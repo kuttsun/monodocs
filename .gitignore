@@ -13,3 +13,6 @@ coverage/
 tmp/
 *.log
 .DS_Store
+
+# Claude Code のローカル設定（個人環境依存）
+.claude/
