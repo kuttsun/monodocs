@@ -9,16 +9,42 @@
     </style>
   </head>
   <body>
+    <button id="sidebar-toggle" type="button" aria-label="サイドバーの表示切替" aria-expanded="true">
+      ☰
+    </button>
     <div id="app">
       <aside id="sidebar">
         <div class="sidebar-header">{{title}}</div>
+        <div class="sidebar-tools">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="検索…"
+            autocomplete="off"
+            aria-label="ドキュメント内検索"
+          />
+          <button
+            id="theme-toggle"
+            type="button"
+            aria-label="ダークモード切替"
+            title="ダークモード切替"
+          >
+            <span class="theme-toggle-icon"></span>
+          </button>
+        </div>
+        <ul id="search-results" hidden></ul>
         <nav id="sidebar-nav">
 {{sidebar}}
         </nav>
       </aside>
       <main id="content">
 {{pages}}
+        <nav id="page-nav" aria-label="前後のページ"></nav>
       </main>
+      <aside id="toc" aria-label="ページ内目次">
+        <div class="toc-title">目次</div>
+        <nav id="toc-nav"></nav>
+      </aside>
     </div>
     <script>
       window.__SINGLE_DOCS_DATA__ = {{siteDataJson}};

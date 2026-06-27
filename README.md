@@ -4,19 +4,25 @@
 
 ドキュメントは複数ファイルに分割して管理しながら、配布時には 1 ファイルにまとめられることを目的としています。
 
-> **Status: v0.3 実装済み** — Markdown / AsciiDoc（混在可）から単一 HTML を生成できます。
-> リンク変換・画像埋め込み・Mermaid・メタデータ・validate に対応。
+> **Status: v0.4 実装済み** — Markdown / AsciiDoc（混在可）から単一 HTML を生成できます。
+> リンク変換・画像埋め込み・Mermaid・メタデータ・validate に加え、HTML 内検索・ページ内目次・
+> 前後ナビ・ダークモード・印刷用レイアウト・`watch` / `serve` に対応。
 > PDF などは未対応です。詳細は [docs/status.md](docs/status.md) を参照してください。
 
 ## 特徴
 
 - 複数 Markdown / AsciiDoc ファイルを単一 HTML にまとめる（混在対応）
-- フォルダ構造に従ったサイドバー目次を自動生成する
+- フォルダ構造に従ったサイドバー目次を自動生成する（折りたたみ可能）
 - 見出しタイトルからサイドバーを構成する（Markdown は H1、AsciiDoc は `= Title`）
 - ファイル間リンク（`.md` / `.adoc` / xref）を単一 HTML 内の hash route に変換する
 - 画像を data URI として埋め込み、自己完結した単一 HTML にする
 - Mermaid を表示する（client mode。ランタイムは CDN / inline を選択可能）
 - frontmatter / `:sd-*:` で order・hidden・description を制御する
+- HTML 内で全文検索できる（タイトル・見出し・本文）
+- ページ内目次（h2 / h3）と前後ページナビゲーションを表示する
+- ダークモード（OS 設定に追従、手動切替は localStorage に保存）
+- 印刷時は全ページを縦に展開する print 用レイアウト
+- `watch` で変更を監視して再ビルド、`serve` でライブリロード付きローカルプレビュー
 - `validate` でリンク切れ・画像欠落などを検出する
 - GitHub Flavored Markdown に対応する
 
@@ -24,7 +30,7 @@
 > `mermaid.runtime: inline` を指定してください。画像サイズ上限（`assets.maxInlineSize`）超過時の
 > 既定 `warn` は「警告しつつ埋め込む」挙動です（埋め込まない場合は `external`）。
 
-> コードハイライト（shiki）・PDF 出力・検索などは今後のバージョンで対応予定です（[docs/roadmap.md](docs/roadmap.md)）。
+> コードハイライト（shiki）・PDF 出力などは今後のバージョンで対応予定です（[docs/roadmap.md](docs/roadmap.md)）。
 
 > **入力は信頼できるドキュメントを前提とします。** AsciiDoc は生 HTML を出力できるため、
 > 信頼できない入力の変換は避けてください（詳細は [docs/development.md](docs/development.md)）。
@@ -53,6 +59,16 @@ single-docs build ./docs -o ./dist/manual.html
 ```
 
 生成された `manual.html` をブラウザで開くと、左サイドバーから各ページを切り替えられます。
+サイドバーの検索ボックスで全文検索、右側にページ内目次、本文下に前後ページナビが表示されます。
+右上のトグルでダークモード・サイドバーの開閉ができます。印刷（PDF 保存）すると全ページが縦に展開されます。
+
+編集しながら確認する場合は、`watch`（変更を監視して再ビルド）や `serve`（ライブリロード付き
+ローカルプレビュー）が使えます。
+
+```bash
+single-docs watch ./docs -o ./dist/manual.html
+single-docs serve ./docs            # 既定で http://127.0.0.1:4173/ を配信
+```
 
 リンク切れや画像欠落などは `validate` で検出できます。
 

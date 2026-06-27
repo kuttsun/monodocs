@@ -50,6 +50,26 @@ function safeJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
+/** クライアント（目次・検索・前後ナビ）へ渡す 1 ページ分のデータ。 */
+function pageData(page: Page): {
+  route: string;
+  title: string;
+  hidden: boolean;
+  headings: { id: string; text: string; level: number }[];
+  text: string;
+} {
+  return {
+    route: page.route,
+    title: page.title,
+    hidden: page.hidden === true,
+    // 目次は h2 / h3 を対象にする（h1 はページタイトル相当のため除外）。
+    headings: page.headings
+      .filter((h) => h.level >= 2 && h.level <= 3)
+      .map((h) => ({ id: h.id, text: h.text, level: h.level })),
+    text: page.text,
+  };
+}
+
 /** Page[] とサイドバーから自己完結した単一 HTML を生成する。 */
 export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> {
   const theme = await loadTheme(input.theme ?? "default");
@@ -58,8 +78,9 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   const pagesHtml = input.pages.map(renderArticle).join("\n");
   const siteData = safeJson({
     title: input.title,
-    routes: input.pages.map((p) => p.route),
     initialRoute: input.pages[0]?.route ?? "/",
+    // 目次・検索・前後ナビ用のページメタ（本文 HTML は含めない）。
+    pages: input.pages.map(pageData),
   });
 
   let html = theme.template;

@@ -22,3 +22,5 @@ export {
 } from "./pipeline/postprocess.js";
 export { renderSingleHtml, type RenderHtmlInput } from "./pipeline/renderSingleHtml.js";
 export { loadTheme, type Theme } from "./themes/index.js";
+export { watchSite, type WatchCallbacks, type WatchHandle } from "./watch.js";
+export { serveSite, type ServeOptions, type ServeCallbacks, type ServeHandle } from "./serve.js";

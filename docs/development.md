@@ -83,8 +83,10 @@ Markdown / AsciiDoc files
 - `core/src/sources/<format>/renderer.ts` … `SourceRenderer` 実装（`extractMeta` / `render`）
 - `core/src/pipeline/buildPages.ts` … ソースを `Page` に正規化（route / page id の重複検知）
 - `core/src/pipeline/buildSidebar.ts` … フォルダ構造からサイドバーツリーを生成
-- `core/src/pipeline/renderSingleHtml.ts` … テンプレートに埋め込み単一 HTML を生成
-- `core/src/themes/default/` … テンプレート / CSS / クライアント JS（hash route 切り替え）
+- `core/src/pipeline/renderSingleHtml.ts` … テンプレートに埋め込み単一 HTML を生成（目次/検索用のページデータも埋め込む）
+- `core/src/themes/default/` … テンプレート / CSS / クライアント JS（hash route 切り替え・検索・目次・前後ナビ・ダークモード・折りたたみ）
+- `core/src/watch.ts` … 入力・設定の変更を監視して再ビルド（`fs.watch`、デバウンス付き）
+- `core/src/serve.ts` … ローカル HTTP 配信 + 監視 + SSE ライブリロード
 
 単一 HTML 内での見出し ID 衝突を避けるため、各見出し / 要素 ID は
 `{page-id}-{元のID}` に prefix する（AsciiDoc の同一文書内 xref も追従して書き換える）。

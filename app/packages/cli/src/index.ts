@@ -1,6 +1,20 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { buildSite, validateSite, type OutputFormat } from "@single-docs/core";
+import {
+  buildSite,
+  serveSite,
+  validateSite,
+  watchSite,
+  type OutputFormat,
+} from "@single-docs/core";
+
+/** ビルド結果の警告とサマリを標準出力へ表示する共通処理。 */
+function reportBuild(result: { pages: number; outputs: string[]; warnings: string[] }): void {
+  for (const warning of result.warnings) {
+    console.warn(`warning: ${warning}`);
+  }
+  console.log(`✓ Generated ${result.pages} page(s) -> ${result.outputs.join(", ")}`);
+}
 
 const program = new Command();
 
@@ -28,10 +42,68 @@ program
           configFile: options.config,
           format: options.format as OutputFormat | undefined,
         });
-        for (const warning of result.warnings) {
-          console.warn(`warning: ${warning}`);
-        }
-        console.log(`✓ Generated ${result.pages} page(s) -> ${result.outputs.join(", ")}`);
+        reportBuild(result);
+      } catch (error) {
+        console.error(`error: ${(error as Error).message}`);
+        process.exitCode = 1;
+      }
+    },
+  );
+
+program
+  .command("watch")
+  .description("入力・設定ファイルの変更を監視して再ビルドする")
+  .argument("[input]", "入力ディレクトリ（既定: ./docs）")
+  .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
+  .option("-c, --config <file>", "設定ファイル（既定: single-docs.config.yml があれば使用）")
+  .action(async (input: string | undefined, options: { output?: string; config?: string }) => {
+    const opts = { inputDir: input, outputFile: options.output, configFile: options.config };
+    try {
+      await watchSite(opts, {
+        onRebuild: reportBuild,
+        onError: (error) => console.error(`error: ${error.message}`),
+      });
+      console.log("Watching for changes… (Ctrl+C to stop)");
+    } catch (error) {
+      console.error(`error: ${(error as Error).message}`);
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command("serve")
+  .description("ローカルサーバーで配信し、変更を監視してライブリロードする")
+  .argument("[input]", "入力ディレクトリ（既定: ./docs）")
+  .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
+  .option("-c, --config <file>", "設定ファイル（既定: single-docs.config.yml があれば使用）")
+  .option("-p, --port <port>", "ポート番号（既定: 4173）", (v) => Number(v))
+  .option("-H, --host <host>", "ホスト（既定: 127.0.0.1）")
+  .action(
+    async (
+      input: string | undefined,
+      options: { output?: string; config?: string; port?: number; host?: string },
+    ) => {
+      try {
+        const handle = await serveSite(
+          {
+            inputDir: input,
+            outputFile: options.output,
+            configFile: options.config,
+            port: options.port,
+            host: options.host,
+          },
+          {
+            onRebuild: (result) => {
+              for (const warning of result.warnings) console.warn(`warning: ${warning}`);
+              console.log(`✓ Rebuilt ${result.pages} page(s)`);
+            },
+            onError: (error) => console.error(`error: ${error.message}`),
+          },
+        );
+        console.log(`Serving at ${handle.url} (Ctrl+C to stop)`);
+        process.on("SIGINT", () => {
+          void handle.close().then(() => process.exit(0));
+        });
       } catch (error) {
         console.error(`error: ${(error as Error).message}`);
         process.exitCode = 1;
