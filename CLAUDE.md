@@ -93,3 +93,14 @@ vitest。ユニット（route/format 判定/各 renderer/サイドバー）、e2
 ## 進め方
 
 ロードマップのバージョン単位で機能を追加する（v0.1=Markdown単一HTML / v0.2=AsciiDoc・混在 / v0.3=リンク・画像・Mermaid・validate / v0.4=検索・目次・watch/serve / v0.5=PDF …）。各バージョン完了時に [docs/status.md](docs/status.md) と [docs/testing.md](docs/testing.md) を更新する。コミットメッセージは日本語・conventional prefix・末尾に対象バージョン（例: `feat: …（v0.4）`）。
+
+## レビュー（必須ルール）
+
+**実装がまとまったら（typecheck / test / format を通したうえで）、`codex` CLI にコードレビューを依頼し、指摘に対応する。** これはこのリポジトリの運用ルール。
+
+```bash
+codex review --uncommitted          # コミット前: staged/unstaged/untracked を対象
+codex review --commit <SHA>         # コミット後: 特定コミットの変更を対象
+```
+
+`--uncommitted` はカスタムプロンプトと併用不可。指摘（P1/P2 等）が出たら原則修正し、対応内容を報告する。
