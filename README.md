@@ -1,93 +1,181 @@
-# Single Docs
+# single-docs
 
+複数の Markdown / AsciiDoc ファイルから、**単一の HTML または PDF** ドキュメントを生成する CLI ツールです。
 
+ドキュメントは複数ファイルに分割して管理しながら、配布時には 1 ファイルにまとめられることを目的としています。
 
-## Getting started
+> **Status: v0.1 実装済み**
+> Markdown 群から単一 HTML を生成できます（フォルダ構造サイドバー / hash route ページ切り替え / H1 タイトル / GFM）。
+> AsciiDoc・PDF などは未対応です。全体像は [ROADMAP.md](ROADMAP.md) を参照してください。
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## リポジトリ構成
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+アプリ本体と、将来公開する紹介サイトをフォルダで分離しています。
 
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
+```text
+single-docs/
+  app/        # アプリ本体（single-docs。pnpm モノレポ）
+  site/       # （予定）アプリ紹介の静的 Web サイト
+  ROADMAP.md  # 仕様・設計・ロードマップ
+  README.md
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/kuttsun/single-docs.git
-git branch -M main
-git push -uf origin main
+
+開発コマンドは原則 `app/` ディレクトリで実行します。
+
+## 特徴（目標）
+
+- 複数 Markdown ファイルを単一 HTML にまとめる
+- 複数 AsciiDoc ファイルを単一 HTML にまとめる
+- Markdown / AsciiDoc の混在に対応する
+- フォルダ構造に従ったサイドバー目次を自動生成する
+- 画像を HTML 内に data URI として埋め込む
+- Mermaid などの図表記法に対応する
+- GitHub Flavored Markdown に対応する
+- 単一 HTML を元に PDF 出力する
+- CLI / npm / Docker / GitHub Actions / VS Code 拡張など複数の提供形態を想定する
+
+`single-docs` は Pandoc の代替を直接目指すものではなく、
+**単一ファイル配布に特化した軽量ドキュメントジェネレータ**を目指します。
+
+## 対応状況
+
+| 機能                                | 状態    | 対象バージョン |
+| ----------------------------------- | ------- | -------------- |
+| 開発環境（devcontainer / monorepo） | ✅ 完了 | -              |
+| Markdown → 単一 HTML（MVP）         | ✅ 完了 | v0.1           |
+| AsciiDoc 対応・混在対応             | 🚧 予定 | v0.2           |
+| リンク変換 / 画像埋め込み / Mermaid | 🚧 予定 | v0.3           |
+| 検索 / 目次 / watch / serve         | 🚧 予定 | v0.4           |
+| PDF 出力                            | 🚧 予定 | v0.5           |
+| npm / Docker / GitHub Actions       | 🚧 予定 | v0.6           |
+| VS Code 拡張                        | 🚧 予定 | v0.7           |
+
+## アーキテクチャ
+
+`app/` は pnpm workspace によるモノレポです。
+
+```text
+app/
+  packages/
+    core/   # 変換処理の中核（@single-docs/core）
+    cli/    # CLI（single-docs コマンド）
+  examples/
+    basic-markdown/
 ```
 
-## Integrate with your tools
+各ソース形式（Markdown / AsciiDoc / 将来の他形式）は専用 renderer で処理し、
+共通の `Page` モデルへ正規化してから HTML / PDF を出力します（Source Renderer Architecture）。
 
-* [Set up project integrations](https://gitlab.com/kuttsun/single-docs/-/settings/integrations)
+```text
+Markdown / AsciiDoc files
+      ↓  Source Renderer
+   Page[]
+      ↓  sidebar / links / assets / search
+  single HTML
+      ↓  (optional) headless browser
+     PDF
+```
 
-## Collaborate with your team
+## 開発環境
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+開発環境は **devcontainer** で構築します。ホスト環境に Node.js / pnpm を直接インストールする必要はありません。
 
-## Test and Deploy
+### 必要なもの
 
-Use the built-in continuous integration in GitLab.
+- Docker
+- VS Code + [Dev Containers 拡張](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+### セットアップ
 
-***
+1. このリポジトリを VS Code で開く
+2. コマンドパレットから **Dev Containers: Reopen in Container** を実行する
+3. コンテナ初回起動時に `corepack enable` と `app/` での `pnpm install` が自動実行されます
 
-# Editing this README
+ベースイメージは `mcr.microsoft.com/devcontainers/typescript-node:22`、
+パッケージマネージャは corepack 経由の pnpm を使用します。
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### よく使うコマンド
 
-## Suggestions for a good README
+`app/` ディレクトリで実行します。
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```bash
+cd app
+pnpm install        # 依存をインストール
+pnpm build          # 全パッケージをビルド（tsc）
+pnpm test           # テスト（vitest）
+pnpm typecheck      # 型チェック
+pnpm format         # Prettier で整形
+```
 
-## Name
-Choose a self-explaining name for your project.
+### devcontainer を使わない場合
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Docker のみでビルド・テストを実行することもできます（ホストを汚さずに動作確認できます）。
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```bash
+docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
+  bash -lc "corepack enable && pnpm install && pnpm build && pnpm test"
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## 使い方
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+> `single-docs` の npm 公開は v0.6 で対応予定です。現時点では `app/` 内でビルドして実行します。
+> PDF（`--format pdf` / `both`）は v0.5 で対応予定で、現状は HTML のみ対応です。
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+```bash
+cd app
+pnpm build
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+# サンプルから単一 HTML を生成
+node packages/cli/dist/index.js build examples/basic-markdown/docs -o dist/manual.html
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+生成された `manual.html` をブラウザで開くと、左サイドバーから各ページを
+切り替えられます（hash route による疑似ページ切り替え）。
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+入力例:
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```text
+docs/
+  index.md
+  setup/
+    install.md
+    config.md
+  guide/
+    usage.md
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+出力例:
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+```text
+dist/
+  manual.html
+```
 
-## License
-For open source projects, say how it is licensed.
+## 設定ファイル（任意）
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+入力ディレクトリを置く場所に `single-docs.config.yml` を置くと挙動をカスタマイズできます。
+無い場合はデフォルト（入力 `./docs`、出力 `./dist/manual.html`）が使われます。
+
+```yaml
+title: "社内ドキュメント"
+input: "./docs"
+output:
+  format: "html"
+  path: "./dist/manual.html"
+sidebar:
+  exclude:
+    - "_partials/**"
+sources:
+  markdown:
+    extensions: [".md", ".markdown"]
+```
+
+設定項目の全体像は [ROADMAP.md](ROADMAP.md) の「12. 設定ファイル」を参照してください。
+
+## ロードマップ
+
+詳細な仕様・設計・バージョン別の実装範囲は [ROADMAP.md](ROADMAP.md) にまとめています。
+
+## ライセンス
+
+未定（TBD）。

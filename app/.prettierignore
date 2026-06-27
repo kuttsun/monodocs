@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+
+# 仕様原本（整形対象外）
+ROADMAP.md
+
+# プレースホルダ（{{appJs}} 等）を Prettier が JS/CSS と誤解釈して壊すため除外
+packages/core/src/themes/default/template.html

@@ -1,0 +1,24 @@
+{
+  "name": "single-docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "single-docs CLI",
+  "type": "module",
+  "bin": {
+    "single-docs": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@single-docs/core": "workspace:*",
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

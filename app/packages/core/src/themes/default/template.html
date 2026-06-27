@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{title}}</title>
+    <style>
+{{style}}
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <div class="sidebar-header">{{title}}</div>
+        <nav id="sidebar-nav">
+{{sidebar}}
+        </nav>
+      </aside>
+      <main id="content">
+{{pages}}
+      </main>
+    </div>
+    <script>
+      window.__SINGLE_DOCS_DATA__ = {{siteDataJson}};
+    </script>
+    <script>
+{{appJs}}
+    </script>
+  </body>
+</html>
