@@ -1,4 +1,6 @@
 = 概要
+:sd-order: 2
+:sd-description: AsciiDoc で書いた概要ページ
 
 これは AsciiDoc で書かれた概要ページです。
 
@@ -7,6 +9,16 @@
 * Markdown / AsciiDoc の混在に対応
 * フォルダ構造からサイドバーを自動生成
 * 単一 HTML に集約
+
+== 構成図
+
+[source,mermaid]
+----
+graph LR
+  md[Markdown] --> page[Page]
+  adoc[AsciiDoc] --> page
+  page --> html[single HTML]
+----
 
 == 関連
 

@@ -1,4 +1,12 @@
+---
+title: ホーム
+order: 1
+description: Mixed サンプルのトップページ
+---
+
 # Mixed サンプル
+
+![ロゴ](images/logo.svg)
 
 Markdown と AsciiDoc を混在させたサンプルです。
 両方が 1 つの HTML にまとまり、同じサイドバーに表示されます。

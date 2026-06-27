@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { buildSite, type OutputFormat } from "@single-docs/core";
+import { buildSite, validateSite, type OutputFormat } from "@single-docs/core";
 
 const program = new Command();
 
@@ -38,5 +38,26 @@ program
       }
     },
   );
+
+program
+  .command("validate")
+  .description("リンク切れ・画像欠落・タイトル欠落などを検出する（出力は書き出さない）")
+  .argument("[input]", "入力ディレクトリ（既定: ./docs）")
+  .option("-c, --config <file>", "設定ファイル（既定: single-docs.config.yml があれば使用）")
+  .action(async (input: string | undefined, options: { config?: string }) => {
+    const result = await validateSite({ inputDir: input, configFile: options.config });
+    for (const error of result.errors) console.error(`error: ${error}`);
+    for (const warning of result.warnings) console.warn(`warning: ${warning}`);
+
+    const total = result.errors.length + result.warnings.length;
+    if (total === 0) {
+      console.log(`✓ No issues found (${result.pages} page(s)).`);
+      return;
+    }
+    console.error(
+      `✗ ${result.errors.length} error(s), ${result.warnings.length} warning(s) in ${result.pages} page(s).`,
+    );
+    process.exitCode = 1;
+  });
 
 await program.parseAsync(process.argv);

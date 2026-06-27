@@ -14,6 +14,7 @@ import type {
   SourceFile,
   SourceRenderer,
 } from "../../types.js";
+import { toPageMeta } from "../meta.js";
 
 const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
 
@@ -45,8 +46,18 @@ export const asciidocRenderer: SourceRenderer = {
   async extractMeta(source: SourceFile): Promise<PageMeta> {
     const doc = await load(source.raw, buildOptions(source));
     const rawTitle = doc.getDocumentTitle();
-    const title = typeof rawTitle === "string" && rawTitle.trim() ? rawTitle.trim() : undefined;
-    return { title };
+    const docTitle = typeof rawTitle === "string" ? rawTitle : undefined;
+
+    // `:sd-*:` 属性をメタデータとして読む（タイトル優先順位: sd-title > = Title）。
+    return toPageMeta(
+      {
+        title: doc.getAttribute("sd-title"),
+        order: doc.getAttribute("sd-order"),
+        hidden: doc.getAttribute("sd-hidden"),
+        description: doc.getAttribute("sd-description"),
+      },
+      docTitle,
+    );
   },
 
   async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {

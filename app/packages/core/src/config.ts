@@ -13,11 +13,14 @@ const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
 // `_` 始まりのファイルは拡張子を問わず include/partial 用とみなしてページ化しない。
 const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
 const DEFAULT_CONFIG_FILE = "single-docs.config.yml";
+const DEFAULT_MAX_INLINE_SIZE = 5 * 1024 * 1024; // 5MB
 
-/**
- * `single-docs.config.yml` のスキーマ（v0.1 で利用する項目のみ）。
- * 未知のキー（mermaid / pdf / assets など）はデフォルトで無視される。
- */
+/** 画像の最大インラインサイズ超過時の挙動。 */
+export type OnLargeImage = "warn" | "error" | "external";
+/** Mermaid ランタイムの配給方法。 */
+export type MermaidRuntime = "cdn" | "inline";
+
+/** `single-docs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
 const configFileSchema = z.object({
   title: z.string().optional(),
   input: z.string().optional(),
@@ -29,28 +32,25 @@ const configFileSchema = z.object({
     .optional(),
   sources: z
     .object({
-      markdown: z
-        .object({
-          extensions: z.array(z.string()).optional(),
-        })
-        .optional(),
-      asciidoc: z
-        .object({
-          extensions: z.array(z.string()).optional(),
-        })
-        .optional(),
+      markdown: z.object({ extensions: z.array(z.string()).optional() }).optional(),
+      asciidoc: z.object({ extensions: z.array(z.string()).optional() }).optional(),
     })
     .optional(),
-  sidebar: z
+  sidebar: z.object({ exclude: z.array(z.string()).optional() }).optional(),
+  assets: z
     .object({
-      exclude: z.array(z.string()).optional(),
+      embedImages: z.boolean().optional(),
+      maxInlineSize: z.union([z.string(), z.number()]).optional(),
+      onLargeImage: z.enum(["warn", "error", "external"]).optional(),
     })
     .optional(),
-  html: z
+  mermaid: z
     .object({
-      theme: z.string().optional(),
+      enabled: z.boolean().optional(),
+      runtime: z.enum(["cdn", "inline"]).optional(),
     })
     .optional(),
+  html: z.object({ theme: z.string().optional() }).optional(),
 });
 
 export type ConfigFile = z.infer<typeof configFileSchema>;
@@ -65,7 +65,38 @@ export type ResolvedConfig = {
   asciidocExtensions: string[];
   exclude: string[];
   theme: string;
+  embedImages: boolean;
+  maxInlineSize: number;
+  onLargeImage: OnLargeImage;
+  mermaidEnabled: boolean;
+  mermaidRuntime: MermaidRuntime;
 };
+
+/**
+ * "5MB" / "500KB" / 1048576 などをバイト数に変換する。
+ * 未指定は fallback。不正値・非正値は設定エラーとして例外を投げる。
+ */
+export function parseSize(value: string | number | undefined, fallback: number): number {
+  if (value === undefined) return fallback;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`Invalid maxInlineSize: ${value}`);
+    }
+    return value;
+  }
+  const match = value.trim().match(/^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB)?$/i);
+  if (!match) {
+    throw new Error(`Invalid maxInlineSize: "${value}"`);
+  }
+  const amount = Number(match[1]);
+  const unit = (match[2] ?? "B").toUpperCase();
+  const factor = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 }[unit] ?? 1;
+  const bytes = Math.round(amount * factor);
+  if (bytes <= 0) {
+    throw new Error(`Invalid maxInlineSize: "${value}"`);
+  }
+  return bytes;
+}
 
 /**
  * 設定ファイル（存在すれば）と CLI オプションを統合して解決済み設定を返す。
@@ -104,5 +135,10 @@ export async function loadConfig(
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
     theme: fileConfig.html?.theme ?? "default",
+    embedImages: fileConfig.assets?.embedImages ?? true,
+    maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
+    onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",
+    mermaidEnabled: fileConfig.mermaid?.enabled ?? true,
+    mermaidRuntime: fileConfig.mermaid?.runtime ?? "cdn",
   };
 }

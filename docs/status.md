@@ -9,7 +9,7 @@
 | 開発環境（devcontainer / monorepo） | ✅ 完了 | -              |
 | Markdown → 単一 HTML（MVP）         | ✅ 完了 | v0.1           |
 | AsciiDoc 対応・混在対応             | ✅ 完了 | v0.2           |
-| リンク変換 / 画像埋め込み / Mermaid | 🚧 予定 | v0.3           |
+| リンク変換 / 画像埋め込み / Mermaid | ✅ 完了 | v0.3           |
 | 検索 / 目次 / watch / serve         | 🚧 予定 | v0.4           |
 | PDF 出力                            | 🚧 予定 | v0.5           |
 | npm / Docker / GitHub Actions       | 🚧 予定 | v0.6           |
@@ -32,11 +32,19 @@
 - [x] include 用ファイル（`_*` / `partials/**` / `includes/**`）をページ化対象から除外できる
 - [x] AsciiDoc の同一文書内 xref を単一 HTML 内リンクに変換する
 
+### v0.3: 実用機能
+
+- [x] Markdown / AsciiDoc 間のリンクを hash route に変換できる（`.md` / `.adoc` / `.html`）
+- [x] 画像を data URI として HTML に埋め込める（サイズ上限・超過時の挙動を設定可能）
+- [x] Markdown / AsciiDoc の Mermaid を表示できる（client mode、ランタイムは CDN / inline 切替）
+- [x] frontmatter / `:sd-*:` により order・hidden・description を制御できる
+- [x] validate でリンク切れ・画像欠落・タイトル欠落を検出できる
+
 ## 既知の未対応 / 制限（今後のバージョンで対応）
 
-- ファイル間のリンク変換（Markdown の `.md`/`.adoc` リンク、AsciiDoc のファイル間 xref）は未対応（v0.3）
-- 画像の data URI 埋め込みは未対応（v0.3）
-- Mermaid のレンダリングは未対応（コードブロックとして表示）（v0.3）
-- frontmatter / `:sd-*:` による order・hidden・description 制御は未対応（v0.3）
-- PDF 出力は未対応（v0.5）
-- 出力形式は HTML のみ（`--format pdf` / `both` はエラー）
+- コードハイライト（shiki）は未対応（v0.3 完了条件外。後続で対応予定）
+- 見出し単位のリンク（`file.md#見出し`）はファイル単位までの解決（見出しアンカーは未対応）
+- 検索 / ページ内目次 / watch / serve は未対応（v0.4）
+- PDF 出力は未対応（v0.5）。出力形式は HTML のみ（`--format pdf` / `both` はエラー）
+- 入力は信頼できるドキュメントを前提（AsciiDoc の生 HTML をサニタイズしない。
+  詳細は [development.md](development.md)）

@@ -98,6 +98,10 @@ Markdown / AsciiDoc files
   そのまま埋め込む。したがって **信頼できない AsciiDoc を変換すると XSS になり得る**。
 - AsciiDoc の `include::[]` は `safe` モードで入力ファイルのディレクトリ配下に jail する
   （`base_dir` を入力ファイルのディレクトリに設定）。外部ファイルの読み込みはできない。
+- 画像の data URI 埋め込みは、実体パス（symlink 解決後）が入力ルート配下にあるものだけを対象とする。
+  入力ルート外を指す画像は埋め込まず警告する。
+- 画像サイズ上限（`assets.maxInlineSize`）超過時の挙動は `assets.onLargeImage` で選ぶ:
+  `warn`（警告して埋め込む。既定）/ `external`（埋め込まず元 src のまま）/ `error`（ビルド失敗）。
 
 信頼できない入力を扱う必要が出た場合は、`rehype-sanitize` 等によるサニタイズ層の追加を検討する
 （現状は未導入。導入すると著者が意図した HTML/passthrough も制限される点に注意）。

@@ -7,6 +7,8 @@ export type RenderHtmlInput = {
   pages: Page[];
   sidebar: SidebarNode[];
   theme?: string;
+  /** </body> 直前に挿入する追加スクリプト（例: Mermaid ランタイム）。 */
+  bodyScripts?: string;
 };
 
 /** サイドバーのツリーを ul/li の HTML に変換する。 */
@@ -67,5 +69,6 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   html = injectToken(html, "{{pages}}", pagesHtml);
   html = injectToken(html, "{{siteDataJson}}", siteData);
   html = injectToken(html, "{{appJs}}", theme.appJs);
+  html = injectToken(html, "{{bodyScripts}}", input.bodyScripts ?? "");
   return html;
 }

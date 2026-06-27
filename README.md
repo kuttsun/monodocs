@@ -4,20 +4,27 @@
 
 ドキュメントは複数ファイルに分割して管理しながら、配布時には 1 ファイルにまとめられることを目的としています。
 
-> **Status: v0.2 実装済み** — Markdown / AsciiDoc（混在可）から単一 HTML を生成できます。
+> **Status: v0.3 実装済み** — Markdown / AsciiDoc（混在可）から単一 HTML を生成できます。
+> リンク変換・画像埋め込み・Mermaid・メタデータ・validate に対応。
 > PDF などは未対応です。詳細は [docs/status.md](docs/status.md) を参照してください。
 
 ## 特徴
 
-- 複数 Markdown ファイルを単一 HTML にまとめる
-- 複数 AsciiDoc ファイルを単一 HTML にまとめる
-- Markdown / AsciiDoc の混在に対応する
+- 複数 Markdown / AsciiDoc ファイルを単一 HTML にまとめる（混在対応）
 - フォルダ構造に従ったサイドバー目次を自動生成する
 - 見出しタイトルからサイドバーを構成する（Markdown は H1、AsciiDoc は `= Title`）
+- ファイル間リンク（`.md` / `.adoc` / xref）を単一 HTML 内の hash route に変換する
+- 画像を data URI として埋め込み、自己完結した単一 HTML にする
+- Mermaid を表示する（client mode。ランタイムは CDN / inline を選択可能）
+- frontmatter / `:sd-*:` で order・hidden・description を制御する
+- `validate` でリンク切れ・画像欠落などを検出する
 - GitHub Flavored Markdown に対応する
-- 単一 HTML として自己完結（hash route によるページ切り替え）
 
-> 画像の data URI 埋め込み・Mermaid・リンク変換・PDF 出力は今後のバージョンで対応予定です（[docs/roadmap.md](docs/roadmap.md)）。
+> Mermaid を使う場合の既定は CDN 参照（表示にネットワークが必要）です。完全に自己完結させるには
+> `mermaid.runtime: inline` を指定してください。画像サイズ上限（`assets.maxInlineSize`）超過時の
+> 既定 `warn` は「警告しつつ埋め込む」挙動です（埋め込まない場合は `external`）。
+
+> コードハイライト（shiki）・PDF 出力・検索などは今後のバージョンで対応予定です（[docs/roadmap.md](docs/roadmap.md)）。
 
 > **入力は信頼できるドキュメントを前提とします。** AsciiDoc は生 HTML を出力できるため、
 > 信頼できない入力の変換は避けてください（詳細は [docs/development.md](docs/development.md)）。
@@ -47,6 +54,12 @@ single-docs build ./docs -o ./dist/manual.html
 
 生成された `manual.html` をブラウザで開くと、左サイドバーから各ページを切り替えられます。
 
+リンク切れや画像欠落などは `validate` で検出できます。
+
+```bash
+single-docs validate ./docs
+```
+
 > **現時点での実行方法**: `single-docs` の npm 公開は v0.6 で対応予定です。
 > それまではリポジトリ内でビルドして実行します（[docs/development.md](docs/development.md) 参照）。
 >
@@ -75,6 +88,13 @@ sources:
     extensions: [".md", ".markdown"]
   asciidoc:
     extensions: [".adoc", ".asciidoc", ".asc"]
+assets:
+  embedImages: true
+  maxInlineSize: "5MB"
+  onLargeImage: "warn" # warn=警告して埋め込む / external=埋め込まない / error=失敗
+mermaid:
+  enabled: true
+  runtime: "cdn" # cdn=軽量・要ネット / inline=自己完結（HTML 肥大）
 ```
 
 設定項目の全体像は [docs/roadmap.md](docs/roadmap.md) の「12. 設定ファイル」を参照してください。

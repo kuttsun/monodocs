@@ -21,6 +21,13 @@ describe("markdownRenderer.extractMeta", () => {
     const meta = await markdownRenderer.extractMeta(md("## Only h2\n"));
     expect(meta.title).toBeUndefined();
   });
+
+  it("reads order / hidden / description from frontmatter", async () => {
+    const meta = await markdownRenderer.extractMeta(
+      md("---\ntitle: T\norder: 5\nhidden: true\ndescription: d\n---\n\n# H\n"),
+    );
+    expect(meta).toMatchObject({ title: "T", order: 5, hidden: true, description: "d" });
+  });
 });
 
 describe("markdownRenderer.render", () => {

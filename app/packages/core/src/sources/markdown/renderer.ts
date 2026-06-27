@@ -5,11 +5,12 @@ import remarkGfm from "remark-gfm";
 import remarkRehype from "remark-rehype";
 import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
+import { parse as parseYaml } from "yaml";
 import { toString as mdastToString } from "mdast-util-to-string";
 import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
 import type { Element, Root as HastRoot } from "hast";
-import type { Heading as MdastHeading, Root as MdastRoot } from "mdast";
+import type { Heading as MdastHeading, Root as MdastRoot, Yaml } from "mdast";
 import type {
   Heading,
   PageMeta,
@@ -18,6 +19,7 @@ import type {
   SourceFile,
   SourceRenderer,
 } from "../../types.js";
+import { toPageMeta } from "../meta.js";
 
 const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
 
@@ -64,16 +66,27 @@ export const markdownRenderer: SourceRenderer = {
       .use(remarkFrontmatter, ["yaml"])
       .parse(source.raw) as MdastRoot;
 
-    let title: string | undefined;
+    let frontmatter: Record<string, unknown> = {};
+    let h1: string | undefined;
     visit(tree, (node) => {
-      if (title !== undefined) return;
-      if (node.type === "heading" && (node as MdastHeading).depth === 1) {
+      if (node.type === "yaml") {
+        try {
+          const parsed = parseYaml((node as Yaml).value);
+          if (parsed && typeof parsed === "object") {
+            frontmatter = parsed as Record<string, unknown>;
+          }
+        } catch {
+          // frontmatter が不正な YAML でも無視（タイトル等はフォールバックする）。
+        }
+      }
+      if (h1 === undefined && node.type === "heading" && (node as MdastHeading).depth === 1) {
         const text = mdastToString(node).trim();
-        if (text) title = text;
+        if (text) h1 = text;
       }
     });
 
-    return { title };
+    // タイトル優先順位: frontmatter.title > H1 >（ファイル名は buildPages 側）
+    return toPageMeta(frontmatter, h1);
   },
 
   async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {

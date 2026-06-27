@@ -20,6 +20,13 @@ describe("asciidocRenderer.extractMeta", () => {
     const meta = await asciidocRenderer.extractMeta(adoc("just a paragraph\n"));
     expect(meta.title).toBeUndefined();
   });
+
+  it("reads :sd-*: attributes as metadata", async () => {
+    const meta = await asciidocRenderer.extractMeta(
+      adoc("= Doc\n:sd-title: Override\n:sd-order: 7\n:sd-hidden: true\n\nbody\n"),
+    );
+    expect(meta).toMatchObject({ title: "Override", order: 7, hidden: true });
+  });
 });
 
 describe("asciidocRenderer.render", () => {
