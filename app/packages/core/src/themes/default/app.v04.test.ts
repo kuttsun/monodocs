@@ -207,4 +207,34 @@ describe("v0.4 client features (app.js)", () => {
     title.click();
     expect(title.parentElement!.classList.contains("collapsed")).toBe(true);
   });
+
+  it("treats an in-page anchor (#id) as an anchor, not a route fallback", async () => {
+    await mountClient(SAMPLE);
+    navigate("/guide");
+    // /guide ページ内に脚注相当のアンカー要素を用意する。
+    const guide = document.querySelector('#content article[data-route="/guide"]')!;
+    guide.innerHTML += '<span id="guide-fn-1">footnote</span>';
+
+    // route ではない hash（"/" 始まりでない）へ遷移してもページは切り替わらない。
+    navigate("guide-fn-1");
+    const shown = Array.from(
+      document.querySelectorAll<HTMLElement>("#content article[data-route]"),
+    ).filter((el) => !el.hidden);
+    expect(shown).toHaveLength(1);
+    expect(shown[0]!.getAttribute("data-route")).toBe("/guide");
+  });
+
+  it("shows the containing page when deep-linking to an in-page anchor", async () => {
+    await mountClient(SAMPLE);
+    // 初期は先頭ページ。FAQ ページ内のアンカーを直接開く。
+    const faq = document.querySelector('#content article[data-route="/faq"]')!;
+    faq.innerHTML += '<span id="faq-note">note</span>';
+
+    navigate("faq-note");
+    const shown = Array.from(
+      document.querySelectorAll<HTMLElement>("#content article[data-route]"),
+    ).filter((el) => !el.hidden);
+    expect(shown).toHaveLength(1);
+    expect(shown[0]!.getAttribute("data-route")).toBe("/faq");
+  });
 });

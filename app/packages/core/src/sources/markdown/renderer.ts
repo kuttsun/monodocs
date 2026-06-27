@@ -1,4 +1,4 @@
-import { unified, type Plugin } from "unified";
+import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
@@ -7,9 +7,8 @@ import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
 import { parse as parseYaml } from "yaml";
 import { toString as mdastToString } from "mdast-util-to-string";
-import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
-import type { Element, Root as HastRoot } from "hast";
+import type { Root as HastRoot } from "hast";
 import type { Heading as MdastHeading, Root as MdastRoot, Yaml } from "mdast";
 import type {
   Heading,
@@ -20,40 +19,7 @@ import type {
   SourceRenderer,
 } from "../../types.js";
 import { toPageMeta } from "../meta.js";
-
-const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
-
-type CollectOptions = {
-  /** 見出し ID に付与する page id（衝突回避用 prefix）。 */
-  prefix: string;
-  /** 抽出結果の格納先。 */
-  out: { headings: Heading[]; text: string };
-};
-
-/**
- * 見出し ID に page id を prefix して衝突を防ぎつつ、
- * 見出し一覧とプレーンテキストを収集する rehype プラグイン。
- */
-const collectHeadingsAndText: Plugin<[CollectOptions], HastRoot> = ({ prefix, out }) => {
-  return (tree) => {
-    visit(tree, (node) => {
-      if (node.type !== "element") return;
-      const element = node as Element;
-      if (!HEADING_TAGS.has(element.tagName)) return;
-
-      const slug = typeof element.properties.id === "string" ? element.properties.id : "";
-      const id = slug ? `${prefix}-${slug}` : prefix;
-      element.properties.id = id;
-
-      out.headings.push({
-        level: Number(element.tagName.slice(1)),
-        id,
-        text: toText(element),
-      });
-    });
-    out.text = toText(tree);
-  };
-};
+import { prefixIdsAndCollect } from "../prefixIds.js";
 
 /** Markdown 用の SourceRenderer（unified / remark / rehype）。 */
 export const markdownRenderer: SourceRenderer = {
@@ -98,7 +64,13 @@ export const markdownRenderer: SourceRenderer = {
       .use(remarkGfm)
       .use(remarkRehype)
       .use(rehypeSlug)
-      .use(collectHeadingsAndText, { prefix: context.page.id, out })
+      // 見出しだけでなく脚注など全要素の ID を page id で prefix し、
+      // 同一文書内アンカーを追従させる（単一 HTML 内の ID 衝突回避）。
+      .use(() => (tree: HastRoot) => {
+        const result = prefixIdsAndCollect(tree, context.page.id);
+        out.headings = result.headings;
+        out.text = result.text;
+      })
       .use(rehypeStringify)
       .process(source.raw);
 

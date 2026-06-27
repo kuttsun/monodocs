@@ -50,4 +50,32 @@ describe("markdownRenderer.render", () => {
     });
     expect(rendered.html).toContain('type="checkbox"');
   });
+
+  it("renders GFM footnotes and prefixes their ids without collisions across pages", async () => {
+    const src = "# T\n\nclaim[^1]\n\n[^1]: a footnote.\n";
+    const a = await markdownRenderer.render(md(src), {
+      page: { id: "a", route: "/a", relativePath: "a.md", format: "markdown" },
+    });
+    const b = await markdownRenderer.render(md(src), {
+      page: { id: "b", route: "/b", relativePath: "b.md", format: "markdown" },
+    });
+
+    // 脚注が出力されている。
+    expect(a.html.toLowerCase()).toContain("footnote");
+
+    // 全 id / 内部アンカーが page id で prefix されている。
+    const ids = (html: string) => [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+    const idsA = ids(a.html);
+    const idsB = ids(b.html);
+    expect(idsA.length).toBeGreaterThan(1); // 見出し + 脚注関連
+    expect(idsA.every((id) => id.startsWith("a-"))).toBe(true);
+    expect(idsB.every((id) => id.startsWith("b-"))).toBe(true);
+    // 別ページ間で id が衝突しない。
+    expect(idsA.some((id) => idsB.includes(id))).toBe(false);
+
+    // ページ内アンカー（href="#X"）は同一ドキュメント内の id を指す。
+    const anchors = [...a.html.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]);
+    expect(anchors.length).toBeGreaterThan(0);
+    expect(anchors.every((target) => idsA.includes(target))).toBe(true);
+  });
 });

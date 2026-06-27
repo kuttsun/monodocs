@@ -342,6 +342,154 @@ body.sidebar-collapsed #sidebar {
   border-left: 0.25rem solid var(--color-border);
 }
 
+#content kbd {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+}
+
+#content dl {
+  margin: 1rem 0;
+}
+
+#content dt {
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+#content dd {
+  margin: 0 0 0.5rem 1.5rem;
+}
+
+/* ---- AsciiDoc blocks (Asciidoctor output) ---- */
+#content .admonitionblock {
+  margin: 1rem 0;
+  border-left: 4px solid var(--color-accent);
+  background: var(--color-sidebar-bg);
+  border-radius: 0 6px 6px 0;
+}
+
+#content .admonitionblock > table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border: 0;
+}
+
+#content .admonitionblock td {
+  border: 0;
+  padding: 0.75rem 1rem;
+  vertical-align: top;
+}
+
+#content .admonitionblock td.icon {
+  width: 1px;
+  white-space: nowrap;
+}
+
+#content .admonitionblock td.icon .title {
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+#content .admonitionblock.tip {
+  border-left-color: #1a7f37;
+}
+#content .admonitionblock.tip td.icon .title {
+  color: #1a7f37;
+}
+#content .admonitionblock.warning,
+#content .admonitionblock.caution {
+  border-left-color: #bf8700;
+}
+#content .admonitionblock.warning td.icon .title,
+#content .admonitionblock.caution td.icon .title {
+  color: #bf8700;
+}
+#content .admonitionblock.important {
+  border-left-color: #cf222e;
+}
+#content .admonitionblock.important td.icon .title {
+  color: #cf222e;
+}
+
+/* block titles / captions */
+#content .title {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  margin: 0.3rem 0;
+}
+
+#content .listingblock,
+#content .literalblock,
+#content .exampleblock,
+#content .sidebarblock,
+#content .quoteblock,
+#content .imageblock {
+  margin: 1rem 0;
+}
+
+#content .sidebarblock {
+  padding: 1rem;
+  background: var(--color-sidebar-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+#content .exampleblock > .content {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+#content .quoteblock blockquote {
+  border: 0;
+}
+
+#content .quoteblock .attribution {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+#content .imageblock .content {
+  text-align: center;
+}
+
+/* tables (Asciidoctor は p.tableblock でセルを包む) */
+#content .tableblock p {
+  margin: 0.2rem 0;
+}
+
+/* callout list / numbers */
+#content .colist {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+#content .conum {
+  font-weight: 700;
+}
+
+/* ---- footnotes (Markdown remark-gfm / AsciiDoc) ---- */
+#content .footnotes {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.9rem;
+}
+
+#content .footnote {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
 /* ---- prev / next page navigation ---- */
 #page-nav {
   display: flex;

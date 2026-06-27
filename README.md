@@ -124,6 +124,7 @@ mermaid:
 | [docs/development.md](docs/development.md) | 開発方針・開発環境・ディレクトリ構成・設計   |
 | [docs/tech-stack.md](docs/tech-stack.md)  | 技術スタックとバージョン方針                 |
 | [docs/roadmap.md](docs/roadmap.md)        | 仕様・ロードマップ                           |
+| [docs/syntax.md](docs/syntax.md)          | 対応記法と制限（Markdown / AsciiDoc）        |
 | [docs/status.md](docs/status.md)          | 実装状況                                     |
 | [docs/testing.md](docs/testing.md)        | テスト方針・テスト結果                       |
 

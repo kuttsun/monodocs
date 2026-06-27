@@ -33,7 +33,7 @@ docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
 | 項目         | 結果      |
 | ------------ | --------- |
 | Test Files   | 18 passed |
-| Tests        | 72 passed |
+| Tests        | 77 passed |
 | typecheck    | 通過      |
 | format:check | 通過      |
 
@@ -42,8 +42,9 @@ docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
 - `route.test.ts` … route / page id 生成
 - `sources/detectFormat.test.ts` … 拡張子からの形式判定
 - `sources/meta.test.ts` … frontmatter / `:sd-*:` メタデータの正規化
-- `sources/markdown/renderer.test.ts` … Markdown 変換・H1 / frontmatter 抽出・見出し ID prefix・GFM
+- `sources/markdown/renderer.test.ts` … Markdown 変換・H1 / frontmatter 抽出・見出し/脚注の ID prefix・GFM
 - `sources/asciidoc/renderer.test.ts` … AsciiDoc 変換・タイトル / `:sd-*:` 抽出・xref 書き換え
+- `sources/prefixIds.ts` … 全要素 ID の prefix・アンカー書き換え（Markdown/AsciiDoc 共通。各 renderer テストで間接検証）
 - `scan.test.ts` … 拡張子マップによる走査・カスタム拡張子・除外
 - `pipeline/buildPages.test.ts` … route / page id の重複検知
 - `pipeline/buildSidebar.test.ts` … フォルダ構造サイドバー

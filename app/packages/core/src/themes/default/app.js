@@ -94,8 +94,32 @@
     }
   }
 
+  /** hash を decode して返す（route 判定用。未設定なら ""）。 */
+  function rawHash() {
+    var hash = window.location.hash || "";
+    var h = hash.charAt(0) === "#" ? hash.slice(1) : hash;
+    try {
+      h = decodeURI(h);
+    } catch (e) {
+      // 不正なエンコードはそのまま扱う。
+    }
+    return h;
+  }
+
   function onRouteChange() {
-    showPage(currentRoute());
+    var h = rawHash();
+    // route は必ず "/" 始まり。"/" で始まらない hash はページ内アンカー
+    // （脚注・内部参照など）として扱い、該当要素を含むページを表示してスクロールする。
+    if (h && h.charAt(0) !== "/") {
+      var el = document.getElementById(h);
+      if (el) {
+        var article = el.closest ? el.closest("article[data-route]") : null;
+        if (article) showPage(article.getAttribute("data-route"));
+        if (typeof el.scrollIntoView === "function") el.scrollIntoView();
+      }
+      return;
+    }
+    showPage(h || "/");
   }
 
   // ---- in-page table of contents ----

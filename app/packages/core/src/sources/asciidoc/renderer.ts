@@ -3,9 +3,7 @@ import { convert, load } from "@asciidoctor/core";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
-import { toText } from "hast-util-to-text";
-import { visit } from "unist-util-visit";
-import type { Element, Root as HastRoot } from "hast";
+import type { Root as HastRoot } from "hast";
 import type {
   Heading,
   PageMeta,
@@ -15,8 +13,7 @@ import type {
   SourceRenderer,
 } from "../../types.js";
 import { toPageMeta } from "../meta.js";
-
-const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
+import { prefixIdsAndCollect } from "../prefixIds.js";
 
 /**
  * Asciidoctor の変換オプションを生成する。
@@ -63,58 +60,16 @@ export const asciidocRenderer: SourceRenderer = {
   async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
     const rawHtml = (await convert(source.raw, buildOptions(source))) as string;
 
-    const prefix = context.page.id;
-    const idMap = new Map<string, string>();
-    const headings: Heading[] = [];
-    const out = { text: "" };
-    let anonHeadingIndex = 0;
+    const out = { headings: [] as Heading[], text: "" };
 
+    // 全要素 ID を page id で prefix し、同一文書内アンカーを追従させる
+    // （見出し・xref・脚注などの単一 HTML 内 ID 衝突を回避）。Markdown と共通処理。
     const file = await unified()
       .use(rehypeParse, { fragment: true })
       .use(() => (tree: HastRoot) => {
-        // 1) 全要素 ID を page id で prefix（単一 HTML 内の衝突回避）し、
-        //    旧 ID → 新 ID の対応と見出し一覧を収集する。
-        visit(tree, (node) => {
-          if (node.type !== "element") return;
-          const element = node as Element;
-          const id = element.properties.id;
-          if (typeof id === "string" && id) {
-            const newId = `${prefix}-${id}`;
-            idMap.set(id, newId);
-            element.properties.id = newId;
-          }
-          if (HEADING_TAGS.has(element.tagName)) {
-            // ID 無し見出し（showtitle で出る doctitle h1 など）にも一意な ID を付与し、
-            // DOM と headings 一覧を一致させる（TOC / search からのリンク用）。
-            let headingId: string;
-            if (typeof element.properties.id === "string" && element.properties.id) {
-              headingId = element.properties.id;
-            } else {
-              headingId = anonHeadingIndex === 0 ? prefix : `${prefix}-h${anonHeadingIndex}`;
-              anonHeadingIndex++;
-              element.properties.id = headingId;
-            }
-            headings.push({
-              level: Number(element.tagName.slice(1)),
-              id: headingId,
-              text: toText(element),
-            });
-          }
-        });
-
-        // 2) 同一文書内アンカー（href="#id"）を prefix 後の ID に書き換える。
-        visit(tree, (node) => {
-          if (node.type !== "element") return;
-          const element = node as Element;
-          if (element.tagName !== "a") return;
-          const href = element.properties.href;
-          if (typeof href === "string" && href.startsWith("#")) {
-            const mapped = idMap.get(href.slice(1));
-            if (mapped) element.properties.href = `#${mapped}`;
-          }
-        });
-
-        out.text = toText(tree);
+        const result = prefixIdsAndCollect(tree, context.page.id);
+        out.headings = result.headings;
+        out.text = result.text;
       })
       .use(rehypeStringify)
       .process(rawHtml);
@@ -122,7 +77,7 @@ export const asciidocRenderer: SourceRenderer = {
     return {
       html: String(file),
       text: out.text,
-      headings,
+      headings: out.headings,
       links: [],
       assets: [],
     };
