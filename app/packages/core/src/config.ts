@@ -9,7 +9,9 @@ const DEFAULT_INPUT = "./docs";
 const DEFAULT_OUTPUT = "./dist/manual.html";
 const DEFAULT_TITLE = "Documentation";
 const DEFAULT_MARKDOWN_EXTENSIONS = [".md", ".markdown"];
-const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*.md", "**/_*.adoc"];
+const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
+// `_` 始まりのファイルは拡張子を問わず include/partial 用とみなしてページ化しない。
+const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
 const DEFAULT_CONFIG_FILE = "single-docs.config.yml";
 
 /**
@@ -28,6 +30,11 @@ const configFileSchema = z.object({
   sources: z
     .object({
       markdown: z
+        .object({
+          extensions: z.array(z.string()).optional(),
+        })
+        .optional(),
+      asciidoc: z
         .object({
           extensions: z.array(z.string()).optional(),
         })
@@ -55,6 +62,7 @@ export type ResolvedConfig = {
   outputFile: string;
   format: OutputFormat;
   markdownExtensions: string[];
+  asciidocExtensions: string[];
   exclude: string[];
   theme: string;
 };
@@ -93,6 +101,7 @@ export async function loadConfig(
     outputFile: options.outputFile ?? fileConfig.output?.path ?? DEFAULT_OUTPUT,
     format: options.format ?? fileConfig.output?.format ?? "html",
     markdownExtensions: fileConfig.sources?.markdown?.extensions ?? DEFAULT_MARKDOWN_EXTENSIONS,
+    asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
     theme: fileConfig.html?.theme ?? "default",
   };

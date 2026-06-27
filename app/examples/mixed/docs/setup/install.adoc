@@ -1,0 +1,16 @@
+= インストール
+
+AsciiDoc で書かれたインストール手順です。
+
+== 必要要件
+
+* Node.js 22 以上
+* pnpm
+
+== 手順
+
+[source,bash]
+----
+pnpm add -D single-docs
+single-docs build ./docs -o ./dist/manual.html
+----
