@@ -51,6 +51,6 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換・shiki コードハイライト
 - `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・クライアント用ページデータ（目次/検索）
 - `themes/default/app.test.ts` … クライアント hash routing（happy-dom）
-- `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ（happy-dom）
+- `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・コードブロックのコピー/折り返しトグル（happy-dom）
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e（Markdown / 混在 / v0.3 機能・validate）
 - `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入）

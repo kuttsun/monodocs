@@ -48,7 +48,7 @@ async function mountClient(pages: ClientPage[]): Promise<void> {
     `</ul></nav>` +
     `</aside>` +
     `<main id="content">${articles}<nav id="page-nav"></nav></main>` +
-    `<aside id="toc"><div class="toc-title">目次</div><nav id="toc-nav"></nav></aside>` +
+    `<aside id="toc"><div class="toc-title">On this page</div><nav id="toc-nav"></nav></aside>` +
     `</div>`;
 
   (window as unknown as { __SINGLE_DOCS_DATA__: unknown }).__SINGLE_DOCS_DATA__ = {
@@ -312,6 +312,70 @@ describe("v0.4 client features (app.js)", () => {
       expect(link("guide-config").classList.contains("active")).toBe(false);
     } finally {
       g.IntersectionObserver = original;
+    }
+  });
+
+  /** code ブロックを含む最小 DOM を組み立て、app.js を実行する。 */
+  async function mountCode(codeHtml: string): Promise<void> {
+    const theme = await loadTheme("default");
+    document.body.innerHTML =
+      `<main id="content"><article class="page" data-route="/">${codeHtml}` +
+      `<nav id="page-nav"></nav></article></main>`;
+    (window as unknown as { __SINGLE_DOCS_DATA__: unknown }).__SINGLE_DOCS_DATA__ = {
+      initialRoute: "/",
+      pages: [page("/", "Home")],
+    };
+    new Function(theme.appJs)();
+  }
+
+  it("wraps code blocks with copy and wrap-toggle buttons", async () => {
+    await mountCode('<pre class="shiki"><code>const x = 1;\nconst y = 2;</code></pre>');
+    const block = document.querySelector("#content .code-block");
+    expect(block).not.toBeNull();
+    // ボタンはアイコン（SVG）で表示する。
+    expect(block!.querySelector(".code-copy-btn svg")).not.toBeNull();
+    expect(block!.querySelector(".code-wrap-btn svg")).not.toBeNull();
+
+    const wrapBtn = block!.querySelector(".code-wrap-btn") as HTMLElement;
+    expect(wrapBtn.getAttribute("aria-pressed")).toBe("false");
+    wrapBtn.click();
+    expect(block!.classList.contains("wrap")).toBe(true);
+    expect(wrapBtn.getAttribute("aria-pressed")).toBe("true");
+    wrapBtn.click();
+    expect(block!.classList.contains("wrap")).toBe(false);
+  });
+
+  it("does not add a toolbar to mermaid blocks", async () => {
+    await mountCode('<pre class="mermaid">graph TD; A--&gt;B;</pre>');
+    expect(document.querySelector("#content .code-block")).toBeNull();
+    expect(document.querySelector("#content .code-toolbar")).toBeNull();
+  });
+
+  it("copies the code text via the copy button", async () => {
+    let copied = "";
+    const nav = window.navigator as unknown as { clipboard?: unknown };
+    const original = nav.clipboard;
+    Object.defineProperty(nav, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: (t: string) => {
+          copied = t;
+          return Promise.resolve();
+        },
+      },
+    });
+    try {
+      await mountCode("<pre><code>hello world</code></pre>");
+      const copyBtn = document.querySelector("#content .code-copy-btn") as HTMLElement;
+      copyBtn.click();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(copied).toBe("hello world");
+      // コピー後はトーストが一定時間表示される。
+      const toast = document.querySelector("#content .code-copied-toast") as HTMLElement;
+      expect(toast.classList.contains("show")).toBe(true);
+      expect(toast.textContent).toBe("Copied!");
+    } finally {
+      Object.defineProperty(nav, "clipboard", { configurable: true, value: original });
     }
   });
 });

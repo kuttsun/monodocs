@@ -342,6 +342,12 @@ body.sidebar-collapsed #sidebar {
   background: none;
 }
 
+/* shiki のライトテーマは背景が白（インライン style）なので、本文と見分けが付くよう
+   コードブロックは常に --color-code-bg を背景にする。ダーク時は下のルールが上書きする。 */
+#content .shiki {
+  background-color: var(--color-code-bg) !important;
+}
+
 /* shiki dual theme: ダークモードでは --shiki-dark / --shiki-dark-bg に切り替える。
    span は --shiki-dark-bg を持たないため background は実質透過のまま（公式手法）。 */
 :root[data-theme="dark"] #content .shiki,
@@ -356,6 +362,93 @@ body.sidebar-collapsed #sidebar {
     color: var(--shiki-dark) !important;
     background-color: var(--shiki-dark-bg) !important;
   }
+}
+
+/* ---- code block toolbar (コピー / 折り返しトグル) ---- */
+/* app.js が各コードブロックを .code-block でラップしてツールバーを差し込む。 */
+#content .code-block {
+  position: relative;
+}
+
+#content .code-toolbar {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  display: flex;
+  gap: 0.3rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+#content .code-block:hover .code-toolbar,
+#content .code-block:focus-within .code-toolbar {
+  opacity: 1;
+}
+
+/* ホバーできない端末（タッチ）では常に表示する。 */
+@media (hover: none) {
+  #content .code-toolbar {
+    opacity: 1;
+  }
+}
+
+#content .code-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  color: var(--color-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#content .code-btn svg {
+  display: block;
+  width: 1rem;
+  height: 1rem;
+}
+
+#content .code-btn:hover {
+  color: var(--color-text);
+  background: var(--color-accent-bg);
+}
+
+#content .code-wrap-btn[aria-pressed="true"] {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* コピー結果トースト（ツールバーの上に一定時間表示する）。 */
+#content .code-copied-toast {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  transform: translateY(calc(-100% - 0.3rem));
+  padding: 0.3rem 0.55rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+  color: #ffffff;
+  background: #1f2328;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+#content .code-copied-toast.show {
+  opacity: 1;
+}
+
+/* 折り返し ON のときは横スクロールせず行を折り返す。 */
+#content .code-block.wrap pre {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 #content table {
@@ -664,7 +757,8 @@ body.sidebar-collapsed #sidebar {
   #sidebar,
   #toc,
   #page-nav,
-  #search-results {
+  #search-results,
+  #content .code-toolbar {
     display: none !important;
   }
   #app {

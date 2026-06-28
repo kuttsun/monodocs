@@ -12,8 +12,8 @@
     <button
       id="sidebar-show"
       type="button"
-      aria-label="サイドバーを開く"
-      title="サイドバーを開く"
+      aria-label="Open sidebar"
+      title="Open sidebar"
     >
       ☰
     </button>
@@ -24,8 +24,8 @@
           <button
             id="sidebar-toggle"
             type="button"
-            aria-label="サイドバーを閉じる"
-            title="サイドバーを閉じる"
+            aria-label="Close sidebar"
+            title="Close sidebar"
             aria-expanded="true"
           >
             «
@@ -35,15 +35,15 @@
           <input
             id="search-input"
             type="search"
-            placeholder="検索…"
+            placeholder="Search…"
             autocomplete="off"
-            aria-label="ドキュメント内検索"
+            aria-label="Search documents"
           />
           <button
             id="theme-toggle"
             type="button"
-            aria-label="ダークモード切替"
-            title="ダークモード切替"
+            aria-label="Toggle dark mode"
+            title="Toggle dark mode"
           >
             <span class="theme-toggle-icon"></span>
           </button>
@@ -55,10 +55,10 @@
       </aside>
       <main id="content">
 {{pages}}
-        <nav id="page-nav" aria-label="前後のページ"></nav>
+        <nav id="page-nav" aria-label="Page navigation"></nav>
       </main>
-      <aside id="toc" aria-label="ページ内目次">
-        <div class="toc-title">目次</div>
+      <aside id="toc" aria-label="Table of contents">
+        <div class="toc-title">On this page</div>
         <nav id="toc-nav"></nav>
       </aside>
     </div>

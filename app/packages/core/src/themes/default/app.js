@@ -13,6 +13,20 @@
   });
 
   var STORAGE_THEME = "single-docs:theme";
+
+  // クライアント UI（chrome）の文言。読者の言語に追従する i18n はせず、英語で統一する
+  // （著者が用意したドキュメント本文の言語とは独立した UI ラベル）。将来 config から
+  // 差し替えられるよう 1 箇所に集約しておく。静的な文言は template.html 側にある。
+  var LABELS = {
+    prev: "← Prev",
+    next: "Next →",
+    noResults: "No results",
+    wrapToggle: "Toggle word wrap",
+    copyCode: "Copy code",
+    copy: "Copy",
+    copied: "Copied!",
+    copyFailed: "Copy failed",
+  };
   // 同一ルートへの遷移後にスクロールしたい見出し ID（あれば）。
   var pendingHeadingId = null;
   // 目次のスクロール連動ハイライト用の IntersectionObserver。
@@ -266,7 +280,9 @@
         escapeHtml(prev.route) +
         '" href="#' +
         escapeHtml(encodeURI(prev.route)) +
-        '"><span class="page-nav-dir">← 前へ</span><span class="page-nav-title">' +
+        '"><span class="page-nav-dir">' +
+        LABELS.prev +
+        '</span><span class="page-nav-title">' +
         escapeHtml(prev.title) +
         "</span></a>";
     } else {
@@ -278,7 +294,9 @@
         escapeHtml(next.route) +
         '" href="#' +
         escapeHtml(encodeURI(next.route)) +
-        '"><span class="page-nav-dir">次へ →</span><span class="page-nav-title">' +
+        '"><span class="page-nav-dir">' +
+        LABELS.next +
+        '</span><span class="page-nav-title">' +
         escapeHtml(next.title) +
         "</span></a>";
     }
@@ -332,7 +350,7 @@
     box.hidden = false;
 
     if (results.length === 0) {
-      box.innerHTML = '<li class="search-empty">該当なし</li>';
+      box.innerHTML = '<li class="search-empty">' + escapeHtml(LABELS.noResults) + "</li>";
       return;
     }
 
@@ -462,6 +480,113 @@
     });
   }
 
+  // ---- code blocks (copy / wrap toggle) ----
+  // ツールバー用アイコン（Material Symbols 由来。currentColor で配色に追従）。
+  var ICON_WRAP =
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">' +
+    '<path d="M4 19h6v-2H4v2zM20 5H4v2h16V5zm-3 6H4v2h13.25c1.1 0 2 .9 2 2s-.9 2-2 2H15v-2l-3 3 3 3v-2h2c2.21 0 4-1.79 4-4s-1.79-4-4-4z"/></svg>';
+  var ICON_COPY =
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">' +
+    '<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
+
+  // テキストをクリップボードへコピーする。Clipboard API が無い環境では
+  // execCommand へフォールバックする。成否を done(ok) で通知する。
+  function copyText(text, done) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () {
+          done(true);
+        },
+        function () {
+          done(fallbackCopy(text));
+        },
+      );
+      return;
+    }
+    done(fallbackCopy(text));
+  }
+
+  function fallbackCopy(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 各コードブロックを .code-block でラップし、折り返しトグルとコピーボタンを差し込む。
+  // 単一 HTML では全ページが DOM 上にあるため、初期化時に一括処理すればよい。
+  function setupCodeBlocks() {
+    var pres = document.querySelectorAll("#content pre");
+    pres.forEach(function (pre) {
+      // Mermaid 図や処理済みのブロックは対象外。
+      if (pre.classList.contains("mermaid")) return;
+      if (pre.parentElement && pre.parentElement.classList.contains("code-block")) return;
+
+      var wrapper = document.createElement("div");
+      wrapper.className = "code-block";
+      if (pre.parentNode) {
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+      }
+
+      var toolbar = document.createElement("div");
+      toolbar.className = "code-toolbar";
+
+      var wrapBtn = document.createElement("button");
+      wrapBtn.type = "button";
+      wrapBtn.className = "code-btn code-wrap-btn";
+      wrapBtn.innerHTML = ICON_WRAP;
+      wrapBtn.title = LABELS.wrapToggle;
+      wrapBtn.setAttribute("aria-label", LABELS.wrapToggle);
+      wrapBtn.setAttribute("aria-pressed", "false");
+      wrapBtn.addEventListener("click", function () {
+        var on = wrapper.classList.toggle("wrap");
+        wrapBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+
+      var copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "code-btn code-copy-btn";
+      copyBtn.innerHTML = ICON_COPY;
+      copyBtn.title = LABELS.copy;
+      copyBtn.setAttribute("aria-label", LABELS.copyCode);
+
+      // コピー結果を一定時間表示するトースト（zenn 風の "Copied!"）。
+      var toast = document.createElement("span");
+      toast.className = "code-copied-toast";
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
+      var toastTimer = null;
+
+      copyBtn.addEventListener("click", function () {
+        var code = pre.querySelector("code");
+        var text = code ? code.textContent : pre.textContent;
+        copyText(text || "", function (ok) {
+          toast.textContent = ok ? LABELS.copied : LABELS.copyFailed;
+          toast.classList.add("show");
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () {
+            toast.classList.remove("show");
+          }, 1500);
+        });
+      });
+
+      toolbar.appendChild(wrapBtn);
+      toolbar.appendChild(copyBtn);
+      wrapper.appendChild(toolbar);
+      wrapper.appendChild(toast);
+    });
+  }
+
   // ---- init ----
   function init() {
     // ルート確定済みの目印。これ以降に読み込まれた Mermaid ランタイムは
@@ -472,6 +597,7 @@
     setupSearch();
     setupSidebarToggle();
     setupSidebarDirs();
+    setupCodeBlocks();
 
     if (window.location.hash) {
       onRouteChange();
