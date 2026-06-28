@@ -1,10 +1,13 @@
 {
   "name": "single-docs",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:22-bookworm",
+  "build": {
+    "dockerfile": "../Dockerfile.dev",
+    "context": ".."
+  },
   "features": {
     "ghcr.io/devcontainers/features/git:1": {}
   },
-  "postCreateCommand": "sudo corepack enable && cd app && pnpm install",
+  "postCreateCommand": "cd app && pnpm install",
   "remoteUser": "node",
   "customizations": {
     "vscode": {

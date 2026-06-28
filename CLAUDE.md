@@ -8,42 +8,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 開発環境とコマンド
 
-**ホスト環境を汚さない方針。** Node.js / pnpm はホストにグローバル導入せず、開発・ビルド・テストはすべて devcontainer または Docker コンテナ内で実行する。コードはすべて `app/`（pnpm モノレポ）配下。
+**ホスト環境を汚さない方針。** Node.js / pnpm はホストに入れず、専用 Docker イメージ `single-docs-dev`（`Dockerfile.dev`、pnpm を焼き込み済み）内で実行する。コードはすべて `app/`（pnpm モノレポ）配下。
 
-devcontainer（または `cd app` 済みのコンテナ）内:
-
-```bash
-pnpm install        # 依存インストール
-pnpm build          # 全パッケージ tsc ビルド + テーマアセットの dist コピー
-pnpm test           # vitest run（全テスト）
-pnpm test:watch     # vitest ウォッチ
-pnpm typecheck      # pnpm -r typecheck（各パッケージ tsc --noEmit）
-pnpm format         # prettier --write .
-pnpm format:check   # prettier --check .
-```
-
-単一テストの実行（`app/` 内）:
+ホストから `scripts/dev.sh` 経由で実行する（イメージが無ければ自動ビルド。作業ツリーをマウントし `app/` で実行）:
 
 ```bash
-pnpm exec vitest run packages/core/src/route.test.ts        # ファイル単位
-pnpm exec vitest run -t "rewrites links"                     # テスト名で絞り込み
+scripts/dev.sh pnpm install      # 依存インストール
+scripts/dev.sh pnpm build        # 全パッケージ tsc ビルド + テーマアセットの dist コピー
+scripts/dev.sh pnpm test         # vitest run（全テスト）
+scripts/dev.sh pnpm typecheck    # pnpm -r typecheck（各パッケージ tsc --noEmit）
+scripts/dev.sh pnpm format       # prettier --write .
+scripts/dev.sh pnpm format:check # prettier --check .
 ```
 
-ホストに Node が無い場合の Docker フォールバック（リポジトリルートで実行）:
+単一テスト:
 
 ```bash
-docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
-  bash -lc "corepack enable && pnpm install && pnpm build && pnpm test"
+scripts/dev.sh pnpm exec vitest run packages/core/src/route.test.ts   # ファイル単位
+scripts/dev.sh pnpm exec vitest run -t "rewrites links"               # テスト名で絞り込み
 ```
 
-> 補足: `node_modules/.bin/*` は shell ラッパーのため `node node_modules/.bin/tsc` のような呼び方は失敗する。バイナリを直接叩く場合は `node node_modules/typescript/bin/tsc ...`、vitest は `./node_modules/.bin/vitest ...` を使う。
-
-CLI をローカルで試す（ビルド後）:
+CLI をローカルで試す（ビルド後。ホストのブラウザで見るには `--host 0.0.0.0`）:
 
 ```bash
-node packages/cli/dist/index.js build examples/mixed/docs -o dist/manual.html
-node packages/cli/dist/index.js serve examples/mixed/docs   # http://127.0.0.1:4173/
+scripts/dev.sh node packages/cli/dist/index.js build examples/mixed/docs -o dist/manual.html
+scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0  # http://localhost:4173/
 ```
+
+> 注意:
+> - `scripts/dev.sh` は**ホスト側**で使う。devcontainer 内やコンテナのシェルに入っている場合は `pnpm ...` を直接実行する（`scripts/dev.sh` は docker-in-docker になる）。
+> - イメージを使わず素の Node イメージで動かすと corepack が pnpm を都度ダウンロードする。`single-docs-dev` はそれを避けるための専用イメージ。pnpm バージョンは `app/package.json` の `packageManager` と `Dockerfile.dev` の `PNPM_VERSION` を一致させる。
+> - `node node_modules/.bin/tsc` のような呼び方は shell ラッパーのため失敗する。直接叩くなら `node node_modules/typescript/bin/tsc ...` / `./node_modules/.bin/vitest ...`、通常は `pnpm` 経由が安全。
 
 ## アーキテクチャ（Source Renderer Architecture）
 

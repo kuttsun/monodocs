@@ -79,12 +79,15 @@ single-docs validate ./docs
 ```
 
 > **現時点での実行方法**: `single-docs` の npm 公開は v0.6 で対応予定です。
-> それまではリポジトリ内でビルドして実行します（[docs/development.md](docs/development.md) 参照）。
+> それまではホストを汚さない専用 Docker イメージでビルド・実行します
+> （[docs/development.md](docs/development.md) 参照）。
 >
 > ```bash
-> cd app
-> pnpm install && pnpm build
-> node packages/cli/dist/index.js build examples/mixed/docs -o dist/manual.html
+> docker build -f Dockerfile.dev -t single-docs-dev .   # 初回のみ
+> scripts/dev.sh pnpm install                            # 初回のみ
+> scripts/dev.sh pnpm build
+> scripts/dev.sh node packages/cli/dist/index.js build examples/mixed/docs -o dist/manual.html
+> # プレビュー: scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
 > ```
 
 ## 設定ファイル（任意）

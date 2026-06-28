@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+#
+# single-docs 開発・ビルド・テスト用イメージ。
+# Node 22 に pnpm（app/package.json の "packageManager" と同一バージョン）を
+# 焼き込み、corepack が実行のたびに pnpm を取得するのを不要にする。
+#
+# build: docker build -f Dockerfile.dev -t single-docs-dev .
+# usage: docker run --rm -it -v "$PWD":/work -w /work/app single-docs-dev pnpm test
+#
+# ソースコードはイメージに含めず、実行時に作業ツリーをマウントして使う
+# （ホスト環境を汚さず、リビルド不要で最新コードを扱える）。
+FROM node:22-bookworm-slim
+
+# corepack のキャッシュを共有・全ユーザー可読の場所に置く。これにより
+# 任意の UID（呼び出しユーザー）で実行しても焼き込んだ pnpm を再ダウンロードしない。
+ENV COREPACK_HOME=/opt/corepack
+
+# app/package.json の "packageManager" と必ず揃えること。
+ARG PNPM_VERSION=11.9.0
+RUN corepack enable \
+ && corepack prepare "pnpm@${PNPM_VERSION}" --activate \
+ && chmod -R a+rX "$COREPACK_HOME" \
+ && pnpm --version
+
+WORKDIR /work/app

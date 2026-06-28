@@ -13,20 +13,20 @@
 
 ## 実行方法
 
-`app/` ディレクトリで実行する。
+専用イメージ（[development.md](development.md) 参照）でホストから実行する。
 
 ```bash
-cd app
-pnpm test         # 一括実行（vitest run）
-pnpm test:watch   # ウォッチ
+scripts/dev.sh pnpm test         # 一括実行（vitest run）
+scripts/dev.sh pnpm test:watch   # ウォッチ
 ```
 
-Docker のみで実行する場合:
+`docker run` を直接使う場合:
 
 ```bash
-docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
-  bash -lc "corepack enable && pnpm install && pnpm test"
+docker run --rm -v "$PWD":/work -w /work/app single-docs-dev pnpm test
 ```
+
+devcontainer 内、またはコンテナのシェルに入っている場合は `app/` で `pnpm test` を直接実行できる。
 
 ## テスト結果（2026-06-27 時点）
 

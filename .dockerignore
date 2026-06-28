@@ -1,0 +1,8 @@
+# Dockerfile.dev はソースを COPY しないため、ビルドコンテキストを最小化する。
+node_modules
+**/node_modules
+.pnpm-store
+.git
+**/dist
+tmp
+coverage

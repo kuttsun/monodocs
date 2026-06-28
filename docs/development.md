@@ -25,48 +25,65 @@ single-docs/
     examples/               # basic-markdown / mixed
   site/                     # （予定）アプリ紹介の静的 Web サイト
   docs/                     # 開発ドキュメント（本フォルダ）
-  .devcontainer/
+  scripts/dev.sh            # 専用イメージ内でコマンドを実行するヘルパー
+  Dockerfile.dev            # 開発・ビルド・テスト用イメージ（pnpm 焼き込み）
+  .devcontainer/            # VS Code Dev Containers 用（任意。Dockerfile.dev を利用）
   README.md
 ```
 
-## 開発環境（devcontainer）
+## 開発環境（専用 Docker イメージ）
+
+ホストに Node / pnpm を入れず、専用イメージ **`single-docs-dev`** の中で開発・ビルド・
+テストする。イメージは Node 22 に pnpm（`app/package.json` の `packageManager` と同一の
+バージョン）を焼き込んであるため、corepack による pnpm の都度ダウンロードが発生しない。
 
 ### 必要なもの
 
-- Docker
-- VS Code + [Dev Containers 拡張](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- Docker のみ（VS Code / devcontainer は不要）
 
-### セットアップ
-
-1. リポジトリを VS Code で開く
-2. **Dev Containers: Reopen in Container** を実行する
-3. 初回起動時に `corepack enable` と `app/` での `pnpm install` が自動実行される
-
-ベースイメージは `mcr.microsoft.com/devcontainers/typescript-node:22`、
-パッケージマネージャは corepack 経由の pnpm（バージョンは `app/package.json` の
-`packageManager` で固定）。
-
-### よく使うコマンド
-
-`app/` ディレクトリで実行する。
+### イメージのビルド（初回のみ）
 
 ```bash
-cd app
-pnpm install        # 依存をインストール
-pnpm build          # 全パッケージをビルド（tsc）+ テーマアセットのコピー
-pnpm test           # テスト（vitest）
-pnpm typecheck      # 型チェック
-pnpm format         # Prettier で整形
+docker build -f Dockerfile.dev -t single-docs-dev .
 ```
 
-### devcontainer を使わない場合
+### よく使うコマンド（ヘルパー `scripts/dev.sh` 経由）
 
-Docker のみでビルド・テストを実行できる（ホストを汚さない）。
+`scripts/dev.sh` は `single-docs-dev` が無ければ自動ビルドし、作業ツリーをマウントして
+`app/` 内でコマンドを実行する。**ホスト側で**実行する。
 
 ```bash
-docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
-  bash -lc "corepack enable && pnpm install && pnpm build && pnpm test"
+scripts/dev.sh pnpm install     # 依存をインストール
+scripts/dev.sh pnpm build       # 全パッケージをビルド（tsc）+ テーマアセットのコピー
+scripts/dev.sh pnpm test        # テスト（vitest）
+scripts/dev.sh pnpm typecheck   # 型チェック
+scripts/dev.sh pnpm format      # Prettier で整形
 ```
+
+ローカルプレビュー（ホストのブラウザで `http://localhost:4173/`）:
+
+```bash
+scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
+# 別ポート: SDOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0 --port 8080
+```
+
+> コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
+> （`scripts/dev.sh` は `SDOCS_PORT`（既定 4173）を公開する）。`http://0.0.0.0:...` ではなく
+> `http://localhost:...` を開く。
+
+### ヘルパーを使わず `docker run` で実行する場合
+
+```bash
+docker run --rm -it -v "$PWD":/work -w /work/app single-docs-dev pnpm test
+docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app single-docs-dev \
+  node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
+```
+
+### VS Code Dev Containers（任意）
+
+必須ではない。使う場合、`.devcontainer` は同じ `Dockerfile.dev` からイメージを構築する。
+**Dev Containers: Reopen in Container** で起動すると `postCreate` で `pnpm install` が走り、
+コンテナ内では `pnpm build` / `pnpm test` を直接実行できる（`scripts/dev.sh` は不要）。
 
 ## アーキテクチャ
 
