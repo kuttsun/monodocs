@@ -1,4 +1,4 @@
-# single-docs
+# monodocs
 
 複数の Markdown / AsciiDoc ファイルから、**単一の HTML または PDF** ドキュメントを生成する CLI ツールです。
 
@@ -36,7 +36,7 @@
 > **入力は信頼できるドキュメントを前提とします。** AsciiDoc は生 HTML を出力できるため、
 > 信頼できない入力の変換は避けてください（詳細は [docs/development.md](docs/development.md)）。
 
-`single-docs` は Pandoc の代替を直接目指すものではなく、
+`monodocs` は Pandoc の代替を直接目指すものではなく、
 **単一ファイル配布に特化した軽量ドキュメントジェネレータ**を目指します。
 
 ## 使い方
@@ -56,7 +56,7 @@ docs/
 このフォルダから単一 HTML を生成します。
 
 ```bash
-single-docs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/manual.html
 ```
 
 生成された `manual.html` をブラウザで開くと、左サイドバーから各ページを切り替えられます。
@@ -67,23 +67,23 @@ single-docs build ./docs -o ./dist/manual.html
 ローカルプレビュー）が使えます。
 
 ```bash
-single-docs watch ./docs -o ./dist/manual.html
-single-docs serve ./docs            # 既定で http://127.0.0.1:4173/ を配信
-single-docs serve ./docs --open     # 起動時にブラウザを開く
+monodocs watch ./docs -o ./dist/manual.html
+monodocs serve ./docs            # 既定で http://127.0.0.1:4173/ を配信
+monodocs serve ./docs --open     # 起動時にブラウザを開く
 ```
 
 リンク切れや画像欠落などは `validate` で検出できます。
 
 ```bash
-single-docs validate ./docs
+monodocs validate ./docs
 ```
 
-> **現時点での実行方法**: `single-docs` の npm 公開は v0.6 で対応予定です。
+> **現時点での実行方法**: `monodocs` の npm 公開は v0.6 で対応予定です。
 > それまではホストを汚さない専用 Docker イメージでビルド・実行します
 > （[docs/development.md](docs/development.md) 参照）。
 >
 > ```bash
-> docker build -f Dockerfile.dev -t single-docs-dev .   # 初回のみ
+> docker build -f Dockerfile.dev -t monodocs-dev .   # 初回のみ
 > scripts/dev.sh pnpm install                            # 初回のみ
 > scripts/dev.sh pnpm build
 > scripts/dev.sh node packages/cli/dist/index.js build examples/docs -o dist/manual.html
@@ -97,7 +97,7 @@ single-docs validate ./docs
 
 ```bash
 # 初回のみ: イメージのビルドと依存インストール
-docker build -f Dockerfile.dev -t single-docs-dev .
+docker build -f Dockerfile.dev -t monodocs-dev .
 scripts/dev.sh pnpm install
 scripts/dev.sh pnpm build
 
@@ -106,11 +106,11 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.
 ```
 
 起動後、ブラウザで **`http://localhost:4173/`** を開きます（`http://0.0.0.0:...` ではなく `localhost`）。
-止めるときは `Ctrl+C`。別ポートにするには `SDOCS_PORT=8080 scripts/dev.sh ... serve ... --host 0.0.0.0 --port 8080`。
+止めるときは `Ctrl+C`。別ポートにするには `MONODOCS_PORT=8080 scripts/dev.sh ... serve ... --host 0.0.0.0 --port 8080`。
 
 - `examples/docs` は Markdown(GFM) / AsciiDoc / 混在の全記法・全機能を 1 サイトにまとめたものです。
 - コンテナ内の配信をホストへ公開するため、`serve` には `--host 0.0.0.0` が必要です
-  （`scripts/dev.sh` は serve のときだけ `SDOCS_PORT`（既定 4173）を公開します）。
+  （`scripts/dev.sh` は serve のときだけ `MONODOCS_PORT`（既定 4173）を公開します）。
 - 配信中にサンプル内のファイルを編集すると、ブラウザが自動でリロードします。
 - Mermaid は既定で CDN 参照のため、図の描画にはブラウザ側のネット接続が必要です。
 
@@ -130,7 +130,7 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.
 
 ## 設定ファイル（任意）
 
-入力ディレクトリのあるプロジェクトに `single-docs.config.yml` を置くと挙動をカスタマイズできます。
+入力ディレクトリのあるプロジェクトに `monodocs.config.yml` を置くと挙動をカスタマイズできます。
 無い場合はデフォルト（入力 `./docs`、出力 `./dist/manual.html`）が使われます。
 
 ```yaml

@@ -1,5 +1,5 @@
 {
-  "name": "single-docs-monorepo",
+  "name": "monodocs-monorepo",
   "version": "0.0.0",
   "private": true,
   "description": "複数の Markdown / AsciiDoc から単一 HTML / PDF を生成するドキュメントジェネレータ",

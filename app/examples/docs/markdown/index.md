@@ -6,14 +6,14 @@ order: 1
 # GitHub Flavored Markdown サンプル
 
 このサンプルは [GitHub Flavored Markdown](https://github.github.com/gfm/)（CommonMark + GFM 拡張）の
-主な記法を網羅し、`single-docs` での表示を確認するためのものです。
+主な記法を網羅し、`monodocs` での表示を確認するためのものです。
 
 各項目は **ソース（生の Markdown）** を先に示し、その下に **表示（HTML 変換結果）** を並べます。
 
 ビルド例:
 
 ```bash
-single-docs build examples/docs -o dist/showcase.html
+monodocs build examples/docs -o dist/showcase.html
 ```
 
 各カテゴリは左サイドバーから開けます:

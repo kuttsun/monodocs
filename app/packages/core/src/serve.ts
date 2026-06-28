@@ -6,7 +6,7 @@ import { watchSite, type WatchHandle } from "./watch.js";
 import type { BuildOptions, BuildResult } from "./types.js";
 
 /** ライブリロード用の SSE エンドポイント。 */
-const LIVE_RELOAD_PATH = "/__single-docs-livereload";
+const LIVE_RELOAD_PATH = "/__monodocs-livereload";
 const DEFAULT_PORT = 4173;
 const DEFAULT_HOST = "127.0.0.1";
 

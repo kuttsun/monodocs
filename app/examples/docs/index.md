@@ -3,9 +3,9 @@ title: ショーケース
 order: 1
 ---
 
-# single-docs ショーケース
+# monodocs ショーケース
 
-`single-docs` の対応記法と機能を **1 つのサイト**でまとめて確認できるサンプルです。
+`monodocs` の対応記法と機能を **1 つのサイト**でまとめて確認できるサンプルです。
 左サイドバーのフォルダから各カテゴリを開けます。
 
 各記法ページは **ソース（生の Markdown / AsciiDoc）** を先に示し、その下に
@@ -21,8 +21,8 @@ order: 1
 ## ビルド / プレビュー
 
 ```bash
-single-docs build examples/docs -o dist/showcase.html
-single-docs serve examples/docs            # http://127.0.0.1:4173/
+monodocs build examples/docs -o dist/showcase.html
+monodocs serve examples/docs            # http://127.0.0.1:4173/
 ```
 
 ## このサイトで確認できる機能

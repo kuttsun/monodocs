@@ -19,7 +19,7 @@ order: 4
 function greet(name) {
   return `Hello, ${name}!`;
 }
-console.log(greet("single-docs"));
+console.log(greet("monodocs"));
 ```
 ````
 
@@ -30,7 +30,7 @@ console.log(greet("single-docs"));
 function greet(name) {
   return `Hello, ${name}!`;
 }
-console.log(greet("single-docs"));
+console.log(greet("monodocs"));
 ```
 
 チルダ（`~~~`）のフェンスも使えます。

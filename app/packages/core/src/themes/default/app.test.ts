@@ -17,7 +17,7 @@ async function mountClient(routes: string[]): Promise<void> {
 
   document.body.innerHTML = `<nav id="sidebar-nav">${links}</nav><main id="content">${articles}</main>`;
 
-  (window as unknown as { __SINGLE_DOCS_DATA__: unknown }).__SINGLE_DOCS_DATA__ = {
+  (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
     initialRoute: routes[0],
   };
 

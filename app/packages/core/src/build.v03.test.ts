@@ -9,7 +9,7 @@ let docs: string;
 let out: string;
 
 beforeAll(async () => {
-  dir = await mkdtemp(join(tmpdir(), "single-docs-v03-"));
+  dir = await mkdtemp(join(tmpdir(), "monodocs-v03-"));
   docs = join(dir, "docs");
   out = join(dir, "dist", "manual.html");
   await mkdir(join(docs, "images"), { recursive: true });
@@ -70,7 +70,7 @@ describe("buildSite (v0.3 features)", () => {
 
 describe("validateSite", () => {
   it("reports unresolved links as warnings", async () => {
-    const vdir = await mkdtemp(join(tmpdir(), "single-docs-val-"));
+    const vdir = await mkdtemp(join(tmpdir(), "monodocs-val-"));
     await mkdir(join(vdir, "docs"), { recursive: true });
     await writeFile(join(vdir, "docs", "index.md"), "# Home\n\n[broken](nope.md)\n");
 

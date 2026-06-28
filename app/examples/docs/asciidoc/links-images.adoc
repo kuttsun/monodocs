@@ -1,6 +1,6 @@
 = リンクと画像
 :sd-order: 5
-:url-repo: https://example.com/single-docs
+:url-repo: https://example.com/monodocs
 
 各項目は *ソース* を先に示し、その下に *表示（HTML 変換結果）* を並べます。
 
@@ -12,7 +12,7 @@ URL マクロ・メール・別ファイルへの相互参照（xref）です。
 
 [source,asciidoc]
 ------
-* URL マクロ: {url-repo}[single-docs リポジトリ]
+* URL マクロ: {url-repo}[monodocs リポジトリ]
 * そのまま: https://docs.asciidoctor.org/
 * メール: mailto:docs@example.com[ドキュメント担当]
 * 別ファイルへの相互参照（xref）: xref:index.adoc[トップに戻る] /
@@ -21,7 +21,7 @@ URL マクロ・メール・別ファイルへの相互参照（xref）です。
 
 *表示:*
 
-* URL マクロ: {url-repo}[single-docs リポジトリ]
+* URL マクロ: {url-repo}[monodocs リポジトリ]
 * そのまま: https://docs.asciidoctor.org/
 * メール: mailto:docs@example.com[ドキュメント担当]
 * 別ファイルへの相互参照（xref）: xref:index.adoc[トップに戻る] /
@@ -73,7 +73,7 @@ URL マクロ・メール・別ファイルへの相互参照（xref）です。
 
 [source,asciidoc]
 ------
-.single-docs ロゴ
+.monodocs ロゴ
 image::images/logo.svg[ロゴ, 120]
 
 インライン画像 image:images/logo.svg[ロゴ, 80] を文中に置くこともできます。
@@ -81,7 +81,7 @@ image::images/logo.svg[ロゴ, 120]
 
 *表示:*
 
-.single-docs ロゴ
+.monodocs ロゴ
 image::images/logo.svg[ロゴ, 120]
 
 インライン画像 image:images/logo.svg[ロゴ, 80] を文中に置くこともできます。

@@ -32,7 +32,7 @@ describe("renderSingleHtml", () => {
     expect(html).toContain(`href="#${encodeURI("/ガイド")}"`);
     // data-route はクライアントで decode 後に比較するため生のまま。
     expect(html).toContain('data-route="/ガイド"');
-    expect(html).toContain("__SINGLE_DOCS_DATA__");
+    expect(html).toContain("__MONODOCS_DATA__");
   });
 
   it("escapes HTML special characters in titles", async () => {
@@ -55,7 +55,7 @@ describe("renderSingleHtml", () => {
     const sidebar: SidebarNode[] = [{ type: "page", title: "Guide", route: "/g", pageId: "g" }];
 
     const html = await renderSingleHtml({ title: "T", pages: [p], sidebar });
-    const json = html.match(/__SINGLE_DOCS_DATA__ = (.*);/)?.[1] ?? "{}";
+    const json = html.match(/__MONODOCS_DATA__ = (.*);/)?.[1] ?? "{}";
     const data = JSON.parse(json.replace(/\\u003c/g, "<"));
 
     expect(data.pages).toHaveLength(1);
@@ -73,7 +73,7 @@ describe("renderSingleHtml", () => {
     const sidebar: SidebarNode[] = [];
 
     const html = await renderSingleHtml({ title: "T", pages: [p], sidebar });
-    const json = html.match(/__SINGLE_DOCS_DATA__ = (.*);/)?.[1] ?? "{}";
+    const json = html.match(/__MONODOCS_DATA__ = (.*);/)?.[1] ?? "{}";
     const data = JSON.parse(json.replace(/\\u003c/g, "<"));
     expect(data.pages[0].hidden).toBe(true);
   });

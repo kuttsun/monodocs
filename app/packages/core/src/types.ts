@@ -1,5 +1,5 @@
 /**
- * single-docs core の共通型定義。
+ * monodocs core の共通型定義。
  *
  * ROADMAP「11. Source Renderer Architecture」に基づく。
  * Markdown / AsciiDoc など各ソース形式は専用 renderer で処理し、

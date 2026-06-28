@@ -1,5 +1,5 @@
 {
-  "name": "single-docs",
+  "name": "monodocs",
   "build": {
     "dockerfile": "../Dockerfile.dev",
     "context": ".."

@@ -51,7 +51,7 @@ async function mountClient(pages: ClientPage[]): Promise<void> {
     `<aside id="toc"><div class="toc-title">On this page</div><nav id="toc-nav"></nav></aside>` +
     `</div>`;
 
-  (window as unknown as { __SINGLE_DOCS_DATA__: unknown }).__SINGLE_DOCS_DATA__ = {
+  (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
     initialRoute: pages[0]?.route,
     pages,
   };
@@ -183,13 +183,13 @@ describe("v0.4 client features (app.js)", () => {
     const btn = document.getElementById("theme-toggle")!;
     btn.click();
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
-    expect(window.localStorage.getItem("single-docs:theme")).toBe("dark");
+    expect(window.localStorage.getItem("monodocs:theme")).toBe("dark");
     btn.click();
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
   });
 
   it("applies the stored theme on load", async () => {
-    window.localStorage.setItem("single-docs:theme", "dark");
+    window.localStorage.setItem("monodocs:theme", "dark");
     await mountClient(SAMPLE);
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
@@ -321,7 +321,7 @@ describe("v0.4 client features (app.js)", () => {
     document.body.innerHTML =
       `<main id="content"><article class="page" data-route="/">${codeHtml}` +
       `<nav id="page-nav"></nav></article></main>`;
-    (window as unknown as { __SINGLE_DOCS_DATA__: unknown }).__SINGLE_DOCS_DATA__ = {
+    (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
       initialRoute: "/",
       pages: [page("/", "Home")],
     };

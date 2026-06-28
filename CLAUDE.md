@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`single-docs` は複数の Markdown / AsciiDoc ファイルを **単一の自己完結 HTML（将来は PDF）** にまとめる CLI ツール。入力は分割管理したまま、配布物だけを 1 ファイル化する。Pandoc 代替ではなく「単一ファイル配布特化の軽量ジェネレータ」を目指す。仕様とロードマップは [docs/roadmap.md](docs/roadmap.md)、実装状況は [docs/status.md](docs/status.md)。
+`monodocs` は複数の Markdown / AsciiDoc ファイルを **単一の自己完結 HTML（将来は PDF）** にまとめる CLI ツール。入力は分割管理したまま、配布物だけを 1 ファイル化する。Pandoc 代替ではなく「単一ファイル配布特化の軽量ジェネレータ」を目指す。仕様とロードマップは [docs/roadmap.md](docs/roadmap.md)、実装状況は [docs/status.md](docs/status.md)。
 
 ## 開発環境とコマンド
 
-**ホスト環境を汚さない方針。** Node.js / pnpm はホストに入れず、専用 Docker イメージ `single-docs-dev`（`Dockerfile.dev`、pnpm を焼き込み済み）内で実行する。コードはすべて `app/`（pnpm モノレポ）配下。
+**ホスト環境を汚さない方針。** Node.js / pnpm はホストに入れず、専用 Docker イメージ `monodocs-dev`（`Dockerfile.dev`、pnpm を焼き込み済み）内で実行する。コードはすべて `app/`（pnpm モノレポ）配下。
 
 ホストから `scripts/dev.sh` 経由で実行する（イメージが無ければ自動ビルド。作業ツリーをマウントし `app/` で実行）:
 
@@ -37,7 +37,7 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.
 
 > 注意:
 > - `scripts/dev.sh` は**ホスト側**で使う。devcontainer 内やコンテナのシェルに入っている場合は `pnpm ...` を直接実行する（`scripts/dev.sh` は docker-in-docker になる）。
-> - イメージを使わず素の Node イメージで動かすと corepack が pnpm を都度ダウンロードする。`single-docs-dev` はそれを避けるための専用イメージ。pnpm バージョンは `app/package.json` の `packageManager` と `Dockerfile.dev` の `PNPM_VERSION` を一致させる。
+> - イメージを使わず素の Node イメージで動かすと corepack が pnpm を都度ダウンロードする。`monodocs-dev` はそれを避けるための専用イメージ。pnpm バージョンは `app/package.json` の `packageManager` と `Dockerfile.dev` の `PNPM_VERSION` を一致させる。
 > - `node node_modules/.bin/tsc` のような呼び方は shell ラッパーのため失敗する。直接叩くなら `node node_modules/typescript/bin/tsc ...` / `./node_modules/.bin/vitest ...`、通常は `pnpm` 経由が安全。
 
 ## アーキテクチャ（Source Renderer Architecture）
@@ -69,7 +69,7 @@ loadConfig (config.ts)
 
 ### クライアントテーマ
 
-[themes/default/](app/packages/core/src/themes/default/) に `template.html` / `style.css` / `app.js`。`renderSingleHtml` がトークン（`{{title}}` `{{style}}` `{{sidebar}}` `{{pages}}` `{{siteDataJson}}` `{{appJs}}` `{{bodyScripts}}`）を差し替える。`window.__SINGLE_DOCS_DATA__` に検索・目次・前後ナビ用のページデータ（route/title/hidden/h2,h3見出し/本文テキスト）を埋め込む。`app.js` は検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・hash routing を担当（素の IIFE。要素は常に null ガード）。print 時は `@media print` で全ページを縦展開。
+[themes/default/](app/packages/core/src/themes/default/) に `template.html` / `style.css` / `app.js`。`renderSingleHtml` がトークン（`{{title}}` `{{style}}` `{{sidebar}}` `{{pages}}` `{{siteDataJson}}` `{{appJs}}` `{{bodyScripts}}`）を差し替える。`window.__MONODOCS_DATA__` に検索・目次・前後ナビ用のページデータ（route/title/hidden/h2,h3見出し/本文テキスト）を埋め込む。`app.js` は検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・hash routing を担当（素の IIFE。要素は常に null ガード）。print 時は `@media print` で全ページを縦展開。
 
 > **テーマアセットの dist コピーが必須**: `tsc` は `.html/.css/.js` を dist へコピーしないため、`packages/core/scripts/copy-theme.mjs` が `src/themes` → `dist/themes` をコピーする（`pnpm build` に含まれる）。`loadTheme` は実行時に `src/themes`（vitest）/ `dist/themes`（ビルド後）を参照する。テーマを編集したら再ビルドが必要。
 

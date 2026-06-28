@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 #
-# single-docs 開発・ビルド・テスト用イメージ。
+# monodocs 開発・ビルド・テスト用イメージ。
 # Node 22 に pnpm（app/package.json の "packageManager" と同一バージョン）を
 # 焼き込み、corepack が実行のたびに pnpm を取得するのを不要にする。
 #
-# build: docker build -f Dockerfile.dev -t single-docs-dev .
-# usage: docker run --rm -it -v "$PWD":/work -w /work/app single-docs-dev pnpm test
+# build: docker build -f Dockerfile.dev -t monodocs-dev .
+# usage: docker run --rm -it -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 #
 # ソースコードはイメージに含めず、実行時に作業ツリーをマウントして使う
 # （ホスト環境を汚さず、リビルド不要で最新コードを扱える）。

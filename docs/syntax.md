@@ -1,6 +1,6 @@
 # 対応記法と制限
 
-`single-docs` は Markdown と AsciiDoc をそれぞれ専用 renderer で処理し、共通の `Page` モデルへ
+`monodocs` は Markdown と AsciiDoc をそれぞれ専用 renderer で処理し、共通の `Page` モデルへ
 正規化してから **単一 HTML** にまとめる（[roadmap.md](roadmap.md) 11章）。本書は、対応する記法と、
 **複数ファイルを 1 つの HTML に統一する都合で対応できない／意図的に制限している記法**を仕様として示す。
 
@@ -11,7 +11,7 @@
 `markdown/`（GFM）/ `asciidoc/` / `mixed/` のフォルダで構成）:
 
 ```bash
-single-docs serve app/examples/docs
+monodocs serve app/examples/docs
 ```
 
 ## Markdown 対応記法

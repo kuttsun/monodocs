@@ -13,15 +13,15 @@
 ## ディレクトリ構成
 
 ```text
-single-docs/
+monodocs/
   app/                      # アプリ本体（pnpm モノレポ）
     packages/
-      core/                 # 変換処理の中核（@single-docs/core）
+      core/                 # 変換処理の中核（@monodocs/core）
         src/
           sources/          # 各形式の SourceRenderer（markdown / asciidoc）
           pipeline/         # buildPages / buildSidebar / renderSingleHtml
           themes/default/   # HTML テンプレート / CSS / クライアント JS
-      cli/                  # CLI（single-docs コマンド）
+      cli/                  # CLI（monodocs コマンド）
     examples/docs/          # 全記法・全機能のショーケース（markdown / asciidoc / mixed）
   site/                     # （予定）アプリ紹介の静的 Web サイト
   docs/                     # 開発ドキュメント（本フォルダ）
@@ -33,7 +33,7 @@ single-docs/
 
 ## 開発環境（専用 Docker イメージ）
 
-ホストに Node / pnpm を入れず、専用イメージ **`single-docs-dev`** の中で開発・ビルド・
+ホストに Node / pnpm を入れず、専用イメージ **`monodocs-dev`** の中で開発・ビルド・
 テストする。イメージは Node 22 に pnpm（`app/package.json` の `packageManager` と同一の
 バージョン）を焼き込んであるため、corepack による pnpm の都度ダウンロードが発生しない。
 
@@ -44,12 +44,12 @@ single-docs/
 ### イメージのビルド（初回のみ）
 
 ```bash
-docker build -f Dockerfile.dev -t single-docs-dev .
+docker build -f Dockerfile.dev -t monodocs-dev .
 ```
 
 ### よく使うコマンド（ヘルパー `scripts/dev.sh` 経由）
 
-`scripts/dev.sh` は `single-docs-dev` が無ければ自動ビルドし、作業ツリーをマウントして
+`scripts/dev.sh` は `monodocs-dev` が無ければ自動ビルドし、作業ツリーをマウントして
 `app/` 内でコマンドを実行する。**ホスト側で**実行する。
 
 ```bash
@@ -64,18 +64,18 @@ scripts/dev.sh pnpm format      # Prettier で整形
 
 ```bash
 scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
-# 別ポート: SDOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0 --port 8080
+# 別ポート: MONODOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0 --port 8080
 ```
 
 > コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
-> （`scripts/dev.sh` は `SDOCS_PORT`（既定 4173）を公開する）。`http://0.0.0.0:...` ではなく
+> （`scripts/dev.sh` は `MONODOCS_PORT`（既定 4173）を公開する）。`http://0.0.0.0:...` ではなく
 > `http://localhost:...` を開く。
 
 ### ヘルパーを使わず `docker run` で実行する場合
 
 ```bash
-docker run --rm -it -v "$PWD":/work -w /work/app single-docs-dev pnpm test
-docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app single-docs-dev \
+docker run --rm -it -v "$PWD":/work -w /work/app monodocs-dev pnpm test
+docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app monodocs-dev \
   node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
 ```
 
@@ -119,7 +119,7 @@ Markdown / AsciiDoc files
 
 ## 入力の前提（セキュリティ）
 
-`single-docs` は **自分（チーム）が管理する信頼できるドキュメント** を変換する用途を想定する。
+`monodocs` は **自分（チーム）が管理する信頼できるドキュメント** を変換する用途を想定する。
 
 - Markdown は生 HTML を通さない（remark-rehype の既定でドロップ）。
 - AsciiDoc は passthrough により著者が意図した生 HTML を出力でき、その HTML はサニタイズせず

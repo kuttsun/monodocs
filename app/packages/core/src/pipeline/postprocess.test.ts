@@ -188,7 +188,7 @@ describe("postprocessPages - image embedding", () => {
   let root: string;
   let docs: string;
   beforeAll(async () => {
-    root = await mkdtemp(join(tmpdir(), "single-docs-img-"));
+    root = await mkdtemp(join(tmpdir(), "monodocs-img-"));
     docs = join(root, "docs");
     await mkdir(docs, { recursive: true });
     await writeFile(join(docs, "logo.svg"), "<svg xmlns='http://www.w3.org/2000/svg'></svg>");

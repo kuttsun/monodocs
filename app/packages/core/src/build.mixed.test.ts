@@ -9,7 +9,7 @@ let docs: string;
 let out: string;
 
 beforeAll(async () => {
-  dir = await mkdtemp(join(tmpdir(), "single-docs-mixed-"));
+  dir = await mkdtemp(join(tmpdir(), "monodocs-mixed-"));
   docs = join(dir, "docs");
   out = join(dir, "dist", "manual.html");
   await mkdir(docs, { recursive: true });

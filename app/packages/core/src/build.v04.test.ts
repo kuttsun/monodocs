@@ -7,7 +7,7 @@ import { serveSite } from "./serve";
 
 describe("watchSite", () => {
   it("builds once initially and rebuilds on source change", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "single-docs-watch-"));
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-watch-"));
     const docs = join(dir, "docs");
     const out = join(dir, "dist", "manual.html");
     await mkdir(docs, { recursive: true });
@@ -47,7 +47,7 @@ describe("watchSite", () => {
   }, 15000);
 
   it("rejects when the input directory does not exist", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "single-docs-watch-missing-"));
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-watch-missing-"));
     await expect(
       watchSite({ inputDir: join(dir, "nope"), outputFile: join(dir, "out.html") }),
     ).rejects.toThrow(/Input directory not found/);
@@ -55,7 +55,7 @@ describe("watchSite", () => {
   });
 
   it("does not self-trigger when the output lives inside the watched input", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "single-docs-watch-loop-"));
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-watch-loop-"));
     const docs = join(dir, "docs");
     // 出力を入力ディレクトリ配下に置く（再ビルドのたびに書き込まれる）。
     const out = join(docs, "manual.html");
@@ -97,7 +97,7 @@ describe("watchSite", () => {
 
 describe("serveSite", () => {
   it("serves the built HTML with the live-reload script injected", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "single-docs-serve-"));
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-serve-"));
     const docs = join(dir, "docs");
     const out = join(dir, "dist", "manual.html");
     await mkdir(docs, { recursive: true });
@@ -110,7 +110,7 @@ describe("serveSite", () => {
       const html = await res.text();
       expect(res.status).toBe(200);
       expect(html).toContain("Served Page");
-      expect(html).toContain("__single-docs-livereload");
+      expect(html).toContain("__monodocs-livereload");
     } finally {
       await handle.close();
       await rm(dir, { recursive: true, force: true });

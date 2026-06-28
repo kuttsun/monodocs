@@ -23,7 +23,7 @@ scripts/dev.sh pnpm test:watch   # ウォッチ
 `docker run` を直接使う場合:
 
 ```bash
-docker run --rm -v "$PWD":/work -w /work/app single-docs-dev pnpm test
+docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 ```
 
 devcontainer 内、またはコンテナのシェルに入っている場合は `app/` で `pnpm test` を直接実行できる。

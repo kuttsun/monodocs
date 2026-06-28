@@ -8,7 +8,7 @@ import type { SourceFormat } from "./types";
 let dir: string;
 
 beforeAll(async () => {
-  dir = await mkdtemp(join(tmpdir(), "single-docs-scan-"));
+  dir = await mkdtemp(join(tmpdir(), "monodocs-scan-"));
   await mkdir(join(dir, "sub"), { recursive: true });
   await writeFile(join(dir, "a.md"), "# a\n");
   await writeFile(join(dir, "sub", "b.ad"), "= b\n"); // カスタム asciidoc 拡張子

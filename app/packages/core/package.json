@@ -1,8 +1,8 @@
 {
-  "name": "@single-docs/core",
+  "name": "@monodocs/core",
   "version": "0.0.0",
   "private": true,
-  "description": "single-docs の変換処理コア（設定読み込み・走査・レンダリング・出力）",
+  "description": "monodocs の変換処理コア（設定読み込み・走査・レンダリング・出力）",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

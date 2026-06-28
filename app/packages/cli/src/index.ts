@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
 import { Command } from "commander";
-import {
-  buildSite,
-  serveSite,
-  validateSite,
-  watchSite,
-  type OutputFormat,
-} from "@single-docs/core";
+import { buildSite, serveSite, validateSite, watchSite, type OutputFormat } from "@monodocs/core";
 
 /** 既定のブラウザで URL を開く（プラットフォーム別。失敗しても致命的ではない）。 */
 function openBrowser(url: string): void {
@@ -36,7 +30,7 @@ function reportBuild(result: { pages: number; outputs: string[]; warnings: strin
 const program = new Command();
 
 program
-  .name("single-docs")
+  .name("monodocs")
   .description("複数の Markdown / AsciiDoc から単一 HTML / PDF を生成する")
   .version("0.0.0");
 
@@ -45,7 +39,7 @@ program
   .description("ドキュメントをビルドして単一 HTML を生成する")
   .argument("[input]", "入力ディレクトリ（既定: ./docs）")
   .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
-  .option("-c, --config <file>", "設定ファイル（既定: single-docs.config.yml があれば使用）")
+  .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .option("-f, --format <format>", "出力形式 html | pdf | both（既定: html）")
   .action(
     async (
@@ -72,7 +66,7 @@ program
   .description("入力・設定ファイルの変更を監視して再ビルドする")
   .argument("[input]", "入力ディレクトリ（既定: ./docs）")
   .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
-  .option("-c, --config <file>", "設定ファイル（既定: single-docs.config.yml があれば使用）")
+  .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .action(async (input: string | undefined, options: { output?: string; config?: string }) => {
     const opts = { inputDir: input, outputFile: options.output, configFile: options.config };
     try {
@@ -92,7 +86,7 @@ program
   .description("ローカルサーバーで配信し、変更を監視してライブリロードする")
   .argument("[input]", "入力ディレクトリ（既定: ./docs）")
   .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
-  .option("-c, --config <file>", "設定ファイル（既定: single-docs.config.yml があれば使用）")
+  .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .option("-p, --port <port>", "ポート番号（既定: 4173）", (v) => Number(v))
   .option("-H, --host <host>", "ホスト（既定: 127.0.0.1）")
   .option("--open", "起動時に既定のブラウザで開く")
@@ -140,7 +134,7 @@ program
   .command("validate")
   .description("リンク切れ・画像欠落・タイトル欠落などを検出する（出力は書き出さない）")
   .argument("[input]", "入力ディレクトリ（既定: ./docs）")
-  .option("-c, --config <file>", "設定ファイル（既定: single-docs.config.yml があれば使用）")
+  .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .action(async (input: string | undefined, options: { config?: string }) => {
     const result = await validateSite({ inputDir: input, configFile: options.config });
     for (const error of result.errors) console.error(`error: ${error}`);

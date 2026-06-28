@@ -19,7 +19,7 @@
 
 ### v0.1: Markdown 単一 HTML MVP
 
-- [x] `single-docs build ./docs -o ./dist/manual.html` が動作する
+- [x] `monodocs build ./docs -o ./dist/manual.html` が動作する
 - [x] 複数 Markdown ファイルが 1 つの HTML に含まれる
 - [x] サイドバーからページ切り替えできる（hash route）
 - [x] H1 がタイトルとして使われる（無ければファイル名にフォールバック＋警告）
@@ -50,8 +50,8 @@
 - [x] 印刷時に全ページを縦に展開する print 用レイアウト（`@media print`）
 - [x] コードブロックを shiki で構文ハイライト（dual theme でダークモード追従。ライトでも本文と見分けやすい背景）
 - [x] コードブロックにコピー / 折り返しトグルボタンを表示（ホバー表示。クライアント側で注入）
-- [x] `single-docs watch` で入力・設定の変更を監視して再ビルドできる
-- [x] `single-docs serve` でローカルプレビューできる（変更検出でライブリロード、`--open` で自動起動）
+- [x] `monodocs watch` で入力・設定の変更を監視して再ビルドできる
+- [x] `monodocs serve` でローカルプレビューできる（変更検出でライブリロード、`--open` で自動起動）
 
 ## 対応記法
 

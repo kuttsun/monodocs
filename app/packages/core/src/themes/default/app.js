@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var data = window.__SINGLE_DOCS_DATA__ || {};
+  var data = window.__MONODOCS_DATA__ || {};
   var pages = Array.isArray(data.pages) ? data.pages : [];
   var pageByRoute = {};
   pages.forEach(function (p) {
@@ -12,7 +12,7 @@
     return !p.hidden;
   });
 
-  var STORAGE_THEME = "single-docs:theme";
+  var STORAGE_THEME = "monodocs:theme";
 
   // クライアント UI（chrome）の文言。読者の言語に追従する i18n はせず、英語で統一する
   // （著者が用意したドキュメント本文の言語とは独立した UI ラベル）。将来 config から

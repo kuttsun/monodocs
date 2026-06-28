@@ -5,7 +5,7 @@ import { loadConfig } from "./config.js";
 import type { BuildOptions, BuildResult } from "./types.js";
 
 /** 既定の設定ファイル名（CLI / 設定読み込みと揃える）。 */
-const DEFAULT_CONFIG_FILE = "single-docs.config.yml";
+const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
 /** 連続したファイルイベントをまとめる待ち時間。 */
 const DEBOUNCE_MS = 150;
 

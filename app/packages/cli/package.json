@@ -1,11 +1,11 @@
 {
-  "name": "single-docs",
+  "name": "monodocs",
   "version": "0.0.0",
   "private": true,
-  "description": "single-docs CLI",
+  "description": "monodocs CLI",
   "type": "module",
   "bin": {
-    "single-docs": "./dist/index.js"
+    "monodocs": "./dist/index.js"
   },
   "files": [
     "dist"
@@ -15,7 +15,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@single-docs/core": "workspace:*",
+    "@monodocs/core": "workspace:*",
     "commander": "^15.0.0"
   },
   "devDependencies": {

@@ -36,7 +36,7 @@ order: 2
 **ソース:**
 
 ```markdown
-- インライン: [single-docs](https://example.com/single-docs)
+- インライン: [monodocs](https://example.com/monodocs)
 - タイトル付き: [ホバーで表示](https://example.com "タイトルです")
 - 参照リンク: [参照スタイル][ref] と [ラベル省略][]
 - 同一サイト内の別ページ: [リストのページ](lists.md)
@@ -47,7 +47,7 @@ order: 2
 
 **表示:**
 
-- インライン: [single-docs](https://example.com/single-docs)
+- インライン: [monodocs](https://example.com/monodocs)
 - タイトル付き: [ホバーで表示](https://example.com "タイトルです")
 - 参照リンク: [参照スタイル][ref] と [ラベル省略][]
 - 同一サイト内の別ページ: [リストのページ](lists.md)
@@ -82,7 +82,7 @@ URL やメールアドレスを自動でリンクにします。
 **ソース:**
 
 ```markdown
-![single-docs ロゴ](images/logo.svg "ロゴ")
+![monodocs ロゴ](images/logo.svg "ロゴ")
 
 参照スタイルの画像:
 
@@ -93,7 +93,7 @@ URL やメールアドレスを自動でリンクにします。
 
 **表示:**
 
-![single-docs ロゴ](images/logo.svg "ロゴ")
+![monodocs ロゴ](images/logo.svg "ロゴ")
 
 参照スタイルの画像:
 

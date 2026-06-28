@@ -12,7 +12,7 @@ const DEFAULT_MARKDOWN_EXTENSIONS = [".md", ".markdown"];
 const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
 // `_` 始まりのファイルは拡張子を問わず include/partial 用とみなしてページ化しない。
 const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
-const DEFAULT_CONFIG_FILE = "single-docs.config.yml";
+const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
 const DEFAULT_MAX_INLINE_SIZE = 5 * 1024 * 1024; // 5MB
 
 /** 画像の最大インラインサイズ超過時の挙動。 */
@@ -20,7 +20,7 @@ export type OnLargeImage = "warn" | "error" | "external";
 /** Mermaid ランタイムの配給方法。 */
 export type MermaidRuntime = "cdn" | "inline";
 
-/** `single-docs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
+/** `monodocs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
 const configFileSchema = z.object({
   title: z.string().optional(),
   input: z.string().optional(),
