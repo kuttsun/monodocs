@@ -8,6 +8,9 @@ order: 1
 `single-docs` の対応記法と機能を **1 つのサイト**でまとめて確認できるサンプルです。
 左サイドバーのフォルダから各カテゴリを開けます。
 
+各記法ページは **ソース（生の Markdown / AsciiDoc）** を先に示し、その下に
+**表示（HTML 変換結果）** を並べる対比形式で、記述と描画の対応がひと目で分かります。
+
 - **Markdown (GFM)**: [Markdown サンプル](markdown/index.md)
 - **AsciiDoc**: [AsciiDoc サンプル](asciidoc/index.adoc)
 - **混在（同一フォルダ）**: [Markdown / AsciiDoc 混在](mixed/index.md)
