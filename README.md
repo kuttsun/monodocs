@@ -128,6 +128,9 @@ output:
 sidebar:
   exclude:
     - "_partials/**"
+  # フォルダ名・ファイル名の先頭の数字プレフィックス（"01_" "001-" など）を表示タイトルから除去する。
+  # ファイル名で並び順を制御しつつ、サイドバー/目次には数字を出さない運用向け（既定 false）。
+  stripNumberPrefix: false
 sources:
   markdown:
     extensions: [".md", ".markdown"]

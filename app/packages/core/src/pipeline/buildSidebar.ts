@@ -1,12 +1,18 @@
 import type { Page, SidebarNode } from "../types.js";
+import { stripOrderPrefix } from "./orderPrefix.js";
 
 type DirNode = Extract<SidebarNode, { type: "dir" }>;
+
+export type BuildSidebarOptions = {
+  /** フォルダ名のタイトルから並び替え用の数値プレフィックスを除去する（`01_setup` → `setup`）。 */
+  stripNumberPrefix?: boolean;
+};
 
 /**
  * ページのフォルダ構造からサイドバーのツリーを生成する。
  * `hidden` なページは除外する。ページの並びは buildPages のソート順を引き継ぐ。
  */
-export function buildSidebar(pages: Page[]): SidebarNode[] {
+export function buildSidebar(pages: Page[], options: BuildSidebarOptions = {}): SidebarNode[] {
   const root: SidebarNode[] = [];
   const dirs = new Map<string, DirNode>();
 
@@ -17,7 +23,8 @@ export function buildSidebar(pages: Page[]): SidebarNode[] {
     if (existing) return existing.children;
 
     const segments = dirPath.split("/");
-    const title = segments[segments.length - 1] ?? dirPath;
+    const name = segments[segments.length - 1] ?? dirPath;
+    const title = options.stripNumberPrefix ? stripOrderPrefix(name) : name;
     const parentPath = segments.slice(0, -1).join("/");
 
     const node: DirNode = { type: "dir", title, path: dirPath, children: [] };

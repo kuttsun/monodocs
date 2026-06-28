@@ -196,8 +196,8 @@ body.sidebar-collapsed #sidebar {
   padding: 0.35rem 1.25rem;
   font-size: 0.8rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  /* フォルダ名の大文字小文字はそのまま表示する（強制大文字化はしない）。 */
+  letter-spacing: 0.02em;
   color: var(--color-muted);
   cursor: pointer;
   user-select: none;

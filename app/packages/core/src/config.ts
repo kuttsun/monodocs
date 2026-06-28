@@ -44,6 +44,9 @@ const configFileSchema = z.object({
       // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
       // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
       collapseDepth: z.number().int().min(0).optional(),
+      // フォルダ名・ファイル名の先頭にある並び替え用の数値プレフィックス（`01_` `001-` など）を
+      // 表示タイトルから除去する。順序はファイル名で制御しつつ、表示には数字を出さない運用向け。
+      stripNumberPrefix: z.boolean().optional(),
     })
     .optional(),
   toc: z
@@ -82,6 +85,8 @@ export type ResolvedConfig = {
   exclude: string[];
   /** この階層より深いディレクトリを既定で折りたたむ。undefined は折りたたみなし。 */
   sidebarCollapseDepth?: number;
+  /** 表示タイトルから並び替え用の数値プレフィックス（`01_` など）を除去するか。 */
+  sidebarStripNumberPrefix: boolean;
   /** ページ内目次に出す見出しの最深レベル（2〜6）。 */
   tocMaxLevel: number;
   theme: string;
@@ -156,6 +161,7 @@ export async function loadConfig(
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
     sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,
+    sidebarStripNumberPrefix: fileConfig.sidebar?.stripNumberPrefix ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
     theme: fileConfig.html?.theme ?? "default",
     embedImages: fileConfig.assets?.embedImages ?? true,

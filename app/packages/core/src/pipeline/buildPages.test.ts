@@ -34,3 +34,29 @@ describe("buildPages collision detection", () => {
     expect(pages.map((p) => p.id).sort()).toEqual(["guide-usage", "index"]);
   });
 });
+
+describe("buildPages title derivation", () => {
+  /** H1 も frontmatter も無いので、タイトルはファイル名から導出される。 */
+  function plain(relativePath: string): SourceFile {
+    return {
+      absolutePath: "/docs/" + relativePath,
+      relativePath,
+      raw: "no heading here\n",
+      format: "markdown",
+    };
+  }
+
+  it("strips a numeric order prefix from filename-derived titles when enabled", async () => {
+    const { pages } = await buildPages([plain("01_intro.md")], [markdownRenderer], {
+      stripNumberPrefix: true,
+    });
+    expect(pages[0]?.title).toBe("intro");
+    // route は順序付けのため prefix を保持する。
+    expect(pages[0]?.route).toBe("/01_intro");
+  });
+
+  it("keeps the numeric prefix in the title by default", async () => {
+    const { pages } = await buildPages([plain("01_intro.md")], [markdownRenderer]);
+    expect(pages[0]?.title).toBe("01_intro");
+  });
+});

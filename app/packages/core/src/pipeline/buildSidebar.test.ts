@@ -57,6 +57,42 @@ describe("buildSidebar", () => {
     }
   });
 
+  it("strips numeric order prefixes from directory titles when enabled", () => {
+    const pages: Page[] = [
+      page({
+        id: "01_setup-install",
+        route: "/01_setup/install",
+        relativePath: "01_setup/install.md",
+        title: "Install",
+      }),
+    ];
+
+    const tree = buildSidebar(pages, { stripNumberPrefix: true });
+    const dir = tree[0];
+    expect(dir?.type).toBe("dir");
+    if (dir && dir.type === "dir") {
+      // 表示タイトルは数字プレフィックスを除く。route/path は順序のため prefix を保持する。
+      expect(dir.title).toBe("setup");
+      expect(dir.path).toBe("01_setup");
+    }
+  });
+
+  it("keeps directory titles verbatim by default", () => {
+    const pages: Page[] = [
+      page({
+        id: "01_setup-install",
+        route: "/01_setup/install",
+        relativePath: "01_setup/install.md",
+        title: "Install",
+      }),
+    ];
+
+    const dir = buildSidebar(pages)[0];
+    if (dir && dir.type === "dir") {
+      expect(dir.title).toBe("01_setup");
+    }
+  });
+
   it("excludes hidden pages", () => {
     const pages: Page[] = [
       page({ id: "index", route: "/", relativePath: "index.md", title: "Home" }),

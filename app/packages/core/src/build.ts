@@ -38,7 +38,9 @@ async function preparePages(config: ResolvedConfig, cwd: string): Promise<Prepar
     throw new Error(`No Markdown / AsciiDoc files found in: ${config.inputDir}`);
   }
 
-  const { pages, warnings } = await buildPages(sources, [markdownRenderer, asciidocRenderer]);
+  const { pages, warnings } = await buildPages(sources, [markdownRenderer, asciidocRenderer], {
+    stripNumberPrefix: config.sidebarStripNumberPrefix,
+  });
   const post = await postprocessPages(pages, {
     inputDir,
     sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
@@ -48,7 +50,7 @@ async function preparePages(config: ResolvedConfig, cwd: string): Promise<Prepar
     mermaidEnabled: config.mermaidEnabled,
     codeHighlight: config.codeHighlight,
   });
-  const sidebar = buildSidebar(pages);
+  const sidebar = buildSidebar(pages, { stripNumberPrefix: config.sidebarStripNumberPrefix });
 
   return {
     pages,

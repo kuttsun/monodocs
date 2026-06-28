@@ -1,16 +1,23 @@
 import type { Page, SourceFile, SourceRenderer } from "../types.js";
 import { toPageId, toRoute } from "../route.js";
+import { stripOrderPrefix } from "./orderPrefix.js";
 
 export type BuildPagesResult = {
   pages: Page[];
   warnings: string[];
 };
 
+export type BuildPagesOptions = {
+  /** ファイル名由来のタイトルから並び替え用の数値プレフィックスを除去する（`01_setup` → `setup`）。 */
+  stripNumberPrefix?: boolean;
+};
+
 /** ファイル名（拡張子除く）からタイトルを導出する。 */
-function deriveTitleFromPath(relativePath: string): string {
+function deriveTitleFromPath(relativePath: string, stripNumberPrefix: boolean): string {
   const base = relativePath.split("/").pop() ?? relativePath;
   const name = base.replace(/\.[^.]+$/, "");
-  return name === "index" ? "Home" : name;
+  if (name === "index") return "Home";
+  return stripNumberPrefix ? stripOrderPrefix(name) : name;
 }
 
 /**
@@ -20,6 +27,7 @@ function deriveTitleFromPath(relativePath: string): string {
 export async function buildPages(
   sources: SourceFile[],
   renderers: SourceRenderer[],
+  options: BuildPagesOptions = {},
 ): Promise<BuildPagesResult> {
   const rendererByFormat = new Map(renderers.map((r) => [r.format, r]));
   const pages: Page[] = [];
@@ -60,7 +68,9 @@ export async function buildPages(
       page: { id, route, relativePath: source.relativePath, format: source.format },
     });
 
-    const title = meta.title?.trim() || deriveTitleFromPath(source.relativePath);
+    const title =
+      meta.title?.trim() ||
+      deriveTitleFromPath(source.relativePath, options.stripNumberPrefix ?? false);
     if (!meta.title) {
       warnings.push(`No title found in "${source.relativePath}"; using "${title}".`);
     }
