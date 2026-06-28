@@ -595,6 +595,12 @@ body.sidebar-collapsed #sidebar {
   color: var(--color-accent);
 }
 
+.toc-item a.active {
+  color: var(--color-accent);
+  border-left-color: var(--color-accent);
+  font-weight: 600;
+}
+
 .toc-level-3 a {
   padding-left: 1.5rem;
   font-size: 0.8rem;

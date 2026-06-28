@@ -69,6 +69,7 @@ single-docs build ./docs -o ./dist/manual.html
 ```bash
 single-docs watch ./docs -o ./dist/manual.html
 single-docs serve ./docs            # 既定で http://127.0.0.1:4173/ を配信
+single-docs serve ./docs --open     # 起動時にブラウザを開く
 ```
 
 リンク切れや画像欠落などは `validate` で検出できます。

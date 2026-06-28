@@ -237,4 +237,51 @@ describe("v0.4 client features (app.js)", () => {
     expect(shown).toHaveLength(1);
     expect(shown[0]!.getAttribute("data-route")).toBe("/faq");
   });
+
+  it("highlights the current heading in the TOC on scroll (IntersectionObserver)", async () => {
+    // happy-dom には IntersectionObserver が無いため、観測対象とコールバックを
+    // 捕捉するスタブを差し込んでスクロール連動を検証する。
+    type Entry = { target: Element; isIntersecting: boolean };
+    type Stub = { cb: (entries: Entry[]) => void; elements: Element[]; disconnect: () => void };
+    const instances: Stub[] = [];
+    const g = globalThis as unknown as { IntersectionObserver?: unknown };
+    const original = g.IntersectionObserver;
+    g.IntersectionObserver = class {
+      cb: (entries: Entry[]) => void;
+      elements: Element[] = [];
+      constructor(cb: (entries: Entry[]) => void) {
+        this.cb = cb;
+        instances.push(this as unknown as Stub);
+      }
+      observe(el: Element) {
+        this.elements.push(el);
+      }
+      disconnect() {}
+    } as unknown as typeof IntersectionObserver;
+
+    try {
+      await mountClient(SAMPLE);
+      const guide = document.querySelector('#content article[data-route="/guide"]')!;
+      guide.innerHTML = '<h2 id="guide-install">Install</h2><h3 id="guide-config">Config</h3>';
+      navigate("/guide");
+
+      const io = instances[instances.length - 1]!;
+      expect(io.elements.map((e) => e.id)).toEqual(["guide-install", "guide-config"]);
+
+      const link = (id: string) =>
+        document.querySelector(`#toc-nav a[data-heading="${id}"]`) as HTMLElement;
+
+      // guide-config だけが可視 → それが active。
+      io.cb([{ target: document.getElementById("guide-config")!, isIntersecting: true }]);
+      expect(link("guide-config").classList.contains("active")).toBe(true);
+      expect(link("guide-install").classList.contains("active")).toBe(false);
+
+      // guide-install も可視になれば文書順で先頭が優先。
+      io.cb([{ target: document.getElementById("guide-install")!, isIntersecting: true }]);
+      expect(link("guide-install").classList.contains("active")).toBe(true);
+      expect(link("guide-config").classList.contains("active")).toBe(false);
+    } finally {
+      g.IntersectionObserver = original;
+    }
+  });
 });

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawn } from "node:child_process";
 import { Command } from "commander";
 import {
   buildSite,
@@ -7,6 +8,22 @@ import {
   watchSite,
   type OutputFormat,
 } from "@single-docs/core";
+
+/** 既定のブラウザで URL を開く（プラットフォーム別。失敗しても致命的ではない）。 */
+function openBrowser(url: string): void {
+  const platform = process.platform;
+  const command = platform === "darwin" ? "open" : platform === "win32" ? "cmd" : "xdg-open";
+  const args = platform === "win32" ? ["/c", "start", "", url] : [url];
+  try {
+    const child = spawn(command, args, { stdio: "ignore", detached: true });
+    child.on("error", () => {
+      console.warn(`warning: could not open browser (${command}).`);
+    });
+    child.unref();
+  } catch {
+    console.warn("warning: could not open browser.");
+  }
+}
 
 /** ビルド結果の警告とサマリを標準出力へ表示する共通処理。 */
 function reportBuild(result: { pages: number; outputs: string[]; warnings: string[] }): void {
@@ -78,10 +95,17 @@ program
   .option("-c, --config <file>", "設定ファイル（既定: single-docs.config.yml があれば使用）")
   .option("-p, --port <port>", "ポート番号（既定: 4173）", (v) => Number(v))
   .option("-H, --host <host>", "ホスト（既定: 127.0.0.1）")
+  .option("--open", "起動時に既定のブラウザで開く")
   .action(
     async (
       input: string | undefined,
-      options: { output?: string; config?: string; port?: number; host?: string },
+      options: {
+        output?: string;
+        config?: string;
+        port?: number;
+        host?: string;
+        open?: boolean;
+      },
     ) => {
       try {
         const handle = await serveSite(
@@ -101,6 +125,7 @@ program
           },
         );
         console.log(`Serving at ${handle.url} (Ctrl+C to stop)`);
+        if (options.open) openBrowser(handle.url);
         process.on("SIGINT", () => {
           void handle.close().then(() => process.exit(0));
         });

@@ -15,6 +15,8 @@
   var STORAGE_THEME = "single-docs:theme";
   // 同一ルートへの遷移後にスクロールしたい見出し ID（あれば）。
   var pendingHeadingId = null;
+  // 目次のスクロール連動ハイライト用の IntersectionObserver。
+  var tocObserver = null;
 
   // ---- helpers ----
   function currentRoute() {
@@ -128,6 +130,12 @@
     var nav = document.getElementById("toc-nav");
     if (!toc || !nav) return;
 
+    // ページ切り替えのたびに前ページ用の監視を破棄する。
+    if (tocObserver) {
+      tocObserver.disconnect();
+      tocObserver = null;
+    }
+
     var page = pageByRoute[route];
     var headings = page && page.headings ? page.headings : [];
     if (headings.length === 0) {
@@ -158,6 +166,57 @@
         e.preventDefault();
         navigateTo(route, a.getAttribute("data-heading"));
       });
+    });
+
+    setupTocSpy(
+      nav,
+      headings.map(function (h) {
+        return h.id;
+      }),
+    );
+  }
+
+  // スクロールに連動して、現在地の見出しに対応する目次リンクを active にする。
+  function setupTocSpy(nav, headingIds) {
+    if (typeof IntersectionObserver === "undefined") return; // 非対応環境は静的目次のまま。
+
+    var links = {};
+    nav.querySelectorAll("a[data-heading]").forEach(function (a) {
+      links[a.getAttribute("data-heading")] = a;
+    });
+    var visible = {};
+
+    function highlight() {
+      // 文書順で最初に可視の見出しを現在地とみなす。
+      var current = null;
+      for (var i = 0; i < headingIds.length; i++) {
+        if (visible[headingIds[i]]) {
+          current = headingIds[i];
+          break;
+        }
+      }
+      for (var id in links) {
+        if (Object.prototype.hasOwnProperty.call(links, id)) {
+          links[id].classList.toggle("active", id === current);
+        }
+      }
+    }
+
+    tocObserver = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) visible[entry.target.id] = true;
+          else delete visible[entry.target.id];
+        });
+        highlight();
+      },
+      // 見出しがビューポート上部に来たら active にする。
+      { rootMargin: "0px 0px -70% 0px", threshold: 0 },
+    );
+
+    headingIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) tocObserver.observe(el);
     });
   }
 

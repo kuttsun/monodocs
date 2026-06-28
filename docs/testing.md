@@ -33,7 +33,7 @@ docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
 | 項目         | 結果      |
 | ------------ | --------- |
 | Test Files   | 18 passed |
-| Tests        | 81 passed |
+| Tests        | 82 passed |
 | typecheck    | 通過      |
 | format:check | 通過      |
 
