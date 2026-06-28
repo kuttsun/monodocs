@@ -1,0 +1,55 @@
+= AsciiDoc サンプル
+:sd-order: 1
+
+このサンプルは https://docs.asciidoctor.org/asciidoc/latest/syntax-quick-reference/[AsciiDoc Syntax Quick Reference]
+の主な記法を網羅し、`single-docs` での表示を確認するためのものです。
+
+ビルド例:
+
+[source,bash]
+----
+single-docs build examples/asciidoc/docs -o dist/asciidoc.html
+----
+
+各カテゴリは左サイドバーから開けます:
+xref:lists.adoc[リスト] / xref:blocks.adoc[ブロック] / xref:tables.adoc[表] / xref:links-images.adoc[リンクと画像]。
+
+== セクション見出し
+
+`==` の数でレベルが決まります（`=` は文書タイトル）。
+
+=== レベル 2
+
+==== レベル 3
+
+===== レベル 4
+
+== 段落と改行
+
+これは段落です。空行で段落を区切ります。
+
+行末に `+` を置くと +
+強制改行になります。
+
+[.lead]
+リード段落（`[.lead]` ロール）。
+
+== テキスト書式
+
+* 太字: *bold* と **un**constrained
+* イタリック: _italic_ と __un__constrained
+* 等幅: `monospace`
+* 太字イタリック等幅: `*_重ね掛け_*`
+* ハイライト: #highlighted#
+* 上付き/下付き: E = mc^2^ / H~2~O
+* 引用符: "`曲がった二重引用符`" と '`単一引用符`'
+
+== 置換（テキスト置換）
+
+(C) (R) (TM) は記号に、矢印 -> => <- <= はそのまま、`...` は省略記号になります。
+
+== 注釈
+
+// これはコメントで、出力されません。
+
+NOTE: `//` 始まりの行コメントは出力されません。

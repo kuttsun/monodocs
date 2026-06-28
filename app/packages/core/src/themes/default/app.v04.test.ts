@@ -32,13 +32,14 @@ async function mountClient(pages: ClientPage[]): Promise<void> {
     .join("");
 
   document.body.innerHTML =
-    `<button id="sidebar-toggle" aria-expanded="true">☰</button>` +
+    `<button id="sidebar-show">☰</button>` +
     `<div id="app">` +
     `<aside id="sidebar">` +
     `<div class="sidebar-header">T</div>` +
     `<div class="sidebar-tools">` +
     `<input id="search-input" type="search" />` +
     `<button id="theme-toggle"><span class="theme-toggle-icon"></span></button>` +
+    `<button id="sidebar-toggle" aria-expanded="true">«</button>` +
     `</div>` +
     `<ul id="search-results" hidden></ul>` +
     `<nav id="sidebar-nav"><ul class="sidebar-list">` +
@@ -193,12 +194,41 @@ describe("v0.4 client features (app.js)", () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
 
-  it("collapses the sidebar", async () => {
+  it("collapses the sidebar and reopens via the floating button", async () => {
     await mountClient(SAMPLE);
-    const btn = document.getElementById("sidebar-toggle")!;
-    btn.click();
+    const hide = document.getElementById("sidebar-toggle")!;
+    const show = document.getElementById("sidebar-show")!;
+    hide.click();
     expect(document.body.classList.contains("sidebar-collapsed")).toBe(true);
-    expect(btn.getAttribute("aria-expanded")).toBe("false");
+    expect(hide.getAttribute("aria-expanded")).toBe("false");
+    show.click();
+    expect(document.body.classList.contains("sidebar-collapsed")).toBe(false);
+    expect(hide.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("auto-expands a collapsed directory that contains the active page", async () => {
+    await mountClient(SAMPLE);
+    const dir = document.querySelector("#sidebar-nav .sidebar-dir")!;
+    dir.classList.add("collapsed");
+    // /guide のリンクはこのディレクトリ内にある。
+    navigate("/guide");
+    expect(dir.classList.contains("collapsed")).toBe(false);
+  });
+
+  it("renders mermaid on the visible page when navigating", async () => {
+    let calls = 0;
+    const g = window as unknown as { __sdRenderMermaid?: () => void };
+    g.__sdRenderMermaid = () => {
+      calls++;
+    };
+    try {
+      await mountClient(SAMPLE); // init → showPage(initial) で 1 回
+      const before = calls;
+      navigate("/guide"); // showPage で再度呼ばれる
+      expect(calls).toBeGreaterThan(before);
+    } finally {
+      delete g.__sdRenderMermaid;
+    }
   });
 
   it("collapses a sidebar directory group", async () => {

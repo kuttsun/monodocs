@@ -9,7 +9,12 @@
     </style>
   </head>
   <body>
-    <button id="sidebar-toggle" type="button" aria-label="サイドバーの表示切替" aria-expanded="true">
+    <button
+      id="sidebar-show"
+      type="button"
+      aria-label="サイドバーを開く"
+      title="サイドバーを開く"
+    >
       ☰
     </button>
     <div id="app">
@@ -30,6 +35,15 @@
             title="ダークモード切替"
           >
             <span class="theme-toggle-icon"></span>
+          </button>
+          <button
+            id="sidebar-toggle"
+            type="button"
+            aria-label="サイドバーを閉じる"
+            title="サイドバーを閉じる"
+            aria-expanded="true"
+          >
+            «
           </button>
         </div>
         <ul id="search-results" hidden></ul>

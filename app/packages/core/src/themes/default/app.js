@@ -78,9 +78,14 @@
     }
 
     var links = document.querySelectorAll("#sidebar-nav a[data-route]");
+    var activeLink = null;
     links.forEach(function (a) {
-      a.classList.toggle("active", a.getAttribute("data-route") === route);
+      var isActive = a.getAttribute("data-route") === route;
+      a.classList.toggle("active", isActive);
+      if (isActive) activeLink = a;
     });
+    // 現在ページが折りたたまれたディレクトリ内にあれば、その親を開く。
+    expandAncestors(activeLink);
 
     renderToc(route);
     renderPageNav(route);
@@ -89,10 +94,25 @@
     if (content) content.scrollTop = 0;
     window.scrollTo(0, 0);
 
+    // 表示中ページの Mermaid を描画する（非表示時は描画できないため切替時に実行）。
+    if (typeof window.__sdRenderMermaid === "function") window.__sdRenderMermaid();
+
     // 検索・目次から見出し指定で遷移してきた場合はその位置へスクロールする。
     if (pendingHeadingId) {
       scrollToHeading(pendingHeadingId);
       pendingHeadingId = null;
+    }
+  }
+
+  // サイドバーリンクの祖先にある折りたたみ済みディレクトリをすべて開く。
+  function expandAncestors(link) {
+    if (!link) return;
+    var node = link.parentElement;
+    while (node && node.id !== "sidebar-nav") {
+      if (node.classList && node.classList.contains("sidebar-dir")) {
+        node.classList.remove("collapsed");
+      }
+      node = node.parentElement;
     }
   }
 
@@ -403,13 +423,23 @@
   }
 
   // ---- sidebar collapse ----
+  // 折りたたみボタンはサイドバー内（テーマ切替の隣）、再表示ボタンは折りたたみ時のみ
+  // 表示される固定ボタン。
   function setupSidebarToggle() {
-    var btn = document.getElementById("sidebar-toggle");
-    if (!btn) return;
-    btn.addEventListener("click", function () {
-      var collapsed = document.body.classList.toggle("sidebar-collapsed");
-      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    });
+    var hideBtn = document.getElementById("sidebar-toggle");
+    var showBtn = document.getElementById("sidebar-show");
+    function setCollapsed(collapsed) {
+      document.body.classList.toggle("sidebar-collapsed", collapsed);
+      if (hideBtn) hideBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    }
+    if (hideBtn)
+      hideBtn.addEventListener("click", function () {
+        setCollapsed(true);
+      });
+    if (showBtn)
+      showBtn.addEventListener("click", function () {
+        setCollapsed(false);
+      });
   }
 
   // ディレクトリ見出しのクリックで子ツリーを開閉する。
@@ -434,6 +464,10 @@
 
   // ---- init ----
   function init() {
+    // ルート確定済みの目印。これ以降に読み込まれた Mermaid ランタイムは
+    // 自分で初回描画してよい（それ以前は showPage 側の呼び出しに任せる）。
+    window.__sdRouted = true;
+
     setupTheme();
     setupSearch();
     setupSidebarToggle();
