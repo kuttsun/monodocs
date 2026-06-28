@@ -5,9 +5,23 @@ import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
 import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
-import type { Element, Root as HastRoot } from "hast";
+import type { Element, ElementContent, Root as HastRoot } from "hast";
 import type { OnLargeImage } from "../config.js";
 import type { Page } from "../types.js";
+
+/** コードハイライトに使う配色（shiki の dual theme。ダークは CSS で切替）。 */
+const SHIKI_THEMES = { light: "github-light", dark: "github-dark" } as const;
+
+// shiki は重いので、ハイライトが実際に必要になったときだけ動的 import する。
+type CodeToHast = typeof import("shiki").codeToHast;
+let codeToHastFn: CodeToHast | null = null;
+async function loadCodeToHast(): Promise<CodeToHast> {
+  if (!codeToHastFn) {
+    const shiki = await import("shiki");
+    codeToHastFn = shiki.codeToHast;
+  }
+  return codeToHastFn;
+}
 
 /** リンク変換対象とする追加拡張子（AsciiDoc 変換後の .html 相当）。 */
 const EXTRA_LINK_EXTENSIONS = [".html", ".htm"];
@@ -31,6 +45,7 @@ export type PostprocessOptions = {
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
   mermaidEnabled: boolean;
+  codeHighlight: boolean;
 };
 
 export type PostprocessResult = {
@@ -80,6 +95,68 @@ function processMermaid(tree: HastRoot): boolean {
     found = true;
   });
   return found;
+}
+
+/** code 要素の className から言語名（language-xxx）を取り出す。 */
+function languageOf(code: Element): string | undefined {
+  const cls = code.properties.className;
+  if (!Array.isArray(cls)) return undefined;
+  for (const c of cls) {
+    if (typeof c === "string" && c.startsWith("language-")) return c.slice("language-".length);
+  }
+  return undefined;
+}
+
+type CodeBlock = {
+  parent: { children: ElementContent[] };
+  index: number;
+  lang: string;
+  code: string;
+};
+
+/**
+ * `<pre><code class="language-xxx">` を shiki で構文ハイライトする。
+ * Markdown / AsciiDoc とも同じ構造（language-xxx）なので共通で扱える。
+ * Mermaid ブロック（processMermaid 済み）や言語指定の無いブロックは対象外。
+ * 未対応言語は素のテキストとしてハイライトし、失敗時は元のまま残す。
+ */
+async function highlightCode(tree: HastRoot): Promise<void> {
+  const blocks: CodeBlock[] = [];
+  visit(tree, "element", (node, index, parent) => {
+    if (node.tagName !== "pre" || !parent || typeof index !== "number") return;
+    const code = node.children.find(
+      (child): child is Element => child.type === "element" && child.tagName === "code",
+    );
+    if (!code) return;
+    const lang = languageOf(code);
+    if (!lang || lang === "mermaid") return;
+    blocks.push({
+      parent: parent as { children: ElementContent[] },
+      index,
+      lang,
+      code: toText(code),
+    });
+  });
+  if (blocks.length === 0) return;
+
+  const codeToHast = await loadCodeToHast();
+  for (const block of blocks) {
+    let root: HastRoot;
+    try {
+      root = await codeToHast(block.code, { lang: block.lang, themes: SHIKI_THEMES });
+    } catch {
+      // 未対応言語などは素のテキスト（plaintext）としてハイライトする。
+      try {
+        root = await codeToHast(block.code, { lang: "text", themes: SHIKI_THEMES });
+      } catch {
+        continue; // それも失敗するなら元の <pre> を残す。
+      }
+    }
+    const pre = root.children.find(
+      (child): child is Element => child.type === "element" && child.tagName === "pre",
+    );
+    if (pre) block.parent.children[block.index] = pre;
+  }
 }
 
 type LinkResolution = { href: string; hadFragment: boolean } | null | undefined;
@@ -235,6 +312,8 @@ export async function postprocessPages(
   for (const page of pages) {
     const tree = parser.parse(page.html);
     if (options.mermaidEnabled && processMermaid(tree)) hasMermaid = true;
+    // Mermaid 変換後にハイライト（mermaid ブロックは対象外になる）。
+    if (options.codeHighlight) await highlightCode(tree);
     rewriteLinks(tree, page, routeMap, linkExtensions, warnings);
     if (options.embedImages) await embedImages(tree, page, options, realRoot, warnings);
     page.html = serializer.stringify(tree);

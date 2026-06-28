@@ -314,6 +314,22 @@ body.sidebar-collapsed #sidebar {
   background: none;
 }
 
+/* shiki dual theme: ダークモードでは --shiki-dark / --shiki-dark-bg に切り替える。
+   span は --shiki-dark-bg を持たないため background は実質透過のまま（公式手法）。 */
+:root[data-theme="dark"] #content .shiki,
+:root[data-theme="dark"] #content .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #content .shiki,
+  :root:not([data-theme="light"]) #content .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
+}
+
 #content table {
   border-collapse: collapse;
   margin: 1rem 0;

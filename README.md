@@ -17,6 +17,7 @@
 - ファイル間リンク（`.md` / `.adoc` / xref）を単一 HTML 内の hash route に変換する
 - 画像を data URI として埋め込み、自己完結した単一 HTML にする
 - Mermaid を表示する（client mode。ランタイムは CDN / inline を選択可能）
+- コードブロックを shiki で構文ハイライトする（dual theme でダークモードに追従）
 - frontmatter / `:sd-*:` で order・hidden・description を制御する
 - HTML 内で全文検索できる（タイトル・見出し・本文）
 - ページ内目次（h2 / h3）と前後ページナビゲーションを表示する
@@ -30,7 +31,7 @@
 > `mermaid.runtime: inline` を指定してください。画像サイズ上限（`assets.maxInlineSize`）超過時の
 > 既定 `warn` は「警告しつつ埋め込む」挙動です（埋め込まない場合は `external`）。
 
-> コードハイライト（shiki）・PDF 出力などは今後のバージョンで対応予定です（[docs/roadmap.md](docs/roadmap.md)）。
+> PDF 出力などは今後のバージョンで対応予定です（[docs/roadmap.md](docs/roadmap.md)）。
 
 > **入力は信頼できるドキュメントを前提とします。** AsciiDoc は生 HTML を出力できるため、
 > 信頼できない入力の変換は避けてください（詳細は [docs/development.md](docs/development.md)）。
@@ -111,6 +112,8 @@ assets:
 mermaid:
   enabled: true
   runtime: "cdn" # cdn=軽量・要ネット / inline=自己完結（HTML 肥大）
+highlight:
+  enabled: true # コードブロックを shiki で構文ハイライト（false で無効）
 ```
 
 設定項目の全体像は [docs/roadmap.md](docs/roadmap.md) の「12. 設定ファイル」を参照してください。

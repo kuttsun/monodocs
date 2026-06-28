@@ -55,7 +55,7 @@ node packages/cli/dist/index.js serve examples/mixed/docs   # http://127.0.0.1:4
 loadConfig (config.ts)
   → scanSourceFiles (scan.ts)          入力走査・拡張子マップで形式判定・exclude 適用
   → buildPages (pipeline/buildPages.ts) 各 SourceRenderer で render → Page[] に正規化
-  → postprocessPages (pipeline/postprocess.ts) HAST 上でリンク変換・画像 data URI 化・Mermaid 変換
+  → postprocessPages (pipeline/postprocess.ts) HAST 上でリンク変換・画像 data URI 化・Mermaid 変換・shiki ハイライト
   → buildSidebar (pipeline/buildSidebar.ts) フォルダ構造からサイドバーツリー生成
   → renderSingleHtml (pipeline/renderSingleHtml.ts) テンプレートへ埋め込み単一 HTML 生成
   → writeOutput (build.ts)

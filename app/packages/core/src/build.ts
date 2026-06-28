@@ -46,6 +46,7 @@ async function preparePages(config: ResolvedConfig, cwd: string): Promise<Prepar
     maxInlineSize: config.maxInlineSize,
     onLargeImage: config.onLargeImage,
     mermaidEnabled: config.mermaidEnabled,
+    codeHighlight: config.codeHighlight,
   });
   const sidebar = buildSidebar(pages);
 

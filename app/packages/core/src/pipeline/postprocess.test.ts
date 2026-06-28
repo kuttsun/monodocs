@@ -29,6 +29,7 @@ const baseOptions = {
   maxInlineSize: 5 * 1024 * 1024,
   onLargeImage: "warn" as const,
   mermaidEnabled: true,
+  codeHighlight: false,
 };
 
 describe("postprocessPages - link rewriting", () => {
@@ -109,6 +110,61 @@ describe("postprocessPages - mermaid", () => {
     const result = await postprocessPages(pages, { ...baseOptions, mermaidEnabled: false });
     expect(result.hasMermaid).toBe(false);
     expect(pages[0]!.html).toContain("language-mermaid");
+  });
+});
+
+describe("postprocessPages - code highlight (shiki)", () => {
+  it("highlights fenced code blocks with shiki dual themes", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "c.md",
+        route: "/c",
+        html: '<pre><code class="language-js">const x = 1;</code></pre>',
+      }),
+    ];
+    await postprocessPages(pages, { ...baseOptions, codeHighlight: true });
+    expect(pages[0]!.html).toContain("shiki");
+    // dual theme（ライト inline + ダーク用 CSS 変数）。
+    expect(pages[0]!.html).toContain("--shiki-dark");
+  }, 20000);
+
+  it("does not highlight mermaid blocks", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "d.md",
+        route: "/d",
+        html: '<pre><code class="language-mermaid">graph TD\n  A --> B</code></pre>',
+      }),
+    ];
+    await postprocessPages(pages, { ...baseOptions, codeHighlight: true });
+    expect(pages[0]!.html).toContain('class="mermaid"');
+    expect(pages[0]!.html).not.toContain("shiki");
+  }, 20000);
+
+  it("falls back to plaintext for unknown languages", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "e.md",
+        route: "/e",
+        html: '<pre><code class="language-totally-unknown-lang">data</code></pre>',
+      }),
+    ];
+    // 未対応言語でも例外を投げず、shiki の出力に置き換わる。
+    await postprocessPages(pages, { ...baseOptions, codeHighlight: true });
+    expect(pages[0]!.html).toContain("shiki");
+  }, 20000);
+
+  it("leaves code blocks untouched when disabled", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "c.md",
+        route: "/c",
+        html: '<pre><code class="language-js">const x = 1;</code></pre>',
+      }),
+    ];
+    await postprocessPages(pages, { ...baseOptions, codeHighlight: false });
+    expect(pages[0]!.html).toContain('class="language-js"');
+    expect(pages[0]!.html).not.toContain("shiki");
   });
 });
 

@@ -50,6 +50,7 @@ const configFileSchema = z.object({
       runtime: z.enum(["cdn", "inline"]).optional(),
     })
     .optional(),
+  highlight: z.object({ enabled: z.boolean().optional() }).optional(),
   html: z.object({ theme: z.string().optional() }).optional(),
 });
 
@@ -70,6 +71,7 @@ export type ResolvedConfig = {
   onLargeImage: OnLargeImage;
   mermaidEnabled: boolean;
   mermaidRuntime: MermaidRuntime;
+  codeHighlight: boolean;
 };
 
 /**
@@ -140,5 +142,6 @@ export async function loadConfig(
     onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",
     mermaidEnabled: fileConfig.mermaid?.enabled ?? true,
     mermaidRuntime: fileConfig.mermaid?.runtime ?? "cdn",
+    codeHighlight: fileConfig.highlight?.enabled ?? true,
   };
 }

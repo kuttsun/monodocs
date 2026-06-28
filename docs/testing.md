@@ -33,7 +33,7 @@ docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
 | 項目         | 結果      |
 | ------------ | --------- |
 | Test Files   | 18 passed |
-| Tests        | 77 passed |
+| Tests        | 81 passed |
 | typecheck    | 通過      |
 | format:check | 通過      |
 
@@ -48,7 +48,7 @@ docker run --rm -v "$PWD":/work -w /work/app node:22-bookworm \
 - `scan.test.ts` … 拡張子マップによる走査・カスタム拡張子・除外
 - `pipeline/buildPages.test.ts` … route / page id の重複検知
 - `pipeline/buildSidebar.test.ts` … フォルダ構造サイドバー
-- `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換
+- `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換・shiki コードハイライト
 - `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・クライアント用ページデータ（目次/検索）
 - `themes/default/app.test.ts` … クライアント hash routing（happy-dom）
 - `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ（happy-dom）
