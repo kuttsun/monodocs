@@ -8,7 +8,7 @@
 
 [source,bash]
 ----
-single-docs build examples/asciidoc/docs -o dist/asciidoc.html
+single-docs build examples/showcase/docs -o dist/showcase.html
 ----
 
 各カテゴリは左サイドバーから開けます:

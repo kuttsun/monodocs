@@ -7,13 +7,11 @@
 - Markdown: [unified](https://unifiedjs.com/) / remark / rehype（CommonMark + GitHub Flavored Markdown）
 - AsciiDoc: [Asciidoctor.js](https://docs.asciidoctor.org/asciidoctor.js/latest/) の標準変換
 
-各記法を網羅したサンプルが `app/examples/` にある（表示確認用）:
+各記法を網羅したサンプルを 1 サイトにまとめた `app/examples/showcase/` がある（表示確認用。
+`markdown/`（GFM）と `asciidoc/` のフォルダで構成）:
 
 ```bash
-# GFM 全記法サンプル
-single-docs serve app/examples/markdown-gfm/docs
-# AsciiDoc 全記法サンプル
-single-docs serve app/examples/asciidoc/docs
+single-docs serve app/examples/showcase/docs
 ```
 
 ## Markdown 対応記法

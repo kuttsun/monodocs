@@ -19,7 +19,18 @@
     </button>
     <div id="app">
       <aside id="sidebar">
-        <div class="sidebar-header">{{title}}</div>
+        <div class="sidebar-header">
+          <span class="sidebar-title">{{title}}</span>
+          <button
+            id="sidebar-toggle"
+            type="button"
+            aria-label="サイドバーを閉じる"
+            title="サイドバーを閉じる"
+            aria-expanded="true"
+          >
+            «
+          </button>
+        </div>
         <div class="sidebar-tools">
           <input
             id="search-input"
@@ -35,15 +46,6 @@
             title="ダークモード切替"
           >
             <span class="theme-toggle-icon"></span>
-          </button>
-          <button
-            id="sidebar-toggle"
-            type="button"
-            aria-label="サイドバーを閉じる"
-            title="サイドバーを閉じる"
-            aria-expanded="true"
-          >
-            «
           </button>
         </div>
         <ul id="search-results" hidden></ul>

@@ -97,6 +97,8 @@ describe("postprocessPages - mermaid", () => {
     expect(result.hasMermaid).toBe(true);
     expect(pages[0]!.html).toContain('class="mermaid"');
     expect(pages[0]!.html).toContain("graph TD");
+    // 改行を保持する（Mermaid は文の区切りに改行が必須）。
+    expect(pages[0]!.html).toContain("graph TD\n");
   });
 
   it("leaves mermaid as-is when disabled", async () => {
@@ -152,6 +154,20 @@ describe("postprocessPages - code highlight (shiki)", () => {
     // 未対応言語でも例外を投げず、shiki の出力に置き換わる。
     await postprocessPages(pages, { ...baseOptions, codeHighlight: true });
     expect(pages[0]!.html).toContain("shiki");
+  }, 20000);
+
+  it("preserves newlines in multi-line code", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "m.md",
+        route: "/m",
+        html: '<pre><code class="language-js">const a = 1;\nconst b = 2;\nconst c = 3;</code></pre>',
+      }),
+    ];
+    await postprocessPages(pages, { ...baseOptions, codeHighlight: true });
+    // shiki は行ごとに <span class="line"> を出力する。3 行なら 3 つ以上。
+    const lineSpans = (pages[0]!.html.match(/class="line"/g) || []).length;
+    expect(lineSpans).toBeGreaterThanOrEqual(3);
   }, 20000);
 
   it("leaves code blocks untouched when disabled", async () => {

@@ -8,5 +8,4 @@ packages/core/src/themes/default/template.html
 
 # 記法サンプルは意図した記法（箇条書き記号・強調記号の違い等）のまま保持するため、
 # Prettier で正規化しない。
-examples/markdown-gfm/
-examples/asciidoc/
+examples/showcase/

@@ -115,11 +115,23 @@ body.sidebar-collapsed #sidebar {
 }
 
 .sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   font-weight: 700;
   font-size: 1.05rem;
   padding: 0.25rem 1.25rem 0.75rem;
   border-bottom: 1px solid var(--color-border);
   margin-bottom: 0.5rem;
+}
+
+.sidebar-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-tools {

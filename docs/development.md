@@ -22,7 +22,7 @@ single-docs/
           pipeline/         # buildPages / buildSidebar / renderSingleHtml
           themes/default/   # HTML テンプレート / CSS / クライアント JS
       cli/                  # CLI（single-docs コマンド）
-    examples/               # basic-markdown / mixed / markdown-gfm / asciidoc
+    examples/               # basic-markdown / mixed / showcase（全記法サンプル）
   site/                     # （予定）アプリ紹介の静的 Web サイト
   docs/                     # 開発ドキュメント（本フォルダ）
   scripts/dev.sh            # 専用イメージ内でコマンドを実行するヘルパー

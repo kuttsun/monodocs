@@ -91,7 +91,8 @@ function processMermaid(tree: HastRoot): boolean {
     );
     if (!code || !hasClass(code, "language-mermaid")) return;
     node.properties = { className: ["mermaid"] };
-    node.children = [{ type: "text", value: toText(code) }];
+    // whitespace:"pre" で改行を保持する（Mermaid は文の区切りに改行が必要）。
+    node.children = [{ type: "text", value: toText(code, { whitespace: "pre" }) }];
     found = true;
   });
   return found;
@@ -134,7 +135,8 @@ async function highlightCode(tree: HastRoot): Promise<void> {
       parent: parent as { children: ElementContent[] },
       index,
       lang,
-      code: toText(code),
+      // whitespace:"pre" で改行・インデントを保持する（複数行コードのため）。
+      code: toText(code, { whitespace: "pre" }),
     });
   });
   if (blocks.length === 0) return;
