@@ -56,7 +56,8 @@
 ## 対応記法
 
 Markdown / AsciiDoc の対応記法と、単一 HTML 化に伴う非対応・制限は [syntax.md](syntax.md) に
-仕様としてまとめている（脚注の ID 衝突回避・ページ内アンカー処理を含む）。
+仕様としてまとめている（脚注の ID 衝突回避・ページ内アンカー処理を含む）。Markdown の GFM alerts
+（`> [!NOTE]` など）と AsciiDoc の admonition は共通の `.admonition` 構造へ正規化して表示する。
 
 ## 既知の未対応 / 制限（今後のバージョンで対応）
 

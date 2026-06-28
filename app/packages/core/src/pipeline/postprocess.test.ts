@@ -184,6 +184,92 @@ describe("postprocessPages - code highlight (shiki)", () => {
   });
 });
 
+describe("postprocessPages - admonitions", () => {
+  it("converts GFM alert blockquotes to the common .admonition structure", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html: "<blockquote>\n<p>[!NOTE]\nUseful information.</p>\n</blockquote>",
+      }),
+    ];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('class="admonition admonition-note"');
+    expect(pages[0]!.html).toContain('class="admonition-title">Note<');
+    expect(pages[0]!.html).toContain("Useful information.");
+    // マーカーのリテラルは残さない。
+    expect(pages[0]!.html).not.toContain("[!NOTE]");
+  });
+
+  it("handles the marker-on-its-own-paragraph alert form", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html: "<blockquote>\n<p>[!WARNING]</p>\n<p>Be careful.</p>\n</blockquote>",
+      }),
+    ];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('class="admonition admonition-warning"');
+    expect(pages[0]!.html).toContain('class="admonition-title">Warning<');
+    expect(pages[0]!.html).toContain("Be careful.");
+    // マーカーだけの空段落は残さない。
+    expect(pages[0]!.html).not.toContain("<p></p>");
+  });
+
+  it("leaves ordinary blockquotes untouched", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html: "<blockquote>\n<p>just a quote</p>\n</blockquote>",
+      }),
+    ];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain("<blockquote>");
+    expect(pages[0]!.html).not.toContain("admonition");
+  });
+
+  it("does not treat a marker followed by inline text as an alert", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html: "<blockquote>\n<p>[!NOTE] inline</p>\n</blockquote>",
+      }),
+    ];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).not.toContain("admonition");
+    expect(pages[0]!.html).toContain("[!NOTE] inline");
+  });
+
+  it("normalizes AsciiDoc admonitionblock to the same structure", async () => {
+    const html =
+      '<div class="admonitionblock warning">\n<table>\n<tr>\n<td class="icon">\n' +
+      '<div class="title">Warning</div>\n</td>\n<td class="content">\n' +
+      '<div class="paragraph">\n<p>block warning.</p>\n</div>\n</td>\n</tr>\n</table>\n</div>';
+    const pages: Page[] = [page({ relativePath: "a.adoc", route: "/a", html })];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('class="admonition admonition-warning"');
+    expect(pages[0]!.html).toContain('class="admonition-title">Warning<');
+    expect(pages[0]!.html).toContain("block warning.");
+    // テーブル構造は残さない。
+    expect(pages[0]!.html).not.toContain("admonitionblock");
+    expect(pages[0]!.html).not.toContain("<table>");
+  });
+
+  it("preserves an explicit id on the AsciiDoc admonition (anchor target)", async () => {
+    const html =
+      '<div id="a-warn" class="admonitionblock warning">\n<table>\n<tr>\n<td class="icon">\n' +
+      '<div class="title">Warning</div>\n</td>\n<td class="content">\n<p>w</p>\n</td>\n</tr>\n</table>\n</div>';
+    const pages: Page[] = [page({ relativePath: "a.adoc", route: "/a", html })];
+    await postprocessPages(pages, baseOptions);
+    // prefixIds 済みの id を引き継ぎ、xref (#a-warn) のジャンプ先を維持する。
+    expect(pages[0]!.html).toContain('id="a-warn"');
+    expect(pages[0]!.html).toContain('class="admonition admonition-warning"');
+  });
+});
+
 describe("postprocessPages - image embedding", () => {
   let root: string;
   let docs: string;

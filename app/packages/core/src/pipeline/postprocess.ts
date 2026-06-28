@@ -4,7 +4,7 @@ import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
 import { toText } from "hast-util-to-text";
-import { visit } from "unist-util-visit";
+import { EXIT, SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
 import type { OnLargeImage } from "../config.js";
 import type { Page } from "../types.js";
@@ -75,6 +75,128 @@ function buildRouteMap(pages: Page[]): Map<string, string> {
 function hasClass(element: Element, name: string): boolean {
   const cls = element.properties.className;
   return Array.isArray(cls) && cls.includes(name);
+}
+
+/** Admonition / GFM alert の種別（Markdown と AsciiDoc で共通の 5 種）。 */
+const ADMONITION_TYPES = ["note", "tip", "important", "warning", "caution"] as const;
+type AdmonitionType = (typeof ADMONITION_TYPES)[number];
+
+/** 共通構造で表示するラベル（GitHub / Asciidoctor 既定に合わせ英語で統一）。 */
+const ADMONITION_LABEL: Record<AdmonitionType, string> = {
+  note: "Note",
+  tip: "Tip",
+  important: "Important",
+  warning: "Warning",
+  caution: "Caution",
+};
+
+/**
+ * Markdown blockquote 先頭の GFM alert マーカー（`> [!NOTE]` など）。
+ * GitHub に合わせ、マーカーは行頭・1 行単独であることを要求する
+ * （同じ行に続く本文があるものは alert として扱わない）。
+ */
+const ALERT_MARKER = /^[^\S\n]*\[!(note|tip|important|warning|caution)\][^\S\n]*(?:\r?\n|$)/i;
+
+/** 種別と本文から共通の admonition 構造（`.admonition`）を組み立てる。 */
+function makeAdmonition(type: AdmonitionType, content: ElementContent[]): Element {
+  return {
+    type: "element",
+    tagName: "div",
+    properties: { className: ["admonition", `admonition-${type}`] },
+    children: [
+      {
+        type: "element",
+        tagName: "p",
+        properties: { className: ["admonition-title"] },
+        children: [{ type: "text", value: ADMONITION_LABEL[type] }],
+      },
+      {
+        type: "element",
+        tagName: "div",
+        properties: { className: ["admonition-content"] },
+        children: content,
+      },
+    ],
+  };
+}
+
+/**
+ * 元要素の `id` を正規化後の admonition に引き継ぐ。
+ * AsciiDoc の `[#anchor]` 付き admonition は `prefixIdsAndCollect`（renderer 段）で
+ * id を prefix 済み・同一文書内 xref も書き換え済みなので、ここで id を捨てると
+ * `<<anchor>>` の参照先が消えてしまう。少なくとも id は保持する。
+ */
+function carryId(from: Element, to: Element): void {
+  const id = from.properties.id;
+  if (id != null && id !== "") to.properties.id = id;
+}
+
+/** node 配下から最初の `td.content`（AsciiDoc admonition の本文セル）の子を返す。 */
+function findAdmonitionContent(node: Element): ElementContent[] | null {
+  let content: ElementContent[] | null = null;
+  visit(node, "element", (el) => {
+    if (el.tagName === "td" && hasClass(el, "content")) {
+      content = el.children;
+      return EXIT;
+    }
+    return undefined;
+  });
+  return content;
+}
+
+/**
+ * Markdown の GFM alerts（`> [!NOTE]` など）と AsciiDoc の admonition
+ * （Asciidoctor 出力の `.admonitionblock`）を、共通の `.admonition` 構造へ正規化する。
+ * 5 種（note/tip/important/warning/caution）は両形式で一致するため共通化できる。
+ * Mermaid / shiki と同じく、形式ごとの出力を postprocess で共通構造に揃える。
+ */
+function processAdmonitions(tree: HastRoot): void {
+  type Match = { parent: { children: ElementContent[] }; index: number; replacement: Element };
+  const matches: Match[] = [];
+
+  visit(tree, "element", (node, index, parent) => {
+    if (!parent || typeof index !== "number") return undefined;
+
+    // AsciiDoc: <div class="admonitionblock TYPE"><table>...<td class="content">…</td>
+    if (node.tagName === "div" && hasClass(node, "admonitionblock")) {
+      const type = ADMONITION_TYPES.find((t) => hasClass(node, t));
+      if (!type) return undefined;
+      const replacement = makeAdmonition(type, findAdmonitionContent(node) ?? []);
+      carryId(node, replacement); // `[#anchor]` 付きブロックの id を保持
+      matches.push({ parent: parent as { children: ElementContent[] }, index, replacement });
+      return SKIP; // 本文セルの再走査・二重変換を避ける
+    }
+
+    // Markdown (GFM alert): <blockquote><p>[!NOTE]\n…</p>…</blockquote>
+    if (node.tagName === "blockquote") {
+      const firstEl = node.children.find((c): c is Element => c.type === "element");
+      if (!firstEl || firstEl.tagName !== "p") return undefined;
+      const firstText = firstEl.children[0];
+      if (!firstText || firstText.type !== "text") return undefined;
+      const marker = ALERT_MARKER.exec(firstText.value);
+      if (!marker) return undefined;
+      const type = marker[1]!.toLowerCase() as AdmonitionType;
+
+      // マーカー（と直後の改行）を本文から取り除く。
+      firstText.value = firstText.value.slice(marker[0].length);
+      // マーカーだけの段落（`> [!NOTE]\n>\n> 本文` 形式）は空になるので除去する。
+      if (toText(firstEl).trim() === "") {
+        node.children = node.children.filter((c) => c !== firstEl);
+      }
+
+      const replacement = makeAdmonition(type, node.children);
+      carryId(node, replacement); // blockquote 自体に付いた id があれば保持
+      matches.push({ parent: parent as { children: ElementContent[] }, index, replacement });
+      return SKIP;
+    }
+
+    return undefined;
+  });
+
+  // 1:1 置換なので index は安定（収集順＝文書順のまま差し替えてよい）。
+  for (const m of matches) {
+    m.parent.children[m.index] = m.replacement;
+  }
 }
 
 /**
@@ -313,6 +435,9 @@ export async function postprocessPages(
 
   for (const page of pages) {
     const tree = parser.parse(page.html);
+    // admonition を共通構造へ正規化してから Mermaid / ハイライト / リンク変換にかける
+    // （正規化後も内部の <pre>/<a>/<img> は後続処理の対象になる）。
+    processAdmonitions(tree);
     if (options.mermaidEnabled && processMermaid(tree)) hasMermaid = true;
     // Mermaid 変換後にハイライト（mermaid ブロックは対象外になる）。
     if (options.codeHighlight) await highlightCode(tree);

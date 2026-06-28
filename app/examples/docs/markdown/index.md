@@ -17,7 +17,7 @@ monodocs build examples/docs -o dist/showcase.html
 ```
 
 各カテゴリは左サイドバーから開けます:
-[テキスト書式](text.md) / [リスト](lists.md) / [コードと表](code-and-tables.md) / [脚注とリンク参照](footnotes.md)。
+[テキスト書式](text.md) / [リスト](lists.md) / [コードと表](code-and-tables.md) / [脚注とリンク参照](footnotes.md) / [アラート](alerts.md)。
 
 ## 見出し（ATX）
 

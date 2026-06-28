@@ -501,33 +501,18 @@ body.sidebar-collapsed #sidebar {
   margin: 0 0 0.5rem 1.5rem;
 }
 
-/* ---- AsciiDoc blocks (Asciidoctor output) ---- */
-#content .admonitionblock {
+/* ---- Admonitions (Markdown GFM alerts + AsciiDoc admonitions の共通構造) ---- */
+/* postprocess が両形式を <div class="admonition admonition-TYPE"> に正規化する。 */
+#content .admonition {
   margin: 1rem 0;
+  padding: 0.75rem 1rem;
   border-left: 4px solid var(--color-accent);
   background: var(--color-sidebar-bg);
   border-radius: 0 6px 6px 0;
 }
 
-#content .admonitionblock > table {
-  display: table;
-  width: 100%;
-  margin: 0;
-  border: 0;
-}
-
-#content .admonitionblock td {
-  border: 0;
-  padding: 0.75rem 1rem;
-  vertical-align: top;
-}
-
-#content .admonitionblock td.icon {
-  width: 1px;
-  white-space: nowrap;
-}
-
-#content .admonitionblock td.icon .title {
+#content .admonition-title {
+  margin: 0 0 0.4rem;
   font-weight: 700;
   font-size: 0.8rem;
   letter-spacing: 0.03em;
@@ -535,24 +520,37 @@ body.sidebar-collapsed #sidebar {
   color: var(--color-accent);
 }
 
-#content .admonitionblock.tip {
+/* 本文先頭・末尾の余白を詰めて囲みに収める。 */
+#content .admonition-content > :first-child {
+  margin-top: 0;
+}
+#content .admonition-content > :last-child {
+  margin-bottom: 0;
+}
+
+/* 種別ごとの配色（GitHub の alert に合わせる）。 */
+#content .admonition-tip {
   border-left-color: #1a7f37;
 }
-#content .admonitionblock.tip td.icon .title {
+#content .admonition-tip .admonition-title {
   color: #1a7f37;
 }
-#content .admonitionblock.warning,
-#content .admonitionblock.caution {
-  border-left-color: #bf8700;
+#content .admonition-important {
+  border-left-color: #8250df;
 }
-#content .admonitionblock.warning td.icon .title,
-#content .admonitionblock.caution td.icon .title {
-  color: #bf8700;
+#content .admonition-important .admonition-title {
+  color: #8250df;
 }
-#content .admonitionblock.important {
+#content .admonition-warning {
+  border-left-color: #9a6700;
+}
+#content .admonition-warning .admonition-title {
+  color: #9a6700;
+}
+#content .admonition-caution {
   border-left-color: #cf222e;
 }
-#content .admonitionblock.important td.icon .title {
+#content .admonition-caution .admonition-title {
   color: #cf222e;
 }
 
