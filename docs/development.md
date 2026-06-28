@@ -22,7 +22,7 @@ single-docs/
           pipeline/         # buildPages / buildSidebar / renderSingleHtml
           themes/default/   # HTML テンプレート / CSS / クライアント JS
       cli/                  # CLI（single-docs コマンド）
-    examples/               # basic-markdown / mixed / showcase（全記法サンプル）
+    examples/docs/          # 全記法・全機能のショーケース（markdown / asciidoc / mixed）
   site/                     # （予定）アプリ紹介の静的 Web サイト
   docs/                     # 開発ドキュメント（本フォルダ）
   scripts/dev.sh            # 専用イメージ内でコマンドを実行するヘルパー
@@ -63,8 +63,8 @@ scripts/dev.sh pnpm format      # Prettier で整形
 ローカルプレビュー（ホストのブラウザで `http://localhost:4173/`）:
 
 ```bash
-scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
-# 別ポート: SDOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0 --port 8080
+scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
+# 別ポート: SDOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0 --port 8080
 ```
 
 > コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
@@ -76,7 +76,7 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 
 ```bash
 docker run --rm -it -v "$PWD":/work -w /work/app single-docs-dev pnpm test
 docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app single-docs-dev \
-  node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
+  node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
 ```
 
 ### VS Code Dev Containers（任意）

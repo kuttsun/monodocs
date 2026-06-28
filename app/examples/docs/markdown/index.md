@@ -11,7 +11,7 @@ order: 1
 ビルド例:
 
 ```bash
-single-docs build examples/showcase/docs -o dist/showcase.html
+single-docs build examples/docs -o dist/showcase.html
 ```
 
 各カテゴリは左サイドバーから開けます:

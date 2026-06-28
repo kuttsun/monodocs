@@ -86,8 +86,8 @@ single-docs validate ./docs
 > docker build -f Dockerfile.dev -t single-docs-dev .   # 初回のみ
 > scripts/dev.sh pnpm install                            # 初回のみ
 > scripts/dev.sh pnpm build
-> scripts/dev.sh node packages/cli/dist/index.js build examples/mixed/docs -o dist/manual.html
-> # プレビュー: scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
+> scripts/dev.sh node packages/cli/dist/index.js build examples/docs -o dist/manual.html
+> # プレビュー: scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
 > ```
 
 ## ローカルプレビュー（目視確認）
@@ -102,14 +102,13 @@ scripts/dev.sh pnpm install
 scripts/dev.sh pnpm build
 
 # 全記法・全機能をまとめたショーケースを配信（ライブリロード付き）
-scripts/dev.sh node packages/cli/dist/index.js serve examples/showcase/docs --host 0.0.0.0
+scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
 ```
 
 起動後、ブラウザで **`http://localhost:4173/`** を開きます（`http://0.0.0.0:...` ではなく `localhost`）。
 止めるときは `Ctrl+C`。別ポートにするには `SDOCS_PORT=8080 scripts/dev.sh ... serve ... --host 0.0.0.0 --port 8080`。
 
-- `examples/showcase/docs` は Markdown(GFM) / AsciiDoc の全記法を 1 サイトにまとめたものです
-  （個別の最小サンプルは `examples/basic-markdown` / `examples/mixed`）。
+- `examples/docs` は Markdown(GFM) / AsciiDoc / 混在の全記法・全機能を 1 サイトにまとめたものです。
 - コンテナ内の配信をホストへ公開するため、`serve` には `--host 0.0.0.0` が必要です
   （`scripts/dev.sh` は serve のときだけ `SDOCS_PORT`（既定 4173）を公開します）。
 - 配信中にサンプル内のファイルを編集すると、ブラウザが自動でリロードします。
@@ -126,7 +125,7 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/showcase/docs --ho
 - 印刷プレビュー（Ctrl+P）で全ページが縦に展開されること
 
 > VS Code Dev Containers を使う場合は、コンテナ内で
-> `node packages/cli/dist/index.js serve examples/mixed/docs` を実行すると、
+> `node packages/cli/dist/index.js serve examples/docs` を実行すると、
 > VS Code がポート 4173 を自動フォワードします（`--host` は不要）。
 
 ## 設定ファイル（任意）

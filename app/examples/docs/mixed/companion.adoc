@@ -1,0 +1,6 @@
+= 相棒（AsciiDoc）
+:sd-title: 相棒（AsciiDoc）
+
+同じフォルダの Markdown ページへ戻る: link:index.md[混在トップ]。
+
+NOTE: AsciiDoc 側の admonition もそのまま使えます。

@@ -10,15 +10,16 @@ order: 1
 
 - **Markdown (GFM)**: [Markdown サンプル](markdown/index.md)
 - **AsciiDoc**: [AsciiDoc サンプル](asciidoc/index.adoc)
+- **混在（同一フォルダ）**: [Markdown / AsciiDoc 混在](mixed/index.md)
 
-上の 2 つ目は Markdown から AsciiDoc ページへのリンクです。形式をまたいだリンクも
+2・3 つ目は Markdown から AsciiDoc ページへのリンクです。形式をまたいだリンクも
 単一 HTML 内の hash route に変換されます（混在対応）。
 
 ## ビルド / プレビュー
 
 ```bash
-single-docs build examples/showcase/docs -o dist/showcase.html
-single-docs serve examples/showcase/docs            # http://127.0.0.1:4173/
+single-docs build examples/docs -o dist/showcase.html
+single-docs serve examples/docs            # http://127.0.0.1:4173/
 ```
 
 ## このサイトで確認できる機能
