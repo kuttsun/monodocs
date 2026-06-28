@@ -60,7 +60,16 @@ scripts/dev.sh pnpm typecheck   # 型チェック
 scripts/dev.sh pnpm format      # Prettier で整形
 ```
 
-ローカルプレビュー（ホストのブラウザで `http://localhost:4173/`）:
+ローカルプレビュー（ホストのブラウザで `http://localhost:4173/`）。
+依存インストール（初回のみ）・ビルド・`serve --host 0.0.0.0` をまとめて行う
+ショートカット `scripts/serve.sh` が手軽:
+
+```bash
+scripts/serve.sh examples/docs
+# 別ポート: MONODOCS_PORT=8080 scripts/serve.sh examples/docs --port 8080
+```
+
+個別に起動する場合（`scripts/serve.sh` は内部でこれに委譲する）:
 
 ```bash
 scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
@@ -68,8 +77,14 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.
 ```
 
 > コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
-> （`scripts/dev.sh` は `MONODOCS_PORT`（既定 4173）を公開する）。`http://0.0.0.0:...` ではなく
-> `http://localhost:...` を開く。
+> （`scripts/serve.sh` は自動で付与し、`scripts/dev.sh` は `MONODOCS_PORT`（既定 4173）を公開する）。
+> `http://0.0.0.0:...` ではなく `http://localhost:...` を開く。
+
+単一 HTML（配布物）をファイルに出力する:
+
+```bash
+scripts/dev.sh node packages/cli/dist/index.js build examples/docs -o dist/manual.html
+```
 
 ### ヘルパーを使わず `docker run` で実行する場合
 
@@ -84,6 +99,8 @@ docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app monodocs-dev \
 必須ではない。使う場合、`.devcontainer` は同じ `Dockerfile.dev` からイメージを構築する。
 **Dev Containers: Reopen in Container** で起動すると `postCreate` で `pnpm install` が走り、
 コンテナ内では `pnpm build` / `pnpm test` を直接実行できる（`scripts/dev.sh` は不要）。
+コンテナ内で `node packages/cli/dist/index.js serve examples/docs` を実行すると、
+VS Code がポート 4173 を自動フォワードする（`--host` は不要）。
 
 ## アーキテクチャ
 

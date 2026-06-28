@@ -79,38 +79,25 @@ monodocs validate ./docs
 ```
 
 > **現時点での実行方法**: `monodocs` の npm 公開は v0.6 で対応予定です。
-> それまではホストを汚さない専用 Docker イメージでビルド・実行します
-> （[docs/development.md](docs/development.md) 参照）。
->
-> ```bash
-> docker build -f Dockerfile.dev -t monodocs-dev .   # 初回のみ
-> scripts/dev.sh pnpm install                            # 初回のみ
-> scripts/dev.sh pnpm build
-> scripts/dev.sh node packages/cli/dist/index.js build examples/docs -o dist/manual.html
-> # プレビュー: scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
-> ```
+> それまではホストを汚さない専用 Docker イメージで実行します（Docker のみ必要）。
+> 全記法のショーケースをすぐ確認したいだけなら、次節の `scripts/serve.sh` が手軽です。
+> HTML へのビルドやテストなど開発向けの手順は [docs/development.md](docs/development.md) を参照してください。
 
 ## ローカルプレビュー（目視確認）
 
 専用 Docker イメージで `serve` を起動し、ホストのブラウザで動作を確認できます。
-ホストに Node / pnpm は不要です（[docs/development.md](docs/development.md) 参照）。
+ホストに Node / pnpm は不要です（Docker のみ）。
 
 ```bash
-# 初回のみ: イメージのビルドと依存インストール
-docker build -f Dockerfile.dev -t monodocs-dev .
-scripts/dev.sh pnpm install
-scripts/dev.sh pnpm build
-
 # 全記法・全機能をまとめたショーケースを配信（ライブリロード付き）
-scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
+# 依存インストール（初回のみ）・ビルド・serve をまとめて実行する
+scripts/serve.sh examples/docs
 ```
 
 起動後、ブラウザで **`http://localhost:4173/`** を開きます（`http://0.0.0.0:...` ではなく `localhost`）。
-止めるときは `Ctrl+C`。別ポートにするには `MONODOCS_PORT=8080 scripts/dev.sh ... serve ... --host 0.0.0.0 --port 8080`。
+止めるときは `Ctrl+C`。別ポートにするには `MONODOCS_PORT=8080 scripts/serve.sh examples/docs --port 8080`。
 
 - `examples/docs` は Markdown(GFM) / AsciiDoc / 混在の全記法・全機能を 1 サイトにまとめたものです。
-- コンテナ内の配信をホストへ公開するため、`serve` には `--host 0.0.0.0` が必要です
-  （`scripts/dev.sh` は serve のときだけ `MONODOCS_PORT`（既定 4173）を公開します）。
 - 配信中にサンプル内のファイルを編集すると、ブラウザが自動でリロードします。
 - Mermaid は既定で CDN 参照のため、図の描画にはブラウザ側のネット接続が必要です。
 
@@ -124,9 +111,8 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.
 - 画像埋め込み・ページ間リンク（`#/...` への変換）
 - 印刷プレビュー（Ctrl+P）で全ページが縦に展開されること
 
-> VS Code Dev Containers を使う場合は、コンテナ内で
-> `node packages/cli/dist/index.js serve examples/docs` を実行すると、
-> VS Code がポート 4173 を自動フォワードします（`--host` は不要）。
+> 個別ステップ（依存インストール・ビルド単体）や、テスト・型チェックなどの開発コマンド、
+> VS Code Dev Containers での実行方法は [docs/development.md](docs/development.md) を参照してください。
 
 ## 設定ファイル（任意）
 
