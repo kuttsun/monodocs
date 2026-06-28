@@ -90,6 +90,43 @@ single-docs validate ./docs
 > # プレビュー: scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
 > ```
 
+## ローカルプレビュー（目視確認）
+
+専用 Docker イメージで `serve` を起動し、ホストのブラウザで動作を確認できます。
+ホストに Node / pnpm は不要です（[docs/development.md](docs/development.md) 参照）。
+
+```bash
+# 初回のみ: イメージのビルドと依存インストール
+docker build -f Dockerfile.dev -t single-docs-dev .
+scripts/dev.sh pnpm install
+scripts/dev.sh pnpm build
+
+# サンプルを配信（ライブリロード付き）
+scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
+```
+
+起動後、ブラウザで **`http://localhost:4173/`** を開きます（`http://0.0.0.0:...` ではなく `localhost`）。
+止めるときは `Ctrl+C`。別ポートにするには `SDOCS_PORT=8080 scripts/dev.sh ... serve ... --host 0.0.0.0 --port 8080`。
+
+- コンテナ内の配信をホストへ公開するため、`serve` には `--host 0.0.0.0` が必要です
+  （`scripts/dev.sh` は serve のときだけ `SDOCS_PORT`（既定 4173）を公開します）。
+- 配信中に `examples/mixed/docs` 内のファイルを編集すると、ブラウザが自動でリロードします。
+- Mermaid は既定で CDN 参照のため、図の描画にはブラウザ側のネット接続が必要です。
+
+確認するとよい項目:
+
+- サイドバー（Markdown / AsciiDoc 混在・ディレクトリ折りたたみ・☰ で開閉）
+- 検索ボックス（タイトル / 本文 / 見出しの全文検索）
+- ページ内目次（右カラム。スクロールで現在地をハイライト）と前後ページナビ
+- ダークモード切替（🌙/☀️。リロードしても保持）
+- コードハイライト（shiki）と Mermaid 図
+- 画像埋め込み・ページ間リンク（`#/...` への変換）
+- 印刷プレビュー（Ctrl+P）で全ページが縦に展開されること
+
+> VS Code Dev Containers を使う場合は、コンテナ内で
+> `node packages/cli/dist/index.js serve examples/mixed/docs` を実行すると、
+> VS Code がポート 4173 を自動フォワードします（`--host` は不要）。
+
 ## 設定ファイル（任意）
 
 入力ディレクトリのあるプロジェクトに `single-docs.config.yml` を置くと挙動をカスタマイズできます。
