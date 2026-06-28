@@ -137,7 +137,8 @@ body.sidebar-collapsed #sidebar {
 .sidebar-tools {
   display: flex;
   gap: 0.5rem;
-  padding: 0 1rem 0.75rem;
+  /* ヘッダーと左右パディングを揃え、テーマ切替ボタンの右端を閉じるボタン «（.sidebar-header）と一致させる。 */
+  padding: 0 1.25rem 0.75rem;
 }
 
 #search-input {
