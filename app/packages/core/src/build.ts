@@ -82,6 +82,8 @@ export async function buildSite(options: BuildOptions = {}): Promise<BuildResult
     pages,
     sidebar,
     theme: config.theme,
+    sidebarCollapseDepth: config.sidebarCollapseDepth,
+    tocMaxLevel: config.tocMaxLevel,
     bodyScripts,
   });
 

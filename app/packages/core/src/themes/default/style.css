@@ -725,6 +725,22 @@ body.sidebar-collapsed #sidebar {
   font-size: 0.8rem;
 }
 
+/* h4 以降は toc.maxLevel を上げたときのみ現れる。段階的に字下げする。 */
+.toc-level-4 a {
+  padding-left: 2.25rem;
+  font-size: 0.8rem;
+}
+
+.toc-level-5 a {
+  padding-left: 3rem;
+  font-size: 0.78rem;
+}
+
+.toc-level-6 a {
+  padding-left: 3.75rem;
+  font-size: 0.78rem;
+}
+
 /* ---- responsive ---- */
 @media (max-width: 1100px) {
   #toc {

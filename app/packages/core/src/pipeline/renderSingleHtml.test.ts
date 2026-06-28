@@ -67,6 +67,68 @@ describe("renderSingleHtml", () => {
     ]);
   });
 
+  it("respects toc.maxLevel when embedding headings", async () => {
+    const p = page("/g", "g", "Guide");
+    p.headings = [
+      { level: 2, id: "g-h2", text: "H2" },
+      { level: 3, id: "g-h3", text: "H3" },
+      { level: 4, id: "g-h4", text: "H4" },
+    ];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Guide", route: "/g", pageId: "g" }];
+
+    const html = await renderSingleHtml({ title: "T", pages: [p], sidebar, tocMaxLevel: 4 });
+    const json = html.match(/__MONODOCS_DATA__ = (.*);/)?.[1] ?? "{}";
+    const data = JSON.parse(json.replace(/\\u003c/g, "<"));
+    // maxLevel 4 なら h4 まで目次に含む。
+    expect(data.pages[0].headings.map((h: { id: string }) => h.id)).toEqual([
+      "g-h2",
+      "g-h3",
+      "g-h4",
+    ]);
+  });
+
+  it("collapses directories deeper than collapseDepth by default", async () => {
+    const pages: Page[] = [page("/a/b/c", "a-b-c", "Deep")];
+    // a (depth 1) > b (depth 2) > page。collapseDepth=1 なら depth 2 以降を畳む。
+    const sidebar: SidebarNode[] = [
+      {
+        type: "dir",
+        title: "a",
+        path: "a",
+        children: [
+          {
+            type: "dir",
+            title: "b",
+            path: "a/b",
+            children: [{ type: "page", title: "Deep", route: "/a/b/c", pageId: "a-b-c" }],
+          },
+        ],
+      },
+    ];
+
+    const html = await renderSingleHtml({ title: "T", pages, sidebar, sidebarCollapseDepth: 1 });
+    // depth 1 の "a" は展開、depth 2 の "b" は collapsed。
+    expect(html).toContain('<li class="sidebar-dir"><span class="sidebar-dir-title">a</span>');
+    expect(html).toContain(
+      '<li class="sidebar-dir collapsed"><span class="sidebar-dir-title">b</span>',
+    );
+  });
+
+  it("does not collapse any directory when collapseDepth is unset", async () => {
+    const pages: Page[] = [page("/a/b", "a-b", "Page")];
+    const sidebar: SidebarNode[] = [
+      {
+        type: "dir",
+        title: "a",
+        path: "a",
+        children: [{ type: "page", title: "Page", route: "/a/b", pageId: "a-b" }],
+      },
+    ];
+
+    const html = await renderSingleHtml({ title: "T", pages, sidebar });
+    expect(html).not.toContain("sidebar-dir collapsed");
+  });
+
   it("marks hidden pages in the embedded data", async () => {
     const p = page("/s", "s", "Secret");
     p.hidden = true;

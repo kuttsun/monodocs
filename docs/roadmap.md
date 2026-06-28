@@ -703,10 +703,18 @@ sidebar:
   mode: "folder"
   titleFrom: "auto"
   collapsible: true
+  # この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
+  # 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。トップレベルを深さ 1 とする。
+  collapseDepth: 2
   exclude:
     - "_partials/**"
     - "partials/**"
     - "includes/**"
+
+toc:
+  # ページ内目次に出す見出しの最深レベル（2〜6）。既定は 3（h2〜h3）。
+  # h1 はページタイトル相当のため常に除外。見出し自体は本文に必ず表示される。
+  maxLevel: 3
 
 assets:
   embedImages: true

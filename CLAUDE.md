@@ -69,7 +69,10 @@ loadConfig (config.ts)
 
 ### クライアントテーマ
 
-[themes/default/](app/packages/core/src/themes/default/) に `template.html` / `style.css` / `app.js`。`renderSingleHtml` がトークン（`{{title}}` `{{style}}` `{{sidebar}}` `{{pages}}` `{{siteDataJson}}` `{{appJs}}` `{{bodyScripts}}`）を差し替える。`window.__MONODOCS_DATA__` に検索・目次・前後ナビ用のページデータ（route/title/hidden/h2,h3見出し/本文テキスト）を埋め込む。`app.js` は検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・hash routing を担当（素の IIFE。要素は常に null ガード）。print 時は `@media print` で全ページを縦展開。
+[themes/default/](app/packages/core/src/themes/default/) に `template.html` / `style.css` / `app.js`。`renderSingleHtml` がトークン（`{{title}}` `{{style}}` `{{sidebar}}` `{{pages}}` `{{siteDataJson}}` `{{appJs}}` `{{bodyScripts}}`）を差し替える。`window.__MONODOCS_DATA__` に検索・目次・前後ナビ用のページデータ（route/title/hidden/見出し/本文テキスト）を埋め込む。`app.js` は検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・hash routing を担当（素の IIFE。要素は常に null ガード）。print 時は `@media print` で全ページを縦展開。
+
+- **サイドバーの折りたたみ深さ（`sidebar.collapseDepth`）**: `renderSingleHtml` の `renderSidebar` が、この階層より深いディレクトリに `collapsed` クラスをサーバ側で付けて既定で畳む（トップレベルを深さ 1 とする。`0`=全畳み / 未指定=全展開）。**隠す（hide）のではなく畳む（collapse）**ため、深いページへの到達性は失わない（クライアントの開閉トグルでいつでも開ける）。深さ制限でナビから消す方式は採らない。
+- **目次の見出し深さ（`toc.maxLevel`）**: `__MONODOCS_DATA__` に埋め込む見出しを h2〜`maxLevel`（2〜6、既定 3）で絞る。見出しは到達済みページ内のアンカーなので、ここを浅くしても到達性は失わない（本文には常に表示される）。`toc-level-4..6` の字下げ CSS も用意済み。
 
 > **テーマアセットの dist コピーが必須**: `tsc` は `.html/.css/.js` を dist へコピーしないため、`packages/core/scripts/copy-theme.mjs` が `src/themes` → `dist/themes` をコピーする（`pnpm build` に含まれる）。`loadTheme` は実行時に `src/themes`（vitest）/ `dist/themes`（ビルド後）を参照する。テーマを編集したら再ビルドが必要。
 

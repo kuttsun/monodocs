@@ -14,6 +14,8 @@ const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
 const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
 const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
 const DEFAULT_MAX_INLINE_SIZE = 5 * 1024 * 1024; // 5MB
+// ページ内目次に出す見出しの最深レベル（h2〜h3）。h1 はページタイトル相当のため常に除外。
+const DEFAULT_TOC_MAX_LEVEL = 3;
 
 /** 画像の最大インラインサイズ超過時の挙動。 */
 export type OnLargeImage = "warn" | "error" | "external";
@@ -36,7 +38,20 @@ const configFileSchema = z.object({
       asciidoc: z.object({ extensions: z.array(z.string()).optional() }).optional(),
     })
     .optional(),
-  sidebar: z.object({ exclude: z.array(z.string()).optional() }).optional(),
+  sidebar: z
+    .object({
+      exclude: z.array(z.string()).optional(),
+      // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
+      // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
+      collapseDepth: z.number().int().min(0).optional(),
+    })
+    .optional(),
+  toc: z
+    .object({
+      // ページ内目次に出す見出しの最深レベル（2〜6）。h1 はページタイトル相当のため常に除外。
+      maxLevel: z.number().int().min(2).max(6).optional(),
+    })
+    .optional(),
   assets: z
     .object({
       embedImages: z.boolean().optional(),
@@ -65,6 +80,10 @@ export type ResolvedConfig = {
   markdownExtensions: string[];
   asciidocExtensions: string[];
   exclude: string[];
+  /** この階層より深いディレクトリを既定で折りたたむ。undefined は折りたたみなし。 */
+  sidebarCollapseDepth?: number;
+  /** ページ内目次に出す見出しの最深レベル（2〜6）。 */
+  tocMaxLevel: number;
   theme: string;
   embedImages: boolean;
   maxInlineSize: number;
@@ -136,6 +155,8 @@ export async function loadConfig(
     markdownExtensions: fileConfig.sources?.markdown?.extensions ?? DEFAULT_MARKDOWN_EXTENSIONS,
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
+    sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,
+    tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
     theme: fileConfig.html?.theme ?? "default",
     embedImages: fileConfig.assets?.embedImages ?? true,
     maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
