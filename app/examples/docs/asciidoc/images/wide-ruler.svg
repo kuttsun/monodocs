@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="320" viewBox="0 0 1600 320" font-family="sans-serif">
+  <rect x="1" y="1" width="1598" height="318" rx="8" fill="#eef3fb" stroke="#94a3b8" />
+
+  <!-- 装飾用の薄いグリッド -->
+  <g stroke="#dbe4f0" stroke-width="1">
+    <line x1="200" y1="24" x2="200" y2="296" />
+    <line x1="400" y1="24" x2="400" y2="296" />
+    <line x1="600" y1="24" x2="600" y2="296" />
+    <line x1="800" y1="24" x2="800" y2="296" />
+    <line x1="1000" y1="24" x2="1000" y2="296" />
+    <line x1="1200" y1="24" x2="1200" y2="296" />
+    <line x1="1400" y1="24" x2="1400" y2="296" />
+  </g>
+
+  <!-- タイトル -->
+  <text x="800" y="150" text-anchor="middle" font-size="40" font-weight="700" fill="#0f172a">幅 1600 × 320 のサンプル画像</text>
+  <text x="800" y="195" text-anchor="middle" font-size="20" fill="#475569">本文幅に合わせて縮小表示されます</text>
+</svg>

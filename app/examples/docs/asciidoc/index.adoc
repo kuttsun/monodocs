@@ -14,7 +14,7 @@ monodocs build examples/docs -o dist/showcase.html
 ----
 
 各カテゴリは左サイドバーから開けます:
-xref:lists.adoc[リスト] / xref:blocks.adoc[ブロック] / xref:tables.adoc[表] / xref:links-images.adoc[リンクと画像]。
+xref:lists.adoc[リスト] / xref:blocks.adoc[ブロック] / xref:tables.adoc[表] / xref:links-images.adoc[リンクと画像] / xref:wide-content.adoc[幅の広いコンテンツ]。
 
 == セクション見出し
 
