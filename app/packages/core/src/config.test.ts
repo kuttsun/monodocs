@@ -44,12 +44,24 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     expect(config.tocMaxLevel).toBe(3);
     expect(config.sidebarStripNumberPrefix).toBe(false);
     expect(config.sidebarFlattenSingleChild).toBe(false);
+    expect(config.sidebarTitleFrom).toBe("heading");
   });
 
   it("reads sidebar.stripNumberPrefix from the config file", async () => {
     await writeConfig("sidebar:\n  stripNumberPrefix: true\n");
     const config = await loadConfig({}, dir);
     expect(config.sidebarStripNumberPrefix).toBe(true);
+  });
+
+  it("reads sidebar.titleFrom from the config file", async () => {
+    await writeConfig("sidebar:\n  titleFrom: filename\n");
+    const config = await loadConfig({}, dir);
+    expect(config.sidebarTitleFrom).toBe("filename");
+  });
+
+  it("rejects an invalid sidebar.titleFrom", async () => {
+    await writeConfig("sidebar:\n  titleFrom: nope\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
   });
 
   it("reads sidebar.flattenSingleChild from the config file", async () => {

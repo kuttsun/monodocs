@@ -6,13 +6,15 @@ import type { PageMeta } from "../types.js";
  *
  * frontmatter は型付き（order: number, hidden: boolean）、
  * AsciiDoc 属性は文字列で来るため、どちらも受けられるようにする。
+ *
+ * 明示タイトル（`raw.title`）と見出しタイトル（`headingTitle`）は別フィールドに保持する。
+ * どちらを表示に使うかは `sidebar.titleFrom` に応じて buildPages 側で決める。
  */
-export function toPageMeta(raw: Record<string, unknown>, fallbackTitle?: string): PageMeta {
+export function toPageMeta(raw: Record<string, unknown>, headingTitle?: string): PageMeta {
   const meta: PageMeta = {};
 
-  const title =
-    typeof raw.title === "string" && raw.title.trim() ? raw.title.trim() : fallbackTitle?.trim();
-  if (title) meta.title = title;
+  if (typeof raw.title === "string" && raw.title.trim()) meta.title = raw.title.trim();
+  if (headingTitle?.trim()) meta.headingTitle = headingTitle.trim();
 
   if (typeof raw.order === "number" && Number.isFinite(raw.order)) {
     meta.order = raw.order;

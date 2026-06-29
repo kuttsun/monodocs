@@ -60,3 +60,46 @@ describe("buildPages title derivation", () => {
     expect(pages[0]?.title).toBe("01_intro");
   });
 });
+
+describe("buildPages titleFrom", () => {
+  function withRaw(relativePath: string, raw: string): SourceFile {
+    return { absolutePath: "/docs/" + relativePath, relativePath, raw, format: "markdown" };
+  }
+
+  it("uses the H1 over the filename by default", async () => {
+    const { pages } = await buildPages(
+      [withRaw("getting-started.md", "# Hello\n")],
+      [markdownRenderer],
+    );
+    expect(pages[0]?.title).toBe("Hello");
+  });
+
+  it("uses the filename even when an H1 exists with titleFrom: filename", async () => {
+    const { pages, warnings } = await buildPages(
+      [withRaw("getting-started.md", "# Hello\n")],
+      [markdownRenderer],
+      { titleFrom: "filename" },
+    );
+    expect(pages[0]?.title).toBe("getting-started");
+    // ファイル名は指定された取得元なので、タイトル欠落の警告は出さない。
+    expect(warnings).toHaveLength(0);
+  });
+
+  it("still respects an explicit frontmatter title with titleFrom: filename", async () => {
+    const { pages } = await buildPages(
+      [withRaw("getting-started.md", "---\ntitle: Explicit\n---\n\n# Hello\n")],
+      [markdownRenderer],
+      { titleFrom: "filename" },
+    );
+    expect(pages[0]?.title).toBe("Explicit");
+  });
+
+  it("composes with stripNumberPrefix (filename title, prefix kept in route)", async () => {
+    const { pages } = await buildPages([withRaw("01_intro.md", "# Hello\n")], [markdownRenderer], {
+      titleFrom: "filename",
+      stripNumberPrefix: true,
+    });
+    expect(pages[0]?.title).toBe("intro");
+    expect(pages[0]?.route).toBe("/01_intro");
+  });
+});

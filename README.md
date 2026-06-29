@@ -131,6 +131,9 @@ sidebar:
   # フォルダ名・ファイル名の先頭の数字プレフィックス（"01_" "001-" など）を表示タイトルから除去する。
   # ファイル名で並び順を制御しつつ、サイドバー/目次には数字を出さない運用向け（既定 false）。
   stripNumberPrefix: false
+  # タイトルの取得元。"heading"（既定）= frontmatter → 見出し(H1) → ファイル名。
+  # "filename" = 見出しがあってもファイル名をタイトルに使う（明示タイトルは常に最優先）。
+  titleFrom: "heading"
 sources:
   markdown:
     extensions: [".md", ".markdown"]

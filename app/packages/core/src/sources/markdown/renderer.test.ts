@@ -7,18 +7,20 @@ function md(raw: string): SourceFile {
 }
 
 describe("markdownRenderer.extractMeta", () => {
-  it("extracts the first H1 as the title", async () => {
+  it("extracts the first H1 as the heading title", async () => {
     const meta = await markdownRenderer.extractMeta(md("# Hello\n\nbody\n"));
-    expect(meta.title).toBe("Hello");
+    expect(meta.headingTitle).toBe("Hello");
+    expect(meta.title).toBeUndefined();
   });
 
   it("ignores YAML frontmatter when finding the H1", async () => {
     const meta = await markdownRenderer.extractMeta(md("---\nfoo: bar\n---\n\n# Real Title\n"));
-    expect(meta.title).toBe("Real Title");
+    expect(meta.headingTitle).toBe("Real Title");
   });
 
-  it("returns undefined title when there is no H1", async () => {
+  it("returns undefined heading title when there is no H1", async () => {
     const meta = await markdownRenderer.extractMeta(md("## Only h2\n"));
+    expect(meta.headingTitle).toBeUndefined();
     expect(meta.title).toBeUndefined();
   });
 

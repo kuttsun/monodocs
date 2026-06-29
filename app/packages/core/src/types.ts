@@ -9,6 +9,13 @@
 /** 対応するソース形式。将来 "html" / "rst" などを追加できる。 */
 export type SourceFormat = "markdown" | "asciidoc";
 
+/**
+ * サイドバー等で使うページタイトルの取得元。
+ * `"heading"`（既定）= frontmatter → 見出し（H1 / 文書タイトル）→ ファイル名。
+ * `"filename"` = frontmatter → ファイル名（見出しはタイトルに使わない）。
+ */
+export type TitleFrom = "heading" | "filename";
+
 /** 走査・読み込み済みのソースファイル。 */
 export type SourceFile = {
   absolutePath: string;
@@ -45,7 +52,10 @@ export type AssetRef = {
 
 /** ソースから抽出したメタデータ（frontmatter / AsciiDoc attributes 由来）。 */
 export type PageMeta = {
+  /** 明示タイトル（Markdown frontmatter `title` / AsciiDoc `:sd-title:`）。 */
   title?: string;
+  /** 見出し由来タイトル（Markdown の H1 / AsciiDoc の文書タイトル `= Title`）。 */
+  headingTitle?: string;
   order?: number;
   hidden?: boolean;
   description?: string;

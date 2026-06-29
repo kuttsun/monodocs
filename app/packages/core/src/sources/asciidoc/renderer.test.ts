@@ -11,13 +11,15 @@ const ctx: RenderContext = {
 };
 
 describe("asciidocRenderer.extractMeta", () => {
-  it("uses the document title (= Title)", async () => {
+  it("uses the document title (= Title) as the heading title", async () => {
     const meta = await asciidocRenderer.extractMeta(adoc("= My Title\n\nbody\n"));
-    expect(meta.title).toBe("My Title");
+    expect(meta.headingTitle).toBe("My Title");
+    expect(meta.title).toBeUndefined();
   });
 
-  it("returns undefined when there is no document title", async () => {
+  it("returns undefined heading title when there is no document title", async () => {
     const meta = await asciidocRenderer.extractMeta(adoc("just a paragraph\n"));
+    expect(meta.headingTitle).toBeUndefined();
     expect(meta.title).toBeUndefined();
   });
 

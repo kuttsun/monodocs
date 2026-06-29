@@ -47,6 +47,7 @@
 - [x] 前後ページナビゲーションを表示する（hidden ページは除外）
 - [x] サイドバーを折りたたみできる（全体トグル＋ディレクトリ単位の開閉。`sidebar.collapseDepth` でこの階層より深いディレクトリを既定で畳める）
 - [x] サイドバーのフォルダ名を強制大文字化せず原文のまま表示する。`sidebar.stripNumberPrefix` で並び替え用の数字プレフィックス（`01_` `001-` など）を表示タイトルから除去できる（route は順序のため保持）
+- [x] `sidebar.titleFrom: "filename"` で、見出し（H1 / `= Title`）があってもファイル名をページタイトルに使える（明示タイトル frontmatter `title` / `:sd-title:` は常に最優先）。既定は `"heading"`（frontmatter → 見出し → ファイル名）
 - [x] `sidebar.flattenSingleChild` でページを 1 つだけ含む（サブフォルダ無し）のフォルダ階層を畳み、唯一のページを親へ繰り上げられる（ドキュメント＋画像を 1 フォルダにまとめた場合の冗長な階層を解消。route は不変で到達性を失わない）
 - [x] ダークモードに対応（OS 設定に追従。手動切替は localStorage に保存）
 - [x] 印刷時に全ページを縦に展開する print 用レイアウト（`@media print`）

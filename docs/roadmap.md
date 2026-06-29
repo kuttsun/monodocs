@@ -701,7 +701,9 @@ sources:
 
 sidebar:
   mode: "folder"
-  titleFrom: "auto"
+  # タイトルの取得元。"heading"（既定）= frontmatter → 見出し(H1 / = Title) → ファイル名。
+  # "filename" = 見出しがあってもファイル名をタイトルに使う（明示タイトルは常に最優先）。
+  titleFrom: "heading"
   collapsible: true
   # この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
   # 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。トップレベルを深さ 1 とする。
@@ -795,6 +797,10 @@ AsciiDoc では document attributes を利用する。
    - AsciiDoc: = Title
 3. ファイル名
 ```
+
+`sidebar.titleFrom: "filename"` を指定すると 2（文書タイトル）を飛ばし、明示メタデータが無ければ
+ファイル名をタイトルにする（見出しが本文に出ても、ナビ名にはファイル名を使いたい運用向け）。
+明示メタデータ（1）は `titleFrom` に関わらず常に最優先。
 
 ### 13.4 order 優先順位
 

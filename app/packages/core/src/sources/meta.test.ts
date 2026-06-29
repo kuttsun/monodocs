@@ -13,18 +13,22 @@ describe("toPageMeta", () => {
 
   it("normalizes AsciiDoc attribute strings", () => {
     expect(toPageMeta({ order: "10", hidden: "true" }, "Doc Title")).toEqual({
-      title: "Doc Title",
+      headingTitle: "Doc Title",
       order: 10,
       hidden: true,
     });
   });
 
-  it("prefers explicit title over the fallback", () => {
-    expect(toPageMeta({ title: "Explicit" }, "H1").title).toBe("Explicit");
+  it("keeps explicit title and heading title in separate fields", () => {
+    const meta = toPageMeta({ title: "Explicit" }, "H1");
+    expect(meta.title).toBe("Explicit");
+    expect(meta.headingTitle).toBe("H1");
   });
 
-  it("falls back when no explicit title is given", () => {
-    expect(toPageMeta({}, "H1").title).toBe("H1");
+  it("records the heading title without setting an explicit title", () => {
+    const meta = toPageMeta({}, "H1");
+    expect(meta.title).toBeUndefined();
+    expect(meta.headingTitle).toBe("H1");
   });
 
   it("ignores invalid order and non-true hidden", () => {

@@ -1,4 +1,4 @@
-import type { Page, SourceFile, SourceRenderer } from "../types.js";
+import type { PageMeta, Page, SourceFile, SourceRenderer, TitleFrom } from "../types.js";
 import { toPageId, toRoute } from "../route.js";
 import { stripOrderPrefix } from "./orderPrefix.js";
 
@@ -10,6 +10,13 @@ export type BuildPagesResult = {
 export type BuildPagesOptions = {
   /** ファイル名由来のタイトルから並び替え用の数値プレフィックスを除去する（`01_setup` → `setup`）。 */
   stripNumberPrefix?: boolean;
+  /**
+   * 見出し（H1 / 文書タイトル）とファイル名のどちらをタイトルに使うか。
+   * `"heading"`（既定）= frontmatter → 見出し → ファイル名。
+   * `"filename"` = frontmatter → ファイル名（見出しは本文に残るがタイトルには使わない）。
+   * 明示タイトル（frontmatter `title` / `:sd-title:`）はどちらでも常に最優先。
+   */
+  titleFrom?: TitleFrom;
 };
 
 /** ファイル名（拡張子除く）からタイトルを導出する。 */
@@ -18,6 +25,31 @@ function deriveTitleFromPath(relativePath: string, stripNumberPrefix: boolean): 
   const name = base.replace(/\.[^.]+$/, "");
   if (name === "index") return "Home";
   return stripNumberPrefix ? stripOrderPrefix(name) : name;
+}
+
+/**
+ * タイトルを優先順位に従って解決する。
+ * 明示タイトル（frontmatter / `:sd-title:`）は常に最優先。次に `titleFrom` が `"heading"` なら
+ * 見出しタイトル、`"filename"` なら見出しを飛ばしてファイル名へ。返り値の `fromFilename` は
+ * 「ファイル名へフォールバックしたか」（タイトル欠落の警告判定に使う）。
+ */
+function resolveTitle(
+  meta: PageMeta,
+  relativePath: string,
+  options: BuildPagesOptions,
+): { title: string; fromFilename: boolean } {
+  const explicit = meta.title?.trim();
+  if (explicit) return { title: explicit, fromFilename: false };
+
+  if ((options.titleFrom ?? "heading") !== "filename") {
+    const heading = meta.headingTitle?.trim();
+    if (heading) return { title: heading, fromFilename: false };
+  }
+
+  return {
+    title: deriveTitleFromPath(relativePath, options.stripNumberPrefix ?? false),
+    fromFilename: true,
+  };
 }
 
 /**
@@ -68,10 +100,10 @@ export async function buildPages(
       page: { id, route, relativePath: source.relativePath, format: source.format },
     });
 
-    const title =
-      meta.title?.trim() ||
-      deriveTitleFromPath(source.relativePath, options.stripNumberPrefix ?? false);
-    if (!meta.title) {
+    const { title, fromFilename } = resolveTitle(meta, source.relativePath, options);
+    // ファイル名へフォールバックしたら警告する。ただし titleFrom: "filename" のときは
+    // ファイル名が指定された取得元なので「タイトル欠落」ではなく、警告しない。
+    if (fromFilename && (options.titleFrom ?? "heading") !== "filename") {
       warnings.push(`No title found in "${source.relativePath}"; using "${title}".`);
     }
 

@@ -40,6 +40,7 @@ async function preparePages(config: ResolvedConfig, cwd: string): Promise<Prepar
 
   const { pages, warnings } = await buildPages(sources, [markdownRenderer, asciidocRenderer], {
     stripNumberPrefix: config.sidebarStripNumberPrefix,
+    titleFrom: config.sidebarTitleFrom,
   });
   const post = await postprocessPages(pages, {
     inputDir,
