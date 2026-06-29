@@ -13,8 +13,25 @@ export type Theme = {
 // （アセットは build 時に copy-theme.mjs で dist へコピーされる）。
 const here = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * 単一実行ファイル（SEA / esbuild バンドル）向けに埋め込まれたアセット。
+ * `scripts/bundle.mjs` がビルド時に banner で `globalThis.__MONODOCS_ASSETS__` を
+ * 注入する。通常（tsc ビルド / vitest）は undefined のままで、ファイル読み込みに委譲する。
+ */
+type EmbeddedAssets = {
+  themes?: Record<string, Theme | undefined>;
+  mermaidInline?: string;
+};
+export function embeddedAssets(): EmbeddedAssets | undefined {
+  return (globalThis as { __MONODOCS_ASSETS__?: EmbeddedAssets }).__MONODOCS_ASSETS__;
+}
+
 /** 指定テーマの template / style / client JS を読み込む。 */
 export async function loadTheme(name = "default"): Promise<Theme> {
+  // 単一実行ファイルではファイルシステムに themes が存在しないため、埋め込み済みを優先する。
+  const embedded = embeddedAssets()?.themes?.[name];
+  if (embedded) return embedded;
+
   const dir = join(here, name);
   const [template, style, appJs] = await Promise.all([
     readFile(join(dir, "template.html"), "utf8"),

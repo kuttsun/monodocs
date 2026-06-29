@@ -151,4 +151,8 @@ program
     process.exitCode = 1;
   });
 
-await program.parseAsync(process.argv);
+// トップレベル await は使わない（単一実行ファイル化のため CJS バンドルにする都合）。
+program.parseAsync(process.argv).catch((error) => {
+  console.error(`error: ${(error as Error).message}`);
+  process.exit(1);
+});

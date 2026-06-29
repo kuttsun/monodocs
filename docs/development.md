@@ -86,6 +86,34 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.
 scripts/dev.sh node packages/cli/dist/index.js build examples/docs -o dist/manual.html
 ```
 
+### 単一実行ファイル（ネイティブバイナリ）をビルドする
+
+`scripts/dev.sh` / `scripts/serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、
+作業ディレクトリも `/work/app` のため、**`app/` 配下のパスしか配信できない**（リポジトリ外の
+任意ディレクトリを指せない）。これを避けて任意の場所のドキュメントを試すには、ホストで直接動く
+単一実行ファイルを使う。
+
+`scripts/build-bin.sh` が依存込みの単一ネイティブバイナリ（Node 22 の
+[Single Executable Application](https://nodejs.org/api/single-executable-applications.html)）を
+`app/dist/monodocs` に出力する。esbuild で全依存とテーマアセットを 1 ファイルにバンドルし、
+SEA blob を `postject` で node バイナリへ注入する。**ホストに node は不要**（ビルド環境と
+同じ OS/arch 向け）。
+
+```bash
+scripts/build-bin.sh                              # → app/dist/monodocs を生成
+
+# 以降はホストで直接実行（Docker 不要・任意ディレクトリを指せる）
+app/dist/monodocs serve ~/任意のドキュメント       # ローカルプレビュー（--host 0.0.0.0 不要）
+app/dist/monodocs build ~/任意のドキュメント -o ~/manual.html
+```
+
+> - 出力は約 130 MiB（node ランタイム同梱のため）。`app/dist/` は `.gitignore` 済み。
+> - テーマアセット（`template.html` / `style.css` / `app.js`）と mermaid inline ランタイムは
+>   バンドル時に `globalThis.__MONODOCS_ASSETS__` へ埋め込む（`scripts/bundle.mjs`）。
+>   `loadTheme` / `mermaidRuntimeScript` はこの埋め込みを優先し、無ければ従来どおりファイルから読む。
+> - バンドルだけ欲しいとき（ホストに node がある場合）は `scripts/dev.sh pnpm bundle` で
+>   `app/dist/monodocs.cjs` を生成し `node app/dist/monodocs.cjs ...` で実行できる。
+
 ### ヘルパーを使わず `docker run` で実行する場合
 
 ```bash

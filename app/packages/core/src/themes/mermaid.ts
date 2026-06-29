@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import type { MermaidRuntime } from "../config.js";
+import { embeddedAssets } from "./index.js";
 
 const MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
 
@@ -32,8 +33,13 @@ function renderHelper(mermaidExpr: string): string {
 
 export async function mermaidRuntimeScript(runtime: MermaidRuntime): Promise<string> {
   if (runtime === "inline") {
-    const require = createRequire(import.meta.url);
-    const lib = await readFile(require.resolve("mermaid/dist/mermaid.min.js"), "utf8");
+    // 単一実行ファイルでは node_modules が無いため、埋め込み済みの mermaid を優先する。
+    const lib =
+      embeddedAssets()?.mermaidInline ??
+      (await readFile(
+        createRequire(import.meta.url).resolve("mermaid/dist/mermaid.min.js"),
+        "utf8",
+      ));
     return (
       `<script>${lib}</script>\n` +
       `<script>(function(){` +
