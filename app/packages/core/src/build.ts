@@ -50,7 +50,10 @@ async function preparePages(config: ResolvedConfig, cwd: string): Promise<Prepar
     mermaidEnabled: config.mermaidEnabled,
     codeHighlight: config.codeHighlight,
   });
-  const sidebar = buildSidebar(pages, { stripNumberPrefix: config.sidebarStripNumberPrefix });
+  const sidebar = buildSidebar(pages, {
+    stripNumberPrefix: config.sidebarStripNumberPrefix,
+    flattenSingleChild: config.sidebarFlattenSingleChild,
+  });
 
   return {
     pages,

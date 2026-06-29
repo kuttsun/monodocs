@@ -75,6 +75,7 @@ loadConfig (config.ts)
 - **目次の見出し深さ（`toc.maxLevel`）**: `__MONODOCS_DATA__` に埋め込む見出しを h2〜`maxLevel`（2〜6、既定 3）で絞る。見出しは到達済みページ内のアンカーなので、ここを浅くしても到達性は失わない（本文には常に表示される）。`toc-level-4..6` の字下げ CSS も用意済み。
 - **フォルダ名の表示**: サイドバーのフォルダ名は強制大文字化しない（`.sidebar-dir-title` から `text-transform: uppercase` を撤去済み。原文の大小をそのまま表示）。
 - **数字プレフィックスの除去（`sidebar.stripNumberPrefix`）**: 入力を `01_setup` / `001-intro` のように数字プレフィックスで並べると route の文字列ソートで意図した順序になる。`true`（既定 `false`）で表示タイトルのみその数字プレフィックスを除去する（フォルダ名は `buildSidebar`、ファイル名由来タイトルは `buildPages.deriveTitleFromPath`、共通ロジックは [pipeline/orderPrefix.ts](app/packages/core/src/pipeline/orderPrefix.ts)）。**route / page id は順序付けのため prefix を保持**し、表示だけ落とす。frontmatter / H1 で明示したタイトルは対象外（ファイル名由来のときのみ除去）。
+- **単一ページフォルダの繰り上げ（`sidebar.flattenSingleChild`）**: ドキュメント＋関連画像を 1 フォルダにまとめると、そのフォルダはサイドバー上ページを 1 つしか持たず階層が冗長になる。`true`（既定 `false`）で「**ページちょうど 1 つ・サブフォルダ 0** のディレクトリ」を畳み、唯一のページを親へ繰り上げる（[buildSidebar.ts](app/packages/core/src/pipeline/buildSidebar.ts) の `flattenSingleChildDirs` がツリー構築後にボトムアップ再帰で適用。`a/b/single.md` のような単一チェーンも端のページまで畳む）。**画像はページに数えない**ので動機ケースは自動判定できる。複数ページを持つフォルダや、唯一の子が複数ページのサブフォルダであるフォルダ（構造を持つ）は対象外。**route / page id は不変**で、`collapseDepth` などと同じく到達性を失わず表示構造だけを変える。
 
 > **テーマアセットの dist コピーが必須**: `tsc` は `.html/.css/.js` を dist へコピーしないため、`packages/core/scripts/copy-theme.mjs` が `src/themes` → `dist/themes` をコピーする（`pnpm build` に含まれる）。`loadTheme` は実行時に `src/themes`（vitest）/ `dist/themes`（ビルド後）を参照する。テーマを編集したら再ビルドが必要。
 

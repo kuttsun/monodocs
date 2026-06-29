@@ -6,6 +6,11 @@ type DirNode = Extract<SidebarNode, { type: "dir" }>;
 export type BuildSidebarOptions = {
   /** フォルダ名のタイトルから並び替え用の数値プレフィックスを除去する（`01_setup` → `setup`）。 */
   stripNumberPrefix?: boolean;
+  /**
+   * ページを 1 つだけ含む（サブフォルダを持たない）ディレクトリ階層を畳み、その唯一のページを
+   * 親へ繰り上げる。route / pageId は変えずサイドバーの表示だけを変えるので到達性は失わない。
+   */
+  flattenSingleChild?: boolean;
 };
 
 /**
@@ -45,5 +50,22 @@ export function buildSidebar(pages: Page[], options: BuildSidebarOptions = {}): 
     });
   }
 
-  return root;
+  return options.flattenSingleChild ? flattenSingleChildDirs(root) : root;
+}
+
+/**
+ * ページを 1 つだけ含む（サブフォルダ無し）のディレクトリ階層を畳み、唯一のページを親へ繰り上げる。
+ * ボトムアップ（子を先に畳んでから自分を判定）で再帰するため、`a/b/single.md` のような
+ * 単一チェーンも端のページまで畳まれる。サブフォルダや複数ページを持つディレクトリは構造を
+ * 持つため対象外。route / pageId には触れず、サイドバーの表示構造だけを変える。
+ */
+function flattenSingleChildDirs(nodes: SidebarNode[]): SidebarNode[] {
+  return nodes.map((node) => {
+    if (node.type !== "dir") return node;
+    const children = flattenSingleChildDirs(node.children);
+    if (children.length === 1 && children[0]?.type === "page") {
+      return children[0];
+    }
+    return { ...node, children };
+  });
 }

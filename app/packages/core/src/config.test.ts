@@ -43,12 +43,19 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     expect(config.sidebarCollapseDepth).toBeUndefined();
     expect(config.tocMaxLevel).toBe(3);
     expect(config.sidebarStripNumberPrefix).toBe(false);
+    expect(config.sidebarFlattenSingleChild).toBe(false);
   });
 
   it("reads sidebar.stripNumberPrefix from the config file", async () => {
     await writeConfig("sidebar:\n  stripNumberPrefix: true\n");
     const config = await loadConfig({}, dir);
     expect(config.sidebarStripNumberPrefix).toBe(true);
+  });
+
+  it("reads sidebar.flattenSingleChild from the config file", async () => {
+    await writeConfig("sidebar:\n  flattenSingleChild: true\n");
+    const config = await loadConfig({}, dir);
+    expect(config.sidebarFlattenSingleChild).toBe(true);
   });
 
   it("reads collapseDepth and maxLevel from the config file", async () => {

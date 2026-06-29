@@ -47,6 +47,10 @@ const configFileSchema = z.object({
       // フォルダ名・ファイル名の先頭にある並び替え用の数値プレフィックス（`01_` `001-` など）を
       // 表示タイトルから除去する。順序はファイル名で制御しつつ、表示には数字を出さない運用向け。
       stripNumberPrefix: z.boolean().optional(),
+      // ページを 1 つだけ含む（サブフォルダを持たない）ディレクトリ階層をサイドバーから畳み、
+      // その唯一のページを親へ繰り上げる。ドキュメント＋画像を 1 フォルダにまとめた場合などに
+      // 冗長なフォルダ階層を消すための設定。画像はページに数えないため自動で判定できる。
+      flattenSingleChild: z.boolean().optional(),
     })
     .optional(),
   toc: z
@@ -87,6 +91,8 @@ export type ResolvedConfig = {
   sidebarCollapseDepth?: number;
   /** 表示タイトルから並び替え用の数値プレフィックス（`01_` など）を除去するか。 */
   sidebarStripNumberPrefix: boolean;
+  /** ページ 1 つだけ・サブフォルダ無しのディレクトリ階層を畳んでページを親へ繰り上げるか。 */
+  sidebarFlattenSingleChild: boolean;
   /** ページ内目次に出す見出しの最深レベル（2〜6）。 */
   tocMaxLevel: number;
   theme: string;
@@ -162,6 +168,7 @@ export async function loadConfig(
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
     sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,
     sidebarStripNumberPrefix: fileConfig.sidebar?.stripNumberPrefix ?? false,
+    sidebarFlattenSingleChild: fileConfig.sidebar?.flattenSingleChild ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
     theme: fileConfig.html?.theme ?? "default",
     embedImages: fileConfig.assets?.embedImages ?? true,
