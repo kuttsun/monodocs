@@ -14,7 +14,10 @@ type ClientPage = {
  * 実テンプレートに近い DOM（検索・目次・前後ナビ・トグル）を組み立て、
  * クライアント app.js を実行して v0.4 のドキュメントサイト機能を検証する。
  */
-async function mountClient(pages: ClientPage[]): Promise<void> {
+async function mountClient(
+  pages: ClientPage[],
+  options: { colorScheme?: string } = {},
+): Promise<void> {
   const theme = await loadTheme("default");
 
   const visible = pages.filter((p) => !p.hidden);
@@ -53,6 +56,7 @@ async function mountClient(pages: ClientPage[]): Promise<void> {
 
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
     initialRoute: pages[0]?.route,
+    colorScheme: options.colorScheme,
     pages,
   };
 
@@ -192,6 +196,22 @@ describe("v0.4 client features (app.js)", () => {
     window.localStorage.setItem("monodocs:theme", "dark");
     await mountClient(SAMPLE);
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  });
+
+  it("applies the configured initial color scheme when nothing is stored", async () => {
+    await mountClient(SAMPLE, { colorScheme: "dark" });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  });
+
+  it("lets the stored choice win over the configured color scheme", async () => {
+    window.localStorage.setItem("monodocs:theme", "light");
+    await mountClient(SAMPLE, { colorScheme: "dark" });
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+  });
+
+  it("follows the OS setting for the auto color scheme (no data-theme)", async () => {
+    await mountClient(SAMPLE, { colorScheme: "auto" });
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
   it("collapses the sidebar and reopens via the floating button", async () => {

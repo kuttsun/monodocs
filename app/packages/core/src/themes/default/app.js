@@ -426,7 +426,10 @@
   }
 
   function setupTheme() {
-    applyTheme(storedTheme());
+    // 読者が一度切り替えていれば localStorage の選択を最優先。未選択なら設定ファイル由来の
+    // 初期配色（既定 "light"）を使う。"auto" や未知値は applyTheme 側で data-theme を外し
+    // OS の prefers-color-scheme に追従する。
+    applyTheme(storedTheme() || data.colorScheme);
     var btn = document.getElementById("theme-toggle");
     if (!btn) return;
     btn.addEventListener("click", function () {

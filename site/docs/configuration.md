@@ -81,6 +81,7 @@ highlight:
 
 html:
   theme: default
+  colorScheme: light # light | dark | auto (follows the OS setting)
   contentWidth: 860px # a CSS length, or "full" for the full available width
 ```
 
@@ -172,6 +173,7 @@ sidebar:
 | Key                  | Type            | Default     | Description                                                                          |
 | -------------------- | --------------- | ----------- | ------------------------------------------------------------------------------------ |
 | `html.theme`         | string          | `default`   | Theme name used for the output HTML.                                                  |
+| `html.colorScheme`   | `light` `dark` `auto` | `light` | Initial color scheme when a document is opened. `auto` follows the OS `prefers-color-scheme`. Once a reader toggles it in the UI, the choice is saved in the browser and takes precedence (distinct from the `html.theme` template name). |
 | `html.contentWidth`  | string / number | `860px`     | Max width of the content area. A CSS length (`px`, `rem`, `em`, `ch`, `vw`, `%`) or a number (px). `full` (or `none`) expands to the full available width. |
 
 ## See also

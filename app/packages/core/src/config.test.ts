@@ -76,6 +76,7 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     expect(config.sidebarFlattenSingleChild).toBe(false);
     expect(config.sidebarTitleFrom).toBe("heading");
     expect(config.contentWidth).toBe("860px");
+    expect(config.colorScheme).toBe("light");
   });
 
   it("finds the default config in the input directory", async () => {
@@ -222,6 +223,17 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
 
   it("rejects invalid html.contentWidth", async () => {
     await writeConfig("html:\n  contentWidth: '860px; color: red'\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+  });
+
+  it("reads html.colorScheme from the config file", async () => {
+    await writeConfig("html:\n  colorScheme: dark\n");
+    const config = await loadConfig({}, dir);
+    expect(config.colorScheme).toBe("dark");
+  });
+
+  it("rejects an invalid html.colorScheme", async () => {
+    await writeConfig("html:\n  colorScheme: sepia\n");
     await expect(loadConfig({}, dir)).rejects.toThrow();
   });
 });

@@ -81,6 +81,7 @@ highlight:
 
 html:
   theme: default
+  colorScheme: light # light | dark | auto（OS 設定に追従）
   contentWidth: 860px # CSS 長さ、または "full"（残り幅いっぱい）
 ```
 
@@ -172,6 +173,7 @@ sidebar:
 | キー                | 型              | 既定値    | 説明                                                                       |
 | ------------------- | --------------- | --------- | -------------------------------------------------------------------------- |
 | `html.theme`        | string          | `default` | 出力 HTML に使うテーマ名。                                                  |
+| `html.colorScheme`  | `light` `dark` `auto` | `light` | ドキュメントを開いたときの初期配色。`auto` は OS の `prefers-color-scheme` に追従。読者が画面のトグルで切り替えるとブラウザに保存され、以降はそちらが優先される（`html.theme` のテンプレート名とは別物）。 |
 | `html.contentWidth` | string / number | `860px`   | 本文領域の最大幅。CSS 長さ（`px`・`rem`・`em`・`ch`・`vw`・`%`）または数値（px）。`full`（または `none`）で残り幅いっぱいに広げる。 |
 
 ## 関連

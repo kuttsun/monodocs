@@ -1,5 +1,5 @@
 import type { Page, SidebarNode } from "../types.js";
-import { parseContentWidth } from "../config.js";
+import { parseContentWidth, type ColorScheme } from "../config.js";
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, injectToken } from "../util/html.js";
 
@@ -8,6 +8,8 @@ export type RenderHtmlInput = {
   pages: Page[];
   sidebar: SidebarNode[];
   theme?: string;
+  /** ドキュメントを開いたときの初期配色（未指定は "light"）。読者の選択があればそちらが優先。 */
+  colorScheme?: ColorScheme;
   /** 本文領域の最大幅。`full` / `none` の場合は利用可能な横幅いっぱいに広げる。 */
   contentWidth?: string;
   /**
@@ -98,21 +100,40 @@ function pageData(
   };
 }
 
+/**
+ * 設定由来の初期配色を `<html>` の属性として返す。
+ * `light` / `dark` は `data-theme` を出力して CSS 評価前に配色を確定させ、
+ * FOUC（ダーク OS で一瞬ダーク表示→ライトへ反転）と JS 無効時の未適用を防ぐ。
+ * `auto`（および未指定）は属性を出さず OS の `prefers-color-scheme` に追従する。
+ * 読者がトグルで切り替えた選択（localStorage）は app.js が読み込み後に上書きする。
+ */
+function rootThemeAttr(colorScheme: ColorScheme | undefined): string {
+  if (colorScheme === "light" || colorScheme === "dark") {
+    return ` data-theme="${colorScheme}"`;
+  }
+  return "";
+}
+
 /** Page[] とサイドバーから自己完結した単一 HTML を生成する。 */
 export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> {
   const theme = await loadTheme(input.theme ?? "default");
   const tocMaxLevel = input.tocMaxLevel ?? 3;
+  // 既定はライト。サーバ出力の data-theme と __MONODOCS_DATA__ の値を必ず一致させる。
+  const colorScheme: ColorScheme = input.colorScheme ?? "light";
 
   const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth);
   const pagesHtml = input.pages.map(renderArticle).join("\n");
   const siteData = safeJson({
     title: input.title,
     initialRoute: input.pages[0]?.route ?? "/",
+    // 読者がまだ配色を選んでいないときに使う初期配色（"light" / "dark" / "auto"）。
+    colorScheme,
     // 目次・検索・前後ナビ用のページメタ（本文 HTML は含めない）。
     pages: input.pages.map((page) => pageData(page, tocMaxLevel)),
   });
 
   let html = theme.template;
+  html = injectToken(html, "{{htmlAttrs}}", rootThemeAttr(colorScheme));
   html = injectToken(html, "{{title}}", escapeHtml(input.title));
   html = injectToken(html, "{{style}}", styleWithOverrides(theme.style, input));
   html = injectToken(html, "{{sidebar}}", sidebarHtml);

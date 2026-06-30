@@ -22,6 +22,13 @@ const DEFAULT_TOC_MAX_LEVEL = 3;
 export type OnLargeImage = "warn" | "error" | "external";
 /** Mermaid ランタイムの配給方法。 */
 export type MermaidRuntime = "cdn" | "inline";
+/**
+ * ドキュメント表示時の初期配色。読者がトグルで切り替える前の既定値。
+ * `"light"`（既定）/ `"dark"` は明示的にその配色で開く。`"auto"` は OS の
+ * `prefers-color-scheme` に追従する。読者が一度切り替えると localStorage の
+ * 選択が優先され、この初期値は無視される。`html.theme`（テンプレート名）とは別物。
+ */
+export type ColorScheme = "light" | "dark" | "auto";
 
 const regexTitleTransformSchema = z
   .object({
@@ -113,6 +120,9 @@ const configFileSchema = z.object({
     .object({
       theme: z.string().optional(),
       contentWidth: z.union([z.string(), z.number()]).optional(),
+      // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
+      // 読者がトグルで切り替えると localStorage の選択が優先される。
+      colorScheme: z.enum(["light", "dark", "auto"]).optional(),
     })
     .optional(),
 });
@@ -141,6 +151,8 @@ export type ResolvedConfig = {
   /** ページ内目次に出す見出しの最深レベル（2〜6）。 */
   tocMaxLevel: number;
   theme: string;
+  /** ドキュメントを開いたときの初期配色（"light" 既定 / "dark" / "auto" = OS 追従）。 */
+  colorScheme: ColorScheme;
   /** 本文領域の最大幅。`full` 指定時は CSS の `none` に解決する。 */
   contentWidth: string;
   embedImages: boolean;
@@ -282,6 +294,7 @@ export async function loadConfig(
     sidebarFlattenSingleChild: fileConfig.sidebar?.flattenSingleChild ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
     theme: fileConfig.html?.theme ?? "default",
+    colorScheme: fileConfig.html?.colorScheme ?? "light",
     contentWidth: parseContentWidth(fileConfig.html?.contentWidth),
     embedImages: fileConfig.assets?.embedImages ?? true,
     maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),

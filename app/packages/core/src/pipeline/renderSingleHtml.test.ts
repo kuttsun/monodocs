@@ -153,6 +153,47 @@ describe("renderSingleHtml", () => {
     expect(html).not.toContain("sidebar-dir collapsed");
   });
 
+  it("emits data-theme on <html> and embeds the configured color scheme", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    const html = await renderSingleHtml({ title: "T", pages, sidebar, colorScheme: "dark" });
+
+    // CSS 評価前に配色を確定させるため <html> に data-theme を出力する。
+    expect(html).toContain('<html lang="ja" data-theme="dark">');
+    const json = html.match(/__MONODOCS_DATA__ = (.*);/)?.[1] ?? "{}";
+    const data = JSON.parse(json.replace(/\\u003c/g, "<"));
+    expect(data.colorScheme).toBe("dark");
+  });
+
+  it("defaults the color scheme to light", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    const html = await renderSingleHtml({ title: "T", pages, sidebar });
+
+    expect(html).toContain('<html lang="ja" data-theme="light">');
+    const json = html.match(/__MONODOCS_DATA__ = (.*);/)?.[1] ?? "{}";
+    const data = JSON.parse(json.replace(/\\u003c/g, "<"));
+    expect(data.colorScheme).toBe("light");
+  });
+
+  it("omits data-theme for the auto color scheme so it follows the OS", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    const html = await renderSingleHtml({ title: "T", pages, sidebar, colorScheme: "auto" });
+
+    // <html> タグには data-theme を付けない（CSS セレクタ内の data-theme は別物なので
+    // タグ単位で検証する）。
+    expect(html).toContain('<html lang="ja">');
+    const htmlTag = html.match(/<html[^>]*>/)?.[0] ?? "";
+    expect(htmlTag).not.toContain("data-theme");
+    const json = html.match(/__MONODOCS_DATA__ = (.*);/)?.[1] ?? "{}";
+    const data = JSON.parse(json.replace(/\\u003c/g, "<"));
+    expect(data.colorScheme).toBe("auto");
+  });
+
   it("marks hidden pages in the embedded data", async () => {
     const p = page("/s", "s", "Secret");
     p.hidden = true;
