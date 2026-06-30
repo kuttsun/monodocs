@@ -116,7 +116,8 @@ scripts/serve.sh examples/docs
 
 ## 設定ファイル（任意）
 
-入力ディレクトリのあるプロジェクトに `monodocs.config.yml` を置くと挙動をカスタマイズできます。
+入力ディレクトリ自身に `monodocs.config.yml` を置くと挙動をカスタマイズできます。
+`--config` を省略した場合は入力ディレクトリ直下の設定ファイルを使います。
 無い場合はデフォルト（入力 `./docs`、出力 `./dist/manual.html`）が使われます。
 
 ```yaml

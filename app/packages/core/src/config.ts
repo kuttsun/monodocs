@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import type { BuildOptions, OutputFormat, SidebarTitleTransforms, TitleFrom } from "./types.js";
@@ -115,6 +115,8 @@ export type ConfigFile = z.infer<typeof configFileSchema>;
 
 /** 設定ファイルと CLI オプションを統合した、解決済みの設定。 */
 export type ResolvedConfig = {
+  /** 実際に読み込んだ設定ファイル。未検出の場合は undefined。 */
+  configFilePath?: string;
   title: string;
   inputDir: string;
   outputFile: string;
@@ -167,6 +169,20 @@ export function parseSize(value: string | number | undefined, fallback: number):
   return bytes;
 }
 
+function resolveConfigRelativePath(baseDir: string, target: string): string {
+  return isAbsolute(target) ? target : resolve(baseDir, target);
+}
+
+function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
+  if (options.inputDir) {
+    const inputConfigPath = resolve(cwd, options.inputDir, DEFAULT_CONFIG_FILE);
+    return existsSync(inputConfigPath) ? inputConfigPath : undefined;
+  }
+
+  const cwdConfigPath = resolve(cwd, DEFAULT_CONFIG_FILE);
+  return existsSync(cwdConfigPath) ? cwdConfigPath : undefined;
+}
+
 /**
  * 設定ファイル（存在すれば）と CLI オプションを統合して解決済み設定を返す。
  * 優先順位は CLI オプション > 設定ファイル > デフォルト。
@@ -175,10 +191,12 @@ export async function loadConfig(
   options: BuildOptions = {},
   cwd: string = process.cwd(),
 ): Promise<ResolvedConfig> {
-  const configPath = resolve(cwd, options.configFile ?? DEFAULT_CONFIG_FILE);
+  const configPath = options.configFile
+    ? resolve(cwd, options.configFile)
+    : findDefaultConfigPath(options, cwd);
 
   let fileConfig: ConfigFile = {};
-  if (existsSync(configPath)) {
+  if (configPath && existsSync(configPath)) {
     let parsed: unknown;
     try {
       parsed = parseYaml(await readFile(configPath, "utf8"));
@@ -195,10 +213,17 @@ export async function loadConfig(
     throw new Error(`Config file not found: ${configPath}`);
   }
 
+  const configBaseDir = configPath ? dirname(configPath) : cwd;
+
   return {
+    configFilePath: configPath,
     title: fileConfig.title ?? DEFAULT_TITLE,
-    inputDir: options.inputDir ?? fileConfig.input ?? DEFAULT_INPUT,
-    outputFile: options.outputFile ?? fileConfig.output?.path ?? DEFAULT_OUTPUT,
+    inputDir:
+      options.inputDir ??
+      resolveConfigRelativePath(configBaseDir, fileConfig.input ?? DEFAULT_INPUT),
+    outputFile:
+      options.outputFile ??
+      resolveConfigRelativePath(configBaseDir, fileConfig.output?.path ?? DEFAULT_OUTPUT),
     format: options.format ?? fileConfig.output?.format ?? "html",
     markdownExtensions: fileConfig.sources?.markdown?.extensions ?? DEFAULT_MARKDOWN_EXTENSIONS,
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,

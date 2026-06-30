@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -48,6 +48,31 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     });
     expect(config.sidebarFlattenSingleChild).toBe(false);
     expect(config.sidebarTitleFrom).toBe("heading");
+  });
+
+  it("finds the default config in the input directory", async () => {
+    const docs = join(dir, "docs");
+    await mkdir(docs, { recursive: true });
+    await writeFile(
+      join(docs, "monodocs.config.yml"),
+      'title: "Input Config"\noutput:\n  path: "./dist/input.html"\n',
+    );
+
+    const config = await loadConfig({ inputDir: docs }, join(dir, "elsewhere"));
+    expect(config.configFilePath).toBe(join(docs, "monodocs.config.yml"));
+    expect(config.title).toBe("Input Config");
+    expect(config.outputFile).toBe(join(docs, "dist", "input.html"));
+  });
+
+  it("does not use a parent config when an input directory is given", async () => {
+    const docs = join(dir, "docs");
+    await mkdir(docs, { recursive: true });
+    await writeConfig('title: "Parent Config"\noutput:\n  path: "./dist/parent.html"\n');
+
+    const config = await loadConfig({ inputDir: docs }, join(dir, "elsewhere"));
+    expect(config.configFilePath).toBeUndefined();
+    expect(config.title).toBe("Documentation");
+    expect(config.outputFile).toBe(join(dir, "elsewhere", "dist", "manual.html"));
   });
 
   it("reads sidebar.titleTransform.page from the config file", async () => {

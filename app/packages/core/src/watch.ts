@@ -4,8 +4,6 @@ import { buildSite } from "./build.js";
 import { loadConfig } from "./config.js";
 import type { BuildOptions, BuildResult } from "./types.js";
 
-/** 既定の設定ファイル名（CLI / 設定読み込みと揃える）。 */
-const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
 /** 連続したファイルイベントをまとめる待ち時間。 */
 const DEBOUNCE_MS = 150;
 
@@ -35,7 +33,6 @@ export async function watchSite(
   const cwd = process.cwd();
   const config = await loadConfig(options, cwd);
   const inputDir = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
-  const configPath = resolve(cwd, options.configFile ?? DEFAULT_CONFIG_FILE);
   // 生成物への書き込みでイベントが発火し再ビルドが連鎖するのを避けるため、
   // 出力ファイルへの変更イベントは無視する（出力が入力配下にある場合の対策）。
   const outputFile = isAbsolute(config.outputFile)
@@ -113,9 +110,9 @@ export async function watchSite(
   // 入力ディレクトリの監視は必須。確立できなければ watchSite ごと失敗させる。
   startWatch(inputDir, inputDir, true);
   // 設定ファイルの監視は best-effort（失敗しても入力監視は継続する）。
-  if (existsSync(configPath)) {
+  if (config.configFilePath && existsSync(config.configFilePath)) {
     try {
-      startWatch(configPath, dirname(configPath), false);
+      startWatch(config.configFilePath, dirname(config.configFilePath), false);
     } catch (error) {
       callbacks.onError?.(error as Error);
     }
