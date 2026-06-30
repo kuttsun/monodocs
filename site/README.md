@@ -22,6 +22,14 @@ site/
 
 ## 開発・ビルド（ホスト側 / Docker）
 
+手軽にローカルプレビュー（依存導入・デモ生成・dev サーバ起動をまとめて実行）:
+
+```bash
+scripts/site-dev.sh                      # 開発サーバ http://localhost:5173/（HMR）
+```
+
+個別ステップで実行する場合:
+
 ```bash
 scripts/site.sh npm install              # 依存インストール
 scripts/site.sh npm run docs:dev         # 開発サーバ http://localhost:5173/

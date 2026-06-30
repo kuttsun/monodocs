@@ -80,7 +80,7 @@ monodocs validate ./docs
 
 > **現時点での実行方法**: `monodocs` の npm 公開は v0.6 で対応予定です。
 > それまではホストを汚さない専用 Docker イメージで実行します（Docker のみ必要）。
-> 全記法のショーケースをすぐ確認したいだけなら、次節の `scripts/serve.sh` が手軽です。
+> 全記法のショーケースをすぐ確認したいだけなら、次節の `scripts/app-serve.sh` が手軽です。
 > HTML へのビルドやテストなど開発向けの手順は [docs/development.md](docs/development.md) を参照してください。
 
 ## ローカルプレビュー（目視確認）
@@ -91,11 +91,11 @@ monodocs validate ./docs
 ```bash
 # 全記法・全機能をまとめたショーケースを配信（ライブリロード付き）
 # 依存インストール（初回のみ）・ビルド・serve をまとめて実行する
-scripts/serve.sh examples/ja
+scripts/app-serve.sh examples/ja
 ```
 
 起動後、ブラウザで **`http://localhost:4173/`** を開きます（`http://0.0.0.0:...` ではなく `localhost`）。
-止めるときは `Ctrl+C`。別ポートにするには `MONODOCS_PORT=8080 scripts/serve.sh examples/ja --port 8080`。
+止めるときは `Ctrl+C`。別ポートにするには `MONODOCS_PORT=8080 scripts/app-serve.sh examples/ja --port 8080`。
 
 - `examples/ja`（日本語）/ `examples/en`（英語）は、Markdown(GFM) / AsciiDoc / 混在の全記法・全機能を 1 サイトにまとめたショーケースです。
 - 配信中にサンプル内のファイルを編集すると、ブラウザが自動でリロードします。

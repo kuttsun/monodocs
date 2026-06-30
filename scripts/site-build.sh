@@ -15,17 +15,17 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DEV="$ROOT/scripts/dev.sh"
+APP="$ROOT/scripts/app.sh"
 SITE="$ROOT/scripts/site.sh"
 
 echo "[site-build] 1/3 monodocs CLI をビルド"
-"$DEV" pnpm build
+"$APP" pnpm build
 
 echo "[site-build] 2/3 単一 HTML マニュアルを生成（英 -> manual.html / 日 -> ja/manual.html）"
 mkdir -p "$ROOT/site/public/ja"
-# dev.sh は /work/app 基準で動くため、入力は app/ からの相対、出力は ../site/... で渡す。
-"$DEV" node packages/cli/dist/index.js build examples/en -o ../site/public/manual.html
-"$DEV" node packages/cli/dist/index.js build examples/ja -o ../site/public/ja/manual.html
+# app.sh は /work/app 基準で動くため、入力は app/ からの相対、出力は ../site/... で渡す。
+"$APP" node packages/cli/dist/index.js build examples/en -o ../site/public/manual.html
+"$APP" node packages/cli/dist/index.js build examples/ja -o ../site/public/ja/manual.html
 
 echo "[site-build] 3/3 VitePress でサイトをビルド"
 "$SITE" npm install

@@ -16,8 +16,8 @@
 専用イメージ（[development.md](development.md) 参照）でホストから実行する。
 
 ```bash
-scripts/dev.sh pnpm test         # 一括実行（vitest run）
-scripts/dev.sh pnpm test:watch   # ウォッチ
+scripts/app.sh pnpm test         # 一括実行（vitest run）
+scripts/app.sh pnpm test:watch   # ウォッチ
 ```
 
 `docker run` を直接使う場合:

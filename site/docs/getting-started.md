@@ -20,18 +20,18 @@ monodocs is not published to a package registry yet, so build it from source. Th
 git clone https://gitlab.com/kuttsun/monodocs.git
 cd monodocs
 
-scripts/dev.sh pnpm install
-scripts/dev.sh pnpm build
+scripts/app.sh pnpm install
+scripts/app.sh pnpm build
 
 # Build a single HTML from the bundled examples
-scripts/dev.sh node packages/cli/dist/index.js build examples/en -o dist/manual.html
+scripts/app.sh node packages/cli/dist/index.js build examples/en -o dist/manual.html
 ```
 
 ## Preview locally
 
 ```bash
 # Live-reloading preview server
-scripts/dev.sh node packages/cli/dist/index.js serve examples/en --host 0.0.0.0
+scripts/app.sh node packages/cli/dist/index.js serve examples/en --host 0.0.0.0
 # → http://localhost:4173/
 ```
 

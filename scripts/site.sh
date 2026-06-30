@@ -3,7 +3,7 @@
 # monodocs 公式サイト（VitePress / site/）を専用 Docker イメージ内で実行するヘルパー。
 # ホストに Node / npm を入れずに dev / build / preview できる。
 #
-# site/ は app/ の pnpm workspace とは独立した npm パッケージなので、scripts/dev.sh とは
+# site/ は app/ の pnpm workspace とは独立した npm パッケージなので、scripts/app.sh とは
 # 別に -w /work/site で実行する（イメージは pnpm 焼き込みの monodocs-dev を流用。Node 22
 # 同梱なので npm がそのまま使える）。
 #
@@ -20,7 +20,7 @@ set -euo pipefail
 IMAGE="monodocs-dev"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-# イメージが無ければ Dockerfile.dev からビルドする（scripts/dev.sh と同一イメージ）。
+# イメージが無ければ Dockerfile.dev からビルドする（scripts/app.sh と同一イメージ）。
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "Building $IMAGE from Dockerfile.dev ..." >&2
   docker build -f "$ROOT/Dockerfile.dev" -t "$IMAGE" "$ROOT"

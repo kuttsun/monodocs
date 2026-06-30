@@ -26,7 +26,7 @@ monodocs/
     examples/en/            # 同上の英語版
   site/                     # アプリ紹介の静的 Web サイト（VitePress）
   docs/                     # 開発ドキュメント（本フォルダ）
-  scripts/dev.sh            # 専用イメージ内でコマンドを実行するヘルパー
+  scripts/app.sh            # 専用イメージ内でコマンドを実行するヘルパー
   Dockerfile.dev            # 開発・ビルド・テスト用イメージ（pnpm 焼き込み）
   .devcontainer/            # VS Code Dev Containers 用（任意。Dockerfile.dev を利用）
   README.md
@@ -48,60 +48,60 @@ monodocs/
 docker build -f Dockerfile.dev -t monodocs-dev .
 ```
 
-### よく使うコマンド（ヘルパー `scripts/dev.sh` 経由）
+### よく使うコマンド（ヘルパー `scripts/app.sh` 経由）
 
-`scripts/dev.sh` は `monodocs-dev` が無ければ自動ビルドし、作業ツリーをマウントして
+`scripts/app.sh` は `monodocs-dev` が無ければ自動ビルドし、作業ツリーをマウントして
 `app/` 内でコマンドを実行する。**ホスト側で**実行する。
 
 ```bash
-scripts/dev.sh pnpm install     # 依存をインストール
-scripts/dev.sh pnpm build       # 全パッケージをビルド（tsc）+ テーマアセットのコピー
-scripts/dev.sh pnpm test        # テスト（vitest）
-scripts/dev.sh pnpm typecheck   # 型チェック
-scripts/dev.sh pnpm format      # Prettier で整形
+scripts/app.sh pnpm install     # 依存をインストール
+scripts/app.sh pnpm build       # 全パッケージをビルド（tsc）+ テーマアセットのコピー
+scripts/app.sh pnpm test        # テスト（vitest）
+scripts/app.sh pnpm typecheck   # 型チェック
+scripts/app.sh pnpm format      # Prettier で整形
 ```
 
 ローカルプレビュー（ホストのブラウザで `http://localhost:4173/`）。
 依存インストール（初回のみ）・ビルド・`serve --host 0.0.0.0` をまとめて行う
-ショートカット `scripts/serve.sh` が手軽:
+ショートカット `scripts/app-serve.sh` が手軽:
 
 ```bash
-scripts/serve.sh examples/ja
-# 別ポート: MONODOCS_PORT=8080 scripts/serve.sh examples/ja --port 8080
+scripts/app-serve.sh examples/ja
+# 別ポート: MONODOCS_PORT=8080 scripts/app-serve.sh examples/ja --port 8080
 ```
 
-個別に起動する場合（`scripts/serve.sh` は内部でこれに委譲する）:
+個別に起動する場合（`scripts/app-serve.sh` は内部でこれに委譲する）:
 
 ```bash
-scripts/dev.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
-# 別ポート: MONODOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0 --port 8080
+scripts/app.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
+# 別ポート: MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0 --port 8080
 ```
 
 > コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
-> （`scripts/serve.sh` は自動で付与し、`scripts/dev.sh` は `MONODOCS_PORT`（既定 4173）を公開する）。
+> （`scripts/app-serve.sh` は自動で付与し、`scripts/app.sh` は `MONODOCS_PORT`（既定 4173）を公開する）。
 > `http://0.0.0.0:...` ではなく `http://localhost:...` を開く。
 
 単一 HTML（配布物）をファイルに出力する:
 
 ```bash
-scripts/dev.sh node packages/cli/dist/index.js build examples/ja -o dist/manual.html
+scripts/app.sh node packages/cli/dist/index.js build examples/ja -o dist/manual.html
 ```
 
 ### 単一実行ファイル（ネイティブバイナリ）をビルドする
 
-`scripts/dev.sh` / `scripts/serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、
+`scripts/app.sh` / `scripts/app-serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、
 作業ディレクトリも `/work/app` のため、**`app/` 配下のパスしか配信できない**（リポジトリ外の
 任意ディレクトリを指せない）。これを避けて任意の場所のドキュメントを試すには、ホストで直接動く
 単一実行ファイルを使う。
 
-`scripts/build-bin.sh` が依存込みの単一ネイティブバイナリ（Node 22 の
+`scripts/app-build.sh` が依存込みの単一ネイティブバイナリ（Node 22 の
 [Single Executable Application](https://nodejs.org/api/single-executable-applications.html)）を
 `app/dist/monodocs` に出力する。esbuild で全依存とテーマアセットを 1 ファイルにバンドルし、
 SEA blob を `postject` で node バイナリへ注入する。**ホストに node は不要**（ビルド環境と
 同じ OS/arch 向け）。
 
 ```bash
-scripts/build-bin.sh                              # → app/dist/monodocs を生成
+scripts/app-build.sh                              # → app/dist/monodocs を生成
 
 # 以降はホストで直接実行（Docker 不要・任意ディレクトリを指せる）
 app/dist/monodocs serve ~/任意のドキュメント       # ローカルプレビュー（--host 0.0.0.0 不要）
@@ -112,7 +112,7 @@ app/dist/monodocs build ~/任意のドキュメント -o ~/manual.html
 > - テーマアセット（`template.html` / `style.css` / `app.js`）と mermaid inline ランタイムは
 >   バンドル時に `globalThis.__MONODOCS_ASSETS__` へ埋め込む（`scripts/bundle.mjs`）。
 >   `loadTheme` / `mermaidRuntimeScript` はこの埋め込みを優先し、無ければ従来どおりファイルから読む。
-> - バンドルだけ欲しいとき（ホストに node がある場合）は `scripts/dev.sh pnpm bundle` で
+> - バンドルだけ欲しいとき（ホストに node がある場合）は `scripts/app.sh pnpm bundle` で
 >   `app/dist/monodocs.cjs` を生成し `node app/dist/monodocs.cjs ...` で実行できる。
 
 ### ヘルパーを使わず `docker run` で実行する場合
@@ -127,7 +127,7 @@ docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app monodocs-dev \
 
 必須ではない。使う場合、`.devcontainer` は同じ `Dockerfile.dev` からイメージを構築する。
 **Dev Containers: Reopen in Container** で起動すると `postCreate` で `pnpm install` が走り、
-コンテナ内では `pnpm build` / `pnpm test` を直接実行できる（`scripts/dev.sh` は不要）。
+コンテナ内では `pnpm build` / `pnpm test` を直接実行できる（`scripts/app.sh` は不要）。
 コンテナ内で `node packages/cli/dist/index.js serve examples/ja` を実行すると、
 VS Code がポート 4173 を自動フォワードする（`--host` は不要）。
 

@@ -4,14 +4,14 @@
 # ホストに Node / pnpm を入れず、corepack の都度ダウンロードも発生しない。
 #
 # 例:
-#   scripts/dev.sh pnpm install
-#   scripts/dev.sh pnpm build
-#   scripts/dev.sh pnpm test
-#   scripts/dev.sh pnpm typecheck
-#   scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
+#   scripts/app.sh pnpm install
+#   scripts/app.sh pnpm build
+#   scripts/app.sh pnpm test
+#   scripts/app.sh pnpm typecheck
+#   scripts/app.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
 #
 # serve のときだけプレビュー用ポート（既定 4173）を公開する。別ポートは MONODOCS_PORT で変更:
-#   MONODOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0 --port 8080
+#   MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0 --port 8080
 set -euo pipefail
 
 IMAGE="monodocs-dev"

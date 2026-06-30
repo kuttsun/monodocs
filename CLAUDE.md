@@ -10,33 +10,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **ホスト環境を汚さない方針。** Node.js / pnpm はホストに入れず、専用 Docker イメージ `monodocs-dev`（`Dockerfile.dev`、pnpm を焼き込み済み）内で実行する。コードはすべて `app/`（pnpm モノレポ）配下。
 
-ホストから `scripts/dev.sh` 経由で実行する（イメージが無ければ自動ビルド。作業ツリーをマウントし `app/` で実行）:
+ホストから `scripts/app.sh` 経由で実行する（イメージが無ければ自動ビルド。作業ツリーをマウントし `app/` で実行）:
 
 ```bash
-scripts/dev.sh pnpm install      # 依存インストール
-scripts/dev.sh pnpm build        # 全パッケージ tsc ビルド + テーマアセットの dist コピー
-scripts/dev.sh pnpm test         # vitest run（全テスト）
-scripts/dev.sh pnpm typecheck    # pnpm -r typecheck（各パッケージ tsc --noEmit）
-scripts/dev.sh pnpm format       # prettier --write .
-scripts/dev.sh pnpm format:check # prettier --check .
+scripts/app.sh pnpm install      # 依存インストール
+scripts/app.sh pnpm build        # 全パッケージ tsc ビルド + テーマアセットの dist コピー
+scripts/app.sh pnpm test         # vitest run（全テスト）
+scripts/app.sh pnpm typecheck    # pnpm -r typecheck（各パッケージ tsc --noEmit）
+scripts/app.sh pnpm format       # prettier --write .
+scripts/app.sh pnpm format:check # prettier --check .
 ```
 
 単一テスト:
 
 ```bash
-scripts/dev.sh pnpm exec vitest run packages/core/src/route.test.ts   # ファイル単位
-scripts/dev.sh pnpm exec vitest run -t "rewrites links"               # テスト名で絞り込み
+scripts/app.sh pnpm exec vitest run packages/core/src/route.test.ts   # ファイル単位
+scripts/app.sh pnpm exec vitest run -t "rewrites links"               # テスト名で絞り込み
 ```
 
 CLI をローカルで試す（ビルド後。ホストのブラウザで見るには `--host 0.0.0.0`）:
 
 ```bash
-scripts/dev.sh node packages/cli/dist/index.js build examples/ja -o dist/manual.html
-scripts/dev.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0  # http://localhost:4173/
+scripts/app.sh node packages/cli/dist/index.js build examples/ja -o dist/manual.html
+scripts/app.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0  # http://localhost:4173/
 ```
 
 > 注意:
-> - `scripts/dev.sh` は**ホスト側**で使う。devcontainer 内やコンテナのシェルに入っている場合は `pnpm ...` を直接実行する（`scripts/dev.sh` は docker-in-docker になる）。
+> - `scripts/app.sh` は**ホスト側**で使う。devcontainer 内やコンテナのシェルに入っている場合は `pnpm ...` を直接実行する（`scripts/app.sh` は docker-in-docker になる）。
 > - イメージを使わず素の Node イメージで動かすと corepack が pnpm を都度ダウンロードする。`monodocs-dev` はそれを避けるための専用イメージ。pnpm バージョンは `app/package.json` の `packageManager` と `Dockerfile.dev` の `PNPM_VERSION` を一致させる。
 > - `node node_modules/.bin/tsc` のような呼び方は shell ラッパーのため失敗する。直接叩くなら `node node_modules/typescript/bin/tsc ...` / `./node_modules/.bin/vitest ...`、通常は `pnpm` 経由が安全。
 
