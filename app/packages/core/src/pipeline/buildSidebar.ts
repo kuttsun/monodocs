@@ -1,11 +1,11 @@
-import type { Page, SidebarNode } from "../types.js";
-import { stripOrderPrefix } from "./orderPrefix.js";
+import type { Page, SidebarNode, TitleTransform } from "../types.js";
+import { applyTitleTransform, DEFAULT_TITLE_TRANSFORM } from "./titleTransform.js";
 
 type DirNode = Extract<SidebarNode, { type: "dir" }>;
 
 export type BuildSidebarOptions = {
-  /** フォルダ名のタイトルから並び替え用の数値プレフィックスを除去する（`01_setup` → `setup`）。 */
-  stripNumberPrefix?: boolean;
+  /** フォルダ名から導出した表示タイトルへ適用する変換。 */
+  titleTransform?: TitleTransform;
   /**
    * ページを 1 つだけ含む（サブフォルダを持たない）ディレクトリ階層を畳み、その唯一のページを
    * 親へ繰り上げる。route / pageId は変えずサイドバーの表示だけを変えるので到達性は失わない。
@@ -29,7 +29,7 @@ export function buildSidebar(pages: Page[], options: BuildSidebarOptions = {}): 
 
     const segments = dirPath.split("/");
     const name = segments[segments.length - 1] ?? dirPath;
-    const title = options.stripNumberPrefix ? stripOrderPrefix(name) : name;
+    const title = applyTitleTransform(name, options.titleTransform ?? DEFAULT_TITLE_TRANSFORM);
     const parentPath = segments.slice(0, -1).join("/");
 
     const node: DirNode = { type: "dir", title, path: dirPath, children: [] };

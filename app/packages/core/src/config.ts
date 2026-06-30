@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import type { BuildOptions, OutputFormat, TitleFrom } from "./types.js";
+import type { BuildOptions, OutputFormat, SidebarTitleTransforms, TitleFrom } from "./types.js";
 
 const DEFAULT_INPUT = "./docs";
 const DEFAULT_OUTPUT = "./dist/manual.html";
@@ -14,6 +14,7 @@ const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
 const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
 const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
 const DEFAULT_MAX_INLINE_SIZE = 5 * 1024 * 1024; // 5MB
+const DEFAULT_CONTENT_WIDTH = "860px";
 // ページ内目次に出す見出しの最深レベル（h2〜h3）。h1 はページタイトル相当のため常に除外。
 const DEFAULT_TOC_MAX_LEVEL = 3;
 
@@ -21,6 +22,38 @@ const DEFAULT_TOC_MAX_LEVEL = 3;
 export type OnLargeImage = "warn" | "error" | "external";
 /** Mermaid ランタイムの配給方法。 */
 export type MermaidRuntime = "cdn" | "inline";
+
+const regexTitleTransformSchema = z
+  .object({
+    type: z.literal("regex"),
+    pattern: z.string().min(1),
+    replacement: z.string(),
+    flags: z.string().optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    try {
+      new RegExp(value.pattern, value.flags);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid regex transform: ${(error as Error).message}`,
+      });
+    }
+  });
+
+const titleTransformSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("none") }).strict(),
+  z.object({ type: z.literal("stripNumberPrefix") }).strict(),
+  regexTitleTransformSchema,
+]);
+
+const sidebarTitleTransformSchema = z
+  .object({
+    page: titleTransformSchema.optional(),
+    directory: titleTransformSchema.optional(),
+  })
+  .strict();
 
 /** `monodocs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
 const configFileSchema = z.object({
@@ -44,9 +77,8 @@ const configFileSchema = z.object({
       // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
       // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
       collapseDepth: z.number().int().min(0).optional(),
-      // フォルダ名・ファイル名の先頭にある並び替え用の数値プレフィックス（`01_` `001-` など）を
-      // 表示タイトルから除去する。順序はファイル名で制御しつつ、表示には数字を出さない運用向け。
-      stripNumberPrefix: z.boolean().optional(),
+      // 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。
+      titleTransform: sidebarTitleTransformSchema.optional(),
       // ページタイトルの取得元。"heading"（既定）= frontmatter → 見出し → ファイル名。
       // "filename" = 見出しがあってもファイル名を使う（明示タイトルは常に最優先）。
       titleFrom: z.enum(["heading", "filename"]).optional(),
@@ -55,6 +87,7 @@ const configFileSchema = z.object({
       // 冗長なフォルダ階層を消すための設定。画像はページに数えないため自動で判定できる。
       flattenSingleChild: z.boolean().optional(),
     })
+    .strict()
     .optional(),
   toc: z
     .object({
@@ -76,13 +109,20 @@ const configFileSchema = z.object({
     })
     .optional(),
   highlight: z.object({ enabled: z.boolean().optional() }).optional(),
-  html: z.object({ theme: z.string().optional() }).optional(),
+  html: z
+    .object({
+      theme: z.string().optional(),
+      contentWidth: z.union([z.string(), z.number()]).optional(),
+    })
+    .optional(),
 });
 
 export type ConfigFile = z.infer<typeof configFileSchema>;
 
 /** 設定ファイルと CLI オプションを統合した、解決済みの設定。 */
 export type ResolvedConfig = {
+  /** 実際に読み込んだ設定ファイル。未検出の場合は undefined。 */
+  configFilePath?: string;
   title: string;
   inputDir: string;
   outputFile: string;
@@ -92,8 +132,8 @@ export type ResolvedConfig = {
   exclude: string[];
   /** この階層より深いディレクトリを既定で折りたたむ。undefined は折りたたみなし。 */
   sidebarCollapseDepth?: number;
-  /** 表示タイトルから並び替え用の数値プレフィックス（`01_` など）を除去するか。 */
-  sidebarStripNumberPrefix: boolean;
+  /** 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。 */
+  sidebarTitleTransform: SidebarTitleTransforms;
   /** ページタイトルの取得元（"heading" = 見出し優先 / "filename" = ファイル名優先）。 */
   sidebarTitleFrom: TitleFrom;
   /** ページ 1 つだけ・サブフォルダ無しのディレクトリ階層を畳んでページを親へ繰り上げるか。 */
@@ -101,6 +141,8 @@ export type ResolvedConfig = {
   /** ページ内目次に出す見出しの最深レベル（2〜6）。 */
   tocMaxLevel: number;
   theme: string;
+  /** 本文領域の最大幅。`full` 指定時は CSS の `none` に解決する。 */
+  contentWidth: string;
   embedImages: boolean;
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
@@ -136,6 +178,57 @@ export function parseSize(value: string | number | undefined, fallback: number):
 }
 
 /**
+ * `html.contentWidth` を CSS の max-width 値へ変換する。
+ * 数値は px として扱う。`full` はサイドバー・目次を除く残り幅いっぱいに広げるため `none` へ変換する。
+ */
+export function parseContentWidth(
+  value: string | number | undefined,
+  fallback: string = DEFAULT_CONTENT_WIDTH,
+): string {
+  if (value === undefined) return fallback;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`Invalid contentWidth: ${value}`);
+    }
+    return `${value}px`;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.toLowerCase() === "full" || trimmed.toLowerCase() === "none") {
+    return "none";
+  }
+
+  const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*(px|rem|em|ch|vw|%)$/i);
+  if (!match) {
+    throw new Error(`Invalid contentWidth: "${value}"`);
+  }
+  const rawAmount = match[1];
+  const rawUnit = match[2];
+  if (rawAmount === undefined || rawUnit === undefined) {
+    throw new Error(`Invalid contentWidth: "${value}"`);
+  }
+  const amount = Number(rawAmount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error(`Invalid contentWidth: "${value}"`);
+  }
+  return `${amount}${rawUnit.toLowerCase()}`;
+}
+
+function resolveConfigRelativePath(baseDir: string, target: string): string {
+  return isAbsolute(target) ? target : resolve(baseDir, target);
+}
+
+function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
+  if (options.inputDir) {
+    const inputConfigPath = resolve(cwd, options.inputDir, DEFAULT_CONFIG_FILE);
+    return existsSync(inputConfigPath) ? inputConfigPath : undefined;
+  }
+
+  const cwdConfigPath = resolve(cwd, DEFAULT_CONFIG_FILE);
+  return existsSync(cwdConfigPath) ? cwdConfigPath : undefined;
+}
+
+/**
  * 設定ファイル（存在すれば）と CLI オプションを統合して解決済み設定を返す。
  * 優先順位は CLI オプション > 設定ファイル > デフォルト。
  */
@@ -143,10 +236,12 @@ export async function loadConfig(
   options: BuildOptions = {},
   cwd: string = process.cwd(),
 ): Promise<ResolvedConfig> {
-  const configPath = resolve(cwd, options.configFile ?? DEFAULT_CONFIG_FILE);
+  const configPath = options.configFile
+    ? resolve(cwd, options.configFile)
+    : findDefaultConfigPath(options, cwd);
 
   let fileConfig: ConfigFile = {};
-  if (existsSync(configPath)) {
+  if (configPath && existsSync(configPath)) {
     let parsed: unknown;
     try {
       parsed = parseYaml(await readFile(configPath, "utf8"));
@@ -163,20 +258,31 @@ export async function loadConfig(
     throw new Error(`Config file not found: ${configPath}`);
   }
 
+  const configBaseDir = configPath ? dirname(configPath) : cwd;
+
   return {
+    configFilePath: configPath,
     title: fileConfig.title ?? DEFAULT_TITLE,
-    inputDir: options.inputDir ?? fileConfig.input ?? DEFAULT_INPUT,
-    outputFile: options.outputFile ?? fileConfig.output?.path ?? DEFAULT_OUTPUT,
+    inputDir:
+      options.inputDir ??
+      resolveConfigRelativePath(configBaseDir, fileConfig.input ?? DEFAULT_INPUT),
+    outputFile:
+      options.outputFile ??
+      resolveConfigRelativePath(configBaseDir, fileConfig.output?.path ?? DEFAULT_OUTPUT),
     format: options.format ?? fileConfig.output?.format ?? "html",
     markdownExtensions: fileConfig.sources?.markdown?.extensions ?? DEFAULT_MARKDOWN_EXTENSIONS,
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
     sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,
-    sidebarStripNumberPrefix: fileConfig.sidebar?.stripNumberPrefix ?? false,
+    sidebarTitleTransform: {
+      page: fileConfig.sidebar?.titleTransform?.page ?? { type: "none" },
+      directory: fileConfig.sidebar?.titleTransform?.directory ?? { type: "none" },
+    },
     sidebarTitleFrom: fileConfig.sidebar?.titleFrom ?? "heading",
     sidebarFlattenSingleChild: fileConfig.sidebar?.flattenSingleChild ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
     theme: fileConfig.html?.theme ?? "default",
+    contentWidth: parseContentWidth(fileConfig.html?.contentWidth),
     embedImages: fileConfig.assets?.embedImages ?? true,
     maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
     onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",

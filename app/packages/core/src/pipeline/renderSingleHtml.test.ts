@@ -43,6 +43,30 @@ describe("renderSingleHtml", () => {
     expect(html).toContain("A &amp; &lt;B&gt;");
   });
 
+  it("injects the configured content width as a theme CSS variable", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    const html = await renderSingleHtml({ title: "T", pages, sidebar, contentWidth: "none" });
+
+    expect(html).toContain("--content-max-width: 860px;");
+    expect(html).toContain("--content-max-width: none;");
+  });
+
+  it("rejects unsafe content width values at the render boundary", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    await expect(
+      renderSingleHtml({
+        title: "T",
+        pages,
+        sidebar,
+        contentWidth: "860px;} body{display:none}",
+      }),
+    ).rejects.toThrow(/contentWidth/);
+  });
+
   it("embeds per-page data (h2/h3 headings + text) for TOC and search", async () => {
     const p = page("/g", "g", "Guide");
     p.text = "searchable body text";

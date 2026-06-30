@@ -77,6 +77,7 @@ describe("validateSite", () => {
     const result = await validateSite({ inputDir: join(vdir, "docs") });
     expect(result.errors).toHaveLength(0);
     expect(result.warnings.some((w) => w.includes("nope.md"))).toBe(true);
+    expect(result.warnings).toContain('Unresolved link "nope.md" in "index.md:3".');
 
     await rm(vdir, { recursive: true, force: true });
   });

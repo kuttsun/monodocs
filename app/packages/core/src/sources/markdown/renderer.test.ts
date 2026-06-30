@@ -53,6 +53,20 @@ describe("markdownRenderer.render", () => {
     expect(rendered.html).toContain('type="checkbox"');
   });
 
+  it("collects link source positions", async () => {
+    const rendered = await markdownRenderer.render(
+      md("# T\n\n[inline](a.md)\n\n[reference][ref]\n\n[ref]: b.md\n"),
+      {
+        page: { id: "p", route: "/p", relativePath: "p.md", format: "markdown" },
+      },
+    );
+
+    expect(rendered.links).toMatchObject([
+      { href: "a.md", text: "inline", line: 3, column: 1 },
+      { href: "b.md", text: "reference", line: 5, column: 1 },
+    ]);
+  });
+
   it("renders GFM footnotes and prefixes their ids without collisions across pages", async () => {
     const src = "# T\n\nclaim[^1]\n\n[^1]: a footnote.\n";
     const a = await markdownRenderer.render(md(src), {

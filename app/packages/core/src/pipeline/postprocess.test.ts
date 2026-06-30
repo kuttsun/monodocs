@@ -5,7 +5,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { postprocessPages } from "./postprocess";
 import type { Page } from "../types";
 
-function page(p: { relativePath: string; route: string; html: string; sourcePath?: string }): Page {
+function page(p: {
+  relativePath: string;
+  route: string;
+  html: string;
+  sourcePath?: string;
+  rawSource?: string;
+}): Page {
   return {
     id: p.route.replace(/\W+/g, "-"),
     route: p.route,
@@ -13,7 +19,7 @@ function page(p: { relativePath: string; route: string; html: string; sourcePath
     relativePath: p.relativePath,
     format: "markdown",
     title: "T",
-    rawSource: "",
+    rawSource: p.rawSource ?? "",
     html: p.html,
     text: "",
     headings: [],
@@ -55,6 +61,41 @@ describe("postprocessPages - link rewriting", () => {
     expect(result.warnings.some((w) => w.includes("missing.md"))).toBe(true);
   });
 
+  it("includes the source line in unresolved link warnings", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "index.md",
+        route: "/",
+        html: '<a href="missing.md">missing</a>',
+        rawSource: "# Home\n\n[missing](missing.md)\n",
+      }),
+    ];
+
+    const result = await postprocessPages(pages, baseOptions);
+
+    expect(result.warnings).toContain('Unresolved link "missing.md" in "index.md:3".');
+  });
+
+  it("resolves percent-encoded Japanese path links", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "index.md",
+        route: "/",
+        html: '<a href="02_%E5%AF%BE%E5%BF%9C%E6%A6%82%E8%A6%81/02_%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E8%AA%8D%E8%A8%BC%E6%A9%9F%E8%83%BD.md">auth</a>',
+      }),
+      page({
+        relativePath: "02_対応概要/02_ユーザー認証機能.md",
+        route: "/02_対応概要/02_ユーザー認証機能",
+        html: "<p>auth</p>",
+      }),
+    ];
+
+    const result = await postprocessPages(pages, baseOptions);
+
+    expect(result.warnings).toHaveLength(0);
+    expect(pages[0]!.html).toContain('href="#/02_対応概要/02_ユーザー認証機能"');
+  });
+
   it("rewrites AsciiDoc-style .html cross links", async () => {
     const pages: Page[] = [
       page({ relativePath: "a.adoc", route: "/a", html: '<a href="b.html">b</a>' }),
@@ -75,12 +116,18 @@ describe("postprocessPages - link rewriting", () => {
 
   it("drops heading anchors with a warning", async () => {
     const pages: Page[] = [
-      page({ relativePath: "index.md", route: "/", html: '<a href="g.md#sec">g</a>' }),
+      page({
+        relativePath: "index.md",
+        route: "/",
+        html: '<a href="g.md#sec">g</a>',
+        rawSource: "# Home\n\n[g](g.md#sec)\n",
+      }),
       page({ relativePath: "g.md", route: "/g", html: "<p>g</p>" }),
     ];
     const result = await postprocessPages(pages, baseOptions);
     expect(pages[0]!.html).toContain('href="#/g"');
     expect(result.warnings.some((w) => w.includes("Heading anchor"))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('"index.md:3"'))).toBe(true);
   });
 });
 

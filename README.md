@@ -116,7 +116,8 @@ scripts/serve.sh examples/docs
 
 ## 設定ファイル（任意）
 
-入力ディレクトリのあるプロジェクトに `monodocs.config.yml` を置くと挙動をカスタマイズできます。
+入力ディレクトリ自身に `monodocs.config.yml` を置くと挙動をカスタマイズできます。
+`--config` を省略した場合は入力ディレクトリ直下の設定ファイルを使います。
 無い場合はデフォルト（入力 `./docs`、出力 `./dist/manual.html`）が使われます。
 
 ```yaml
@@ -128,9 +129,19 @@ output:
 sidebar:
   exclude:
     - "_partials/**"
-  # フォルダ名・ファイル名の先頭の数字プレフィックス（"01_" "001-" など）を表示タイトルから除去する。
-  # ファイル名で並び順を制御しつつ、サイドバー/目次には数字を出さない運用向け（既定 false）。
-  stripNumberPrefix: false
+  # 明示タイトル（frontmatter title / :sd-title:）以外の表示タイトル変換。
+  # page は見出し・ファイル名由来のページ表示タイトル、directory はフォルダ表示名に適用する。
+  # type: none（既定）/ stripNumberPrefix / regex
+  titleTransform:
+    page:
+      type: "none"
+      # type: "regex"
+      # pattern: "^REQ-\\d+:\\s*"
+      # replacement: ""
+      # flags: "gi"
+    directory:
+      type: "none"
+      # type: "stripNumberPrefix"
   # タイトルの取得元。"heading"（既定）= frontmatter → 見出し(H1) → ファイル名。
   # "filename" = 見出しがあってもファイル名をタイトルに使う（明示タイトルは常に最優先）。
   titleFrom: "heading"
@@ -148,6 +159,9 @@ mermaid:
   runtime: "cdn" # cdn=軽量・要ネット / inline=自己完結（HTML 肥大）
 highlight:
   enabled: true # コードブロックを shiki で構文ハイライト（false で無効）
+html:
+  theme: "default"
+  contentWidth: "860px" # 固定幅。例: "1100px" / "72rem" / full=横幅いっぱい
 ```
 
 設定項目の全体像は [docs/roadmap.md](docs/roadmap.md) の「12. 設定ファイル」を参照してください。

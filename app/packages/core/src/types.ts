@@ -16,6 +16,22 @@ export type SourceFormat = "markdown" | "asciidoc";
  */
 export type TitleFrom = "heading" | "filename";
 
+/**
+ * frontmatter などの明示タイトルではなく、導出した表示タイトルへ適用する変換。
+ */
+export type TitleTransform =
+  | { type: "none" }
+  | { type: "stripNumberPrefix" }
+  | { type: "regex"; pattern: string; replacement: string; flags?: string };
+
+/** サイドバーに表示するページタイトル・ディレクトリ名それぞれの変換。 */
+export type SidebarTitleTransforms = {
+  /** 見出し・ファイル名から導出したページ表示タイトルへ適用する変換。 */
+  page: TitleTransform;
+  /** フォルダ名から導出したディレクトリ表示名へ適用する変換。 */
+  directory: TitleTransform;
+};
+
 /** 走査・読み込み済みのソースファイル。 */
 export type SourceFile = {
   absolutePath: string;
@@ -38,6 +54,10 @@ export type LinkRef = {
   /** 元のリンク先（相対パス / xref など）。 */
   href: string;
   text?: string;
+  /** ソース上の開始行（1-based）。取得できない形式では undefined。 */
+  line?: number;
+  /** ソース上の開始桁（1-based）。取得できない形式では undefined。 */
+  column?: number;
   /** 解決後の route（例: "/setup/install"）。未解決なら undefined。 */
   resolved?: string;
 };

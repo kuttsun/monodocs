@@ -1,6 +1,13 @@
-import type { PageMeta, Page, SourceFile, SourceRenderer, TitleFrom } from "../types.js";
+import type {
+  PageMeta,
+  Page,
+  SourceFile,
+  SourceRenderer,
+  TitleFrom,
+  TitleTransform,
+} from "../types.js";
 import { toPageId, toRoute } from "../route.js";
-import { stripOrderPrefix } from "./orderPrefix.js";
+import { applyTitleTransform, DEFAULT_TITLE_TRANSFORM } from "./titleTransform.js";
 
 export type BuildPagesResult = {
   pages: Page[];
@@ -8,8 +15,8 @@ export type BuildPagesResult = {
 };
 
 export type BuildPagesOptions = {
-  /** ファイル名由来のタイトルから並び替え用の数値プレフィックスを除去する（`01_setup` → `setup`）。 */
-  stripNumberPrefix?: boolean;
+  /** 明示タイトルではなく、見出し・ファイル名から導出した表示タイトルへ適用する変換。 */
+  titleTransform?: TitleTransform;
   /**
    * 見出し（H1 / 文書タイトル）とファイル名のどちらをタイトルに使うか。
    * `"heading"`（既定）= frontmatter → 見出し → ファイル名。
@@ -20,11 +27,11 @@ export type BuildPagesOptions = {
 };
 
 /** ファイル名（拡張子除く）からタイトルを導出する。 */
-function deriveTitleFromPath(relativePath: string, stripNumberPrefix: boolean): string {
+function deriveTitleFromPath(relativePath: string): string {
   const base = relativePath.split("/").pop() ?? relativePath;
   const name = base.replace(/\.[^.]+$/, "");
   if (name === "index") return "Home";
-  return stripNumberPrefix ? stripOrderPrefix(name) : name;
+  return name;
 }
 
 /**
@@ -40,14 +47,17 @@ function resolveTitle(
 ): { title: string; fromFilename: boolean } {
   const explicit = meta.title?.trim();
   if (explicit) return { title: explicit, fromFilename: false };
+  const titleTransform = options.titleTransform ?? DEFAULT_TITLE_TRANSFORM;
 
   if ((options.titleFrom ?? "heading") !== "filename") {
     const heading = meta.headingTitle?.trim();
-    if (heading) return { title: heading, fromFilename: false };
+    if (heading) {
+      return { title: applyTitleTransform(heading, titleTransform), fromFilename: false };
+    }
   }
 
   return {
-    title: deriveTitleFromPath(relativePath, options.stripNumberPrefix ?? false),
+    title: applyTitleTransform(deriveTitleFromPath(relativePath), titleTransform),
     fromFilename: true,
   };
 }
