@@ -3,7 +3,8 @@
  *
  * 入力を `01_setup` / `001-intro` のように数字プレフィックスで並べておくと、route の
  * 文字列ソート（buildPages）でそのまま意図した順序になる。一方で表示タイトルには
- * その数字を出したくない、という運用を `sidebar.stripNumberPrefix` で可能にする。
+ * その数字を出したくない、という運用を `sidebar.titleTransform.page` /
+ * `sidebar.titleTransform.directory` で可能にする。
  */
 
 /**

@@ -16,6 +16,22 @@ export type SourceFormat = "markdown" | "asciidoc";
  */
 export type TitleFrom = "heading" | "filename";
 
+/**
+ * frontmatter などの明示タイトルではなく、導出した表示タイトルへ適用する変換。
+ */
+export type TitleTransform =
+  | { type: "none" }
+  | { type: "stripNumberPrefix" }
+  | { type: "regex"; pattern: string; replacement: string; flags?: string };
+
+/** サイドバーに表示するページタイトル・ディレクトリ名それぞれの変換。 */
+export type SidebarTitleTransforms = {
+  /** 見出し・ファイル名から導出したページ表示タイトルへ適用する変換。 */
+  page: TitleTransform;
+  /** フォルダ名から導出したディレクトリ表示名へ適用する変換。 */
+  directory: TitleTransform;
+};
+
 /** 走査・読み込み済みのソースファイル。 */
 export type SourceFile = {
   absolutePath: string;

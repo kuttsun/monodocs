@@ -708,10 +708,19 @@ sidebar:
   # この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
   # 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。トップレベルを深さ 1 とする。
   collapseDepth: 2
-  # フォルダ名・ファイル名の先頭にある並び替え用の数字プレフィックス（"01_" "001-" "01." など）を
-  # 表示タイトルから除去する。順序はファイル名で制御しつつ、表示には数字を出さない運用向け（既定 false）。
-  # route/page id は順序のため prefix を保持し、タイトル表示のみ除去する。
-  stripNumberPrefix: false
+  # 明示タイトル（frontmatter title / :sd-title:）以外の表示タイトル変換。
+  # page は見出し・ファイル名由来のページ表示タイトル、directory はフォルダ表示名に適用する。
+  # type: none（既定）/ stripNumberPrefix / regex。route/page id は不変。
+  titleTransform:
+    page:
+      type: "none"
+      # type: "regex"
+      # pattern: "^REQ-\\d+:\\s*"
+      # replacement: ""
+      # flags: "gi"
+    directory:
+      type: "none"
+      # type: "stripNumberPrefix"
   exclude:
     - "_partials/**"
     - "partials/**"

@@ -57,7 +57,7 @@ describe("buildSidebar", () => {
     }
   });
 
-  it("strips numeric order prefixes from directory titles when enabled", () => {
+  it("strips numeric order prefixes from directory titles when configured", () => {
     const pages: Page[] = [
       page({
         id: "01_setup-install",
@@ -67,7 +67,7 @@ describe("buildSidebar", () => {
       }),
     ];
 
-    const tree = buildSidebar(pages, { stripNumberPrefix: true });
+    const tree = buildSidebar(pages, { titleTransform: { type: "stripNumberPrefix" } });
     const dir = tree[0];
     expect(dir?.type).toBe("dir");
     if (dir && dir.type === "dir") {
@@ -90,6 +90,24 @@ describe("buildSidebar", () => {
     const dir = buildSidebar(pages)[0];
     if (dir && dir.type === "dir") {
       expect(dir.title).toBe("01_setup");
+    }
+  });
+
+  it("applies regex titleTransform to directory titles", () => {
+    const pages: Page[] = [
+      page({
+        id: "req-001_setup-install",
+        route: "/REQ-001_setup/install",
+        relativePath: "REQ-001_setup/install.md",
+        title: "Install",
+      }),
+    ];
+
+    const dir = buildSidebar(pages, {
+      titleTransform: { type: "regex", pattern: "^REQ-\\d+_", replacement: "" },
+    })[0];
+    if (dir && dir.type === "dir") {
+      expect(dir.title).toBe("setup");
     }
   });
 

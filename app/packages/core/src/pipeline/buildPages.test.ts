@@ -46,9 +46,9 @@ describe("buildPages title derivation", () => {
     };
   }
 
-  it("strips a numeric order prefix from filename-derived titles when enabled", async () => {
+  it("strips a numeric order prefix from filename-derived titles when configured", async () => {
     const { pages } = await buildPages([plain("01_intro.md")], [markdownRenderer], {
-      stripNumberPrefix: true,
+      titleTransform: { type: "stripNumberPrefix" },
     });
     expect(pages[0]?.title).toBe("intro");
     // route は順序付けのため prefix を保持する。
@@ -94,12 +94,55 @@ describe("buildPages titleFrom", () => {
     expect(pages[0]?.title).toBe("Explicit");
   });
 
-  it("composes with stripNumberPrefix (filename title, prefix kept in route)", async () => {
+  it("composes with stripNumberPrefix transform (filename title, prefix kept in route)", async () => {
     const { pages } = await buildPages([withRaw("01_intro.md", "# Hello\n")], [markdownRenderer], {
       titleFrom: "filename",
-      stripNumberPrefix: true,
+      titleTransform: { type: "stripNumberPrefix" },
     });
     expect(pages[0]?.title).toBe("intro");
     expect(pages[0]?.route).toBe("/01_intro");
+  });
+
+  it("applies titleTransform to the H1 when titleFrom is heading", async () => {
+    const { pages } = await buildPages([withRaw("intro.md", "# 01_Intro\n")], [markdownRenderer], {
+      titleTransform: { type: "stripNumberPrefix" },
+    });
+    expect(pages[0]?.title).toBe("Intro");
+  });
+
+  it("does not apply titleTransform to explicit frontmatter titles", async () => {
+    const { pages } = await buildPages(
+      [withRaw("01_intro.md", "---\ntitle: 01_Explicit\n---\n\n# 02_Heading\n")],
+      [markdownRenderer],
+      { titleTransform: { type: "stripNumberPrefix" } },
+    );
+    expect(pages[0]?.title).toBe("01_Explicit");
+  });
+
+  it("applies regex titleTransform to implicit titles", async () => {
+    const { pages } = await buildPages(
+      [withRaw("intro.md", "# REQ-001: Intro\n")],
+      [markdownRenderer],
+      {
+        titleTransform: { type: "regex", pattern: "^REQ-\\d+:\\s*", replacement: "" },
+      },
+    );
+    expect(pages[0]?.title).toBe("Intro");
+  });
+
+  it("supports regex titleTransform flags", async () => {
+    const { pages } = await buildPages(
+      [withRaw("intro.md", "# req-001: REQ-002: Guide\n")],
+      [markdownRenderer],
+      {
+        titleTransform: {
+          type: "regex",
+          pattern: "REQ-\\d+:\\s*",
+          replacement: "",
+          flags: "gi",
+        },
+      },
+    );
+    expect(pages[0]?.title).toBe("Guide");
   });
 });

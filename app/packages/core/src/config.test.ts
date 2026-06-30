@@ -42,15 +42,77 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     const config = await loadConfig({}, dir);
     expect(config.sidebarCollapseDepth).toBeUndefined();
     expect(config.tocMaxLevel).toBe(3);
-    expect(config.sidebarStripNumberPrefix).toBe(false);
+    expect(config.sidebarTitleTransform).toEqual({
+      page: { type: "none" },
+      directory: { type: "none" },
+    });
     expect(config.sidebarFlattenSingleChild).toBe(false);
     expect(config.sidebarTitleFrom).toBe("heading");
   });
 
-  it("reads sidebar.stripNumberPrefix from the config file", async () => {
-    await writeConfig("sidebar:\n  stripNumberPrefix: true\n");
+  it("reads sidebar.titleTransform.page from the config file", async () => {
+    await writeConfig("sidebar:\n  titleTransform:\n    page:\n      type: stripNumberPrefix\n");
     const config = await loadConfig({}, dir);
-    expect(config.sidebarStripNumberPrefix).toBe(true);
+    expect(config.sidebarTitleTransform).toEqual({
+      page: { type: "stripNumberPrefix" },
+      directory: { type: "none" },
+    });
+  });
+
+  it("reads sidebar.titleTransform.directory from the config file", async () => {
+    await writeConfig(
+      "sidebar:\n  titleTransform:\n    directory:\n      type: stripNumberPrefix\n",
+    );
+    const config = await loadConfig({}, dir);
+    expect(config.sidebarTitleTransform).toEqual({
+      page: { type: "none" },
+      directory: { type: "stripNumberPrefix" },
+    });
+  });
+
+  it("reads sidebar.titleTransform regex with flags from the config file", async () => {
+    await writeConfig(
+      'sidebar:\n  titleTransform:\n    page:\n      type: regex\n      pattern: "^REQ-\\\\d+: "\n      replacement: ""\n      flags: "i"\n',
+    );
+    const config = await loadConfig({}, dir);
+    expect(config.sidebarTitleTransform).toEqual({
+      page: {
+        type: "regex",
+        pattern: "^REQ-\\d+: ",
+        replacement: "",
+        flags: "i",
+      },
+      directory: { type: "none" },
+    });
+  });
+
+  it("rejects an invalid sidebar.titleTransform regex pattern", async () => {
+    await writeConfig(
+      'sidebar:\n  titleTransform:\n    page:\n      type: regex\n      pattern: "[bad"\n      replacement: ""\n',
+    );
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+  });
+
+  it("rejects invalid sidebar.titleTransform regex flags", async () => {
+    await writeConfig(
+      'sidebar:\n  titleTransform:\n    page:\n      type: regex\n      pattern: "^REQ"\n      replacement: ""\n      flags: "gg"\n',
+    );
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+  });
+
+  it("rejects the old flat sidebar.titleTransform shape", async () => {
+    await writeConfig("sidebar:\n  titleTransform:\n    type: stripNumberPrefix\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+  });
+
+  it("rejects the removed sidebar.stripNumberPrefix key", async () => {
+    await writeConfig("sidebar:\n  stripNumberPrefix: true\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+  });
+
+  it("rejects unknown sidebar keys", async () => {
+    await writeConfig("sidebar:\n  titleTranform:\n    page:\n      type: none\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
   });
 
   it("reads sidebar.titleFrom from the config file", async () => {

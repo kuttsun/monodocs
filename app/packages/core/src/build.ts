@@ -39,7 +39,7 @@ async function preparePages(config: ResolvedConfig, cwd: string): Promise<Prepar
   }
 
   const { pages, warnings } = await buildPages(sources, [markdownRenderer, asciidocRenderer], {
-    stripNumberPrefix: config.sidebarStripNumberPrefix,
+    titleTransform: config.sidebarTitleTransform.page,
     titleFrom: config.sidebarTitleFrom,
   });
   const post = await postprocessPages(pages, {
@@ -52,7 +52,7 @@ async function preparePages(config: ResolvedConfig, cwd: string): Promise<Prepar
     codeHighlight: config.codeHighlight,
   });
   const sidebar = buildSidebar(pages, {
-    stripNumberPrefix: config.sidebarStripNumberPrefix,
+    titleTransform: config.sidebarTitleTransform.directory,
     flattenSingleChild: config.sidebarFlattenSingleChild,
   });
 

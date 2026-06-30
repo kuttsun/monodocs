@@ -128,9 +128,19 @@ output:
 sidebar:
   exclude:
     - "_partials/**"
-  # フォルダ名・ファイル名の先頭の数字プレフィックス（"01_" "001-" など）を表示タイトルから除去する。
-  # ファイル名で並び順を制御しつつ、サイドバー/目次には数字を出さない運用向け（既定 false）。
-  stripNumberPrefix: false
+  # 明示タイトル（frontmatter title / :sd-title:）以外の表示タイトル変換。
+  # page は見出し・ファイル名由来のページ表示タイトル、directory はフォルダ表示名に適用する。
+  # type: none（既定）/ stripNumberPrefix / regex
+  titleTransform:
+    page:
+      type: "none"
+      # type: "regex"
+      # pattern: "^REQ-\\d+:\\s*"
+      # replacement: ""
+      # flags: "gi"
+    directory:
+      type: "none"
+      # type: "stripNumberPrefix"
   # タイトルの取得元。"heading"（既定）= frontmatter → 見出し(H1) → ファイル名。
   # "filename" = 見出しがあってもファイル名をタイトルに使う（明示タイトルは常に最優先）。
   titleFrom: "heading"

@@ -53,4 +53,43 @@ describe("buildSite (e2e)", () => {
       /not supported/i,
     );
   });
+
+  it("applies page and directory title transforms separately from the config file", async () => {
+    const tdir = await mkdtemp(join(tmpdir(), "monodocs-title-transform-"));
+    const tdocs = join(tdir, "docs");
+    const tout = join(tdir, "dist", "manual.html");
+    const configFile = join(tdir, "monodocs.config.yml");
+    await mkdir(join(tdocs, "01_section"), { recursive: true });
+    await writeFile(join(tdocs, "01_section", "req.md"), "# REQ-001: Intro\n");
+    await writeFile(
+      configFile,
+      [
+        `input: "${tdocs}"`,
+        "output:",
+        `  path: "${tout}"`,
+        "sidebar:",
+        "  titleTransform:",
+        "    page:",
+        "      type: regex",
+        "      pattern: '^REQ-\\d+:\\s*'",
+        '      replacement: ""',
+        '      flags: "i"',
+        "    directory:",
+        "      type: stripNumberPrefix",
+        "",
+      ].join("\n"),
+    );
+
+    try {
+      await buildSite({ configFile });
+      const html = await readFile(tout, "utf8");
+      const nav = html.match(/<nav id="sidebar-nav">([\s\S]*?)<\/nav>/)?.[1] ?? "";
+      expect(nav).toContain('<span class="sidebar-dir-title">section</span>');
+      expect(nav).not.toContain('<span class="sidebar-dir-title">01_section</span>');
+      expect(nav).toContain("Intro");
+      expect(nav).not.toContain("REQ-001");
+    } finally {
+      await rm(tdir, { recursive: true, force: true });
+    }
+  });
 });

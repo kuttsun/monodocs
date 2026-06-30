@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import type { BuildOptions, OutputFormat, TitleFrom } from "./types.js";
+import type { BuildOptions, OutputFormat, SidebarTitleTransforms, TitleFrom } from "./types.js";
 
 const DEFAULT_INPUT = "./docs";
 const DEFAULT_OUTPUT = "./dist/manual.html";
@@ -21,6 +21,38 @@ const DEFAULT_TOC_MAX_LEVEL = 3;
 export type OnLargeImage = "warn" | "error" | "external";
 /** Mermaid ランタイムの配給方法。 */
 export type MermaidRuntime = "cdn" | "inline";
+
+const regexTitleTransformSchema = z
+  .object({
+    type: z.literal("regex"),
+    pattern: z.string().min(1),
+    replacement: z.string(),
+    flags: z.string().optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    try {
+      new RegExp(value.pattern, value.flags);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid regex transform: ${(error as Error).message}`,
+      });
+    }
+  });
+
+const titleTransformSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("none") }).strict(),
+  z.object({ type: z.literal("stripNumberPrefix") }).strict(),
+  regexTitleTransformSchema,
+]);
+
+const sidebarTitleTransformSchema = z
+  .object({
+    page: titleTransformSchema.optional(),
+    directory: titleTransformSchema.optional(),
+  })
+  .strict();
 
 /** `monodocs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
 const configFileSchema = z.object({
@@ -44,9 +76,8 @@ const configFileSchema = z.object({
       // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
       // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
       collapseDepth: z.number().int().min(0).optional(),
-      // フォルダ名・ファイル名の先頭にある並び替え用の数値プレフィックス（`01_` `001-` など）を
-      // 表示タイトルから除去する。順序はファイル名で制御しつつ、表示には数字を出さない運用向け。
-      stripNumberPrefix: z.boolean().optional(),
+      // 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。
+      titleTransform: sidebarTitleTransformSchema.optional(),
       // ページタイトルの取得元。"heading"（既定）= frontmatter → 見出し → ファイル名。
       // "filename" = 見出しがあってもファイル名を使う（明示タイトルは常に最優先）。
       titleFrom: z.enum(["heading", "filename"]).optional(),
@@ -55,6 +86,7 @@ const configFileSchema = z.object({
       // 冗長なフォルダ階層を消すための設定。画像はページに数えないため自動で判定できる。
       flattenSingleChild: z.boolean().optional(),
     })
+    .strict()
     .optional(),
   toc: z
     .object({
@@ -92,8 +124,8 @@ export type ResolvedConfig = {
   exclude: string[];
   /** この階層より深いディレクトリを既定で折りたたむ。undefined は折りたたみなし。 */
   sidebarCollapseDepth?: number;
-  /** 表示タイトルから並び替え用の数値プレフィックス（`01_` など）を除去するか。 */
-  sidebarStripNumberPrefix: boolean;
+  /** 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。 */
+  sidebarTitleTransform: SidebarTitleTransforms;
   /** ページタイトルの取得元（"heading" = 見出し優先 / "filename" = ファイル名優先）。 */
   sidebarTitleFrom: TitleFrom;
   /** ページ 1 つだけ・サブフォルダ無しのディレクトリ階層を畳んでページを親へ繰り上げるか。 */
@@ -172,7 +204,10 @@ export async function loadConfig(
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
     sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,
-    sidebarStripNumberPrefix: fileConfig.sidebar?.stripNumberPrefix ?? false,
+    sidebarTitleTransform: {
+      page: fileConfig.sidebar?.titleTransform?.page ?? { type: "none" },
+      directory: fileConfig.sidebar?.titleTransform?.directory ?? { type: "none" },
+    },
     sidebarTitleFrom: fileConfig.sidebar?.titleFrom ?? "heading",
     sidebarFlattenSingleChild: fileConfig.sidebar?.flattenSingleChild ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
