@@ -1,0 +1,15 @@
+{
+  "name": "monodocs-site",
+  "version": "0.1.0",
+  "description": "monodocs 公式サイト（ランディング + ドキュメント + 単一HTMLデモ）",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev --host",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview --host"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
