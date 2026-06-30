@@ -1,4 +1,5 @@
 import type { Page, SidebarNode } from "../types.js";
+import { parseContentWidth } from "../config.js";
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, injectToken } from "../util/html.js";
 
@@ -7,6 +8,8 @@ export type RenderHtmlInput = {
   pages: Page[];
   sidebar: SidebarNode[];
   theme?: string;
+  /** 本文領域の最大幅。`full` / `none` の場合は利用可能な横幅いっぱいに広げる。 */
+  contentWidth?: string;
   /**
    * この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
    * undefined は折りたたみなし。トップレベルのディレクトリを深さ 1 とする。
@@ -62,6 +65,16 @@ function safeJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
+/** 設定由来のテーマ CSS 変数を追加する。公開レンダリング境界でも値を検証する。 */
+function styleWithOverrides(style: string, input: RenderHtmlInput): string {
+  const overrides: string[] = [];
+  if (input.contentWidth !== undefined) {
+    overrides.push(`  --content-max-width: ${parseContentWidth(input.contentWidth)};`);
+  }
+  if (overrides.length === 0) return style;
+  return `${style}\n:root {\n${overrides.join("\n")}\n}\n`;
+}
+
 /** クライアント（目次・検索・前後ナビ）へ渡す 1 ページ分のデータ。 */
 function pageData(
   page: Page,
@@ -101,7 +114,7 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
 
   let html = theme.template;
   html = injectToken(html, "{{title}}", escapeHtml(input.title));
-  html = injectToken(html, "{{style}}", theme.style);
+  html = injectToken(html, "{{style}}", styleWithOverrides(theme.style, input));
   html = injectToken(html, "{{sidebar}}", sidebarHtml);
   html = injectToken(html, "{{pages}}", pagesHtml);
   html = injectToken(html, "{{siteDataJson}}", siteData);

@@ -92,4 +92,32 @@ describe("buildSite (e2e)", () => {
       await rm(tdir, { recursive: true, force: true });
     }
   });
+
+  it("applies configured content width to the generated HTML", async () => {
+    const tdir = await mkdtemp(join(tmpdir(), "monodocs-content-width-"));
+    const tdocs = join(tdir, "docs");
+    const tout = join(tdir, "dist", "manual.html");
+    const configFile = join(tdir, "monodocs.config.yml");
+    await mkdir(tdocs, { recursive: true });
+    await writeFile(join(tdocs, "index.md"), "# Top\n");
+    await writeFile(
+      configFile,
+      [
+        `input: "${tdocs}"`,
+        "output:",
+        `  path: "${tout}"`,
+        "html:",
+        "  contentWidth: full",
+        "",
+      ].join("\n"),
+    );
+
+    try {
+      await buildSite({ configFile });
+      const html = await readFile(tout, "utf8");
+      expect(html).toContain("--content-max-width: none;");
+    } finally {
+      await rm(tdir, { recursive: true, force: true });
+    }
+  });
 });

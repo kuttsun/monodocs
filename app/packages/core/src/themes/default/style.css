@@ -1,6 +1,7 @@
 :root {
   --sidebar-width: 280px;
   --toc-width: 240px;
+  --content-max-width: 860px;
   --color-bg: #ffffff;
   --color-text: #1f2328;
   --color-muted: #656d76;
@@ -286,7 +287,7 @@ body.sidebar-collapsed #sidebar {
 #content {
   flex: 1 1 auto;
   min-width: 0;
-  max-width: 860px;
+  max-width: var(--content-max-width);
   margin: 0 auto;
   padding: 2.5rem 3rem 5rem;
   overflow-x: hidden;

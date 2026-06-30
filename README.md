@@ -159,6 +159,9 @@ mermaid:
   runtime: "cdn" # cdn=軽量・要ネット / inline=自己完結（HTML 肥大）
 highlight:
   enabled: true # コードブロックを shiki で構文ハイライト（false で無効）
+html:
+  theme: "default"
+  contentWidth: "860px" # 固定幅。例: "1100px" / "72rem" / full=横幅いっぱい
 ```
 
 設定項目の全体像は [docs/roadmap.md](docs/roadmap.md) の「12. 設定ファイル」を参照してください。

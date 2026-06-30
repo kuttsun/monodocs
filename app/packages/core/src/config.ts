@@ -14,6 +14,7 @@ const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
 const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
 const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
 const DEFAULT_MAX_INLINE_SIZE = 5 * 1024 * 1024; // 5MB
+const DEFAULT_CONTENT_WIDTH = "860px";
 // ページ内目次に出す見出しの最深レベル（h2〜h3）。h1 はページタイトル相当のため常に除外。
 const DEFAULT_TOC_MAX_LEVEL = 3;
 
@@ -108,7 +109,12 @@ const configFileSchema = z.object({
     })
     .optional(),
   highlight: z.object({ enabled: z.boolean().optional() }).optional(),
-  html: z.object({ theme: z.string().optional() }).optional(),
+  html: z
+    .object({
+      theme: z.string().optional(),
+      contentWidth: z.union([z.string(), z.number()]).optional(),
+    })
+    .optional(),
 });
 
 export type ConfigFile = z.infer<typeof configFileSchema>;
@@ -135,6 +141,8 @@ export type ResolvedConfig = {
   /** ページ内目次に出す見出しの最深レベル（2〜6）。 */
   tocMaxLevel: number;
   theme: string;
+  /** 本文領域の最大幅。`full` 指定時は CSS の `none` に解決する。 */
+  contentWidth: string;
   embedImages: boolean;
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
@@ -167,6 +175,43 @@ export function parseSize(value: string | number | undefined, fallback: number):
     throw new Error(`Invalid maxInlineSize: "${value}"`);
   }
   return bytes;
+}
+
+/**
+ * `html.contentWidth` を CSS の max-width 値へ変換する。
+ * 数値は px として扱う。`full` はサイドバー・目次を除く残り幅いっぱいに広げるため `none` へ変換する。
+ */
+export function parseContentWidth(
+  value: string | number | undefined,
+  fallback: string = DEFAULT_CONTENT_WIDTH,
+): string {
+  if (value === undefined) return fallback;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`Invalid contentWidth: ${value}`);
+    }
+    return `${value}px`;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.toLowerCase() === "full" || trimmed.toLowerCase() === "none") {
+    return "none";
+  }
+
+  const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*(px|rem|em|ch|vw|%)$/i);
+  if (!match) {
+    throw new Error(`Invalid contentWidth: "${value}"`);
+  }
+  const rawAmount = match[1];
+  const rawUnit = match[2];
+  if (rawAmount === undefined || rawUnit === undefined) {
+    throw new Error(`Invalid contentWidth: "${value}"`);
+  }
+  const amount = Number(rawAmount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error(`Invalid contentWidth: "${value}"`);
+  }
+  return `${amount}${rawUnit.toLowerCase()}`;
 }
 
 function resolveConfigRelativePath(baseDir: string, target: string): string {
@@ -237,6 +282,7 @@ export async function loadConfig(
     sidebarFlattenSingleChild: fileConfig.sidebar?.flattenSingleChild ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
     theme: fileConfig.html?.theme ?? "default",
+    contentWidth: parseContentWidth(fileConfig.html?.contentWidth),
     embedImages: fileConfig.assets?.embedImages ?? true,
     maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
     onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",

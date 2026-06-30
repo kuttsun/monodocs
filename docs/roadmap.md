@@ -744,6 +744,8 @@ html:
   selfContained: true
   routeMode: "hash"
   theme: "default"
+  # 本文領域の最大幅。例: "860px" / "1100px" / "72rem" / full
+  contentWidth: "860px"
   darkMode: true
 
 pdf:
