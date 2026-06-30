@@ -1,0 +1,123 @@
+= Links and images
+:sd-order: 5
+:url-repo: https://example.com/monodocs
+
+Each item shows the *source* first, then the *rendered output (HTML)* below it.
+
+== Links
+
+URL macros, email, and cross-references (xref) to other files.
+
+*Source:*
+
+[source,asciidoc]
+------
+* URL macro: {url-repo}[monodocs repository]
+* As-is: https://docs.asciidoctor.org/
+* Email: mailto:docs@example.com[Documentation team]
+* Cross-reference (xref) to another file: xref:index.adoc[Back to top] /
+  xref:blocks.adoc[The blocks page]
+------
+
+*Rendered:*
+
+* URL macro: {url-repo}[monodocs repository]
+* As-is: https://docs.asciidoctor.org/
+* Email: mailto:docs@example.com[Documentation team]
+* Cross-reference (xref) to another file: xref:index.adoc[Back to top] /
+  xref:blocks.adoc[The blocks page]
+
+== Attributes
+
+An attribute `{url-repo}` defined in the header can be expanded in the body.
+
+*Source:*
+
+[source,asciidoc]
+------
+You can expand the attribute `{url-repo}` defined in the header in the body: {url-repo}
+------
+
+*Rendered:*
+
+You can expand the attribute `{url-repo}` defined in the header in the body: {url-repo}
+
+== Internal anchors and cross-references
+
+`[#id]` adds an anchor to a heading, and `<<id,text>>` references it. Clicking scrolls to the spot without switching pages.
+
+*Source:*
+
+[source,asciidoc]
+------
+[#install-section]
+=== Installation steps (with an anchor)
+
+This heading has an anchor (ID) via `[#install-section]`.
+You can reference it from elsewhere like <<install-section,go to the installation steps>>.
+------
+
+*Rendered:*
+
+[#install-section]
+=== Installation steps (with an anchor)
+
+This heading has an anchor (ID) via `[#install-section]`.
+You can reference it from elsewhere like <<install-section,go to the installation steps>>.
+
+== Images
+
+`image::` is a block image (with a caption); `image:` is an inline image (images are embedded into the single HTML as data URIs).
+
+*Source:*
+
+[source,asciidoc]
+------
+.monodocs logo
+image::images/logo.svg[Logo, 120]
+
+You can also place an inline image image:images/logo.svg[Logo, 80] within text.
+------
+
+*Rendered:*
+
+.monodocs logo
+image::images/logo.svg[Logo, 120]
+
+You can also place an inline image image:images/logo.svg[Logo, 80] within text.
+
+== UI macros
+
+Macros for key presses, buttons, and menus.
+
+*Source:*
+
+[source,asciidoc]
+------
+* Key press: kbd:[Ctrl+S] to save, kbd:[Ctrl+Shift+P]
+* Button: click btn:[OK]
+* Menu: choose menu:File[New > Project]
+------
+
+*Rendered:*
+
+* Key press: kbd:[Ctrl+S] to save, kbd:[Ctrl+Shift+P]
+* Button: click btn:[OK]
+* Menu: choose menu:File[New > Project]
+
+== Footnotes
+
+`footnote:[...]` creates a footnote; `footnote:ref1[...]` creates a reusable named footnote.
+
+*Source:*
+
+[source,asciidoc]
+------
+You can attach a footnote to the textfootnote:[This is a footnote. It gets a unique ID within the single HTML.].
+You can also use a named footnotefootnote:ref1[A reusable footnote.] and reference the same one againfootnote:ref1[].
+------
+
+*Rendered:*
+
+You can attach a footnote to the textfootnote:[This is a footnote. It gets a unique ID within the single HTML.].
+You can also use a named footnotefootnote:ref1[A reusable footnote.] and reference the same one againfootnote:ref1[].

@@ -1,0 +1,117 @@
+= Tables
+:sd-order: 4
+
+Each item shows the *source* first, then the *rendered output (HTML)* below it.
+
+== A basic table
+
+`cols` sets column widths and alignment (`^` center / `>` right), `options="header"` makes the first row a header, and `.Title` adds a caption.
+
+*Source:*
+
+[source,asciidoc]
+------
+.Support status
+[cols="1,^1,>1", options="header"]
+|===
+| Feature | Markdown | AsciiDoc
+
+| Headings
+| ✅
+| ✅
+
+| Tables
+| ✅
+| ✅
+
+| Code highlighting
+| shiki
+| shiki
+|===
+------
+
+*Rendered:*
+
+.Support status
+[cols="1,^1,>1", options="header"]
+|===
+| Feature | Markdown | AsciiDoc
+
+| Headings
+| ✅
+| ✅
+
+| Tables
+| ✅
+| ✅
+
+| Code highlighting
+| shiki
+| shiki
+|===
+
+== Cell formatting and multiple lines
+
+You can use `*bold*` and `code` inside cells. The `a|` prefix lets you put AsciiDoc blocks (like lists) in a cell.
+
+*Source:*
+
+[source,asciidoc]
+------
+[cols="1,2", options="header"]
+|===
+| Item | Description
+
+| Emphasis
+| You can use *bold*, `code`, and _italic_ inside cells.
+
+| Bullets
+a|
+Use the `a` prefix to put AsciiDoc blocks (like lists) in a cell:
+
+* Item 1
+* Item 2
+|===
+------
+
+*Rendered:*
+
+[cols="1,2", options="header"]
+|===
+| Item | Description
+
+| Emphasis
+| You can use *bold*, `code`, and _italic_ inside cells.
+
+| Bullets
+a|
+Use the `a` prefix to put AsciiDoc blocks (like lists) in a cell:
+
+* Item 1
+* Item 2
+|===
+
+== CSV format
+
+`format=csv` builds a table from comma-separated data.
+
+*Source:*
+
+[source,asciidoc]
+------
+[%header, format=csv]
+|===
+Name,Role
+core,The core of the conversion
+cli,Command line
+|===
+------
+
+*Rendered:*
+
+[%header, format=csv]
+|===
+Name,Role
+core,The core of the conversion
+cli,Command line
+|===

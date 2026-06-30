@@ -1,0 +1,6 @@
+= Companion (AsciiDoc)
+:sd-title: Companion (AsciiDoc)
+
+Back to the Markdown page in the same folder: link:index.md[Mixed top].
+
+NOTE: AsciiDoc admonitions work as-is too.

@@ -7,7 +7,7 @@
 #
 # ジョブの流れ:
 #   1) monodocs CLI 本体をビルド（app/、pnpm を corepack で解決）
-#   2) その CLI で同梱 examples を単一 HTML 化し site/public/manual.html に出力（ドッグフーディング）
+#   2) その CLI で英日それぞれの examples を単一 HTML 化（英→manual.html / 日→ja/manual.html）
 #   3) VitePress でサイトをビルド（SITE_BASE=/<project>/）
 #   4) 生成物を public/ に集約（GitLab Pages の規約）
 
@@ -34,8 +34,10 @@ pages:
     # 1) monodocs CLI 本体をビルド（packageManager 指定を corepack で解決）
     - corepack enable
     - (cd app && pnpm install --frozen-lockfile --store-dir "$PNPM_STORE" && pnpm build)
-    # 2) ドッグフーディング: 同梱 examples を単一 HTML 化して併載
-    - node app/packages/cli/dist/index.js build app/examples/docs -o site/public/manual.html
+    # 2) ドッグフーディング: 英日それぞれの examples を単一 HTML 化して併載
+    - mkdir -p site/public/ja
+    - node app/packages/cli/dist/index.js build app/examples/en -o site/public/manual.html
+    - node app/packages/cli/dist/index.js build app/examples/ja -o site/public/ja/manual.html
     # 3) VitePress ビルド（サブパス base）
     - (cd site && npm ci && npm run docs:build)
     # 4) GitLab Pages 規約に合わせ public/ へ集約

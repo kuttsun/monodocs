@@ -91,13 +91,13 @@ monodocs validate ./docs
 ```bash
 # 全記法・全機能をまとめたショーケースを配信（ライブリロード付き）
 # 依存インストール（初回のみ）・ビルド・serve をまとめて実行する
-scripts/serve.sh examples/docs
+scripts/serve.sh examples/ja
 ```
 
 起動後、ブラウザで **`http://localhost:4173/`** を開きます（`http://0.0.0.0:...` ではなく `localhost`）。
-止めるときは `Ctrl+C`。別ポートにするには `MONODOCS_PORT=8080 scripts/serve.sh examples/docs --port 8080`。
+止めるときは `Ctrl+C`。別ポートにするには `MONODOCS_PORT=8080 scripts/serve.sh examples/ja --port 8080`。
 
-- `examples/docs` は Markdown(GFM) / AsciiDoc / 混在の全記法・全機能を 1 サイトにまとめたものです。
+- `examples/ja`（日本語）/ `examples/en`（英語）は、Markdown(GFM) / AsciiDoc / 混在の全記法・全機能を 1 サイトにまとめたショーケースです。
 - 配信中にサンプル内のファイルを編集すると、ブラウザが自動でリロードします。
 - Mermaid は既定で CDN 参照のため、図の描画にはブラウザ側のネット接続が必要です。
 

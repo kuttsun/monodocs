@@ -34,8 +34,8 @@ export default defineConfig({
   // 開発用 README はページ化しない（/README.html を出力させない）。
   srcExclude: ['**/README.md'],
 
-  // /manual.html は VitePress 管轄外（public/ の静的アセット）なので dead link 対象外。
-  ignoreDeadLinks: [/^\/manual\.html$/],
+  // /manual.html・/ja/manual.html は VitePress 管轄外（public/ の静的アセット）なので dead link 対象外。
+  ignoreDeadLinks: [/^\/manual\.html$/, /^\/ja\/manual\.html$/],
 
   head: [['meta', { name: 'theme-color', content: '#3451b2' }]],
 
@@ -83,7 +83,7 @@ export default defineConfig({
         nav: [
           { text: 'ホーム', link: '/ja/' },
           { text: 'ガイド', link: '/ja/docs/getting-started' },
-          { text: '単一ファイルデモ', link: '/manual.html', target: '_blank', rel: 'noopener' }
+          { text: '単一ファイルデモ', link: '/ja/manual.html', target: '_blank', rel: 'noopener' }
         ],
 
         sidebar: {

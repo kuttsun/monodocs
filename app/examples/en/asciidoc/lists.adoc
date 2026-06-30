@@ -1,0 +1,144 @@
+= Lists
+:sd-order: 2
+
+Each item shows the *source* first, then the *rendered output (HTML)* below it.
+
+== Bullet lists (unordered)
+
+The number of `*` sets the nesting.
+
+*Source:*
+
+[source,asciidoc]
+------
+* Item A
+* Item B
+** Nested B-1
+** Nested B-2
+*** Even deeper
+* Item C
+------
+
+*Rendered:*
+
+* Item A
+* Item B
+** Nested B-1
+** Nested B-2
+*** Even deeper
+* Item C
+
+== Numbered lists (ordered)
+
+`.` makes a numbered list; `..` nests.
+
+*Source:*
+
+[source,asciidoc]
+------
+. First
+. Next
+. After that
+.. Nested 2-1
+.. Nested 2-2
+------
+
+*Rendered:*
+
+. First
+. Next
+. After that
+.. Nested 2-1
+.. Nested 2-2
+
+== Checklists
+
+`[x]` / `[ ]` create checkboxes.
+
+*Source:*
+
+[source,asciidoc]
+------
+* [x] A completed task
+* [ ] An incomplete task
+* [*] Completed (alternative notation)
+------
+
+*Rendered:*
+
+* [x] A completed task
+* [ ] An incomplete task
+* [*] Completed (alternative notation)
+
+== Description lists
+
+`term:: description` creates term/description pairs.
+
+*Source:*
+
+[source,asciidoc]
+------
+CPU:: Central processing unit.
+Memory:: Main memory.
+Storage::
+  Auxiliary storage. Multi-line descriptions are fine too.
+------
+
+*Rendered:*
+
+CPU:: Central processing unit.
+Memory:: Main memory.
+Storage::
+  Auxiliary storage. Multi-line descriptions are fine too.
+
+== Terms and nesting
+
+You can nest by changing the level with `::` / `:::`.
+
+*Source:*
+
+[source,asciidoc]
+------
+Operating system::
+  Linux:::
+    An open-source OS.
+  macOS:::
+    Apple's OS.
+------
+
+*Rendered:*
+
+Operating system::
+  Linux:::
+    An open-source OS.
+  macOS:::
+    Apple's OS.
+
+== Multiple blocks in a list item
+
+A continuation line (`+`) connects paragraphs or blocks to the same item.
+
+*Source:*
+
+[source,asciidoc]
+------
+* An item that contains multiple blocks.
++
+This is a paragraph of the same item, connected with a continuation line (`+`).
++
+[source,bash]
+----
+echo "A code block inside a list item"
+----
+------
+
+*Rendered:*
+
+* An item that contains multiple blocks.
++
+This is a paragraph of the same item, connected with a continuation line (`+`).
++
+[source,bash]
+----
+echo "A code block inside a list item"
+----

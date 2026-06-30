@@ -21,8 +21,8 @@ order: 1
 ## ビルド / プレビュー
 
 ```bash
-monodocs build examples/docs -o dist/showcase.html
-monodocs serve examples/docs            # http://127.0.0.1:4173/
+monodocs build examples/ja -o dist/showcase.html
+monodocs serve examples/ja            # http://127.0.0.1:4173/
 ```
 
 ## このサイトで確認できる機能

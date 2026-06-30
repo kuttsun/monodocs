@@ -24,14 +24,14 @@ scripts/dev.sh pnpm install
 scripts/dev.sh pnpm build
 
 # 同梱 examples から単一 HTML を生成
-scripts/dev.sh node packages/cli/dist/index.js build examples/docs -o dist/manual.html
+scripts/dev.sh node packages/cli/dist/index.js build examples/ja -o dist/manual.html
 ```
 
 ## ローカルプレビュー
 
 ```bash
 # ライブリロード付きプレビューサーバ
-scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
+scripts/dev.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
 # → http://localhost:4173/
 ```
 

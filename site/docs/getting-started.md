@@ -24,14 +24,14 @@ scripts/dev.sh pnpm install
 scripts/dev.sh pnpm build
 
 # Build a single HTML from the bundled examples
-scripts/dev.sh node packages/cli/dist/index.js build examples/docs -o dist/manual.html
+scripts/dev.sh node packages/cli/dist/index.js build examples/en -o dist/manual.html
 ```
 
 ## Preview locally
 
 ```bash
 # Live-reloading preview server
-scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
+scripts/dev.sh node packages/cli/dist/index.js serve examples/en --host 0.0.0.0
 # → http://localhost:4173/
 ```
 

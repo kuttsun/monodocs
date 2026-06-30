@@ -12,6 +12,7 @@ coverage/
 # site (VitePress) — cache と生成デモ。dist/ は上の build output で除外済み
 site/.vitepress/cache/
 site/public/manual.html
+site/public/ja/manual.html
 
 # GitLab Pages の成果物集約先（CI が site/.vitepress/dist から生成）
 /public/

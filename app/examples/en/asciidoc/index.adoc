@@ -1,0 +1,128 @@
+= AsciiDoc samples
+:sd-order: 1
+
+This sample covers the main syntax from the https://docs.asciidoctor.org/asciidoc/latest/syntax-quick-reference/[AsciiDoc Syntax Quick Reference]
+to check its rendering in `monodocs`.
+
+Each item shows the *source (raw AsciiDoc)* first, then the *rendered output (HTML)* below it.
+
+Build example:
+
+[source,bash]
+----
+monodocs build examples/en -o dist/showcase.html
+----
+
+Open each category from the left sidebar:
+xref:lists.adoc[Lists] / xref:blocks.adoc[Blocks] / xref:tables.adoc[Tables] / xref:links-images.adoc[Links and images] / xref:wide-content.adoc[Wide content].
+
+== Section headings
+
+The number of `==` sets the level (`=` is the document title).
+
+*Source:*
+
+[source,asciidoc]
+------
+=== Level 2
+
+==== Level 3
+
+===== Level 4
+------
+
+*Rendered:*
+
+=== Level 2
+
+==== Level 3
+
+===== Level 4
+
+== Paragraphs and line breaks
+
+A blank line separates paragraphs, and a trailing `+` forces a line break. The `[.lead]` role makes a lead paragraph.
+
+*Source:*
+
+[source,asciidoc]
+------
+This is a paragraph. Blank lines separate paragraphs.
+
+Put a `+` at the end of a line +
+to force a line break.
+
+[.lead]
+A lead paragraph (the `[.lead]` role).
+------
+
+*Rendered:*
+
+This is a paragraph. Blank lines separate paragraphs.
+
+Put a `+` at the end of a line +
+to force a line break.
+
+[.lead]
+A lead paragraph (the `[.lead]` role).
+
+== Text formatting
+
+Decorations such as bold, italic, monospace, highlight, and super/subscript.
+
+*Source:*
+
+[source,asciidoc]
+------
+* Bold: *bold* and **un**constrained
+* Italic: _italic_ and __un__constrained
+* Monospace: `monospace`
+* Bold italic monospace: `*_combined_*`
+* Highlight: #highlighted#
+* Super/subscript: E = mc^2^ / H~2~O
+* Quotes: "`curly double quotes`" and '`single quotes`'
+------
+
+*Rendered:*
+
+* Bold: *bold* and **un**constrained
+* Italic: _italic_ and __un__constrained
+* Monospace: `monospace`
+* Bold italic monospace: `*_combined_*`
+* Highlight: #highlighted#
+* Super/subscript: E = mc^2^ / H~2~O
+* Quotes: "`curly double quotes`" and '`single quotes`'
+
+== Replacements (text substitution)
+
+Symbols and arrows are substituted automatically.
+
+*Source:*
+
+[source,asciidoc]
+------
+(C) (R) (TM) become symbols, arrows -> => <- <= stay as-is, and `...` becomes an ellipsis.
+------
+
+*Rendered:*
+
+(C) (R) (TM) become symbols, arrows -> => <- <= stay as-is, and `...` becomes an ellipsis.
+
+== Comments
+
+Lines starting with `//` are comments and are not output.
+
+*Source:*
+
+[source,asciidoc]
+------
+// This is a comment and is not output.
+
+NOTE: Line comments starting with `//` are not output.
+------
+
+*Rendered:*
+
+// This is a comment and is not output.
+
+NOTE: Line comments starting with `//` are not output.

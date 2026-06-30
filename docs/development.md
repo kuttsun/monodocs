@@ -22,8 +22,9 @@ monodocs/
           pipeline/         # buildPages / buildSidebar / renderSingleHtml
           themes/default/   # HTML テンプレート / CSS / クライアント JS
       cli/                  # CLI（monodocs コマンド）
-    examples/docs/          # 全記法・全機能のショーケース（markdown / asciidoc / mixed）
-  site/                     # （予定）アプリ紹介の静的 Web サイト
+    examples/ja/            # 全記法・全機能のショーケース（日本語。markdown / asciidoc / mixed）
+    examples/en/            # 同上の英語版
+  site/                     # アプリ紹介の静的 Web サイト（VitePress）
   docs/                     # 開発ドキュメント（本フォルダ）
   scripts/dev.sh            # 専用イメージ内でコマンドを実行するヘルパー
   Dockerfile.dev            # 開発・ビルド・テスト用イメージ（pnpm 焼き込み）
@@ -65,15 +66,15 @@ scripts/dev.sh pnpm format      # Prettier で整形
 ショートカット `scripts/serve.sh` が手軽:
 
 ```bash
-scripts/serve.sh examples/docs
-# 別ポート: MONODOCS_PORT=8080 scripts/serve.sh examples/docs --port 8080
+scripts/serve.sh examples/ja
+# 別ポート: MONODOCS_PORT=8080 scripts/serve.sh examples/ja --port 8080
 ```
 
 個別に起動する場合（`scripts/serve.sh` は内部でこれに委譲する）:
 
 ```bash
-scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
-# 別ポート: MONODOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0 --port 8080
+scripts/dev.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
+# 別ポート: MONODOCS_PORT=8080 scripts/dev.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0 --port 8080
 ```
 
 > コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
@@ -83,7 +84,7 @@ scripts/dev.sh node packages/cli/dist/index.js serve examples/docs --host 0.0.0.
 単一 HTML（配布物）をファイルに出力する:
 
 ```bash
-scripts/dev.sh node packages/cli/dist/index.js build examples/docs -o dist/manual.html
+scripts/dev.sh node packages/cli/dist/index.js build examples/ja -o dist/manual.html
 ```
 
 ### 単一実行ファイル（ネイティブバイナリ）をビルドする
@@ -119,7 +120,7 @@ app/dist/monodocs build ~/任意のドキュメント -o ~/manual.html
 ```bash
 docker run --rm -it -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app monodocs-dev \
-  node packages/cli/dist/index.js serve examples/docs --host 0.0.0.0
+  node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
 ```
 
 ### VS Code Dev Containers（任意）
@@ -127,7 +128,7 @@ docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app monodocs-dev \
 必須ではない。使う場合、`.devcontainer` は同じ `Dockerfile.dev` からイメージを構築する。
 **Dev Containers: Reopen in Container** で起動すると `postCreate` で `pnpm install` が走り、
 コンテナ内では `pnpm build` / `pnpm test` を直接実行できる（`scripts/dev.sh` は不要）。
-コンテナ内で `node packages/cli/dist/index.js serve examples/docs` を実行すると、
+コンテナ内で `node packages/cli/dist/index.js serve examples/ja` を実行すると、
 VS Code がポート 4173 を自動フォワードする（`--host` は不要）。
 
 ## アーキテクチャ

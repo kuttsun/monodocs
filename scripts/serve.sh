@@ -5,9 +5,9 @@
 # Docker イメージのビルドやポート公開（既定 4173）はそちらが面倒を見る。
 #
 # 例:
-#   scripts/serve.sh                 # examples/docs（全記法ショーケース）を配信
-#   scripts/serve.sh examples/docs   # 入力ディレクトリを明示
-#   MONODOCS_PORT=8080 scripts/serve.sh examples/docs --port 8080
+#   scripts/serve.sh                 # examples/ja（全記法ショーケース）を配信
+#   scripts/serve.sh examples/ja   # 入力ディレクトリを明示
+#   MONODOCS_PORT=8080 scripts/serve.sh examples/ja --port 8080
 #
 # 起動後、ホストのブラウザで http://localhost:4173/ を開く（止めるときは Ctrl+C）。
 set -euo pipefail
@@ -17,7 +17,7 @@ DEV="$ROOT/scripts/dev.sh"
 
 # 入力ディレクトリ（省略時はショーケース）。残りは serve への追加引数として渡す。
 # 先頭が `-` で始まるとき（例: `serve.sh --open`）はオプションなので DOCS は既定のまま。
-DOCS="examples/docs"
+DOCS="examples/ja"
 if [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; then
   DOCS="$1"
   shift

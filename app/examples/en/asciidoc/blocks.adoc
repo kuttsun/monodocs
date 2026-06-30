@@ -1,0 +1,266 @@
+= Blocks
+:sd-order: 3
+
+Each item shows the *source* first, then the *rendered output (HTML)* below it.
+
+== Source blocks (syntax highlighting)
+
+A `----` block with `[source,language]` is highlighted by shiki.
+
+*Source:*
+
+[source,asciidoc]
+------
+[source,python]
+----
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+----
+------
+
+*Rendered:*
+
+[source,python]
+----
+def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+----
+
+You can annotate with callouts like `// <1>`.
+
+*Source:*
+
+[source,asciidoc,subs="-callouts"]
+------
+[source,js]
+----
+function greet(name) { // <1>
+  return `Hello, ${name}!`; // <2>
+}
+----
+<1> Define the function.
+<2> Return using a template literal.
+------
+
+*Rendered:*
+
+[source,js]
+----
+function greet(name) { // <1>
+  return `Hello, ${name}!`; // <2>
+}
+----
+<1> Define the function.
+<2> Return using a template literal.
+
+== Listing blocks / literal blocks
+
+`----` shows text verbatim in monospace; `....` is literal (preserving whitespace).
+
+*Source:*
+
+[source,asciidoc]
+------
+----
+A listing block (monospace, shown as-is)
+----
+
+....
+A literal block
+  Whitespace is preserved.
+....
+------
+
+*Rendered:*
+
+----
+A listing block (monospace, shown as-is)
+----
+
+....
+A literal block
+  Whitespace is preserved.
+....
+
+== Example blocks
+
+`====` groups text and other blocks together.
+
+*Source:*
+
+[source,asciidoc]
+------
+====
+An example block. It groups text and other blocks.
+====
+------
+
+*Rendered:*
+
+====
+An example block. It groups text and other blocks.
+====
+
+== Sidebar blocks
+
+`****` is a box for supplementary information.
+
+*Source:*
+
+[source,asciidoc]
+------
+****
+A sidebar block: a box for supplementary information.
+****
+------
+
+*Rendered:*
+
+****
+A sidebar block: a box for supplementary information.
+****
+
+== Quote blocks / verse blocks
+
+`[quote]` is a quotation; `[verse]` is a verse block that preserves line breaks and indentation.
+
+*Source:*
+
+[source,asciidoc]
+------
+[quote, Taro Yamada, The art of single-file distribution]
+____
+Write docs in pieces; distribute as one file.
+____
+
+[verse, Author Name]
+____
+Line breaks and
+  indentation are
+preserved in a verse block.
+____
+------
+
+*Rendered:*
+
+[quote, Taro Yamada, The art of single-file distribution]
+____
+Write docs in pieces; distribute as one file.
+____
+
+[verse, Author Name]
+____
+Line breaks and
+  indentation are
+preserved in a verse block.
+____
+
+== Admonitions
+
+Labels such as `NOTE:` create admonitions.
+
+*Source:*
+
+[source,asciidoc]
+------
+NOTE: A simple NOTE.
+
+TIP: A useful tip.
+
+IMPORTANT: An important note.
+
+WARNING: A warning.
+
+CAUTION: A caution.
+------
+
+*Rendered:*
+
+NOTE: A simple NOTE.
+
+TIP: A useful tip.
+
+IMPORTANT: An important note.
+
+WARNING: A warning.
+
+CAUTION: A caution.
+
+The `[NOTE]` + `====` block form can contain multiple paragraphs and other blocks.
+
+*Source:*
+
+[source,asciidoc]
+------
+[NOTE]
+====
+A block-form NOTE. It can contain multiple paragraphs and other blocks.
+
+* Lists too
+* can be included
+====
+------
+
+*Rendered:*
+
+[NOTE]
+====
+A block-form NOTE. It can contain multiple paragraphs and other blocks.
+
+* Lists too
+* can be included
+====
+
+== Mermaid (`[source,mermaid]`)
+
+A `[source,mermaid]` block is rendered as a diagram.
+
+*Source:*
+
+[source,asciidoc]
+------
+[source,mermaid]
+----
+graph TD
+  A[AsciiDoc] --> B[Page model]
+  B --> C[Single HTML]
+----
+------
+
+*Rendered:*
+
+[source,mermaid]
+----
+graph TD
+  A[AsciiDoc] --> B[Page model]
+  B --> C[Single HTML]
+----
+
+== Passthrough (raw HTML)
+
+Wrapping with `++++` embeds raw HTML as-is (assuming trusted input).
+
+*Source:*
+
+[source,asciidoc]
+------
+++++
+<div style="padding:0.5rem;border:1px dashed #888;border-radius:6px;">
+  Raw HTML embedded via passthrough (assuming trusted input).
+</div>
+++++
+------
+
+*Rendered:*
+
+++++
+<div style="padding:0.5rem;border:1px dashed #888;border-radius:6px;">
+  Raw HTML embedded via passthrough (assuming trusted input).
+</div>
+++++
