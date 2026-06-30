@@ -54,6 +54,10 @@ export type LinkRef = {
   /** 元のリンク先（相対パス / xref など）。 */
   href: string;
   text?: string;
+  /** ソース上の開始行（1-based）。取得できない形式では undefined。 */
+  line?: number;
+  /** ソース上の開始桁（1-based）。取得できない形式では undefined。 */
+  column?: number;
   /** 解決後の route（例: "/setup/install"）。未解決なら undefined。 */
   resolved?: string;
 };

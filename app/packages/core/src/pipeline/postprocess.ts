@@ -284,6 +284,132 @@ async function highlightCode(tree: HastRoot): Promise<void> {
 }
 
 type LinkResolution = { href: string; hadFragment: boolean } | null | undefined;
+type SourceLocation = { line: number; column: number };
+
+function safeDecodeUri(value: string): string | undefined {
+  try {
+    return decodeURI(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function decodePathPart(pathPart: string): string {
+  return safeDecodeUri(pathPart) ?? pathPart;
+}
+
+function replaceHrefExtension(href: string, nextExt: string): string | undefined {
+  const hashIdx = href.indexOf("#");
+  const beforeHash = hashIdx === -1 ? href : href.slice(0, hashIdx);
+  const hash = hashIdx === -1 ? "" : href.slice(hashIdx);
+  const qIdx = beforeHash.indexOf("?");
+  const pathPart = qIdx === -1 ? beforeHash : beforeHash.slice(0, qIdx);
+  const query = qIdx === -1 ? "" : beforeHash.slice(qIdx);
+  const ext = posix.extname(pathPart);
+  if (!ext) return undefined;
+  return `${pathPart.slice(0, -ext.length)}${nextExt}${query}${hash}`;
+}
+
+function sourceHrefVariants(href: string, linkExtensions: Set<string>): string[] {
+  const variants = new Set<string>([href]);
+  const decoded = safeDecodeUri(href);
+  if (decoded) variants.add(decoded);
+
+  for (const value of [...variants]) {
+    const ext = posix.extname(value.split("#")[0]?.split("?")[0] ?? "").toLowerCase();
+    if (ext !== ".html" && ext !== ".htm") continue;
+    for (const sourceExt of linkExtensions) {
+      if (sourceExt === ".html" || sourceExt === ".htm") continue;
+      const replaced = replaceHrefExtension(value, sourceExt);
+      if (replaced) variants.add(replaced);
+    }
+  }
+
+  return [...variants].filter((v) => v.length > 0);
+}
+
+function hrefMatches(
+  sourceHref: string,
+  renderedHref: string,
+  linkExtensions: Set<string>,
+): boolean {
+  if (sourceHref === renderedHref) return true;
+  return (
+    sourceHrefVariants(renderedHref, linkExtensions).includes(sourceHref) ||
+    sourceHrefVariants(sourceHref, linkExtensions).includes(renderedHref)
+  );
+}
+
+function findRawSourceLocations(rawSource: string, needles: string[]): SourceLocation[] {
+  if (!rawSource || needles.length === 0) return [];
+  const seen = new Set<string>();
+  const locations: SourceLocation[] = [];
+  const lines = rawSource.split(/\r\n|\r|\n/);
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    for (const needle of needles) {
+      let columnIdx = line.indexOf(needle);
+      while (columnIdx !== -1) {
+        const key = `${i + 1}:${columnIdx + 1}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          locations.push({ line: i + 1, column: columnIdx + 1 });
+        }
+        columnIdx = line.indexOf(needle, columnIdx + Math.max(needle.length, 1));
+      }
+    }
+  }
+
+  return locations.sort((a, b) => a.line - b.line || a.column - b.column);
+}
+
+class SourceLocationTracker {
+  private readonly linkCursors = new Map<string, number>();
+  private readonly rawCursors = new Map<string, number>();
+  private readonly rawCache = new Map<string, SourceLocation[]>();
+
+  constructor(
+    private readonly page: Page,
+    private readonly linkExtensions: Set<string>,
+  ) {}
+
+  consume(href: string): SourceLocation | undefined {
+    return this.consumeLinkLocation(href) ?? this.consumeRawLocation(href);
+  }
+
+  private consumeLinkLocation(href: string): SourceLocation | undefined {
+    const matches = this.page.links
+      .filter((link) => link.line != null && hrefMatches(link.href, href, this.linkExtensions))
+      .map((link) => ({ line: link.line!, column: link.column ?? 1 }));
+    if (matches.length === 0) return undefined;
+
+    const cursor = this.linkCursors.get(href) ?? 0;
+    this.linkCursors.set(href, cursor + 1);
+    return matches[Math.min(cursor, matches.length - 1)];
+  }
+
+  private consumeRawLocation(href: string): SourceLocation | undefined {
+    let locations = this.rawCache.get(href);
+    if (!locations) {
+      locations = findRawSourceLocations(
+        this.page.rawSource,
+        sourceHrefVariants(href, this.linkExtensions),
+      );
+      this.rawCache.set(href, locations);
+    }
+    if (locations.length === 0) return undefined;
+
+    const cursor = this.rawCursors.get(href) ?? 0;
+    this.rawCursors.set(href, cursor + 1);
+    return locations[Math.min(cursor, locations.length - 1)];
+  }
+}
+
+function formatSourceRef(page: Page, href: string, locations: SourceLocationTracker): string {
+  const location = locations.consume(href);
+  return location ? `${page.relativePath}:${location.line}` : page.relativePath;
+}
 
 /**
  * href を解決する。
@@ -309,7 +435,7 @@ function resolveHref(
   if (!linkExtensions.has(posix.extname(pathPart).toLowerCase())) return undefined;
 
   const dir = posix.dirname(normalizePath(pageRelPath));
-  const targetKey = stripExtension(posix.normalize(posix.join(dir, pathPart)));
+  const targetKey = stripExtension(posix.normalize(posix.join(dir, decodePathPart(pathPart))));
   const route = routeMap.get(targetKey);
   if (!route) return null;
   return { href: `#${route}`, hadFragment: hashIdx !== -1 };
@@ -321,6 +447,7 @@ function rewriteLinks(
   routeMap: Map<string, string>,
   linkExtensions: Set<string>,
   warnings: string[],
+  locations: SourceLocationTracker,
 ): void {
   visit(tree, "element", (node) => {
     if (node.tagName !== "a") return;
@@ -328,14 +455,14 @@ function rewriteLinks(
     if (typeof href !== "string") return;
     const resolved = resolveHref(href, page.relativePath, routeMap, linkExtensions);
     if (resolved === null) {
-      warnings.push(`Unresolved link "${href}" in "${page.relativePath}".`);
+      warnings.push(`Unresolved link "${href}" in "${formatSourceRef(page, href, locations)}".`);
       return;
     }
     if (resolved === undefined) return;
     node.properties.href = resolved.href;
     if (resolved.hadFragment) {
       warnings.push(
-        `Heading anchor in "${href}" is not supported yet; linked to page top in "${page.relativePath}".`,
+        `Heading anchor in "${href}" is not supported yet; linked to page top in "${formatSourceRef(page, href, locations)}".`,
       );
     }
   });
@@ -441,7 +568,14 @@ export async function postprocessPages(
     if (options.mermaidEnabled && processMermaid(tree)) hasMermaid = true;
     // Mermaid 変換後にハイライト（mermaid ブロックは対象外になる）。
     if (options.codeHighlight) await highlightCode(tree);
-    rewriteLinks(tree, page, routeMap, linkExtensions, warnings);
+    rewriteLinks(
+      tree,
+      page,
+      routeMap,
+      linkExtensions,
+      warnings,
+      new SourceLocationTracker(page, linkExtensions),
+    );
     if (options.embedImages) await embedImages(tree, page, options, realRoot, warnings);
     page.html = serializer.stringify(tree);
   }

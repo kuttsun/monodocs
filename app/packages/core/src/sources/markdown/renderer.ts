@@ -9,9 +9,17 @@ import { parse as parseYaml } from "yaml";
 import { toString as mdastToString } from "mdast-util-to-string";
 import { visit } from "unist-util-visit";
 import type { Root as HastRoot } from "hast";
-import type { Heading as MdastHeading, Root as MdastRoot, Yaml } from "mdast";
+import type {
+  Definition,
+  Heading as MdastHeading,
+  Link,
+  LinkReference,
+  Root as MdastRoot,
+  Yaml,
+} from "mdast";
 import type {
   Heading,
+  LinkRef,
   PageMeta,
   RenderContext,
   RenderedContent,
@@ -20,6 +28,48 @@ import type {
 } from "../../types.js";
 import { toPageMeta } from "../meta.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
+
+function normalizeReferenceId(identifier: string): string {
+  return identifier.trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+function toLinkRef(href: string, node: Link | LinkReference): LinkRef {
+  const text = mdastToString(node).trim();
+  return {
+    href,
+    text: text || undefined,
+    line: node.position?.start.line,
+    column: node.position?.start.column,
+  };
+}
+
+function collectLinks(tree: MdastRoot): LinkRef[] {
+  const definitions = new Map<string, Definition>();
+  const links: LinkRef[] = [];
+
+  visit(tree, (node) => {
+    if (node.type === "definition") {
+      const definition = node as Definition;
+      definitions.set(normalizeReferenceId(definition.identifier), definition);
+    }
+  });
+
+  visit(tree, (node) => {
+    if (node.type === "link") {
+      const link = node as Link;
+      links.push(toLinkRef(link.url, link));
+      return;
+    }
+
+    if (node.type === "linkReference") {
+      const reference = node as LinkReference;
+      const definition = definitions.get(normalizeReferenceId(reference.identifier));
+      if (definition) links.push(toLinkRef(definition.url, reference));
+    }
+  });
+
+  return links;
+}
 
 /** Markdown 用の SourceRenderer（unified / remark / rehype）。 */
 export const markdownRenderer: SourceRenderer = {
@@ -57,11 +107,15 @@ export const markdownRenderer: SourceRenderer = {
 
   async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
     const out = { headings: [] as Heading[], text: "" };
+    let links: LinkRef[] = [];
 
     const file = await unified()
       .use(remarkParse)
       .use(remarkFrontmatter, ["yaml"])
       .use(remarkGfm)
+      .use(() => (tree: MdastRoot) => {
+        links = collectLinks(tree);
+      })
       .use(remarkRehype)
       .use(rehypeSlug)
       // 見出しだけでなく脚注など全要素の ID を page id で prefix し、
@@ -78,7 +132,7 @@ export const markdownRenderer: SourceRenderer = {
       html: String(file),
       text: out.text,
       headings: out.headings,
-      links: [],
+      links,
       assets: [],
     };
   },
