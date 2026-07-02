@@ -37,6 +37,7 @@ scripts/app.sh node packages/cli/dist/index.js serve examples/en --host 0.0.0.0
 
 ## Next steps
 
+- See [Command Options](/docs/commands) for the CLI reference (`build` / `watch` / `serve` / `validate`).
 - See [Configuration](/docs/configuration) for the `monodocs.config.yml` options.
 - See [the roadmap](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/roadmap.md) for the version plan.
 - See [supported syntax](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/syntax.md) for what is supported and what single-file bundling intentionally restricts.

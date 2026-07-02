@@ -37,6 +37,7 @@ scripts/app.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
 
 ## 次のステップ
 
+- コマンド一覧とオプションは [コマンドオプション](/ja/docs/commands)（`build` / `watch` / `serve` / `validate`）を参照してください。
 - `monodocs.config.yml` の設定項目は [設定ファイル](/ja/docs/configuration) を参照してください。
 - バージョン計画は [ロードマップ](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/roadmap.md) を参照してください。
 - 対応記法と、単一ファイル化に伴う制限は [対応記法](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/syntax.md) にまとまっています。

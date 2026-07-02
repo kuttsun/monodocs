@@ -61,6 +61,7 @@ export default defineConfig({
               text: 'Guide',
               items: [
                 { text: 'Getting Started', link: '/docs/getting-started' },
+                { text: 'Command Options', link: '/docs/commands' },
                 { text: 'Configuration', link: '/docs/configuration' }
               ]
             }
@@ -95,6 +96,7 @@ export default defineConfig({
               text: 'ガイド',
               items: [
                 { text: 'はじめに', link: '/ja/docs/getting-started' },
+                { text: 'コマンドオプション', link: '/ja/docs/commands' },
                 { text: '設定ファイル', link: '/ja/docs/configuration' }
               ]
             }
