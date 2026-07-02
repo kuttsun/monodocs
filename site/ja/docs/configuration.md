@@ -196,6 +196,44 @@ sidebar:
 | `html.colorScheme`  | `light` `dark` `auto` | `light` | ドキュメントを開いたときの初期配色。`auto` は OS の `prefers-color-scheme` に追従。読者が画面のトグルで切り替えるとブラウザに保存され、以降はそちらが優先される（`html.theme` のテンプレート名とは別物）。 |
 | `html.contentWidth` | string / number | `860px`   | 本文領域の最大幅。CSS 長さ（`px`・`rem`・`em`・`ch`・`vw`・`%`）または数値（px）。`full`（または `none`）で残り幅いっぱいに広げる。 |
 
+## ページの並び順とタイトル
+
+サイドバーとページ送り（前後ナビ）の**並び順は、表示タイトルとは無関係**に決まります。`sidebar.titleFrom` / `sidebar.titleTransform` は画面に出る**文言だけ**を変えるもので、並びには影響しません。順序は次の 2 段で決まります。
+
+1. **`order`（明示順・昇順）** — frontmatter の `order`（AsciiDoc は `:sd-order:`）。小さいほど上に来ます。
+2. **ファイル名（パス）順** — `order` を持たないページ同士は、拡張子を除いた相対パスの辞書順（`localeCompare`）で並びます。`order` を持つページが常に先で、未指定のページは末尾側に回ります。
+
+つまり `01_intro.md` を `titleTransform: stripNumberPrefix` で「intro」と表示しても、**並びは `01_` を含むファイル名で決まり**、H1 見出しの文言では並びません。数字プレフィックスで順序を固定しつつ、表示だけ整える運用ができます。
+
+> ディレクトリ（サイドバーのフォルダ）の並びも、その中に最初に現れるページの位置で決まります（＝同じくファイル名順）。
+
+### ページ frontmatter
+
+各ページの先頭で、Markdown は YAML frontmatter、AsciiDoc は `:sd-*:` 属性として以下を指定できます。いずれも任意です。
+
+| Markdown frontmatter | AsciiDoc 属性      | 型      | 説明 |
+| -------------------- | ------------------ | ------- | ---- |
+| `title`              | `:sd-title:`       | string  | 明示タイトル。`titleFrom` / `titleTransform` に関わらず**常に最優先**で、変換もされません。 |
+| `order`              | `:sd-order:`       | number  | 並び順（昇順）。未指定ならファイル名順（`order` を持つページが先）。 |
+| `hidden`             | `:sd-hidden:`      | boolean | サイドバー・前後ナビ・検索から除外します。ページ HTML は生成され、hash route で直接到達はできます。 |
+| `description`        | `:sd-description:` | string  | ページの説明（メタ情報）。 |
+
+```yaml
+---
+title: セットアップ
+order: 10
+hidden: false
+description: 環境構築の手順
+---
+```
+
+AsciiDoc の場合:
+
+```asciidoc
+= セットアップ
+:sd-order: 10
+```
+
 ## 関連
 
 - [対応記法](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/syntax.md) — 対応範囲と、単一ファイル化に伴う制限。

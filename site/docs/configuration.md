@@ -196,6 +196,44 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | `html.colorScheme`   | `light` `dark` `auto` | `light` | Initial color scheme when a document is opened. `auto` follows the OS `prefers-color-scheme`. Once a reader toggles it in the UI, the choice is saved in the browser and takes precedence (distinct from the `html.theme` template name). |
 | `html.contentWidth`  | string / number | `860px`     | Max width of the content area. A CSS length (`px`, `rem`, `em`, `ch`, `vw`, `%`) or a number (px). `full` (or `none`) expands to the full available width. |
 
+## Page order and titles
+
+The order of pages in the sidebar and in the prev/next navigation is **independent of the display title**. `sidebar.titleFrom` and `sidebar.titleTransform` only change the **text shown on screen**; they never affect ordering. The order is decided in two steps:
+
+1. **`order` (explicit, ascending)** — the frontmatter `order` (`:sd-order:` in AsciiDoc). Lower comes first.
+2. **Filename (path) order** — pages without an `order` are sorted by their extension-stripped relative path (`localeCompare`). Pages that have an `order` always come first; pages without one fall to the end.
+
+So even if `01_intro.md` displays as “intro” via `titleTransform: stripNumberPrefix`, **its position is decided by the filename that still contains `01_`**, not by the H1 heading. This lets you pin the order with a numeric prefix while cleaning up only the displayed text.
+
+> Directory (sidebar folder) order follows the position of the first page that appears inside it — i.e. filename order as well.
+
+### Page frontmatter
+
+At the top of each page you can set the following — Markdown via YAML frontmatter, AsciiDoc via `:sd-*:` attributes. All are optional.
+
+| Markdown frontmatter | AsciiDoc attribute | Type    | Description |
+| -------------------- | ------------------ | ------- | ----------- |
+| `title`              | `:sd-title:`       | string  | Explicit title. **Always wins** regardless of `titleFrom` / `titleTransform`, and is never transformed. |
+| `order`              | `:sd-order:`       | number  | Sort order (ascending). Without it, pages fall back to filename order (pages that have an `order` come first). |
+| `hidden`             | `:sd-hidden:`      | boolean | Exclude from the sidebar, prev/next nav, and search. The page HTML is still generated and reachable via its hash route. |
+| `description`        | `:sd-description:` | string  | Page description (metadata). |
+
+```yaml
+---
+title: Setup
+order: 10
+hidden: false
+description: How to set up your environment
+---
+```
+
+For AsciiDoc:
+
+```asciidoc
+= Setup
+:sd-order: 10
+```
+
 ## See also
 
 - [Supported syntax](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/syntax.md) — what is supported and what single-file bundling intentionally restricts.
