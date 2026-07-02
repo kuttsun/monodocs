@@ -193,26 +193,37 @@ body.sidebar-collapsed #sidebar {
 }
 
 .sidebar-dir-title {
-  display: block;
+  /* 開閉キャレットを右端に置くため flex 化し、テキストとキャレットを両端へ寄せる。
+     これでフォルダ名の左端がページ名と揃う。 */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.35rem 1.25rem;
-  font-size: 0.8rem;
+  /* ページ名と文字サイズを揃える（フォルダだけ別サイズにしない）。区別は太字で付ける。 */
+  font-size: 0.875rem;
+  line-height: 1.5;
   font-weight: 600;
   /* フォルダ名の大文字小文字はそのまま表示する（強制大文字化はしない）。 */
-  letter-spacing: 0.02em;
-  color: var(--color-muted);
+  color: var(--color-text);
   cursor: pointer;
   user-select: none;
 }
 
-.sidebar-dir-title::before {
-  content: "▾";
-  display: inline-block;
-  margin-right: 0.35rem;
-  font-size: 0.7em;
+/* 開閉キャレットは末尾（右端）に置く。フォントに依存しないよう CSS の三角形で描く
+   （記号グリフだと環境によっては豆腐になる）。展開時は下向き、折りたたみ時は右向き。 */
+.sidebar-dir-title::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--color-muted);
   transition: transform 0.15s ease;
 }
 
-.sidebar-dir.collapsed > .sidebar-dir-title::before {
+.sidebar-dir.collapsed > .sidebar-dir-title::after {
   transform: rotate(-90deg);
 }
 
@@ -223,21 +234,27 @@ body.sidebar-collapsed #sidebar {
 .sidebar-page a {
   display: block;
   padding: 0.3rem 1.25rem;
-  color: var(--color-text);
+  /* フォルダ名と文字サイズを揃える。 */
+  font-size: 0.875rem;
+  line-height: 1.5;
+  /* 非選択は控えめな色にして、一覧が長くなっても視線がうるさくならないようにする。 */
+  color: var(--color-muted);
   text-decoration: none;
-  border-left: 3px solid transparent;
-  font-size: 0.95rem;
+  /* アクティブの帯は box-shadow で描く。border-left にすると本文が右へずれ、
+     左ボーダーを持たないフォルダ見出し（.sidebar-dir-title）と左端が揃わない。 */
 }
 
 .sidebar-page a:hover {
+  color: var(--color-text);
   background: var(--color-accent-bg);
 }
 
 .sidebar-page a.active {
   color: var(--color-accent);
   background: var(--color-accent-bg);
-  border-left-color: var(--color-accent);
-  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--color-accent);
+  /* 太字にすると文字幅が変わり、選択した瞬間に折り返し位置がズレる。
+     太字にはせず、色・背景・左の帯だけで選択状態を示す。 */
 }
 
 /* ---- search results ---- */
@@ -252,12 +269,12 @@ body.sidebar-collapsed #sidebar {
   padding: 0.5rem 1.25rem;
   color: var(--color-text);
   text-decoration: none;
-  border-left: 3px solid transparent;
 }
 
 .search-result a:hover {
   background: var(--color-accent-bg);
-  border-left-color: var(--color-accent);
+  /* サイドバーと同様、帯は box-shadow で描いてテキストの左端をずらさない。 */
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .search-result-title {
@@ -719,7 +736,7 @@ body.sidebar-collapsed #sidebar {
 .toc-item a.active {
   color: var(--color-accent);
   border-left-color: var(--color-accent);
-  font-weight: 600;
+  /* サイドバー同様、選択時に太字化しない（折り返し位置がズレるのを防ぐ）。 */
 }
 
 .toc-level-3 a {
