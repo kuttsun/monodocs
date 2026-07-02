@@ -12,6 +12,21 @@
   --color-code-bg: #f6f8fa;
   --color-input-bg: #ffffff;
   --color-mark-bg: #fff3cd;
+  /* ナビ（サイドバー / 目次）のホバー・選択の背景。青のアクセントではなく中立的なグレー
+     を基調にする（ツール名 monodocs に合わせたモノクロ基調）。地の背景（サイドバー
+     #f6f8fa / 本文 白）に黒を薄く重ねるので、どちらの上でも同じ濃さに見える。 */
+  --color-nav-hover-bg: rgba(0, 0, 0, 0.045);
+  --color-nav-active-bg: rgba(0, 0, 0, 0.075);
+  /* サイドバー行の左右パディング（＝ホバー/選択の帯の左端の基準）と、階層ごとのテキスト
+     インデント幅。帯は全階層で左端を揃えて同じ幅にし、深い階層はテキストだけを
+     padding-left で下げる（帯の左端は動かさない）。 */
+  --sidebar-pad-x: 1.25rem;
+  --sidebar-indent: 0.9rem;
+  /* 選択中テキストを「太字に見せる」ための影。font-weight を上げると文字の実幅（文字送り）
+     が変わり、選択した瞬間に折り返し位置がズレて急に改行される。それを避けるため、
+     レイアウトを一切変えない text-shadow で左右にわずかに重ね描きして太字相当の見た目に
+     する。色は currentColor に追従する（配色に依存しない）。 */
+  --faux-bold: 0.3px 0 currentColor, -0.3px 0 currentColor;
 }
 
 /* 明示設定が無いときは OS のダーク設定に追従する。 */
@@ -27,6 +42,9 @@
     --color-code-bg: #161b22;
     --color-input-bg: #0d1117;
     --color-mark-bg: #5a4a00;
+    /* 暗所は白を薄く重ねて中立的に明るくする。 */
+    --color-nav-hover-bg: rgba(255, 255, 255, 0.06);
+    --color-nav-active-bg: rgba(255, 255, 255, 0.09);
   }
 }
 
@@ -42,6 +60,8 @@
   --color-code-bg: #161b22;
   --color-input-bg: #0d1117;
   --color-mark-bg: #5a4a00;
+  --color-nav-hover-bg: rgba(255, 255, 255, 0.06);
+  --color-nav-active-bg: rgba(255, 255, 255, 0.09);
 }
 
 * {
@@ -188,8 +208,49 @@ body.sidebar-collapsed #sidebar {
   padding: 0;
 }
 
-#sidebar-nav .sidebar-list .sidebar-list {
-  padding-left: 0.9rem;
+/* 階層インデントは行の padding-left で表す（ネストした ul は字下げしない）。こうすると
+   各行の背景（ホバー/選択の帯）の左端が全階層で --sidebar-pad-x に揃い、帯の幅が階層で
+   変わらない。行の直近祖先 .sidebar-list の数＝階層で、深い規則ほどセレクタが具体的
+   （＝優先）になるため、その行に該当する最深の規則が勝つ。6 階層まで用意（以降は据え置き）。 */
+.sidebar-list .sidebar-list > .sidebar-page > a,
+.sidebar-list .sidebar-list > .sidebar-dir > .sidebar-dir-title {
+  padding-left: calc(var(--sidebar-pad-x) + 1 * var(--sidebar-indent));
+}
+.sidebar-list .sidebar-list .sidebar-list > .sidebar-page > a,
+.sidebar-list .sidebar-list .sidebar-list > .sidebar-dir > .sidebar-dir-title {
+  padding-left: calc(var(--sidebar-pad-x) + 2 * var(--sidebar-indent));
+}
+.sidebar-list .sidebar-list .sidebar-list .sidebar-list > .sidebar-page > a,
+.sidebar-list .sidebar-list .sidebar-list .sidebar-list > .sidebar-dir > .sidebar-dir-title {
+  padding-left: calc(var(--sidebar-pad-x) + 3 * var(--sidebar-indent));
+}
+.sidebar-list .sidebar-list .sidebar-list .sidebar-list .sidebar-list > .sidebar-page > a,
+.sidebar-list
+  .sidebar-list
+  .sidebar-list
+  .sidebar-list
+  .sidebar-list
+  > .sidebar-dir
+  > .sidebar-dir-title {
+  padding-left: calc(var(--sidebar-pad-x) + 4 * var(--sidebar-indent));
+}
+.sidebar-list
+  .sidebar-list
+  .sidebar-list
+  .sidebar-list
+  .sidebar-list
+  .sidebar-list
+  > .sidebar-page
+  > a,
+.sidebar-list
+  .sidebar-list
+  .sidebar-list
+  .sidebar-list
+  .sidebar-list
+  .sidebar-list
+  > .sidebar-dir
+  > .sidebar-dir-title {
+  padding-left: calc(var(--sidebar-pad-x) + 5 * var(--sidebar-indent));
 }
 
 .sidebar-dir-title {
@@ -199,11 +260,13 @@ body.sidebar-collapsed #sidebar {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.35rem 1.25rem;
-  /* ページ名と文字サイズを揃える（フォルダだけ別サイズにしない）。区別は太字で付ける。 */
+  padding: 0.35rem var(--sidebar-pad-x);
+  /* ページ名と文字サイズ・太さを揃える（フォルダだけ太字/別サイズにしない）。同じトップ
+     レベルにファイルとフォルダが並ぶと、フォルダだけ太字だと不揃いに見えるため。フォルダ
+     の区別は右端の開閉キャレットと、やや濃い文字色（--color-text 対ページの --color-muted）
+     で付ける。 */
   font-size: 0.875rem;
   line-height: 1.5;
-  font-weight: 600;
   /* フォルダ名の大文字小文字はそのまま表示する（強制大文字化はしない）。 */
   color: var(--color-text);
   cursor: pointer;
@@ -233,28 +296,28 @@ body.sidebar-collapsed #sidebar {
 
 .sidebar-page a {
   display: block;
-  padding: 0.3rem 1.25rem;
+  padding: 0.3rem var(--sidebar-pad-x);
   /* フォルダ名と文字サイズを揃える。 */
   font-size: 0.875rem;
   line-height: 1.5;
   /* 非選択は控えめな色にして、一覧が長くなっても視線がうるさくならないようにする。 */
   color: var(--color-muted);
   text-decoration: none;
-  /* アクティブの帯は box-shadow で描く。border-left にすると本文が右へずれ、
-     左ボーダーを持たないフォルダ見出し（.sidebar-dir-title）と左端が揃わない。 */
 }
 
 .sidebar-page a:hover {
   color: var(--color-text);
-  background: var(--color-accent-bg);
+  background: var(--color-nav-hover-bg);
 }
 
 .sidebar-page a.active {
-  color: var(--color-accent);
-  background: var(--color-accent-bg);
-  box-shadow: inset 3px 0 0 var(--color-accent);
-  /* 太字にすると文字幅が変わり、選択した瞬間に折り返し位置がズレる。
-     太字にはせず、色・背景・左の帯だけで選択状態を示す。 */
+  /* 選択状態は中立グレーの背景と濃い文字色で示す（青のアクセントは使わない）。左端の
+     アクセントバー（box-shadow）は付けない＝サイドバーに縦線を出さない。 */
+  color: var(--color-text);
+  background: var(--color-nav-active-bg);
+  /* 選択中は太字で強調する。ただし font-weight は使わない（文字送りが変わり折り返し位置が
+     ズレる）。--faux-bold の text-shadow でレイアウトを変えずに太字相当に見せる。 */
+  text-shadow: var(--faux-bold);
 }
 
 /* ---- search results ---- */
@@ -272,9 +335,8 @@ body.sidebar-collapsed #sidebar {
 }
 
 .search-result a:hover {
-  background: var(--color-accent-bg);
-  /* サイドバーと同様、帯は box-shadow で描いてテキストの左端をずらさない。 */
-  box-shadow: inset 3px 0 0 var(--color-accent);
+  /* サイドバーの選択と同じ中立グレー基調に揃える（青のアクセントバーは出さない）。 */
+  background: var(--color-nav-hover-bg);
 }
 
 .search-result-title {
@@ -730,13 +792,16 @@ body.sidebar-collapsed #sidebar {
 }
 
 .toc-item a:hover {
-  color: var(--color-accent);
+  color: var(--color-text);
 }
 
 .toc-item a.active {
-  color: var(--color-accent);
-  border-left-color: var(--color-accent);
-  /* サイドバー同様、選択時に太字化しない（折り返し位置がズレるのを防ぐ）。 */
+  /* 選択セグメントは青ではなく濃い文字色で示す（左のトラック線はグレーのまま残す）。 */
+  color: var(--color-text);
+  border-left-color: var(--color-text);
+  /* サイドバー同様、font-weight は使わず --faux-bold（text-shadow）で太字相当に見せる。
+     文字送りを変えないので、選択した瞬間に折り返し位置がズレて急に改行されることがない。 */
+  text-shadow: var(--faux-bold);
 }
 
 .toc-level-3 a {
