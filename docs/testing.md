@@ -48,9 +48,10 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `scan.test.ts` … 拡張子マップによる走査・カスタム拡張子・除外
 - `pipeline/buildPages.test.ts` … route / page id の重複検知
 - `pipeline/buildSidebar.test.ts` … フォルダ構造サイドバー
-- `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換・shiki コードハイライト・admonition / GFM alert の共通構造化
+- `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換（client / pre-render の SVG 化・グローバル一意 id・複雑 SVG の verbatim 保持・図単位エラーのソースフォールバック・環境エラー `MermaidPrerenderSetupError` の fail fast・renderer 未注入エラー）・shiki コードハイライト・admonition / GFM alert の共通構造化
 - `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・クライアント用ページデータ（目次/検索）
 - `themes/default/app.test.ts` … クライアント hash routing（happy-dom）
 - `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・コードブロックのコピー/折り返しトグル（happy-dom）
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e（Markdown / 混在 / v0.3 機能・validate）
+- `build.mermaid-prerender.test.ts` … Mermaid pre-render（偽レンダラ注入で config 連携・SVG 埋め込みを検証。実 Chromium がある環境でだけ end-to-end 描画とランタイム未注入ゲートを確認）
 - `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入）

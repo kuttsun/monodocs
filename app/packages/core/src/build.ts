@@ -2,15 +2,27 @@ import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import type { BuildOptions, BuildResult, Page, SidebarNode, SourceFormat } from "./types.js";
-import { loadConfig, type ResolvedConfig } from "./config.js";
+import { loadConfig, type MermaidMode, type ResolvedConfig } from "./config.js";
 import { scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
 import { asciidocRenderer } from "./sources/asciidoc/renderer.js";
 import { buildPages } from "./pipeline/buildPages.js";
 import { buildSidebar } from "./pipeline/buildSidebar.js";
 import { postprocessPages } from "./pipeline/postprocess.js";
+import {
+  createPuppeteerPrerenderer,
+  type MermaidPrerenderer,
+} from "./pipeline/mermaidPrerender.js";
 import { renderSingleHtml } from "./pipeline/renderSingleHtml.js";
 import { mermaidRuntimeScript } from "./themes/mermaid.js";
+
+/** {@link preparePages} のオプション（テスト時のレンダラ注入・validate の mode 上書き用）。 */
+type PreparePagesOptions = {
+  /** pre-render 用レンダラ。build 経路で pre-render のとき渡す。テストでは偽実装を注入する。 */
+  mermaidPrerenderer?: MermaidPrerenderer;
+  /** config の mermaidMode を上書きする（validate は "client" にして browserless にする）。 */
+  mermaidMode?: MermaidMode;
+};
 
 type PreparedSite = {
   pages: Page[];
@@ -23,7 +35,11 @@ type PreparedSite = {
  * 設定をもとにソースを走査・レンダリング・後処理し、ページ群を組み立てる。
  * buildSite / validateSite の共通処理。ハードエラー（入力なし等）は例外を投げる。
  */
-async function preparePages(config: ResolvedConfig, cwd: string): Promise<PreparedSite> {
+export async function preparePages(
+  config: ResolvedConfig,
+  cwd: string,
+  opts: PreparePagesOptions = {},
+): Promise<PreparedSite> {
   const inputDir = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
   if (!existsSync(inputDir)) {
     throw new Error(`Input directory not found: ${config.inputDir}`);
@@ -49,6 +65,8 @@ async function preparePages(config: ResolvedConfig, cwd: string): Promise<Prepar
     maxInlineSize: config.maxInlineSize,
     onLargeImage: config.onLargeImage,
     mermaidEnabled: config.mermaidEnabled,
+    mermaidMode: opts.mermaidMode ?? config.mermaidMode,
+    mermaidPrerenderer: opts.mermaidPrerenderer,
     codeHighlight: config.codeHighlight,
   });
   const sidebar = buildSidebar(pages, {
@@ -78,10 +96,26 @@ export async function buildSite(options: BuildOptions = {}): Promise<BuildResult
     throw new Error(`Output format "${config.format}" is not supported yet (only "html").`);
   }
 
-  const { pages, sidebar, warnings, hasMermaid } = await preparePages(config, cwd);
+  // pre-render mode では各図をビルド時に SVG 化する。レンダラは lazy 起動なので
+  // 図が 0 個なら Chromium は起動しない。ライフサイクル（close）は build 側で管理する。
+  const prerenderer =
+    config.mermaidEnabled && config.mermaidMode === "pre-render"
+      ? createPuppeteerPrerenderer({ colorScheme: config.colorScheme })
+      : undefined;
 
+  let prepared: PreparedSite;
+  try {
+    prepared = await preparePages(config, cwd, { mermaidPrerenderer: prerenderer });
+  } finally {
+    await prerenderer?.close();
+  }
+  const { pages, sidebar, warnings, hasMermaid } = prepared;
+
+  // pre-render は静的 SVG なのでランタイム JS を注入しない（client mode のときだけ注入）。
   const bodyScripts =
-    hasMermaid && config.mermaidEnabled ? await mermaidRuntimeScript(config.mermaidRuntime) : "";
+    hasMermaid && config.mermaidEnabled && config.mermaidMode === "client"
+      ? await mermaidRuntimeScript(config.mermaidRuntime)
+      : "";
 
   const html = await renderSingleHtml({
     title: config.title,
@@ -127,7 +161,9 @@ export async function validateSite(options: BuildOptions = {}): Promise<Validate
         pages: 0,
       };
     }
-    const { pages, warnings } = await preparePages(config, cwd);
+    // validate では pre-render の実描画（Chromium 起動）は行わない。mermaidMode を
+    // "client" に上書きしてクラス付与のみに留める（pre-render の描画/構文エラーは対象外）。
+    const { pages, warnings } = await preparePages(config, cwd, { mermaidMode: "client" });
     return { errors: [], warnings, pages: pages.length };
   } catch (error) {
     return { errors: [(error as Error).message], warnings: [], pages: 0 };

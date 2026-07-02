@@ -1245,7 +1245,7 @@ HTML に Mermaid.js を含め、ブラウザ側で描画する。
 
 ### 21.2 pre-render mode
 
-将来対応。
+対応済み。
 
 ```yaml
 mermaid:
@@ -1253,18 +1253,23 @@ mermaid:
   mode: "pre-render"
 ```
 
-Mermaid CLI により SVG を事前生成し、HTML に埋め込む。
+ビルド時に Puppeteer（`puppeteer-core` + システム Chromium）で各図を SVG 化し、HTML に埋め込む
+（当初案の Mermaid CLI ではなく既存依存の mermaid@11 を 1 ページ内で `mermaid.render` 実行し、id 衝突を
+自前制御する方針に変更）。実装は `pipeline/mermaidPrerender.ts` と `postprocess.ts` の
+`processMermaidPrerender`。SVG は raw ノードで挿入し、id は全 HTML で一意な `mermaid-{n}` を採番する。
 
 メリット：
 
 * PDF 化に強い
 * JavaScript なしでも表示できる
 * 印刷結果が安定する
+* 図が少数なら inline ランタイム（約 975KB gzip 固定）より小さい
 
 デメリット：
 
-* 依存が重い
+* 依存が重い（Chromium）。バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では利用不可
 * CI 環境で失敗要因が増える
+* SVG のテーマはビルド時固定（ダーク/ライトのトグルに追従しない）
 
 ---
 

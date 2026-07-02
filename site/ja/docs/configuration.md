@@ -74,7 +74,8 @@ assets:
 
 mermaid:
   enabled: true
-  runtime: cdn # cdn | inline
+  mode: client # client | pre-render
+  runtime: inline # inline | cdn（client mode のみ）
 
 highlight:
   enabled: true
@@ -157,10 +158,29 @@ sidebar:
 
 ### `mermaid`
 
-| キー              | 型             | 既定値 | 説明                                                            |
-| ----------------- | -------------- | ------ | --------------------------------------------------------------- |
-| `mermaid.enabled` | boolean        | `true` | Mermaid コードブロックを図としてレンダリングする。              |
-| `mermaid.runtime` | `cdn` `inline` | `cdn`  | Mermaid ランタイムを CDN から読み込むか、完全オフライン用にインライン化するか。 |
+| キー              | 型                     | 既定値   | 説明                                                            |
+| ----------------- | ---------------------- | -------- | --------------------------------------------------------------- |
+| `mermaid.enabled` | boolean                | `true`   | Mermaid コードブロックを図としてレンダリングする。              |
+| `mermaid.mode`    | `client` `pre-render`  | `client` | `client` はブラウザで mermaid ランタイムを実行（`runtime` で配給方法を選ぶ）。`pre-render` はビルド時にヘッドレス Chromium で各図を SVG 化して埋め込む（JS 不要・印刷安定・図が少数なら `inline` より小さい）。 |
+| `mermaid.runtime` | `inline` `cdn`         | `inline` | **client mode 専用。** `inline`（既定）は mermaid ランタイムを HTML に埋め込み**完全オフラインで自己完結**（図があると約 975KB(gzip) 増）。`cdn` は CDN から読み込み HTML は最小だが**表示にネット接続が必要**。 |
+
+#### `client` と `pre-render` の比較
+
+同じ mermaid エンジンで描画するため、図の形・レイアウトは基本的に一致する。ただし次の違いがある。
+
+| 観点                    | `client`（cdn / inline）                 | `pre-render`                                   |
+| ----------------------- | ---------------------------------------- | ---------------------------------------------- |
+| 自己完結                | cdn = 要ネット / inline = 自己完結       | 自己完結（SVG を埋め込み）                      |
+| JavaScript              | 必要                                     | 不要                                           |
+| 追加サイズ              | cdn ≈ 0 / inline ≈ 975KB(gzip) 固定      | 図の数に比例（1 図あたり数 KB）                |
+| ダーク配色              | 追従しない（mermaid 既定テーマで固定）   | `html.colorScheme` で固定（`dark`→dark / 他→light） |
+| フォント                | 読者のブラウザ・フォントで描画           | **ビルド環境のフォントで計測・焼き込み**       |
+| 対話機能（`click` 等）  | 有効                                     | 無効（静的 SVG）                               |
+| 印刷・未訪問ページの図  | 崩れる場合がある                         | 常に表示される                                 |
+
+> **フォント注意**: `pre-render` はテキストの計測・配置を**ビルドを実行するマシンのフォント**で行い、その結果を SVG に固定する。日本語などのラベルを含む図では、ビルド環境に対応フォント（例: Noto CJK）が無いと文字化け（□）や折り返し崩れが起きる。`client` は読者環境のフォントで描画するためこの問題は出ない。npm などで導入した場合に効くのは**あなたのビルド環境のフォント**で、monodocs 側の設定では補えない点に注意。
+
+> **既定は `client`**: `pre-render` はビルド時に Chromium を要し、無ければビルドが失敗する（環境エラーは fail fast。個々の図の構文エラーのみ警告してソース表示にフォールバック）。この依存を全員に強制しないため既定は `client`。ローカルの Chromium は `PUPPETEER_EXECUTABLE_PATH` で指定できる（開発用 Docker には同梱）。バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では `pre-render` は使えない（node_modules を持たないため。パッケージインストール版を使う）。
 
 ### `highlight`
 

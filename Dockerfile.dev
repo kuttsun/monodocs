@@ -11,6 +11,15 @@
 # （ホスト環境を汚さず、リビルド不要で最新コードを扱える）。
 FROM node:22-bookworm-slim
 
+# Mermaid の pre-render（mermaid.mode: pre-render）は puppeteer-core 経由で
+# ヘッドレス Chromium を起動する。巨大な puppeteer 同梱 Chromium を落とさず distro の
+# chromium を使い、実行パスを固定する（puppeteer-core は Chromium を同梱しない）。
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends chromium fonts-liberation \
+ && rm -rf /var/lib/apt/lists/*
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    PUPPETEER_SKIP_DOWNLOAD=true
+
 # corepack のキャッシュを共有・全ユーザー可読の場所に置く。これにより
 # 任意の UID（呼び出しユーザー）で実行しても焼き込んだ pnpm を再ダウンロードしない。
 ENV COREPACK_HOME=/opt/corepack

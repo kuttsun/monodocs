@@ -67,6 +67,16 @@ loadConfig (config.ts)
 
 対応記法と、単一 HTML 化に伴い対応できない／意図的に制限する記法は [docs/syntax.md](docs/syntax.md) にまとめる。記法の対応範囲を変えたらこの文書も更新する。
 
+### Mermaid（`mermaid.mode`: client / pre-render）
+
+Mermaid には 2 つの描画方式がある。**client**（既定）は HTML に mermaid ランタイムを載せてブラウザで描画する（`mermaid.runtime` が `cdn`=CDN 参照 / `inline`=バンドル埋め込み。[themes/mermaid.ts](app/packages/core/src/themes/mermaid.ts)）。inline は自己完結だが図が 1 個でも約 975KB(gzip) を all-or-nothing で払う。**pre-render** は [pipeline/mermaidPrerender.ts](app/packages/core/src/pipeline/mermaidPrerender.ts) が Puppeteer（`puppeteer-core` + システム Chromium。`optionalDependencies`・動的 import）で各図をビルド時に SVG 化し、[postprocess.ts](app/packages/core/src/pipeline/postprocess.ts) の `processMermaidPrerender` が **raw ノードで HAST に挿入**する（HTML パーサを通さず `viewBox`/`<defs>`/`url(#…)`/`foreignObject` を保つため serializer は `allowDangerousHtml`）。
+
+- **id 採番**: SVG の id は pre-render SVG が `prefixIdsAndCollect` の後段で入り prefix 対象外のため、ビルド全体で単調増加する **ASCII セーフでグローバル一意な `mermaid-{n}`** を自前採番して衝突（`url(#…)`・`<style> #id{}`）を防ぐ。`page.id`（Unicode・数字始まりあり）は使わない。
+- **ランタイム注入ゲート**: pre-render は静的 SVG なのでランタイム JS を注入しない（[build.ts](app/packages/core/src/build.ts) の `bodyScripts` は `hasMermaid && enabled && mode === "client"` のときだけ）。
+- **エラーの区別（fail fast）**: **環境／セットアップエラー**（Chromium・puppeteer-core 不在、ブラウザ起動失敗）は `MermaidPrerenderSetupError` として `processMermaidPrerender` が**再 throw してビルドを止める**（図単位のフォールバックで握りつぶさない）。一方**図単位の描画エラー**（構文エラー等）は警告を出して当該ブロックを `<pre class="mermaid">`（ソース表示）へフォールバックする。`createPuppeteerPrerenderer` は setup 系の失敗をこの型で投げる。
+- **レンダラのライフサイクル**: `buildSite` が pre-render 時に lazy 起動のレンダラを作り `preparePages` へ注入して `finally` で close（図 0 個なら Chromium 非起動）。`validateSite` は `mermaidMode` を `client` に上書きして browserless（**pre-render の実描画・構文エラーは validate 対象外**）。build 経路で pre-render 指定なのに未注入なら握りつぶさずエラー。
+- **制限**: SVG のテーマはビルド時固定（読者のダーク/ライトトグルに追従しない。`colorScheme: auto` は light 相当）。**バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では利用不可**（node_modules を持たず `puppeteer-core` を解決できない。`bundle.mjs` は `external` にし、実行時は動的 import 失敗を案内文言で受ける）。Chromium は `PUPPETEER_EXECUTABLE_PATH` で明示（Dockerfile.dev に同梱）。
+
 ### クライアントテーマ
 
 [themes/default/](app/packages/core/src/themes/default/) に `template.html` / `style.css` / `app.js`。`renderSingleHtml` がトークン（`{{htmlAttrs}}` `{{title}}` `{{style}}` `{{sidebar}}` `{{pages}}` `{{siteDataJson}}` `{{appJs}}` `{{bodyScripts}}`）を差し替える。`window.__MONODOCS_DATA__` に検索・目次・前後ナビ用のページデータ（route/title/hidden/見出し/本文テキスト）を埋め込む。`app.js` は検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・hash routing を担当（素の IIFE。要素は常に null ガード）。print 時は `@media print` で全ページを縦展開。

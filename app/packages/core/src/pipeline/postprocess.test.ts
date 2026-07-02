@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { postprocessPages } from "./postprocess";
+import { MermaidPrerenderSetupError } from "./mermaidPrerender";
 import type { Page } from "../types";
 
 function page(p: {
@@ -35,6 +36,7 @@ const baseOptions = {
   maxInlineSize: 5 * 1024 * 1024,
   onLargeImage: "warn" as const,
   mermaidEnabled: true,
+  mermaidMode: "client" as const,
   codeHighlight: false,
 };
 
@@ -158,6 +160,159 @@ describe("postprocessPages - mermaid", () => {
     ];
     const result = await postprocessPages(pages, { ...baseOptions, mermaidEnabled: false });
     expect(result.hasMermaid).toBe(false);
+    expect(pages[0]!.html).toContain("language-mermaid");
+  });
+});
+
+describe("postprocessPages - mermaid pre-render", () => {
+  /** 呼び出しを記録し canned SVG を返す偽レンダラ。 */
+  function fakeRenderer(svgFor: (id: string, code: string) => string) {
+    const calls: { id: string; code: string }[] = [];
+    return {
+      calls,
+      renderer: {
+        async render(id: string, code: string) {
+          calls.push({ id, code });
+          return svgFor(id, code);
+        },
+        async close() {},
+      },
+    };
+  }
+
+  it("replaces mermaid blocks with inline <svg> using a global ASCII-safe id", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "日本語.md",
+        route: "/日本語",
+        html: '<pre><code class="language-mermaid">graph TD\n  A --> B</code></pre>',
+      }),
+    ];
+    const { calls, renderer } = fakeRenderer((id) => `<svg id="${id}"><g/></svg>`);
+    const result = await postprocessPages(pages, {
+      ...baseOptions,
+      mermaidMode: "pre-render",
+      mermaidPrerenderer: renderer,
+    });
+    expect(result.hasMermaid).toBe(true);
+    // ページ id が Unicode でも SVG id は ASCII セーフでグローバル一意。
+    expect(calls).toEqual([{ id: "mermaid-0", code: "graph TD\n  A --> B" }]);
+    expect(pages[0]!.html).toContain('<figure class="mermaid"><svg id="mermaid-0">');
+    // client mode のような未描画 <pre class="mermaid"> は残らない。
+    expect(pages[0]!.html).not.toContain("<pre");
+    expect(pages[0]!.html).not.toContain("language-mermaid");
+  });
+
+  it("assigns sequential ids across pages and multiple diagrams", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html:
+          '<pre><code class="language-mermaid">graph TD; A-->B</code></pre>' +
+          '<pre><code class="language-mermaid">graph TD; C-->D</code></pre>',
+      }),
+      page({
+        relativePath: "b.md",
+        route: "/b",
+        html: '<pre><code class="language-mermaid">graph TD; E-->F</code></pre>',
+      }),
+    ];
+    const { calls, renderer } = fakeRenderer((id) => `<svg id="${id}"></svg>`);
+    await postprocessPages(pages, {
+      ...baseOptions,
+      mermaidMode: "pre-render",
+      mermaidPrerenderer: renderer,
+    });
+    expect(calls.map((c) => c.id)).toEqual(["mermaid-0", "mermaid-1", "mermaid-2"]);
+    expect(pages[0]!.html).toContain('id="mermaid-0"');
+    expect(pages[0]!.html).toContain('id="mermaid-1"');
+    expect(pages[1]!.html).toContain('id="mermaid-2"');
+  });
+
+  it("preserves complex SVG (style/defs/url(#)/foreignObject/viewBox) verbatim", async () => {
+    const complexSvg =
+      '<svg id="mermaid-0" viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">' +
+      "<style>#mermaid-0 .node{fill:#eee}</style>" +
+      '<defs><marker id="arrow"><path d="M0,0 L10,5"/></marker></defs>' +
+      '<g marker-end="url(#arrow)"><path d="M0,0"/></g>' +
+      '<foreignObject width="80" height="20"><div xmlns="http://www.w3.org/1999/xhtml">ラベル</div></foreignObject>' +
+      "</svg>";
+    const pages: Page[] = [
+      page({
+        relativePath: "d.md",
+        route: "/d",
+        html: '<pre><code class="language-mermaid">graph TD; A-->B</code></pre>',
+      }),
+    ];
+    const { renderer } = fakeRenderer(() => complexSvg);
+    await postprocessPages(pages, {
+      ...baseOptions,
+      mermaidMode: "pre-render",
+      mermaidPrerenderer: renderer,
+    });
+    const html = pages[0]!.html;
+    expect(html).toContain('viewBox="0 0 100 50"');
+    expect(html).toContain("<style>#mermaid-0 .node{fill:#eee}</style>");
+    expect(html).toContain('<marker id="arrow">');
+    expect(html).toContain('marker-end="url(#arrow)"');
+    expect(html).toContain("<foreignObject");
+    expect(html).toContain("ラベル");
+  });
+
+  it("falls back to source <pre> and warns when a diagram fails to render", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "d.md",
+        route: "/d",
+        html: '<pre><code class="language-mermaid">bad diagram</code></pre>',
+      }),
+    ];
+    const renderer = {
+      async render() {
+        throw new Error("parse error");
+      },
+      async close() {},
+    };
+    const result = await postprocessPages(pages, {
+      ...baseOptions,
+      mermaidMode: "pre-render",
+      mermaidPrerenderer: renderer,
+    });
+    expect(result.hasMermaid).toBe(true);
+    expect(pages[0]!.html).toContain('<pre class="mermaid">bad diagram</pre>');
+    expect(result.warnings.some((w) => w.includes("pre-render"))).toBe(true);
+  });
+
+  it("throws when pre-render mode is set but no renderer is injected", async () => {
+    const pages: Page[] = [page({ relativePath: "d.md", route: "/d", html: "<p>x</p>" })];
+    await expect(
+      postprocessPages(pages, { ...baseOptions, mermaidMode: "pre-render" }),
+    ).rejects.toThrow(/pre-render/);
+  });
+
+  it("fails the build (does not fall back) on setup errors like missing Chromium", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "d.md",
+        route: "/d",
+        html: '<pre><code class="language-mermaid">graph TD; A-->B</code></pre>',
+      }),
+    ];
+    const renderer = {
+      async render(): Promise<string> {
+        throw new MermaidPrerenderSetupError("Chromium がありません");
+      },
+      async close() {},
+    };
+    await expect(
+      postprocessPages(pages, {
+        ...baseOptions,
+        mermaidMode: "pre-render",
+        mermaidPrerenderer: renderer,
+      }),
+    ).rejects.toThrow(MermaidPrerenderSetupError);
+    // フォールバックの <pre> にはならない（ビルドを止める）。
     expect(pages[0]!.html).toContain("language-mermaid");
   });
 });

@@ -6,8 +6,9 @@ import rehypeStringify from "rehype-stringify";
 import { toText } from "hast-util-to-text";
 import { EXIT, SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
-import type { OnLargeImage } from "../config.js";
+import type { MermaidMode, OnLargeImage } from "../config.js";
 import type { Page } from "../types.js";
+import { MermaidPrerenderSetupError, type MermaidPrerenderer } from "./mermaidPrerender.js";
 
 /** コードハイライトに使う配色（shiki の dual theme。ダークは CSS で切替）。 */
 const SHIKI_THEMES = { light: "github-light", dark: "github-dark" } as const;
@@ -45,6 +46,14 @@ export type PostprocessOptions = {
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
   mermaidEnabled: boolean;
+  /** Mermaid の描画方式（"client" = クラス付与のみ / "pre-render" = SVG 化して埋め込む）。 */
+  mermaidMode: MermaidMode;
+  /**
+   * pre-render 用レンダラ。`mermaidMode === "pre-render"` のとき **必須**。
+   * validate 経路など SVG 化しない場合は `mermaidMode` を "client" にして呼ぶこと
+   * （build 経路で pre-render 指定なのに未注入なら握りつぶさずエラーにする）。
+   */
+  mermaidPrerenderer?: MermaidPrerenderer;
   codeHighlight: boolean;
 };
 
@@ -218,6 +227,70 @@ function processMermaid(tree: HastRoot): boolean {
     found = true;
   });
   return found;
+}
+
+/** processMermaid で検出する Mermaid コードブロック（親・位置・ソース）。 */
+type MermaidBlock = { parent: { children: ElementContent[] }; index: number; code: string };
+
+/**
+ * Mermaid のコードブロックをビルド時に SVG 化して埋め込む（pre-render mode）。
+ * `renderer.render` に **CSS/SVG セーフで全 HTML 一意な id**（`nextId()`）を渡し、SVG は
+ * HTML パーサを通さず raw ノードとして挿入する（`viewBox`/`<defs>`/`url(#…)`/`foreignObject`
+ * を壊さない）。図単位の失敗は警告し `<pre class="mermaid">`（ソース表示）へフォールバックする。
+ */
+async function processMermaidPrerender(
+  tree: HastRoot,
+  page: Page,
+  renderer: MermaidPrerenderer,
+  nextId: () => string,
+  warnings: string[],
+): Promise<boolean> {
+  const blocks: MermaidBlock[] = [];
+  visit(tree, "element", (node, index, parent) => {
+    if (node.tagName !== "pre" || !parent || typeof index !== "number") return;
+    const code = node.children.find(
+      (child): child is Element => child.type === "element" && child.tagName === "code",
+    );
+    if (!code || !hasClass(code, "language-mermaid")) return;
+    blocks.push({
+      parent: parent as { children: ElementContent[] },
+      index,
+      code: toText(code, { whitespace: "pre" }),
+    });
+  });
+  if (blocks.length === 0) return false;
+
+  // 決定的な id 採番のため順番に await する（1 ブロック→1 ノードなので index はずれない）。
+  for (const block of blocks) {
+    try {
+      const svg = await renderer.render(nextId(), block.code);
+      // raw ノードで verbatim 出力（serializer は allowDangerousHtml 済み）。
+      const raw = { type: "raw", value: svg } as unknown as ElementContent;
+      block.parent.children[block.index] = {
+        type: "element",
+        tagName: "figure",
+        properties: { className: ["mermaid"] },
+        children: [raw],
+      };
+    } catch (error) {
+      // 環境／セットアップエラー（Chromium・puppeteer-core 不在、起動失敗）はビルドを止める
+      // （図単位のフォールバックで握りつぶさない。fail fast）。
+      if (error instanceof MermaidPrerenderSetupError) throw error;
+      // 図単位の描画エラー（構文エラー等）は警告してソース表示にフォールバックする。
+      warnings.push(
+        `${page.relativePath}: Mermaid の pre-render に失敗しました（ソース表示にフォールバック）: ${
+          (error as Error).message
+        }`,
+      );
+      block.parent.children[block.index] = {
+        type: "element",
+        tagName: "pre",
+        properties: { className: ["mermaid"] },
+        children: [{ type: "text", value: block.code }],
+      };
+    }
+  }
+  return true;
 }
 
 /** code 要素の className から言語名（language-xxx）を取り出す。 */
@@ -555,17 +628,48 @@ export async function postprocessPages(
   const realRoot = await realpath(options.inputDir).catch(() => resolve(options.inputDir));
 
   const parser = unified().use(rehypeParse, { fragment: true });
-  const serializer = unified().use(rehypeStringify);
+  // pre-render SVG を raw ノードで verbatim 出力するため allowDangerousHtml を有効化する
+  // （入力はパース済み hast で raw ノードを含まないため、既存要素の出力挙動は変わらない）。
+  const serializer = unified().use(rehypeStringify, { allowDangerousHtml: true });
 
   const warnings: string[] = [];
   let hasMermaid = false;
+  // pre-render SVG の id を全 HTML で一意にするグローバルカウンタ（CSS/SVG セーフな ASCII）。
+  let mermaidIdSeq = 0;
+  const nextMermaidId = () => `mermaid-${mermaidIdSeq++}`;
+
+  if (
+    options.mermaidEnabled &&
+    options.mermaidMode === "pre-render" &&
+    !options.mermaidPrerenderer
+  ) {
+    throw new Error(
+      "mermaid.mode: pre-render が指定されていますが pre-render 用レンダラが渡されていません。",
+    );
+  }
 
   for (const page of pages) {
     const tree = parser.parse(page.html);
     // admonition を共通構造へ正規化してから Mermaid / ハイライト / リンク変換にかける
     // （正規化後も内部の <pre>/<a>/<img> は後続処理の対象になる）。
     processAdmonitions(tree);
-    if (options.mermaidEnabled && processMermaid(tree)) hasMermaid = true;
+    if (options.mermaidEnabled) {
+      if (options.mermaidMode === "pre-render" && options.mermaidPrerenderer) {
+        if (
+          await processMermaidPrerender(
+            tree,
+            page,
+            options.mermaidPrerenderer,
+            nextMermaidId,
+            warnings,
+          )
+        ) {
+          hasMermaid = true;
+        }
+      } else if (processMermaid(tree)) {
+        hasMermaid = true;
+      }
+    }
     // Mermaid 変換後にハイライト（mermaid ブロックは対象外になる）。
     if (options.codeHighlight) await highlightCode(tree);
     rewriteLinks(

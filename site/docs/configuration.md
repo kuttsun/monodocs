@@ -74,7 +74,8 @@ assets:
 
 mermaid:
   enabled: true
-  runtime: cdn # cdn | inline
+  mode: client # client | pre-render
+  runtime: inline # inline | cdn (client mode only)
 
 highlight:
   enabled: true
@@ -157,10 +158,29 @@ sidebar:
 
 ### `mermaid`
 
-| Key               | Type           | Default | Description                                                              |
-| ----------------- | -------------- | ------- | ------------------------------------------------------------------------ |
-| `mermaid.enabled` | boolean        | `true`  | Render Mermaid code blocks as diagrams.                                   |
-| `mermaid.runtime` | `cdn` `inline` | `cdn`   | Load the Mermaid runtime from a CDN, or inline it for fully offline output. |
+| Key               | Type                  | Default  | Description                                                              |
+| ----------------- | --------------------- | -------- | ------------------------------------------------------------------------ |
+| `mermaid.enabled` | boolean               | `true`   | Render Mermaid code blocks as diagrams.                                   |
+| `mermaid.mode`    | `client` `pre-render` | `client` | `client` runs the mermaid runtime in the browser (see `runtime`). `pre-render` rasterizes each diagram to inline SVG at build time via headless Chromium (no JS, print-stable, smaller than `inline` for a handful of diagrams). |
+| `mermaid.runtime` | `inline` `cdn`        | `inline` | **client mode only.** `inline` (default) embeds the mermaid runtime in the HTML for a **fully self-contained, offline** file (adds ~975KB gzip when diagrams exist). `cdn` loads it from a CDN, keeping the HTML tiny but **requiring network access to display**. |
+
+#### `client` vs `pre-render`
+
+Both render with the same mermaid engine, so a given diagram's shape and layout are essentially identical. The differences are:
+
+| Aspect                  | `client` (cdn / inline)                  | `pre-render`                                   |
+| ----------------------- | ---------------------------------------- | ---------------------------------------------- |
+| Self-contained          | cdn = needs network / inline = yes       | Yes (SVG embedded)                             |
+| JavaScript              | Required                                 | Not required                                   |
+| Added size              | cdn ≈ 0 / inline ≈ 975KB(gzip) fixed     | Proportional to diagram count (a few KB each)  |
+| Dark theme              | Does not follow it (mermaid default)     | Fixed via `html.colorScheme` (`dark`→dark, else light) |
+| Fonts                   | Reader's browser fonts                   | **Measured & baked with the build machine's fonts** |
+| Interactivity (`click`) | Works                                    | Disabled (static SVG)                          |
+| Print / unvisited pages | May be missing                           | Always rendered                                |
+
+> **Fonts caveat**: `pre-render` measures and positions text using the fonts of **the machine running the build**, then bakes the result into the SVG. Diagrams with non-Latin labels (e.g. Japanese) render as boxes or wrap incorrectly if the build environment lacks the needed font (e.g. Noto CJK). `client` uses the reader's fonts, so it is not affected. Note that when installed via npm, what matters is **your build environment's fonts** — monodocs cannot supply them.
+
+> **Default is `client`**: `pre-render` needs Chromium at build time and the build fails if it is missing (environment errors fail fast; only per-diagram syntax errors warn and fall back to source). To avoid forcing this dependency on everyone, the default is `client`. Point at a local Chromium with `PUPPETEER_EXECUTABLE_PATH` (bundled in the dev Docker image). `pre-render` is unavailable in the bundled CLI (single `.cjs` / single-executable), which ships without `node_modules`; use a package install instead.
 
 ### `highlight`
 

@@ -53,10 +53,11 @@ describe("buildSite (v0.3 features)", () => {
     expect(html).toContain('href="#/guide"');
     // 画像 data URI 埋め込み
     expect(html).toContain("data:image/svg+xml;base64,");
-    // Mermaid 変換 + CDN ランタイム注入
+    // Mermaid 変換 + inline ランタイム注入（既定 inline = 自己完結。CDN は使わない）
     expect(html).toContain('class="mermaid"');
-    expect(html).toContain("cdn.jsdelivr.net/npm/mermaid");
-    expect(html).toContain("mermaid.initialize");
+    expect(html).toContain("__esbuild_esm_mermaid_nm"); // inline ランタイム注入の目印
+    expect(html).not.toContain("cdn.jsdelivr.net");
+    expect(html).toContain("initialize({startOnLoad:false})");
     // hidden ページはサイドバーに出ない（サイドバー内に #/secret リンクが無い）。
     // 本文リンク（index -> secret）は解決されるため、判定はサイドバー範囲に限定する。
     const nav = html.match(/<nav id="sidebar-nav">([\s\S]*?)<\/nav>/)?.[1] ?? "";

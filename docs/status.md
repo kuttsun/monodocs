@@ -36,7 +36,7 @@
 
 - [x] Markdown / AsciiDoc 間のリンクを hash route に変換できる（`.md` / `.adoc` / `.html`）
 - [x] 画像を data URI として HTML に埋め込める（サイズ上限・超過時の挙動を設定可能）
-- [x] Markdown / AsciiDoc の Mermaid を表示できる（client mode、ランタイムは CDN / inline 切替）
+- [x] Markdown / AsciiDoc の Mermaid を表示できる（`mermaid.mode`: `client` 既定はランタイムを CDN / inline 切替。`pre-render` はビルド時にヘッドレス Chromium で各図を SVG 化して埋め込み、JS 不要・印刷安定・図が少数なら inline より小さい。バンドル版 CLI＝単一 `.cjs` / 単一実行ファイルでは利用不可でパッケージインストール版が必要）
 - [x] frontmatter / `:sd-*:` により order・hidden・description を制御できる
 - [x] validate でリンク切れ・画像欠落・タイトル欠落を検出できる
 

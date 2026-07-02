@@ -20,8 +20,15 @@ const DEFAULT_TOC_MAX_LEVEL = 3;
 
 /** 画像の最大インラインサイズ超過時の挙動。 */
 export type OnLargeImage = "warn" | "error" | "external";
-/** Mermaid ランタイムの配給方法。 */
+/** Mermaid ランタイムの配給方法（client mode 専用）。 */
 export type MermaidRuntime = "cdn" | "inline";
+/**
+ * Mermaid の描画方式。
+ * `"client"`（既定）= ブラウザで mermaid ランタイムを実行（`runtime` で cdn/inline を選ぶ）。
+ * `"pre-render"` = ビルド時にヘッドレスブラウザで各図を SVG 化して埋め込む
+ * （JS 不要・印刷安定・図が少数なら inline より小さい。テーマはビルド時固定）。
+ */
+export type MermaidMode = "client" | "pre-render";
 /**
  * ドキュメント表示時の初期配色。読者がトグルで切り替える前の既定値。
  * `"light"`（既定）/ `"dark"` は明示的にその配色で開く。`"auto"` は OS の
@@ -112,6 +119,7 @@ const configFileSchema = z.object({
   mermaid: z
     .object({
       enabled: z.boolean().optional(),
+      mode: z.enum(["client", "pre-render"]).optional(),
       runtime: z.enum(["cdn", "inline"]).optional(),
     })
     .optional(),
@@ -159,6 +167,7 @@ export type ResolvedConfig = {
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
   mermaidEnabled: boolean;
+  mermaidMode: MermaidMode;
   mermaidRuntime: MermaidRuntime;
   codeHighlight: boolean;
 };
@@ -300,7 +309,10 @@ export async function loadConfig(
     maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
     onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",
     mermaidEnabled: fileConfig.mermaid?.enabled ?? true,
-    mermaidRuntime: fileConfig.mermaid?.runtime ?? "cdn",
+    mermaidMode: fileConfig.mermaid?.mode ?? "client",
+    // 既定は inline（自己完結）。単一ファイル配布時にオフラインでも図が表示される。
+    // サイズ最小化したい場合のみ cdn を選ぶ。
+    mermaidRuntime: fileConfig.mermaid?.runtime ?? "inline",
     codeHighlight: fileConfig.highlight?.enabled ?? true,
   };
 }

@@ -55,6 +55,11 @@ const result = await build({
       `var __monodocsImportMetaUrl=require("node:url").pathToFileURL(__filename).href;`,
   },
   define: { "import.meta.url": "__monodocsImportMetaUrl" },
+  // puppeteer-core は optionalDependency で mermaid.mode: pre-render のときだけ動的 import する。
+  // バンドルには含めない（Chromium 起動用に実体ファイルを要し、自己完結バンドルに載せられない）。
+  // → このバンドル（単一 .cjs / SEA）は node_modules を持たないため pre-render 非対応。
+  //   実行時に import("puppeteer-core") が失敗し、mermaidPrerender.ts が案内メッセージを出す。
+  external: ["puppeteer-core"],
   // dist の tsc ビルドに依存せず、core を src から直接バンドルする。
   alias: { "@monodocs/core": resolve(coreSrc, "index.ts") },
   logLevel: "info",

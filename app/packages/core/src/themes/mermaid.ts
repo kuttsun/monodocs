@@ -31,15 +31,21 @@ function renderHelper(mermaidExpr: string): string {
   );
 }
 
+/**
+ * mermaid のブラウザ用バンドル（`mermaid.min.js`）本体を返す。
+ * 単一実行ファイルでは node_modules が無いため、埋め込み済み（`embeddedAssets`）を優先し、
+ * 無ければ `mermaid` パッケージから読み込む。inline runtime と pre-render の双方で使う。
+ */
+export async function loadMermaidInline(): Promise<string> {
+  return (
+    embeddedAssets()?.mermaidInline ??
+    (await readFile(createRequire(import.meta.url).resolve("mermaid/dist/mermaid.min.js"), "utf8"))
+  );
+}
+
 export async function mermaidRuntimeScript(runtime: MermaidRuntime): Promise<string> {
   if (runtime === "inline") {
-    // 単一実行ファイルでは node_modules が無いため、埋め込み済みの mermaid を優先する。
-    const lib =
-      embeddedAssets()?.mermaidInline ??
-      (await readFile(
-        createRequire(import.meta.url).resolve("mermaid/dist/mermaid.min.js"),
-        "utf8",
-      ));
+    const lib = await loadMermaidInline();
     return (
       `<script>${lib}</script>\n` +
       `<script>(function(){` +

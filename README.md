@@ -27,8 +27,9 @@
 - `validate` でリンク切れ・画像欠落などを検出する
 - GitHub Flavored Markdown に対応する
 
-> Mermaid を使う場合の既定は CDN 参照（表示にネットワークが必要）です。完全に自己完結させるには
-> `mermaid.runtime: inline` を指定してください。画像サイズ上限（`assets.maxInlineSize`）超過時の
+> Mermaid の既定は `runtime: inline`（ランタイムを埋め込み**自己完結**。図があると約 975KB(gzip) 増）です。
+> HTML を最小化したい場合は `runtime: cdn`（表示にネットワークが必要）に切り替えられます。JS 無しでビルド時に
+> SVG 化する `mode: pre-render`（要 Chromium）もあります。画像サイズ上限（`assets.maxInlineSize`）超過時の
 > 既定 `warn` は「警告しつつ埋め込む」挙動です（埋め込まない場合は `external`）。
 
 > PDF 出力などは今後のバージョンで対応予定です（[docs/roadmap.md](docs/roadmap.md)）。
@@ -99,7 +100,7 @@ scripts/app-serve.sh examples/ja
 
 - `examples/ja`（日本語）/ `examples/en`（英語）は、Markdown(GFM) / AsciiDoc / 混在の全記法・全機能を 1 サイトにまとめたショーケースです。
 - 配信中にサンプル内のファイルを編集すると、ブラウザが自動でリロードします。
-- Mermaid は既定で CDN 参照のため、図の描画にはブラウザ側のネット接続が必要です。
+- Mermaid は既定で `runtime: inline`（自己完結）です。`runtime: cdn` にすると HTML は軽くなりますが、図の描画にブラウザ側のネット接続が必要になります。
 
 確認するとよい項目:
 
@@ -156,7 +157,8 @@ assets:
   onLargeImage: "warn" # warn=警告して埋め込む / external=埋め込まない / error=失敗
 mermaid:
   enabled: true
-  runtime: "cdn" # cdn=軽量・要ネット / inline=自己完結（HTML 肥大）
+  mode: "client" # client=ブラウザ描画 / pre-render=ビルド時 SVG 化（要 Chromium）
+  runtime: "inline" # inline=自己完結（既定・HTML 肥大） / cdn=軽量・要ネット（client のみ）
 highlight:
   enabled: true # コードブロックを shiki で構文ハイライト（false で無効）
 html:
