@@ -720,34 +720,41 @@ body.sidebar-collapsed #sidebar {
   display: none;
 }
 
-.page-nav-link {
+.page-nav-item {
+  /* 枠は付けずテキストだけで見せる（Vue ドキュメント風）。上段に「← Prev / Next →」の
+     小さなラベル、下段にページタイトルのリンクを縦に並べる。 */
   display: flex;
   flex-direction: column;
+  gap: 0.15rem;
   max-width: 48%;
-  padding: 0.6rem 1rem;
-  text-decoration: none;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
 }
 
-.page-nav-link:hover {
-  border-color: var(--color-accent);
-  background: var(--color-accent-bg);
-}
-
-.page-nav-next {
+.page-nav-item-next {
   margin-left: auto;
   text-align: right;
 }
 
 .page-nav-dir {
+  /* 「← Prev」「Next →」の小さなラベル。リンクにはせず（<a> の外）、控えめなグレーの
+     ただの文字にする。 */
   font-size: 0.8rem;
   color: var(--color-muted);
 }
 
-.page-nav-title {
-  font-weight: 600;
+.page-nav-link {
+  /* リンクはタイトルだけ。クリック範囲もタイトル幅に収める（align-self でシュリンク）。
+     太字にはしない普通のリンク文字（アクセント色・ホバーで下線）。 */
+  align-self: flex-start;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.page-nav-item-next .page-nav-link {
+  align-self: flex-end;
+}
+
+.page-nav-link:hover {
+  text-decoration: underline;
 }
 
 .page-nav-spacer {

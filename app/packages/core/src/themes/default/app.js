@@ -274,31 +274,34 @@
     var prev = idx > 0 ? navPages[idx - 1] : null;
     var next = idx < navPages.length - 1 ? navPages[idx + 1] : null;
     var html = "";
+    // 「← Prev / Next →」ラベルはリンクにしない（<a> の外に出す）。タイトルだけをリンクにする。
     if (prev) {
       html +=
-        '<a class="page-nav-link page-nav-prev" data-route="' +
+        '<div class="page-nav-item page-nav-item-prev">' +
+        '<span class="page-nav-dir">' +
+        LABELS.prev +
+        '</span><a class="page-nav-link page-nav-prev" data-route="' +
         escapeHtml(prev.route) +
         '" href="#' +
         escapeHtml(encodeURI(prev.route)) +
-        '"><span class="page-nav-dir">' +
-        LABELS.prev +
-        '</span><span class="page-nav-title">' +
+        '">' +
         escapeHtml(prev.title) +
-        "</span></a>";
+        "</a></div>";
     } else {
       html += '<span class="page-nav-spacer"></span>';
     }
     if (next) {
       html +=
-        '<a class="page-nav-link page-nav-next" data-route="' +
+        '<div class="page-nav-item page-nav-item-next">' +
+        '<span class="page-nav-dir">' +
+        LABELS.next +
+        '</span><a class="page-nav-link page-nav-next" data-route="' +
         escapeHtml(next.route) +
         '" href="#' +
         escapeHtml(encodeURI(next.route)) +
-        '"><span class="page-nav-dir">' +
-        LABELS.next +
-        '</span><span class="page-nav-title">' +
+        '">' +
         escapeHtml(next.title) +
-        "</span></a>";
+        "</a></div>";
     }
     nav.innerHTML = html;
   }
