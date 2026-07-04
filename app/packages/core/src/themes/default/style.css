@@ -402,6 +402,11 @@ body.sidebar-collapsed #sidebar {
 
 #content a {
   color: var(--color-accent);
+  text-decoration: none;
+}
+
+#content a:hover {
+  text-decoration: underline;
 }
 
 #content pre {
