@@ -1,5 +1,5 @@
 = Wide content
-:sd-order: 6
+:sd-order: 105
 
 The body is kept at a comfortable reading width (max 860px by default). You can change the fixed width with
 `html.contentWidth` in the config file, or set it to `full` to span the full width. This sample shows how

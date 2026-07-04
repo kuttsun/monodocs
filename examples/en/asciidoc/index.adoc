@@ -1,5 +1,5 @@
 = AsciiDoc samples
-:sd-order: 1
+:sd-order: 100
 
 This sample covers the main syntax from the https://docs.asciidoctor.org/asciidoc/latest/syntax-quick-reference/[AsciiDoc Syntax Quick Reference]
 to check its rendering in `monodocs`.
