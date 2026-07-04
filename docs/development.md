@@ -22,8 +22,8 @@ monodocs/
           pipeline/         # buildPages / buildSidebar / renderSingleHtml
           themes/default/   # HTML テンプレート / CSS / クライアント JS
       cli/                  # CLI（monodocs コマンド）
-    examples/ja/            # 全記法・全機能のショーケース（日本語。markdown / asciidoc / mixed）
-    examples/en/            # 同上の英語版
+  examples/ja/              # 全記法・全機能のショーケース（日本語。markdown / asciidoc / mixed）
+  examples/en/              # 同上の英語版
   site/                     # アプリ紹介の静的 Web サイト（VitePress）
   docs/                     # 開発ドキュメント（本フォルダ）
   scripts/app.sh            # 専用イメージ内でコマンドを実行するヘルパー
@@ -66,15 +66,15 @@ scripts/app.sh pnpm format      # Prettier で整形
 ショートカット `scripts/app-serve.sh` が手軽:
 
 ```bash
-scripts/app-serve.sh examples/ja
-# 別ポート: MONODOCS_PORT=8080 scripts/app-serve.sh examples/ja --port 8080
+scripts/app-serve.sh
+# 別ポート: MONODOCS_PORT=8080 scripts/app-serve.sh --port 8080
 ```
 
 個別に起動する場合（`scripts/app-serve.sh` は内部でこれに委譲する）:
 
 ```bash
-scripts/app.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
-# 別ポート: MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0 --port 8080
+scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0
+# 別ポート: MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0 --port 8080
 ```
 
 > コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
@@ -84,15 +84,15 @@ scripts/app.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
 単一 HTML（配布物）をファイルに出力する:
 
 ```bash
-scripts/app.sh node packages/cli/dist/index.js build examples/ja -o dist/manual.html
+scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/manual.html
 ```
 
 ### 単一実行ファイル（ネイティブバイナリ）をビルドする
 
 `scripts/app.sh` / `scripts/app-serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、
-作業ディレクトリも `/work/app` のため、**`app/` 配下のパスしか配信できない**（リポジトリ外の
-任意ディレクトリを指せない）。これを避けて任意の場所のドキュメントを試すには、ホストで直接動く
-単一実行ファイルを使う。
+作業ディレクトリも `/work/app` のため、**リポジトリ配下のパスしか配信できない**（リポジトリ外の
+任意ディレクトリを指せない。`app/` の外を指すには `../examples/ja` のように `../` を付ける）。これを
+避けて任意の場所のドキュメントを試すには、ホストで直接動く単一実行ファイルを使う。
 
 `scripts/app-build.sh` が依存込みの単一ネイティブバイナリ（Node 22 の
 [Single Executable Application](https://nodejs.org/api/single-executable-applications.html)）を

@@ -7,9 +7,9 @@
 # そちらが面倒を見る。
 #
 # 例:
-#   scripts/app-serve.sh                 # examples/ja（全記法ショーケース）を配信
-#   scripts/app-serve.sh examples/ja   # 入力ディレクトリを明示
-#   MONODOCS_PORT=8080 scripts/app-serve.sh examples/ja --port 8080
+#   scripts/app-serve.sh                      # examples/ja（全記法ショーケース）を配信
+#   scripts/app-serve.sh ../examples/ja     # 入力ディレクトリを明示
+#   MONODOCS_PORT=8080 scripts/app-serve.sh ../examples/ja --port 8080
 #
 # 起動後、ホストのブラウザで http://localhost:4173/ を開く（止めるときは Ctrl+C）。
 set -euo pipefail
@@ -19,7 +19,8 @@ APP="$ROOT/scripts/app.sh"
 
 # 入力ディレクトリ（省略時はショーケース）。残りは serve への追加引数として渡す。
 # 先頭が `-` で始まるとき（例: `app-serve.sh --open`）はオプションなので DOCS は既定のまま。
-DOCS="examples/ja"
+# examples/ はルート直下・app.sh は /work/app 基準で動くため ../ を付ける。
+DOCS="../examples/ja"
 if [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; then
   DOCS="$1"
   shift

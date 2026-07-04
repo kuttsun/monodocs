@@ -33,7 +33,7 @@ Code containing long lines **scrolls horizontally within the code block**. Short
 **Long line:**
 
 ```bash
-docker run --rm -it --name monodocs-dev -v "$(pwd)":/work -w /work/app -e NODE_ENV=development -p 4173:4173 monodocs-dev node packages/cli/dist/index.js serve examples/en --host 0.0.0.0 --port 4173
+docker run --rm -it --name monodocs-dev -v "$(pwd)":/work -w /work/app -e NODE_ENV=development -p 4173:4173 monodocs-dev node packages/cli/dist/index.js serve ../examples/en --host 0.0.0.0 --port 4173
 ```
 
 **Short line:**

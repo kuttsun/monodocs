@@ -36,8 +36,8 @@ pages:
     - (cd app && pnpm install --frozen-lockfile --store-dir "$PNPM_STORE" && pnpm build)
     # 2) ドッグフーディング: 英日それぞれの examples を単一 HTML 化して併載
     - mkdir -p site/public/ja
-    - node app/packages/cli/dist/index.js build app/examples/en -o site/public/manual.html
-    - node app/packages/cli/dist/index.js build app/examples/ja -o site/public/ja/manual.html
+    - node app/packages/cli/dist/index.js build examples/en -o site/public/manual.html
+    - node app/packages/cli/dist/index.js build examples/ja -o site/public/ja/manual.html
     # 3) VitePress ビルド（サブパス base）
     - (cd site && npm ci && npm run docs:build)
     # 4) GitLab Pages 規約に合わせ public/ へ集約

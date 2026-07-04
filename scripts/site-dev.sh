@@ -50,9 +50,9 @@ if [ "$need_demos" = "1" ]; then
   fi
   "$APP" pnpm build
   mkdir -p "$ROOT/site/public/ja"
-  # app.sh は /work/app 基準で動くため、入力は app/ からの相対、出力は ../site/... で渡す。
-  "$APP" node packages/cli/dist/index.js build examples/en -o ../site/public/manual.html
-  "$APP" node packages/cli/dist/index.js build examples/ja -o ../site/public/ja/manual.html
+  # app.sh は /work/app 基準で動くため、examples も site もルート直下＝../ を付けて渡す。
+  "$APP" node packages/cli/dist/index.js build ../examples/en -o ../site/public/manual.html
+  "$APP" node packages/cli/dist/index.js build ../examples/ja -o ../site/public/ja/manual.html
 fi
 
 echo "[site-dev] dev サーバを起動します（http://localhost:5173/）。Ctrl+C で停止。"

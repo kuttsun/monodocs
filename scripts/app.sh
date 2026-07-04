@@ -8,10 +8,10 @@
 #   scripts/app.sh pnpm build
 #   scripts/app.sh pnpm test
 #   scripts/app.sh pnpm typecheck
-#   scripts/app.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0
+#   scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0
 #
 # serve のときだけプレビュー用ポート（既定 4173）を公開する。別ポートは MONODOCS_PORT で変更:
-#   MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve examples/mixed/docs --host 0.0.0.0 --port 8080
+#   MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0 --port 8080
 set -euo pipefail
 
 IMAGE="monodocs-dev"
