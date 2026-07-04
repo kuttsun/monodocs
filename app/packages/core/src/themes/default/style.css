@@ -301,7 +301,7 @@ body.sidebar-collapsed #sidebar {
 }
 
 /* 開閉キャレットは末尾（右端）に置く。フォントに依存しないよう CSS の三角形で描く
-   （記号グリフだと環境によっては豆腐になる）。展開時は下向き、折りたたみ時は右向き。 */
+   （記号グリフだと環境によっては豆腐になる）。展開時は下向き。 */
 .sidebar-dir-title::after {
   content: "";
   flex: 0 0 auto;
@@ -310,11 +310,16 @@ body.sidebar-collapsed #sidebar {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 5px solid var(--color-muted);
-  transition: transform 0.15s ease;
 }
 
+/* 折りたたみ時は右向き。transform: rotate で回すとサブピクセル境界に
+   アンチエイリアスがかかりエッジがぼやけるため、回転させず右向き三角形を
+   ボーダーで直接描いて軸整列のまま（展開時と同じく）くっきり見せる。 */
 .sidebar-dir.collapsed > .sidebar-dir-title::after {
-  transform: rotate(-90deg);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--color-muted);
+  border-right: 0;
 }
 
 .sidebar-dir.collapsed > .sidebar-list {
