@@ -498,8 +498,11 @@ body.sidebar-collapsed #sidebar {
   transition: opacity 0.15s ease;
 }
 
+/* :focus-visible（キーボードフォーカス）のみに反応させる。マウスクリックで
+   ボタンにフォーカスが残っても :focus-within で表示されっぱなしにならないように
+   する（クリック後にポインタが離れてもツールバーが消えない不具合の対策）。 */
 #content .code-block:hover .code-toolbar,
-#content .code-block:focus-within .code-toolbar {
+#content .code-block:has(.code-btn:focus-visible) .code-toolbar {
   opacity: 1;
 }
 
