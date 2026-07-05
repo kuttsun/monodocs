@@ -1743,24 +1743,33 @@ Markdown / AsciiDoc の混在ドキュメントを単一 HTML に出力できる
 
 ## v0.5: PDF 出力
 
+対応済み。
+
 目的：
 
 単一 HTML を元に PDF を出力できるようにする。
 
+実装：Puppeteer（`puppeteer-core` + システム Chromium。Mermaid pre-render と起動処理を
+`pipeline/browser.ts` に共通化）で単一 HTML を開き、テーマの `@media print`（全ページ縦展開）を
+使って `page.pdf()` で PDF 化する（`pipeline/renderPdf.ts`）。`--format both` は `-o` をディレクトリ
+扱いし `manual.html` / `manual.pdf` を出力する。client mode の Mermaid は全ページ展開後に描画完了を
+待つ。当初案の Playwright ではなく、既存の puppeteer-core 基盤を再利用する方針に変更。
+
 実装範囲：
 
-* Playwright / Puppeteer 導入
+* Puppeteer 導入（既存の Mermaid pre-render 基盤を共通化して再利用）
 * `--format pdf` 対応
-* `--format both` 対応
-* PDF 用 print mode
-* PDF 用 CSS
-* Mermaid 描画完了待ち
-* 画像読み込み完了待ち
+* `--format both` 対応（`-o` はディレクトリ）
+* PDF 用 print mode（テーマの `@media print` を利用）
+* Mermaid 描画完了待ち（client mode。全ページ展開後に `data-processed` を待つ）
+* しおり（アウトライン）を HTML サイドバーと同じ フォルダ→ページ 構造で付与（`pdf-lib`。
+  Chromium の内部リンク由来 `/Dests` を参照して `/Outlines` を構築。既定 on）
 * PDF 設定対応
 
   * pageSize
   * margin
   * printBackground
+  * bookmarks（しおり）
 
 完了条件：
 
@@ -1768,6 +1777,10 @@ Markdown / AsciiDoc の混在ドキュメントを単一 HTML に出力できる
 * Markdown / AsciiDoc 混在文書を PDF 化できる
 * Mermaid と画像が PDF に含まれる
 * A4 PDF として出力できる
+
+制限：ヘッドレス Chromium が必要なため、バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では
+利用不可（`puppeteer-core` を `external` 化。パッケージインストール版が必要）。`serve` はプレビュー
+用途のため、設定が pdf/both でも HTML を配信する（PDF を毎回生成しない）。
 
 ---
 

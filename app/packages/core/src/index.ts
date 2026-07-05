@@ -1,5 +1,11 @@
 export * from "./types.js";
-export { buildSite, validateSite, type ValidateResult } from "./build.js";
+export {
+  buildSite,
+  validateSite,
+  resolveOutputs,
+  type ValidateResult,
+  type BuildInternals,
+} from "./build.js";
 export {
   loadConfig,
   parseSize,
@@ -7,6 +13,7 @@ export {
   type ResolvedConfig,
   type OnLargeImage,
   type MermaidRuntime,
+  type PdfMargin,
 } from "./config.js";
 export { scanSourceFiles, type ScanOptions } from "./scan.js";
 export { detectFormat, FORMAT_EXTENSIONS } from "./sources/detectFormat.js";
@@ -21,6 +28,18 @@ export {
   type PostprocessResult,
 } from "./pipeline/postprocess.js";
 export { renderSingleHtml, type RenderHtmlInput } from "./pipeline/renderSingleHtml.js";
+export {
+  createPuppeteerPdfGenerator,
+  type PdfGenerator,
+  type PdfRenderOptions,
+} from "./pipeline/renderPdf.js";
+export { sidebarToOutline, addOutline, type PdfOutlineNode } from "./pipeline/pdfOutline.js";
+export { BrowserSetupError } from "./pipeline/browser.js";
+export {
+  createPuppeteerPrerenderer,
+  MermaidPrerenderSetupError,
+  type MermaidPrerenderer,
+} from "./pipeline/mermaidPrerender.js";
 export { loadTheme, type Theme } from "./themes/index.js";
 export { watchSite, type WatchCallbacks, type WatchHandle } from "./watch.js";
 export { serveSite, type ServeOptions, type ServeCallbacks, type ServeHandle } from "./serve.js";

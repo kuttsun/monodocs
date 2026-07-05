@@ -24,6 +24,7 @@
     "hast-util-to-text": "^4.0.2",
     "mdast-util-to-string": "^4.0.0",
     "mermaid": "^11.16.0",
+    "pdf-lib": "^1.17.1",
     "picomatch": "^4.0.4",
     "rehype-parse": "^9.0.1",
     "rehype-slug": "^6.0.0",

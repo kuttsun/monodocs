@@ -1,6 +1,6 @@
 # 実装状況
 
-最終更新: 2026-06-28
+最終更新: 2026-07-04
 
 ## 対応状況
 
@@ -11,7 +11,7 @@
 | AsciiDoc 対応・混在対応             | ✅ 完了 | v0.2           |
 | リンク変換 / 画像埋め込み / Mermaid | ✅ 完了 | v0.3           |
 | 検索 / 目次 / watch / serve         | ✅ 完了 | v0.4           |
-| PDF 出力                            | 🚧 予定 | v0.5           |
+| PDF 出力                            | ✅ 完了 | v0.5           |
 | npm / Docker / GitHub Actions       | 🚧 予定 | v0.6           |
 | VS Code 拡張                        | 🚧 予定 | v0.7           |
 
@@ -56,6 +56,20 @@
 - [x] `monodocs watch` で入力・設定の変更を監視して再ビルドできる
 - [x] `monodocs serve` でローカルプレビューできる（変更検出でライブリロード、`--open` で自動起動）
 
+### v0.5: PDF 出力
+
+- [x] `monodocs build --format pdf -o ./dist/manual.pdf` で単一 HTML を経由して PDF を生成できる（ヘッドレス Chromium。print 用レイアウトで全ページを縦展開）
+- [x] `--format both` で HTML と PDF を同時出力できる（`-o` はディレクトリ扱いで `manual.html` / `manual.pdf` を出力）
+- [x] client mode の Mermaid を含む場合、全ページを展開して各図の描画完了を待ってから PDF 化する（pre-render 済み SVG はそのまま埋め込み）
+- [x] `pdf.pageSize` / `pdf.margin` / `pdf.printBackground` を設定で制御できる（既定 A4・20/15/20/15mm・背景印刷 on）
+- [x] PDF 出力時は画像を data URI として埋め込む（配布 PDF は外部の相対画像を参照できないため、`assets.embedImages: false` でも上書きして埋め込み、警告を出す。`onLargeImage: external` で外部化した大きい画像は PDF に含まれない）
+- [x] アラート/admonition のアイコンをインライン SVG で埋め込む（CSS mask だと PDF でソフトマスク化され一部ビューアで塗り四角になるため）。print で `.admonition` / 図表 / コードブロック等の途中改ページを回避（`break-inside: avoid`）
+- [x] PDF にしおり（アウトライン）を HTML サイドバーと同じ フォルダ→ページ 構造で付与（`pdf.bookmarks`、既定 true）。各ページ位置へ ASCII サロゲート宛先の内部リンクを注入して Chromium に `/Dests` を作らせ、`pdf-lib` で `/Outlines` を構築（Unicode page id でも堅牢。ビューアでしおりパネルを既定表示）
+- [x] PDF の本文中のページ間リンクをクリック可能にする（SPA 用 hash route `#/route` は PDF に対応要素が無く飛べないため、`renderPdf` が各 article の `data-route` → 要素 id 対応で `#/route` を `#page-{id}` へ書き換え、Chromium が内部リンク＝GoTo 注釈を生成）。同一ページ内アンカー（脚注・見出し）はそのまま有効
+- [x] Puppeteer 起動処理を `pipeline/browser.ts` に共通化し、Mermaid pre-render と PDF で共有（環境エラーは `BrowserSetupError` で fail fast）
+- [x] `serve` はプレビュー用途のため、設定が pdf/both でも HTML を配信する（PDF を毎回生成しない。明示 `-o` は尊重）
+- [x] バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では PDF 出力は利用不可（`puppeteer-core` を `external` 化。パッケージインストール版が必要）
+
 ## 対応記法
 
 Markdown / AsciiDoc の対応記法と、単一 HTML 化に伴う非対応・制限は [syntax.md](syntax.md) に
@@ -70,6 +84,13 @@ Markdown / AsciiDoc の対応記法と、単一 HTML 化に伴う非対応・制
 - 検索は部分一致のみ（スコアリング・複数キーワード・日本語分かち書きは v0.8 で改善予定）
 - `watch` / `serve` の監視は `fs.watch`（可能なら recursive）を利用。設定で `input` を
   変更した場合は再起動が必要
-- PDF 出力は未対応（v0.5）。出力形式は HTML のみ（`--format pdf` / `both` はエラー）
+- PDF 出力に対応（v0.5。`--format pdf` / `both`）。ヘッドレス Chromium を使うため実行環境に
+  Chromium が必要で、バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では利用不可（パッケージ
+  インストール版が必要）。Mermaid を `cdn` runtime にした場合、PDF 化時はネットワークが必要
+  （オフライン確実にするには `inline` または `pre-render` を使う）
+- **PDF のフォントは実行環境のシステムフォントを使う**。本文に出す文字種のフォントが無いと
+  PDF で豆腐（□ / ☒）になる（例: 絵文字 ✅ は絵文字フォントが必要）。開発用 Docker には
+  `fonts-noto-cjk`（日本語）＋ `fonts-noto-color-emoji`（絵文字）を同梱済み。自前環境で PDF を
+  出す場合は使う文字種に応じたフォントを入れる（HTML はブラウザのフォントで表示するため影響なし）
 - 入力は信頼できるドキュメントを前提（AsciiDoc の生 HTML をサニタイズしない。
   詳細は [development.md](development.md)）

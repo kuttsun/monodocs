@@ -163,6 +163,19 @@ Markdown / AsciiDoc files
 `themes/default/app.js` の `LABELS` に集約し、静的文言は `template.html` に置く（将来 config で
 ビルド時に言語/ラベルを差し替えられる余地を残すための集約）。
 
+### PDF のフォント
+
+PDF 出力（`--format pdf` / `both`）と Mermaid pre-render はヘッドレス Chromium で描画するため、
+**本文に出す文字種のフォントが実行環境に無いと PDF で豆腐（□ / ☒）になる**（HTML はブラウザ側の
+フォントで表示するため影響しない）。`Dockerfile.dev` には以下を同梱している:
+
+- `fonts-noto-cjk` … 日本語（CJK）
+- `fonts-noto-color-emoji` … 絵文字（`✅` / `⚠️` など）
+
+フォントを追加したら `docker build -f Dockerfile.dev -t monodocs-dev .` でイメージを再ビルドする
+（`scripts/app.sh` はイメージが**無いときだけ**自動ビルドするので、Dockerfile 変更後は手動再ビルドが必要）。
+自前環境で PDF を出す場合は、使う文字種に応じたフォントを別途インストールする。
+
 ## 入力の前提（セキュリティ）
 
 `monodocs` は **自分（チーム）が管理する信頼できるドキュメント** を変換する用途を想定する。

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildSite } from "./build";
+import { buildSite, validateSite } from "./build";
 
 let dir: string;
 let docs: string;
@@ -48,10 +48,11 @@ describe("buildSite (e2e)", () => {
     ).rejects.toThrow(/not found/i);
   });
 
-  it("throws for unsupported output formats", async () => {
-    await expect(buildSite({ inputDir: docs, outputFile: out, format: "pdf" })).rejects.toThrow(
-      /not supported/i,
-    );
+  it("accepts pdf / both output formats (v0.5: no longer 'not supported')", async () => {
+    // validate は出力を書かず format に依存しないため、pdf / both でもエラーにならない。
+    // 実際の PDF 生成（Chromium）は build.pdf.test.ts で検証する。
+    expect((await validateSite({ inputDir: docs, format: "pdf" })).errors).toEqual([]);
+    expect((await validateSite({ inputDir: docs, format: "both" })).errors).toEqual([]);
   });
 
   it("applies page and directory title transforms separately from the config file", async () => {

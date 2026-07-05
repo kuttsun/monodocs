@@ -28,14 +28,14 @@ docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 
 devcontainer 内、またはコンテナのシェルに入っている場合は `app/` で `pnpm test` を直接実行できる。
 
-## テスト結果（2026-06-27 時点）
+## テスト結果（2026-07-04 時点）
 
-| 項目         | 結果      |
-| ------------ | --------- |
-| Test Files   | 18 passed |
-| Tests        | 82 passed |
-| typecheck    | 通過      |
-| format:check | 通過      |
+| 項目         | 結果       |
+| ------------ | ---------- |
+| Test Files   | 22 passed  |
+| Tests        | 195 passed |
+| typecheck    | 通過       |
+| format:check | 通過       |
 
 主なテスト対象:
 
@@ -48,10 +48,13 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `scan.test.ts` … 拡張子マップによる走査・カスタム拡張子・除外
 - `pipeline/buildPages.test.ts` … route / page id の重複検知
 - `pipeline/buildSidebar.test.ts` … フォルダ構造サイドバー
-- `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換（client / pre-render の SVG 化・グローバル一意 id・複雑 SVG の verbatim 保持・図単位エラーのソースフォールバック・環境エラー `MermaidPrerenderSetupError` の fail fast・renderer 未注入エラー）・shiki コードハイライト・admonition / GFM alert の共通構造化
+- `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換（client / pre-render の SVG 化・グローバル一意 id・複雑 SVG の verbatim 保持・図単位エラーのソースフォールバック・環境エラー `BrowserSetupError`（`MermaidPrerenderSetupError` を含む）の fail fast・renderer 未注入エラー）・shiki コードハイライト・admonition / GFM alert の共通構造化
 - `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・クライアント用ページデータ（目次/検索）
 - `themes/default/app.test.ts` … クライアント hash routing（happy-dom）
 - `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・コードブロックのコピー/折り返しトグル（happy-dom）
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e（Markdown / 混在 / v0.3 機能・validate）
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render（偽レンダラ注入で config 連携・SVG 埋め込みを検証。実 Chromium がある環境でだけ end-to-end 描画とランタイム未注入ゲートを確認）
-- `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入）
+- `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入・`serveSite` が pdf/both 設定でも HTML を配信し明示 `-o` を尊重すること）
+- `build.pdf.test.ts` … PDF 出力（v0.5。`resolveOutputs` の html/pdf/both 出力パス解決・偽 `PdfGenerator` 注入で format 分岐と設定（pageSize/margin/printBackground）連携・embedImages 上書き・しおり outline の受け渡しを browserless 検証。実 Chromium がある環境でだけ実際の PDF 生成＝`%PDF-` と `/Outlines`・`/UseOutlines` を確認）
+- `pipeline/pdfOutline.test.ts` … PDF しおり（`sidebarToOutline` のツリー変換・`collectDests`/`remapDests`・`addOutline` が `/Dests` を参照して フォルダ→ページ の `/Outlines` を構築し `/UseOutlines` を設定。宛先が無い/空ツリーは元 PDF を返す。pdf-lib のみで browserless）
+- `config.test.ts` … 設定解決（`pdf` スキーマの既定値・欠落余白の補完・未知キー拒否・不正 `--format` の拒否・format 別の既定出力パス を含む）

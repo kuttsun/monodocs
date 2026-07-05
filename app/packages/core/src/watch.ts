@@ -1,6 +1,6 @@
 import { existsSync, watch as fsWatch, type FSWatcher } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
-import { buildSite } from "./build.js";
+import { buildSite, resolveOutputs } from "./build.js";
 import { loadConfig } from "./config.js";
 import type { BuildOptions, BuildResult } from "./types.js";
 
@@ -35,9 +35,10 @@ export async function watchSite(
   const inputDir = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
   // 生成物への書き込みでイベントが発火し再ビルドが連鎖するのを避けるため、
   // 出力ファイルへの変更イベントは無視する（出力が入力配下にある場合の対策）。
-  const outputFile = isAbsolute(config.outputFile)
-    ? config.outputFile
-    : resolve(cwd, config.outputFile);
+  // both では html / pdf の両方が生成されるため、resolveOutputs で実際の出力集合を得る
+  // （config.outputFile は both のときディレクトリになりうる）。
+  const outputs = resolveOutputs(config, cwd);
+  const outputFiles = new Set<string>([outputs.html, outputs.pdf].filter((p): p is string => !!p));
 
   // 入力ディレクトリが無ければ監視を確立できないため、ここで失敗させる
   // （CLI 側で「Watching…」と表示したまま無反応になるのを防ぐ）。
@@ -86,7 +87,7 @@ export async function watchSite(
       // 出力ファイル自身への書き込みは無視（自己再ビルドループ防止）。
       if (filename) {
         const changed = resolve(baseDir, filename.toString());
-        if (changed === outputFile) return;
+        if (outputFiles.has(changed)) return;
       }
       schedule();
     };

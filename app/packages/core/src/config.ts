@@ -6,7 +6,6 @@ import { z } from "zod";
 import type { BuildOptions, OutputFormat, SidebarTitleTransforms, TitleFrom } from "./types.js";
 
 const DEFAULT_INPUT = "./docs";
-const DEFAULT_OUTPUT = "./dist/manual.html";
 const DEFAULT_TITLE = "Documentation";
 const DEFAULT_MARKDOWN_EXTENSIONS = [".md", ".markdown"];
 const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
@@ -17,6 +16,18 @@ const DEFAULT_MAX_INLINE_SIZE = 5 * 1024 * 1024; // 5MB
 const DEFAULT_CONTENT_WIDTH = "860px";
 // ページ内目次に出す見出しの最深レベル（h2〜h3）。h1 はページタイトル相当のため常に除外。
 const DEFAULT_TOC_MAX_LEVEL = 3;
+// PDF（v0.5）の既定値。pageSize は Puppeteer の `format` 値、margin は CSS 長さ。
+const DEFAULT_PDF_PAGE_SIZE = "A4";
+const DEFAULT_PDF_MARGIN = { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" };
+
+/** `-o` / 設定の output.path が未指定のときの既定出力パス（format 別）。 */
+function defaultOutputFor(format: OutputFormat): string {
+  if (format === "pdf") return "./dist/manual.pdf";
+  // both は `-o` をディレクトリ扱いにするため、既定はディレクトリ（./dist）。
+  // build 側の resolveOutputs が manual.html / manual.pdf を生成する。
+  if (format === "both") return "./dist";
+  return "./dist/manual.html";
+}
 
 /** 画像の最大インラインサイズ超過時の挙動。 */
 export type OnLargeImage = "warn" | "error" | "external";
@@ -133,9 +144,33 @@ const configFileSchema = z.object({
       colorScheme: z.enum(["light", "dark", "auto"]).optional(),
     })
     .optional(),
+  pdf: z
+    .object({
+      // Puppeteer の page.pdf `format`（"A4" / "Letter" など）。既定は "A4"。
+      pageSize: z.string().optional(),
+      // ページ余白（CSS 長さ。"20mm" など）。省略した辺は既定値を使う。
+      margin: z
+        .object({
+          top: z.string().optional(),
+          right: z.string().optional(),
+          bottom: z.string().optional(),
+          left: z.string().optional(),
+        })
+        .strict()
+        .optional(),
+      // 背景色・背景画像を印刷するか（既定 true）。
+      printBackground: z.boolean().optional(),
+      // PDF のしおり（HTML サイドバーと同じ フォルダ→ページ 構造）を付与するか（既定 true）。
+      bookmarks: z.boolean().optional(),
+    })
+    .strict()
+    .optional(),
 });
 
 export type ConfigFile = z.infer<typeof configFileSchema>;
+
+/** PDF のページ余白（各辺 CSS 長さ）。 */
+export type PdfMargin = { top: string; right: string; bottom: string; left: string };
 
 /** 設定ファイルと CLI オプションを統合した、解決済みの設定。 */
 export type ResolvedConfig = {
@@ -170,6 +205,14 @@ export type ResolvedConfig = {
   mermaidMode: MermaidMode;
   mermaidRuntime: MermaidRuntime;
   codeHighlight: boolean;
+  /** PDF の用紙サイズ（Puppeteer の page.pdf `format`。既定 "A4"）。 */
+  pdfPageSize: string;
+  /** PDF のページ余白（各辺 CSS 長さ）。 */
+  pdfMargin: PdfMargin;
+  /** PDF に背景色・背景画像を含めるか（既定 true）。 */
+  pdfPrintBackground: boolean;
+  /** PDF にしおり（サイドバーと同じ構造）を付与するか（既定 true）。 */
+  pdfBookmarks: boolean;
 };
 
 /**
@@ -281,6 +324,13 @@ export async function loadConfig(
 
   const configBaseDir = configPath ? dirname(configPath) : cwd;
 
+  // 設定ファイルの output.format は zod で検証済みだが、CLI の --format は生文字列で渡るため
+  // ここで検証する（不正値が resolveOutputs の both 分岐へ落ちるのを防ぐ）。
+  const format = options.format ?? fileConfig.output?.format ?? "html";
+  if (format !== "html" && format !== "pdf" && format !== "both") {
+    throw new Error(`Invalid output format: "${format}" (expected "html", "pdf", or "both").`);
+  }
+
   return {
     configFilePath: configPath,
     title: fileConfig.title ?? DEFAULT_TITLE,
@@ -289,8 +339,8 @@ export async function loadConfig(
       resolveConfigRelativePath(configBaseDir, fileConfig.input ?? DEFAULT_INPUT),
     outputFile:
       options.outputFile ??
-      resolveConfigRelativePath(configBaseDir, fileConfig.output?.path ?? DEFAULT_OUTPUT),
-    format: options.format ?? fileConfig.output?.format ?? "html",
+      resolveConfigRelativePath(configBaseDir, fileConfig.output?.path ?? defaultOutputFor(format)),
+    format,
     markdownExtensions: fileConfig.sources?.markdown?.extensions ?? DEFAULT_MARKDOWN_EXTENSIONS,
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
@@ -314,5 +364,14 @@ export async function loadConfig(
     // サイズ最小化したい場合のみ cdn を選ぶ。
     mermaidRuntime: fileConfig.mermaid?.runtime ?? "inline",
     codeHighlight: fileConfig.highlight?.enabled ?? true,
+    pdfPageSize: fileConfig.pdf?.pageSize ?? DEFAULT_PDF_PAGE_SIZE,
+    pdfMargin: {
+      top: fileConfig.pdf?.margin?.top ?? DEFAULT_PDF_MARGIN.top,
+      right: fileConfig.pdf?.margin?.right ?? DEFAULT_PDF_MARGIN.right,
+      bottom: fileConfig.pdf?.margin?.bottom ?? DEFAULT_PDF_MARGIN.bottom,
+      left: fileConfig.pdf?.margin?.left ?? DEFAULT_PDF_MARGIN.left,
+    },
+    pdfPrintBackground: fileConfig.pdf?.printBackground ?? true,
+    pdfBookmarks: fileConfig.pdf?.bookmarks ?? true,
   };
 }

@@ -11,13 +11,15 @@
 # （ホスト環境を汚さず、リビルド不要で最新コードを扱える）。
 FROM node:22-bookworm-slim
 
-# Mermaid の pre-render（mermaid.mode: pre-render）は puppeteer-core 経由で
-# ヘッドレス Chromium を起動する。巨大な puppeteer 同梱 Chromium を落とさず distro の
-# chromium を使い、実行パスを固定する（puppeteer-core は Chromium を同梱しない）。
-# fonts-noto-cjk は日本語（CJK）フォント。日本語ラベルを含む図の pre-render や、
-# Chromium でのプレビュー描画で文字が豆腐（□）にならないようにする。
+# Mermaid の pre-render（mermaid.mode: pre-render）と PDF 出力（--format pdf/both）は
+# puppeteer-core 経由でヘッドレス Chromium を起動する。巨大な puppeteer 同梱 Chromium を
+# 落とさず distro の chromium を使い、実行パスを固定する（puppeteer-core は Chromium を同梱しない）。
+# フォントは Chromium がシステムフォントを使うため、PDF に出したい文字種の分だけ必要:
+# - fonts-noto-cjk … 日本語（CJK）。図の pre-render や本文が豆腐（□）にならないように。
+# - fonts-noto-color-emoji … 絵文字（✅ / ⚠️ など）。無いと PDF で豆腐（☒）になる。
 RUN apt-get update \
- && apt-get install -y --no-install-recommends chromium fonts-liberation fonts-noto-cjk \
+ && apt-get install -y --no-install-recommends \
+      chromium fonts-liberation fonts-noto-cjk fonts-noto-color-emoji \
  && rm -rf /var/lib/apt/lists/*
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     PUPPETEER_SKIP_DOWNLOAD=true

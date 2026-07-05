@@ -236,4 +236,59 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     await writeConfig("html:\n  colorScheme: sepia\n");
     await expect(loadConfig({}, dir)).rejects.toThrow();
   });
+
+  it("defaults PDF settings to A4 / 20-15-20-15mm / printBackground / bookmarks", async () => {
+    const config = await loadConfig({}, dir);
+    expect(config.pdfPageSize).toBe("A4");
+    expect(config.pdfMargin).toEqual({
+      top: "20mm",
+      right: "15mm",
+      bottom: "20mm",
+      left: "15mm",
+    });
+    expect(config.pdfPrintBackground).toBe(true);
+    expect(config.pdfBookmarks).toBe(true);
+  });
+
+  it("reads pdf.bookmarks: false from the config file", async () => {
+    await writeConfig("pdf:\n  bookmarks: false\n");
+    expect((await loadConfig({}, dir)).pdfBookmarks).toBe(false);
+  });
+
+  it("reads pdf settings and fills omitted margins with defaults", async () => {
+    await writeConfig(
+      "pdf:\n  pageSize: Letter\n  printBackground: false\n  margin:\n    top: 10mm\n    bottom: 30mm\n",
+    );
+    const config = await loadConfig({}, dir);
+    expect(config.pdfPageSize).toBe("Letter");
+    expect(config.pdfPrintBackground).toBe(false);
+    expect(config.pdfMargin).toEqual({
+      top: "10mm",
+      right: "15mm",
+      bottom: "30mm",
+      left: "15mm",
+    });
+  });
+
+  it("rejects unknown keys under pdf", async () => {
+    await writeConfig("pdf:\n  orientation: landscape\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+  });
+
+  it("rejects an invalid --format value (raw CLI string)", async () => {
+    await expect(loadConfig({ format: "docx" as unknown as "html" }, dir)).rejects.toThrow(
+      /invalid output format/i,
+    );
+  });
+
+  it("uses a format-appropriate default output path", async () => {
+    expect((await loadConfig({ format: "html" }, dir)).outputFile).toBe(
+      join(dir, "dist", "manual.html"),
+    );
+    expect((await loadConfig({ format: "pdf" }, dir)).outputFile).toBe(
+      join(dir, "dist", "manual.pdf"),
+    );
+    // both はディレクトリ扱いの既定（build 側で manual.html / manual.pdf を生成）。
+    expect((await loadConfig({ format: "both" }, dir)).outputFile).toBe(join(dir, "dist"));
+  });
 });

@@ -5,7 +5,12 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildSite, preparePages } from "./build";
 import { loadConfig } from "./config";
-import type { MermaidPrerenderer } from "./pipeline/mermaidPrerender";
+import {
+  createPuppeteerPrerenderer,
+  MermaidPrerenderSetupError,
+  type MermaidPrerenderer,
+} from "./pipeline/mermaidPrerender";
+import { BrowserSetupError } from "./pipeline/browser";
 
 let dir: string;
 let docs: string;
@@ -48,6 +53,26 @@ describe("buildSite - mermaid pre-render (browserless via injected renderer)", (
     expect(prepared.pages[0]!.html).toContain('<figure class="mermaid"><svg id="mermaid-0">');
     expect(prepared.pages[0]!.html).not.toContain("language-mermaid");
   });
+
+  it("throws MermaidPrerenderSetupError (a BrowserSetupError) when the browser cannot launch", async () => {
+    const prev = process.env.PUPPETEER_EXECUTABLE_PATH;
+    // 存在しない実行パスを指定して起動失敗させる（resolveChromiumPath は env をそのまま返す）。
+    process.env.PUPPETEER_EXECUTABLE_PATH = "/nonexistent/monodocs-no-chromium";
+    try {
+      const renderer = createPuppeteerPrerenderer({ colorScheme: "light" });
+      const err = await renderer.render("mermaid-0", "graph TD; A-->B").then(
+        () => undefined,
+        (e) => e as Error,
+      );
+      await renderer.close();
+      expect(err).toBeInstanceOf(MermaidPrerenderSetupError);
+      // postprocess の fail fast（instanceof BrowserSetupError）に載る型であること。
+      expect(err).toBeInstanceOf(BrowserSetupError);
+    } finally {
+      if (prev === undefined) delete process.env.PUPPETEER_EXECUTABLE_PATH;
+      else process.env.PUPPETEER_EXECUTABLE_PATH = prev;
+    }
+  }, 20_000);
 });
 
 // 実 Chromium が要るため、存在するときだけ end-to-end で描画とゲートを確認する。

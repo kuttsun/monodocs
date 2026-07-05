@@ -1,7 +1,8 @@
 import { createServer, type Server, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
-import { isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { loadConfig } from "./config.js";
+import { resolveOutputs } from "./build.js";
 import { watchSite, type WatchHandle } from "./watch.js";
 import type { BuildOptions, BuildResult } from "./types.js";
 
@@ -57,10 +58,23 @@ export async function serveSite(
   callbacks: ServeCallbacks = {},
 ): Promise<ServeHandle> {
   const cwd = process.cwd();
-  const config = await loadConfig(options, cwd);
-  const outputFile = isAbsolute(config.outputFile)
-    ? config.outputFile
-    : resolve(cwd, config.outputFile);
+  // serve はプレビュー用途なので、設定が pdf / both でも HTML を配信する（PDF を毎回
+  // 生成しない）。HTML の出力先を決め、その場所へ format=html で固定ビルドさせる。
+  let outputFile: string;
+  if (options.outputFile) {
+    // 明示 -o は HTML ファイルとして尊重する（serve は HTML を配信するため）。
+    outputFile = isAbsolute(options.outputFile)
+      ? options.outputFile
+      : resolve(cwd, options.outputFile);
+  } else {
+    // -o 未指定なら設定どおりに解決し、出力パスの意味（both のディレクトリ扱い等）を保つ。
+    // both は resolved.html（例: dist/manual.html）、pdf は PDF と同じ場所の manual.html を使う。
+    const baseConfig = await loadConfig(options, cwd);
+    const resolved = resolveOutputs(baseConfig, cwd);
+    outputFile = resolved.html ?? join(resolved.pdf ? dirname(resolved.pdf) : cwd, "manual.html");
+  }
+  // 実ビルドは HTML に固定し、上で決めた場所へ出力させる（pdf / both でも Chromium 不使用）。
+  const serveOptions: ServeOptions = { ...options, format: "html", outputFile };
 
   const port = options.port ?? DEFAULT_PORT;
   const host = options.host ?? DEFAULT_HOST;
@@ -76,8 +90,9 @@ export async function serveSite(
     for (const res of clients) res.write("data: reload\n\n");
   }
 
-  // 監視 + 再ビルド。初回ビルドは watchSite 内で完了する。
-  const watcher: WatchHandle = await watchSite(options, {
+  // 監視 + 再ビルド。初回ビルドは watchSite 内で完了する。serveOptions（format 固定）で
+  // ビルドさせることで、pdf / both 設定でも HTML のみを生成・配信する。
+  const watcher: WatchHandle = await watchSite(serveOptions, {
     onRebuild: (result) => {
       void reload().then(broadcastReload);
       callbacks.onRebuild?.(result);

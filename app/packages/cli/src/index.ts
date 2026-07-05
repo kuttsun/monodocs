@@ -36,9 +36,12 @@ program
 
 program
   .command("build")
-  .description("ドキュメントをビルドして単一 HTML を生成する")
+  .description("ドキュメントをビルドして単一 HTML / PDF を生成する")
   .argument("[input]", "入力ディレクトリ（既定: ./docs）")
-  .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
+  .option(
+    "-o, --output <path>",
+    "出力先（html: ファイル / pdf: ファイル / both: ディレクトリ。既定: ./dist/manual.html）",
+  )
   .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .option("-f, --format <format>", "出力形式 html | pdf | both（既定: html）")
   .action(

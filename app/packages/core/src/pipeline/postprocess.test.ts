@@ -397,7 +397,9 @@ describe("postprocessPages - admonitions", () => {
     ];
     await postprocessPages(pages, baseOptions);
     expect(pages[0]!.html).toContain('class="admonition admonition-note"');
-    expect(pages[0]!.html).toContain('class="admonition-title">Note<');
+    // タイトルはインライン SVG アイコン（PDF 全ビューア対応）＋ ラベル。
+    expect(pages[0]!.html).toContain('class="admonition-icon"');
+    expect(pages[0]!.html).toContain("Note</p>");
     expect(pages[0]!.html).toContain("Useful information.");
     // マーカーのリテラルは残さない。
     expect(pages[0]!.html).not.toContain("[!NOTE]");
@@ -413,7 +415,8 @@ describe("postprocessPages - admonitions", () => {
     ];
     await postprocessPages(pages, baseOptions);
     expect(pages[0]!.html).toContain('class="admonition admonition-warning"');
-    expect(pages[0]!.html).toContain('class="admonition-title">Warning<');
+    expect(pages[0]!.html).toContain('class="admonition-icon"');
+    expect(pages[0]!.html).toContain("Warning</p>");
     expect(pages[0]!.html).toContain("Be careful.");
     // マーカーだけの空段落は残さない。
     expect(pages[0]!.html).not.toContain("<p></p>");
@@ -453,7 +456,8 @@ describe("postprocessPages - admonitions", () => {
     const pages: Page[] = [page({ relativePath: "a.adoc", route: "/a", html })];
     await postprocessPages(pages, baseOptions);
     expect(pages[0]!.html).toContain('class="admonition admonition-warning"');
-    expect(pages[0]!.html).toContain('class="admonition-title">Warning<');
+    expect(pages[0]!.html).toContain('class="admonition-icon"');
+    expect(pages[0]!.html).toContain("Warning</p>");
     expect(pages[0]!.html).toContain("block warning.");
     // テーブル構造は残さない。
     expect(pages[0]!.html).not.toContain("admonitionblock");
