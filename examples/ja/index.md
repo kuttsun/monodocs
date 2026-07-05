@@ -21,9 +21,13 @@ order: 1
 ## ビルド / プレビュー
 
 ```bash
-monodocs build examples/ja -o dist/showcase.html
+monodocs build examples/ja -o dist/showcase.html   # 単一 HTML
+monodocs build examples/ja --format pdf -o dist/showcase.pdf   # PDF
 monodocs serve examples/ja            # http://127.0.0.1:4173/
 ```
+
+単一 HTML を経由した **PDF 出力**（しおり・本文リンク・フォント要件など）は
+[PDF 出力](pdf.md)を参照してください。
 
 ## このサイトで確認できる機能
 
@@ -32,4 +36,4 @@ monodocs serve examples/ja            # http://127.0.0.1:4173/
 - コードハイライト（shiki）/ Mermaid 図
 - 画像の data URI 埋め込み / ファイル間リンク・AsciiDoc xref / 脚注
 - 本文幅より広い表・コード・画像・図の表示（[Markdown](markdown/wide-content.md) / [AsciiDoc](asciidoc/wide-content.adoc)）
-- 印刷時の全ページ縦展開
+- 印刷時の全ページ縦展開 / [PDF 出力](pdf.md)（しおり・クリック可能なリンク付き）

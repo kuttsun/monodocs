@@ -21,9 +21,13 @@ also converted into hash routes within the single HTML (mixed support).
 ## Build / preview
 
 ```bash
-monodocs build examples/en -o dist/showcase.html
+monodocs build examples/en -o dist/showcase.html   # single HTML
+monodocs build examples/en --format pdf -o dist/showcase.pdf   # PDF
 monodocs serve examples/en            # http://127.0.0.1:4173/
 ```
+
+For **PDF output** via the single HTML (bookmarks, in-content links, font requirements,
+and more), see [PDF output](pdf.md).
 
 ## Features you can check on this site
 
@@ -32,4 +36,4 @@ monodocs serve examples/en            # http://127.0.0.1:4173/
 - Code highlighting (shiki) / Mermaid diagrams
 - Image data URI embedding / cross-file links & AsciiDoc xref / footnotes
 - Tables, code, images, and diagrams wider than the body width ([Markdown](markdown/wide-content.md) / [AsciiDoc](asciidoc/wide-content.adoc))
-- Full vertical expansion of all pages when printing
+- Full vertical expansion of all pages when printing / [PDF output](pdf.md) (with bookmarks and clickable links)
