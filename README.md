@@ -185,4 +185,9 @@ html:
 
 ## ライセンス
 
-未定（TBD）。
+[MIT License](LICENSE) © 2026 kuttsun
+
+単一ファイル配布物（`dist/monodocs.cjs` および SEA バイナリ）は依存ライブラリを埋め込むため、
+ビルド時に第三者ライセンスをまとめた `dist/THIRD-PARTY-NOTICES.txt` を生成し、配布物に添付します
+（`pnpm bundle` / `pnpm build:bin` で出力）。埋め込む依存はすべて寛容ライセンス（MIT / ISC / BSD /
+Apache-2.0 等）で、`dompurify` のみ `MPL-2.0 OR Apache-2.0` のうち Apache-2.0 を選択しています。

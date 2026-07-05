@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "description": "monodocs 公式サイト（ランディング + ドキュメント + 単一HTMLデモ）",
   "private": true,
+  "license": "MIT",
+  "author": "kuttsun",
   "type": "module",
   "scripts": {
     "docs:dev": "vitepress dev --host",

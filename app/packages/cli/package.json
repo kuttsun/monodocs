@@ -2,13 +2,34 @@
   "name": "monodocs",
   "version": "0.0.0",
   "private": true,
-  "description": "monodocs CLI",
+  "description": "monodocs CLI — 複数の Markdown / AsciiDoc を単一の自己完結 HTML / PDF にまとめる",
+  "license": "MIT",
+  "author": "kuttsun",
+  "homepage": "https://gitlab.com/kuttsun/monodocs",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/kuttsun/monodocs.git",
+    "directory": "app/packages/cli"
+  },
+  "bugs": {
+    "url": "https://gitlab.com/kuttsun/monodocs/-/issues"
+  },
+  "keywords": [
+    "markdown",
+    "asciidoc",
+    "documentation",
+    "single-file",
+    "html",
+    "pdf",
+    "cli"
+  ],
   "type": "module",
   "bin": {
     "monodocs": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

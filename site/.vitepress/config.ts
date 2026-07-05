@@ -18,6 +18,10 @@ import { defineConfig } from 'vitepress'
 
 const repo = 'https://gitlab.com/kuttsun/monodocs'
 
+// GitLab Pages の project pages はサブパス配信（例 /monodocs/）。footer の生 HTML リンクは
+// VitePress のルーティングを経由しないため、base を明示的に前置してリンク切れを防ぐ。
+const base = process.env.SITE_BASE ?? '/'
+
 // GitLab ロゴ（socialLinks 用のカスタム svg）。
 const gitlabIcon = {
   svg: '<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>GitLab</title><path d="m23.6 9.6-.03-.08-3.26-8.5a.85.85 0 0 0-.84-.54.85.85 0 0 0-.5.2.85.85 0 0 0-.28.43l-2.2 6.74H7.5L5.3 1.1A.84.84 0 0 0 4.5.55a.85.85 0 0 0-.5.2.85.85 0 0 0-.27.42L.46 9.52l-.03.08a6.05 6.05 0 0 0 2.01 7l.01.01.04.03 4.96 3.71 2.45 1.86 1.5 1.13a1 1 0 0 0 1.2 0l1.5-1.13 2.45-1.86 4.99-3.73.01-.01a6.05 6.05 0 0 0 2-7Z"/></svg>'
@@ -26,7 +30,7 @@ const gitlabIcon = {
 export default defineConfig({
   // GitHub / GitLab の project pages はサブパス（例 /monodocs/）で配信されるため、
   // base はビルド時に SITE_BASE で切り替える。独自ドメイン / user pages なら '/'。
-  base: process.env.SITE_BASE ?? '/',
+  base,
 
   // 拡張子なし URL。
   cleanUrls: true,
@@ -52,6 +56,7 @@ export default defineConfig({
         nav: [
           { text: 'Home', link: '/' },
           { text: 'Guide', link: '/docs/getting-started' },
+          { text: 'License', link: '/docs/license' },
           { text: 'Single-file demo', link: '/manual.html', target: '_blank', rel: 'noopener' }
         ],
 
@@ -64,12 +69,16 @@ export default defineConfig({
                 { text: 'Command Options', link: '/docs/commands' },
                 { text: 'Configuration', link: '/docs/configuration' }
               ]
+            },
+            {
+              text: 'About',
+              items: [{ text: 'License', link: '/docs/license' }]
             }
           ]
         },
 
         footer: {
-          message: 'Released under the MIT License.',
+          message: `Released under the <a href="${base}docs/license">MIT License</a>.`,
           copyright: `Copyright © ${new Date().getFullYear()} kuttsun`
         }
       }
@@ -87,6 +96,7 @@ export default defineConfig({
         nav: [
           { text: 'ホーム', link: '/ja/' },
           { text: 'ガイド', link: '/ja/docs/getting-started' },
+          { text: 'ライセンス', link: '/ja/docs/license' },
           { text: '単一ファイルデモ', link: '/ja/manual.html', target: '_blank', rel: 'noopener' }
         ],
 
@@ -99,12 +109,16 @@ export default defineConfig({
                 { text: 'コマンドオプション', link: '/ja/docs/commands' },
                 { text: '設定ファイル', link: '/ja/docs/configuration' }
               ]
+            },
+            {
+              text: 'このプロジェクトについて',
+              items: [{ text: 'ライセンス', link: '/ja/docs/license' }]
             }
           ]
         },
 
         footer: {
-          message: 'MIT License で公開しています。',
+          message: `<a href="${base}ja/docs/license">MIT License</a> で公開しています。`,
           copyright: `Copyright © ${new Date().getFullYear()} kuttsun`
         },
 

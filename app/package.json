@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "description": "複数の Markdown / AsciiDoc から単一 HTML / PDF を生成するドキュメントジェネレータ",
+  "license": "MIT",
+  "author": "kuttsun",
   "type": "module",
   "packageManager": "pnpm@11.9.0",
   "engines": {
