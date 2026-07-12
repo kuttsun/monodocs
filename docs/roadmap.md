@@ -18,7 +18,7 @@
 * Mermaid などの図表記法に対応する
 * GitHub Flavored Markdown に対応する
 * 単一 HTML を元に PDF 出力できる
-* CLI / npm / Docker / GitHub Actions / VS Code 拡張など複数の提供形態を想定する
+* CLI / npm / GitHub Actions / VS Code 拡張など複数の提供形態を想定する
 
 `monodocs` は Pandoc の代替を直接目指すものではない。
 主目的は、**単一ファイル配布に特化した軽量ドキュメントジェネレータ**を作ることである。
@@ -82,7 +82,6 @@ dist/
 ### 3.3 長期目標
 
 * VS Code 拡張として提供する
-* Docker イメージを提供する
 * GitHub Actions として利用できるようにする
 * 単体バイナリを提供する
 * テーマやレイアウトを拡張可能にする
@@ -1793,7 +1792,6 @@ Markdown / AsciiDoc の混在ドキュメントを単一 HTML に出力できる
 実装範囲：
 
 * npm パッケージ公開準備
-* Docker イメージ作成
 * GitHub Actions 作成
 * GitLab CI サンプル
 * README 整備
@@ -1803,9 +1801,11 @@ Markdown / AsciiDoc の混在ドキュメントを単一 HTML に出力できる
 完了条件：
 
 * npm からインストールできる
-* Docker で実行できる
 * GitHub Actions で HTML / PDF を生成できる
 * サンプルプロジェクトを見て導入できる
+
+利用者向け Docker イメージは提供しない。開発・テスト環境で使用する既存の専用 Docker イメージは
+引き続き維持する。
 
 ---
 

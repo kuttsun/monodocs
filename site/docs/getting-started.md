@@ -1,6 +1,6 @@
 # Getting Started
 
-> **Status: v0.4** — monodocs generates a single HTML from Markdown / AsciiDoc (link conversion, image embedding, Mermaid, in-page search, TOC, dark mode, `watch` / `serve`). PDF output is planned (v0.5); npm / Docker distribution is planned (v0.6).
+> **Status: v0.4** — monodocs generates a single HTML from Markdown / AsciiDoc (link conversion, image embedding, Mermaid, in-page search, TOC, dark mode, `watch` / `serve`). PDF output is planned (v0.5); npm distribution is planned (v0.6).
 
 monodocs turns a directory of Markdown / AsciiDoc files into **one self-contained HTML file**. You keep your documentation split across many files; only the distributed artifact is bundled into a single file.
 

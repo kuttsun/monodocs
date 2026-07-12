@@ -1,6 +1,6 @@
 # はじめに
 
-> **Status: v0.4** — Markdown / AsciiDoc から単一 HTML を生成できます（リンク変換・画像埋め込み・Mermaid・ページ内検索・目次・ダークモード・`watch` / `serve`）。PDF 出力は v0.5、npm / Docker 配布は v0.6 で対応予定です。
+> **Status: v0.4** — Markdown / AsciiDoc から単一 HTML を生成できます（リンク変換・画像埋め込み・Mermaid・ページ内検索・目次・ダークモード・`watch` / `serve`）。PDF 出力は v0.5、npm 配布は v0.6 で対応予定です。
 
 monodocs は Markdown / AsciiDoc のディレクトリを **単一の自己完結 HTML** にまとめる CLI ツールです。ドキュメントは複数ファイルに分割して管理しながら、配布物だけを 1 ファイル化します。
 

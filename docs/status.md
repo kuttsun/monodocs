@@ -12,7 +12,7 @@
 | リンク変換 / 画像埋め込み / Mermaid | ✅ 完了 | v0.3           |
 | 検索 / 目次 / watch / serve         | ✅ 完了 | v0.4           |
 | PDF 出力                            | ✅ 完了 | v0.5           |
-| npm / Docker / GitHub Actions       | 🚧 予定 | v0.6           |
+| npm / GitHub Actions                | 🚧 予定 | v0.6           |
 | VS Code 拡張                        | 🚧 予定 | v0.7           |
 
 ## 完了条件の達成状況
