@@ -43,6 +43,28 @@
 `monodocs` は Pandoc の代替を直接目指すものではなく、
 **単一ファイル配布に特化した軽量ドキュメントジェネレータ**を目指します。
 
+## 対応環境
+
+v0.6 は **npm パッケージのみ**を配布し、Node.js 22 以上で動作させます。初期対応対象は
+Linux x64 と Windows x64 とし、ベータ公開前に GitHub Actions で両環境の主要機能を検証します。
+Linux arm64 と macOS arm64 は、継続検証できる環境を用意した段階で追加を判断します。
+
+| 項目                            | 初期サポート方針                                    |
+| ------------------------------- | --------------------------------------------------- |
+| 配布方法                        | npm（`npm install` / `npx`）のみ                    |
+| Node.js                         | 22 以上                                             |
+| HTML / validate / watch / serve | Linux x64、Windows x64                              |
+| PDF / pre-render                | システムにインストールされた Chromium が必要        |
+| SEA 単体バイナリ                | v0.6 の対象外。npm 安定版の公開後に改めて検討       |
+
+`monodocs` は Chromium を自動ダウンロードしません。PDF 出力と Mermaid pre-render では、
+`PUPPETEER_EXECUTABLE_PATH` で実行ファイルを明示するか、Linux の標準的な配置場所にある
+Chromium / Google Chrome を使用します。開発用 Docker イメージには Chromium が含まれます。
+
+Windows では自動探索する Chromium のパスをまだ定義していないため、PDF 出力と Mermaid
+pre-render を使う場合は `PUPPETEER_EXECUTABLE_PATH` の指定が必要です。SEA 単体バイナリの
+配布は、npm 版の公開・運用が安定した後の将来対応とします。
+
 ## 使い方
 
 入力は Markdown / AsciiDoc を混在できます。フォルダ構造がそのままサイドバーになります。
@@ -203,7 +225,7 @@ html:
 
 [MIT License](LICENSE) © 2026 kuttsun
 
-単一ファイル配布物（`dist/monodocs.cjs` および SEA バイナリ）は依存ライブラリを埋め込むため、
-ビルド時に第三者ライセンスをまとめた `dist/THIRD-PARTY-NOTICES.txt` を生成し、配布物に添付します
-（`pnpm bundle` / `pnpm build:bin` で出力）。埋め込む依存はすべて寛容ライセンス（MIT / ISC / BSD /
+npm 公開物の `dist/monodocs.cjs` には依存ライブラリをバンドルするため、ビルド時に第三者ライセンスを
+まとめた `dist/THIRD-PARTY-NOTICES.txt` を生成し、配布物に添付します（`pnpm bundle` で出力）。
+埋め込む依存はすべて寛容ライセンス（MIT / ISC / BSD /
 Apache-2.0 等）で、`dompurify` のみ `MPL-2.0 OR Apache-2.0` のうち Apache-2.0 を選択しています。
