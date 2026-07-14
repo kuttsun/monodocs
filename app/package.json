@@ -18,7 +18,8 @@
     "test:watch": "vitest",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "ci:check": "pnpm format:check && pnpm build && pnpm typecheck && pnpm test && pnpm bundle"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -1,6 +1,6 @@
 # OSS・npm 公開ロードマップ
 
-最終更新: 2026-07-13
+最終更新: 2026-07-14
 
 ## 1. 目的
 
@@ -23,6 +23,8 @@ npm 公開に先行して、GitHub Releases から単体バイナリを試験配
 ## 2. 基本方針
 
 - ソースコードは MIT License で公開する。
+- 正式な公開基盤は GitHub とし、現在の GitLab リポジトリから段階的に移行する。
+- 移行完了までは GitLab を開発基盤として維持し、GitHub 固有のリリース自動化は移行後に構築する。
 - バージョンには Semantic Versioning を使用する。
 - 公開済みの成果物は差し替えず、不具合は新しいバージョンで修正する。
 - npm の初回公開では CLI パッケージ `monodocs` のみを公開する。
@@ -34,6 +36,28 @@ npm 公開に先行して、GitHub Releases から単体バイナリを試験配
 
 ## 3. 現状と解決すべき課題
 
+### 3.1 GitHub への移行
+
+現在は GitLab をソースリポジトリ、CI、Pages の基盤として利用しており、package metadata も
+GitLab の URL を参照している。正式な OSS 公開基盤は GitHub とするが、移行が完了するまでは
+既存の GitLab 運用を維持する。
+
+GitHub への移行は M2 の完了および M3 のリリース開始より前に行い、次を同じ移行単位で更新する。
+
+- Git remote とデフォルトブランチ
+- `homepage`、`repository`、`bugs` の URL
+- GitHub Actions の Pull Request CI
+- GitHub Releases と Artifact Attestations
+- npm Trusted Publishing
+- Issue / Pull Request template と非公開の脆弱性報告経路
+- README、公式サイト、開発文書内のリポジトリ URL
+
+移行までは `.gitlab-ci.yml` の Pages 配信を維持する。将来破棄する GitLab 固有のリリース処理は
+増やさず、format、typecheck、test、build、bundle などの検証手順は package scripts として
+プラットフォーム非依存に保つ。
+
+### 3.2 npm パッケージ構造
+
 現在の CLI は非公開の `@monodocs/core` に `workspace:*` で依存している。
 
 ```text
@@ -44,7 +68,9 @@ monodocs CLI
 このままでは CLI だけを npm に公開できない。初回公開では core の公開 API を確定せず、CLI の
 成果物へバンドルして単一パッケージとして配布する。
 
-また、現在の SEA バイナリは `puppeteer-core` を外部依存にしているため、次の制限がある。
+### 3.3 SEA バイナリの制限
+
+現在の SEA バイナリは `puppeteer-core` を外部依存にしているため、次の制限がある。
 
 | 機能                    | SEA バイナリ | npm 版の目標 |
 | ----------------------- | ------------ | ------------ |
@@ -72,13 +98,14 @@ monodocs CLI
 
 ### 5.1 決定事項
 
-- [ ] 正式なソースリポジトリを GitHub または GitLab のどちらかに統一する。
+- [x] 正式な公開基盤を GitHub とし、現在の GitLab リポジトリから段階的に移行する。
+- [ ] GitHub への移行を完了し、正式なソースリポジトリを一本化する。
 - [ ] `homepage`、`repository`、`bugs`の URL を正式なリポジトリへ統一する。
-- [ ] npm のパッケージ名を `monodocs` とする。
+- [x] npm のパッケージ名を `monodocs` とする。
 - [ ] npm registry でパッケージ名を利用できることを最終確認する。
 - [ ] npm パッケージの所有者を個人または Organization のどちらにするか決める。
 - [ ] npm の公開権限を持つメンテナーを決める。
-- [ ] 初回は CLI のみを公開し、core は内部パッケージとして維持する方針を確定する。
+- [x] 初回は CLI のみを公開し、core は内部パッケージとして維持する方針を確定する。
 - [ ] サポートする Node.js バージョンを決める。
 - [ ] サポートする OS / CPU を決める。
 - [ ] PDF 用 Chromium の対応・探索・設定方針を決める。
@@ -96,13 +123,13 @@ monodocs CLI
 ### 6.1 ドキュメント
 
 - [ ] `README.md` にインストール、基本操作、対応環境、既知の制限を記載する。
-- [ ] `LICENSE` に MIT License が正しく記載されていることを確認する。
-- [ ] `CONTRIBUTING.md` を追加する。
-- [ ] `SECURITY.md` を追加する。
+- [x] `LICENSE` に MIT License が正しく記載されていることを確認する。
+- [x] `CONTRIBUTING.md` を追加する。
+- [x] `SECURITY.md` を追加する。
 - [ ] CHANGELOG または GitHub Releases のどちらを変更履歴の正本とするか決める。
 - [ ] 必要に応じて `CODE_OF_CONDUCT.md` を追加する。
-- [ ] サポート範囲と SLA を提供しないことを明記する。
-- [ ] コントリビューションが MIT License で提供されることを明記する。
+- [x] サポート範囲と SLA を提供しないことを明記する。
+- [x] コントリビューションが MIT License で提供されることを明記する。
 
 ### 6.2 リポジトリ運用
 
@@ -130,16 +157,16 @@ monodocs CLI
 ```text
 pnpm install --frozen-lockfile
 pnpm format:check
+pnpm build
 pnpm typecheck
 pnpm test
-pnpm build
 pnpm bundle
 ```
 
 - [ ] format check を実行する。
+- [ ] workspace 全体をビルドする。
 - [ ] typecheck を実行する。
 - [ ] 全テストを実行する。
-- [ ] workspace 全体をビルドする。
 - [ ] CLI バンドルを生成する。
 - [ ] 第三者ライセンス一覧を生成・検証する。
 - [ ] 依存関係変更時に既知の脆弱性を検査する。

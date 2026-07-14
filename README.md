@@ -196,6 +196,9 @@ html:
 
 アプリ本体のソースは [app/](app/) にあります。
 
+コントリビューションの手順は [CONTRIBUTING.md](CONTRIBUTING.md)、脆弱性を非公開で報告する方法は
+[SECURITY.md](SECURITY.md) を参照してください。
+
 ## ライセンス
 
 [MIT License](LICENSE) © 2026 kuttsun
