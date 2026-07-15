@@ -1,96 +1,85 @@
-# 実装状況
+# Implementation Status
 
-最終更新: 2026-07-04
+Last updated: 2026-07-04
 
-## 対応状況
+## Support Status
 
-| 機能                                | 状態    | 対象バージョン |
-| ----------------------------------- | ------- | -------------- |
-| 開発環境（devcontainer / monorepo） | ✅ 完了 | -              |
-| Markdown → 単一 HTML（MVP）         | ✅ 完了 | v0.1           |
-| AsciiDoc 対応・混在対応             | ✅ 完了 | v0.2           |
-| リンク変換 / 画像埋め込み / Mermaid | ✅ 完了 | v0.3           |
-| 検索 / 目次 / watch / serve         | ✅ 完了 | v0.4           |
-| PDF 出力                            | ✅ 完了 | v0.5           |
-| npm / GitHub Actions                | 🚧 予定 | v0.6           |
-| VS Code 拡張                        | 🚧 予定 | v0.7           |
+| Feature                                           | State      | Target Version |
+| ------------------------------------------------- | ---------- | -------------- |
+| Development environment (devcontainer / monorepo) | ✅ Done    | -              |
+| Markdown → single HTML (MVP)                      | ✅ Done    | v0.1           |
+| AsciiDoc support / mixed-format support           | ✅ Done    | v0.2           |
+| Link conversion / image embedding / Mermaid       | ✅ Done    | v0.3           |
+| Search / table of contents / watch / serve        | ✅ Done    | v0.4           |
+| PDF output                                        | ✅ Done    | v0.5           |
+| npm / GitHub Actions                              | 🚧 Planned | v0.6           |
+| VS Code extension                                 | 🚧 Planned | v0.7           |
 
-## 完了条件の達成状況
+## Completion Criteria Status
 
-### v0.1: Markdown 単一 HTML MVP
+### v0.1: Markdown Single-HTML MVP
 
-- [x] `monodocs build ./docs -o ./dist/manual.html` が動作する
-- [x] 複数 Markdown ファイルが 1 つの HTML に含まれる
-- [x] サイドバーからページ切り替えできる（hash route）
-- [x] H1 がタイトルとして使われる（無ければファイル名にフォールバック＋警告）
+- [x] `monodocs build ./docs -o ./dist/manual.html` works
+- [x] Multiple Markdown files are included in a single HTML
+- [x] Pages can be switched from the sidebar (hash route)
+- [x] H1 is used as the title (falls back to the file name with a warning if absent)
 
-### v0.2: AsciiDoc 基本対応・混在対応
+### v0.2: AsciiDoc Basic Support / Mixed-Format Support
 
-- [x] `.md` と `.adoc` が混在していてもビルドできる
-- [x] AsciiDoc の `= Title` がページタイトルになる
-- [x] Markdown / AsciiDoc が同じサイドバーに表示される
-- [x] include 用ファイル（`_*` / `partials/**` / `includes/**`）をページ化対象から除外できる
-- [x] AsciiDoc の同一文書内 xref を単一 HTML 内リンクに変換する
+- [x] Builds even when `.md` and `.adoc` are mixed
+- [x] AsciiDoc's `= Title` becomes the page title
+- [x] Markdown / AsciiDoc are shown in the same sidebar
+- [x] Include files (`_*` / `partials/**` / `includes/**`) can be excluded from being turned into pages
+- [x] AsciiDoc xrefs within the same document are converted to links within the single HTML
 
-### v0.3: 実用機能
+### v0.3: Practical Features
 
-- [x] Markdown / AsciiDoc 間のリンクを hash route に変換できる（`.md` / `.adoc` / `.html`）
-- [x] 画像を data URI として HTML に埋め込める（サイズ上限・超過時の挙動を設定可能）
-- [x] Markdown / AsciiDoc の Mermaid を表示できる（`mermaid.mode`: `client` 既定はランタイムを CDN / inline 切替。`pre-render` はビルド時にヘッドレス Chromium で各図を SVG 化して埋め込み、JS 不要・印刷安定・図が少数なら inline より小さい。バンドル版 CLI＝単一 `.cjs` / 単一実行ファイルでは利用不可でパッケージインストール版が必要）
-- [x] frontmatter / `:sd-*:` により order・hidden・description を制御できる
-- [x] validate でリンク切れ・画像欠落・タイトル欠落を検出できる
+- [x] Links between Markdown / AsciiDoc can be converted to hash routes (`.md` / `.adoc` / `.html`)
+- [x] Images can be embedded into the HTML as data URIs (size limit and over-limit behavior are configurable)
+- [x] Mermaid in Markdown / AsciiDoc can be displayed (`mermaid.mode`: `client` (the default) switches the runtime between CDN / inline. `pre-render` renders each diagram as SVG at build time using headless Chromium and embeds it—no JS required, print-stable, and smaller than inline when there are few diagrams. Not available in the bundled CLI (single `.cjs` / single executable); the npm-installed version is required)
+- [x] order / hidden / description can be controlled via frontmatter / `:sd-*:`
+- [x] validate can detect broken links, missing images, and missing titles
 
-### v0.4: HTML ドキュメントサイト機能強化
+### v0.4: HTML Documentation Site Enhancements
 
-- [x] HTML 内検索ができる（タイトル・見出し・本文の部分一致。サイドバーの検索ボックス）
-- [x] ページ内目次（既定 h2 / h3）が表示される（スクロールに連動して現在地をハイライト。`toc.maxLevel` で最深レベルを 2〜6 に設定可能）
-- [x] 前後ページナビゲーションを表示する（hidden ページは除外）
-- [x] サイドバーを折りたたみできる（全体トグル＋ディレクトリ単位の開閉。`sidebar.collapseDepth` でこの階層より深いディレクトリを既定で畳める）
-- [x] サイドバーのフォルダ名を強制大文字化せず原文のまま表示する。`sidebar.titleTransform.page` / `directory` でページ表示タイトルとフォルダ表示名に別々の変換を適用できる（route は順序のため保持）
-- [x] `sidebar.titleFrom: "filename"` で、見出し（H1 / `= Title`）があってもファイル名をページタイトルに使える（明示タイトル frontmatter `title` / `:sd-title:` は常に最優先）。既定は `"heading"`（frontmatter → 見出し → ファイル名）
-- [x] `sidebar.flattenSingleChild` でページを 1 つだけ含む（サブフォルダ無し）のフォルダ階層を畳み、唯一のページを親へ繰り上げられる（ドキュメント＋画像を 1 フォルダにまとめた場合の冗長な階層を解消。route は不変で到達性を失わない）
-- [x] ダークモードに対応（OS 設定に追従。手動切替は localStorage に保存）
-- [x] 印刷時に全ページを縦に展開する print 用レイアウト（`@media print`）
-- [x] コードブロックを shiki で構文ハイライト（dual theme でダークモード追従。ライトでも本文と見分けやすい背景）
-- [x] コードブロックにコピー / 折り返しトグルボタンを表示（ホバー表示。クライアント側で注入）
-- [x] `monodocs watch` で入力・設定の変更を監視して再ビルドできる
-- [x] `monodocs serve` でローカルプレビューできる（変更検出でライブリロード、`--open` で自動起動）
+- [x] In-HTML search works (partial match on titles, headings, and body text; search box in the sidebar)
+- [x] An in-page table of contents (h2 / h3 by default) is shown (highlights the current position as you scroll; the deepest level can be set to 2–6 via `toc.maxLevel`)
+- [x] Previous/next page navigation is shown (hidden pages are excluded)
+- [x] The sidebar can be collapsed (an overall toggle plus per-directory open/close; `sidebar.collapseDepth` collapses directories deeper than this level by default)
+- [x] Sidebar folder names are displayed as-is without forced uppercasing. `sidebar.titleTransform.page` / `directory` can apply separate transforms to page display titles and folder display names (routes are preserved for ordering)
+- [x] With `sidebar.titleFrom: "filename"`, the file name can be used as the page title even when a heading (H1 / `= Title`) exists (an explicit title frontmatter `title` / `:sd-title:` always takes top priority). The default is `"heading"` (frontmatter → heading → file name)
+- [x] `sidebar.flattenSingleChild` collapses folder hierarchies that contain only a single page (with no subfolders) and promotes that sole page to the parent (eliminating redundant hierarchy when a document and images are grouped into one folder; routes are unchanged so reachability is preserved)
+- [x] Dark mode is supported (follows the OS setting; manual toggling is saved to localStorage)
+- [x] A print layout that expands all pages vertically when printing (`@media print`)
+- [x] Code blocks are syntax-highlighted with shiki (dual theme follows dark mode; a background that stays distinguishable from body text even in light mode)
+- [x] Copy / word-wrap toggle buttons are shown on code blocks (shown on hover; injected client-side)
+- [x] `monodocs watch` can watch for input/config changes and rebuild
+- [x] `monodocs serve` provides a local preview (live reload on change detection; auto-launch with `--open`)
 
-### v0.5: PDF 出力
+### v0.5: PDF Output
 
-- [x] `monodocs build --format pdf -o ./dist/manual.pdf` で単一 HTML を経由して PDF を生成できる（ヘッドレス Chromium。print 用レイアウトで全ページを縦展開）
-- [x] `--format both` で HTML と PDF を同時出力できる（`-o` はディレクトリ扱いで `manual.html` / `manual.pdf` を出力）
-- [x] client mode の Mermaid を含む場合、全ページを展開して各図の描画完了を待ってから PDF 化する（pre-render 済み SVG はそのまま埋め込み）
-- [x] `pdf.pageSize` / `pdf.margin` / `pdf.printBackground` を設定で制御できる（既定 A4・20/15/20/15mm・背景印刷 on）
-- [x] PDF 出力時は画像を data URI として埋め込む（配布 PDF は外部の相対画像を参照できないため、`assets.embedImages: false` でも上書きして埋め込み、警告を出す。`onLargeImage: external` で外部化した大きい画像は PDF に含まれない）
-- [x] アラート/admonition のアイコンをインライン SVG で埋め込む（CSS mask だと PDF でソフトマスク化され一部ビューアで塗り四角になるため）。print で `.admonition` / 図表 / コードブロック等の途中改ページを回避（`break-inside: avoid`）
-- [x] PDF にしおり（アウトライン）を HTML サイドバーと同じ フォルダ→ページ 構造で付与（`pdf.bookmarks`、既定 true）。各ページ位置へ ASCII サロゲート宛先の内部リンクを注入して Chromium に `/Dests` を作らせ、`pdf-lib` で `/Outlines` を構築（Unicode page id でも堅牢。ビューアでしおりパネルを既定表示）
-- [x] PDF の本文中のページ間リンクをクリック可能にする（SPA 用 hash route `#/route` は PDF に対応要素が無く飛べないため、`renderPdf` が各 article の `data-route` → 要素 id 対応で `#/route` を `#page-{id}` へ書き換え、Chromium が内部リンク＝GoTo 注釈を生成）。同一ページ内アンカー（脚注・見出し）はそのまま有効
-- [x] Puppeteer 起動処理を `pipeline/browser.ts` に共通化し、Mermaid pre-render と PDF で共有（環境エラーは `BrowserSetupError` で fail fast）
-- [x] `serve` はプレビュー用途のため、設定が pdf/both でも HTML を配信する（PDF を毎回生成しない。明示 `-o` は尊重）
-- [x] バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では PDF 出力は利用不可（`puppeteer-core` を `external` 化。パッケージインストール版が必要）
+- [x] `monodocs build --format pdf -o ./dist/manual.pdf` can generate a PDF via a single HTML (headless Chromium; all pages expanded vertically in the print layout)
+- [x] `--format both` can output HTML and PDF simultaneously (`-o` is treated as a directory, outputting `manual.html` / `manual.pdf`)
+- [x] When client-mode Mermaid is included, all pages are expanded and rendering of each diagram is awaited before generating the PDF (pre-rendered SVGs are embedded as-is)
+- [x] `pdf.pageSize` / `pdf.margin` / `pdf.printBackground` can be controlled via configuration (defaults: A4, 20/15/20/15mm, background printing on)
+- [x] Images are embedded as data URIs on PDF output (because a distributed PDF cannot reference external relative images, they are embedded even when `assets.embedImages: false`—overriding it—with a warning. Large images externalized via `onLargeImage: external` are not included in the PDF)
+- [x] Alert/admonition icons are embedded as inline SVG (because a CSS mask becomes a soft mask in PDFs and renders as a filled square in some viewers). Avoid mid-element page breaks of `.admonition` / figures / code blocks etc. in print (`break-inside: avoid`)
+- [x] Bookmarks (outline) are added to the PDF with the same folder→page structure as the HTML sidebar (`pdf.bookmarks`, default true). Internal links to ASCII surrogate destinations are injected at each page position so Chromium creates `/Dests`, and `/Outlines` is built with `pdf-lib` (robust even with Unicode page ids; the bookmarks panel is shown by default in viewers)
+- [x] Inter-page links in the PDF body are made clickable (since SPA hash routes `#/route` have no corresponding element in a PDF and cannot be navigated to, `renderPdf` rewrites `#/route` to `#page-{id}` using each article's `data-route` → element id mapping, and Chromium generates internal links = GoTo annotations). In-page anchors (footnotes, headings) remain valid as-is
+- [x] Puppeteer startup handling is unified in `pipeline/browser.ts` and shared between Mermaid pre-render and PDF (environment errors fail fast with `BrowserSetupError`)
+- [x] Since `serve` is for preview purposes, it serves HTML even when the configuration is pdf/both (it does not regenerate the PDF each time; an explicit `-o` is respected)
+- [x] PDF output is not available in the bundled CLI (single `.cjs` / single executable) (`puppeteer-core` is made `external`; the npm-installed version is required)
 
-## 対応記法
+## Supported Syntax
 
-Markdown / AsciiDoc の対応記法と、単一 HTML 化に伴う非対応・制限は [syntax.md](syntax.md) に
-仕様としてまとめている（脚注の ID 衝突回避・ページ内アンカー処理を含む）。Markdown の GFM alerts
-（`> [!NOTE]` など）と AsciiDoc の admonition は共通の `.admonition` 構造へ正規化して表示する。
+The supported syntax for Markdown / AsciiDoc, along with the unsupported items and limitations that come with single-HTML generation, is documented as a specification in [syntax.md](syntax.md) (including footnote ID collision avoidance and in-page anchor handling). Markdown GFM alerts (such as `> [!NOTE]`) and AsciiDoc admonitions are normalized into a common `.admonition` structure for display.
 
-## 既知の未対応 / 制限（今後のバージョンで対応）
+## Known Unsupported Items / Limitations (to be addressed in future versions)
 
-- コードハイライト（shiki）に対応（`highlight.enabled: false` で無効化可。dual theme でダークモード追従）
-- 見出し単位のファイル間リンク（`file.md#見出し` / `xref:other.adoc#sec`）はファイル単位までの解決
-  （別ファイルの見出しアンカーは未対応。同一ページ内のアンカー・脚注は機能する）
-- 検索は部分一致のみ（スコアリング・複数キーワード・日本語分かち書きは v0.8 で改善予定）
-- `watch` / `serve` の監視は `fs.watch`（可能なら recursive）を利用。設定で `input` を
-  変更した場合は再起動が必要
-- PDF 出力に対応（v0.5。`--format pdf` / `both`）。ヘッドレス Chromium を使うため実行環境に
-  Chromium が必要で、バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では利用不可（パッケージ
-  インストール版が必要）。Mermaid を `cdn` runtime にした場合、PDF 化時はネットワークが必要
-  （オフライン確実にするには `inline` または `pre-render` を使う）
-- **PDF のフォントは実行環境のシステムフォントを使う**。本文に出す文字種のフォントが無いと
-  PDF で豆腐（□ / ☒）になる（例: 絵文字 ✅ は絵文字フォントが必要）。開発用 Docker には
-  `fonts-noto-cjk`（日本語）＋ `fonts-noto-color-emoji`（絵文字）を同梱済み。自前環境で PDF を
-  出す場合は使う文字種に応じたフォントを入れる（HTML はブラウザのフォントで表示するため影響なし）
-- 入力は信頼できるドキュメントを前提（AsciiDoc の生 HTML をサニタイズしない。
-  詳細は [development.md](development.md)）
+- Code highlighting (shiki) is supported (can be disabled with `highlight.enabled: false`; dual theme follows dark mode)
+- Heading-level cross-file links (`file.md#heading` / `xref:other.adoc#sec`) are resolved only down to the file level (heading anchors in other files are unsupported; anchors and footnotes within the same page work)
+- Search is partial-match only (scoring, multiple keywords, and Japanese word segmentation are planned to be improved in v0.8)
+- `watch` / `serve` monitoring uses `fs.watch` (recursive when possible). If `input` is changed in the configuration, a restart is required
+- PDF output is supported (v0.5; `--format pdf` / `both`). Because it uses headless Chromium, Chromium must be present in the runtime environment, and it is not available in the bundled CLI (single `.cjs` / single executable) (the npm-installed version is required). When Mermaid is set to the `cdn` runtime, a network connection is required during PDF generation (use `inline` or `pre-render` to be reliably offline)
+- **PDF fonts use the system fonts of the runtime environment.** If a font for a character type appearing in the body is missing, it becomes tofu (□ / ☒) in the PDF (e.g., the emoji ✅ requires an emoji font). The development Docker image already bundles `fonts-noto-cjk` (Japanese) plus `fonts-noto-color-emoji` (emoji). When producing PDFs in your own environment, install fonts according to the character types you use (HTML is unaffected because it uses the browser's fonts)
+- Input is assumed to be trusted documents (AsciiDoc raw HTML is not sanitized; see [development.md](development.md) for details)

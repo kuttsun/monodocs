@@ -1,60 +1,60 @@
-# テスト
+# Testing
 
-## 方針
+## Policy
 
-- テストランナーは [vitest](https://vitest.dev/) を使用する。
-- 種類:
-  - **ユニットテスト**: route 生成 / format 判定 / 各 SourceRenderer / サイドバー生成 など
-  - **e2e テスト**: 一時ディレクトリに Markdown / AsciiDoc を生成し、`buildSite()` で
-    単一 HTML を出力して内容を検証する
-  - **クライアントテスト**: happy-dom 上でテーマの `app.js` を実行し、hash route による
-    ページ切り替え（encode/decode 整合）を検証する
-- 検証はすべて Docker / devcontainer 内で実行し、ホスト環境を汚さない。
+- The test runner uses [vitest](https://vitest.dev/).
+- Types:
+  - **Unit tests**: route generation / format detection / each SourceRenderer / sidebar generation, etc.
+  - **e2e tests**: generate Markdown / AsciiDoc in a temporary directory, output a
+    single HTML with `buildSite()`, and verify the content
+  - **Client tests**: run the theme's `app.js` on happy-dom and verify page switching via hash routing
+    (encode/decode consistency)
+- All verification runs inside Docker / devcontainer and does not pollute the host environment.
 
-## 実行方法
+## How to Run
 
-専用イメージ（[development.md](development.md) 参照）でホストから実行する。
+Run from the host using the dedicated image (see [development.md](development.md)).
 
 ```bash
-scripts/app.sh pnpm test         # 一括実行（vitest run）
-scripts/app.sh pnpm test:watch   # ウォッチ
+scripts/app.sh pnpm test         # run all at once (vitest run)
+scripts/app.sh pnpm test:watch   # watch
 ```
 
-`docker run` を直接使う場合:
+When using `docker run` directly:
 
 ```bash
 docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 ```
 
-devcontainer 内、またはコンテナのシェルに入っている場合は `app/` で `pnpm test` を直接実行できる。
+Inside a devcontainer, or when you are in the container's shell, you can run `pnpm test` directly in `app/`.
 
-## テスト結果（2026-07-04 時点）
+## Test Results (as of 2026-07-04)
 
-| 項目         | 結果       |
+| Item         | Result     |
 | ------------ | ---------- |
 | Test Files   | 22 passed  |
 | Tests        | 195 passed |
-| typecheck    | 通過       |
-| format:check | 通過       |
+| typecheck    | passed     |
+| format:check | passed     |
 
-主なテスト対象:
+Main test targets:
 
-- `route.test.ts` … route / page id 生成
-- `sources/detectFormat.test.ts` … 拡張子からの形式判定
-- `sources/meta.test.ts` … frontmatter / `:sd-*:` メタデータの正規化
-- `sources/markdown/renderer.test.ts` … Markdown 変換・H1 / frontmatter 抽出・見出し/脚注の ID prefix・GFM
-- `sources/asciidoc/renderer.test.ts` … AsciiDoc 変換・タイトル / `:sd-*:` 抽出・xref 書き換え
-- `sources/prefixIds.ts` … 全要素 ID の prefix・アンカー書き換え（Markdown/AsciiDoc 共通。各 renderer テストで間接検証）
-- `scan.test.ts` … 拡張子マップによる走査・カスタム拡張子・除外
-- `pipeline/buildPages.test.ts` … route / page id の重複検知
-- `pipeline/buildSidebar.test.ts` … フォルダ構造サイドバー
-- `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換（client / pre-render の SVG 化・グローバル一意 id・複雑 SVG の verbatim 保持・図単位エラーのソースフォールバック・環境エラー `BrowserSetupError`（`MermaidPrerenderSetupError` を含む）の fail fast・renderer 未注入エラー）・shiki コードハイライト・admonition / GFM alert の共通構造化
-- `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・クライアント用ページデータ（目次/検索）
-- `themes/default/app.test.ts` … クライアント hash routing（happy-dom）
-- `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・コードブロックのコピー/折り返しトグル（happy-dom）
-- `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e（Markdown / 混在 / v0.3 機能・validate）
-- `build.mermaid-prerender.test.ts` … Mermaid pre-render（偽レンダラ注入で config 連携・SVG 埋め込みを検証。実 Chromium がある環境でだけ end-to-end 描画とランタイム未注入ゲートを確認）
-- `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入・`serveSite` が pdf/both 設定でも HTML を配信し明示 `-o` を尊重すること）
-- `build.pdf.test.ts` … PDF 出力（v0.5。`resolveOutputs` の html/pdf/both 出力パス解決・偽 `PdfGenerator` 注入で format 分岐と設定（pageSize/margin/printBackground）連携・embedImages 上書き・しおり outline の受け渡しを browserless 検証。実 Chromium がある環境でだけ実際の PDF 生成＝`%PDF-` と `/Outlines`・`/UseOutlines` を確認）
-- `pipeline/pdfOutline.test.ts` … PDF しおり（`sidebarToOutline` のツリー変換・`collectDests`/`remapDests`・`addOutline` が `/Dests` を参照して フォルダ→ページ の `/Outlines` を構築し `/UseOutlines` を設定。宛先が無い/空ツリーは元 PDF を返す。pdf-lib のみで browserless）
-- `config.test.ts` … 設定解決（`pdf` スキーマの既定値・欠落余白の補完・未知キー拒否・不正 `--format` の拒否・format 別の既定出力パス を含む）
+- `route.test.ts` … route / page id generation
+- `sources/detectFormat.test.ts` … format detection from file extensions
+- `sources/meta.test.ts` … normalization of frontmatter / `:sd-*:` metadata
+- `sources/markdown/renderer.test.ts` … Markdown conversion, H1 / frontmatter extraction, ID prefix for headings/footnotes, GFM
+- `sources/asciidoc/renderer.test.ts` … AsciiDoc conversion, title / `:sd-*:` extraction, xref rewriting
+- `sources/prefixIds.ts` … prefix for all element IDs, anchor rewriting (common to Markdown/AsciiDoc; indirectly verified in each renderer test)
+- `scan.test.ts` … scanning via extension map, custom extensions, exclusion
+- `pipeline/buildPages.test.ts` … duplicate detection of route / page id
+- `pipeline/buildSidebar.test.ts` … folder-structure sidebar
+- `pipeline/postprocess.test.ts` … link conversion, image data URI embedding, Mermaid conversion (client / pre-render SVG conversion, globally unique ids, verbatim preservation of complex SVG, per-diagram error source fallback, fail fast on environment errors `BrowserSetupError` (including `MermaidPrerenderSetupError`), renderer-not-injected error), shiki code highlighting, common structuring of admonition / GFM alert
+- `pipeline/renderSingleHtml.test.ts` … href encoding, HTML escaping, client page data (table of contents/search)
+- `themes/default/app.test.ts` … client hash routing (happy-dom)
+- `themes/default/app.v04.test.ts` … search, in-page table of contents, prev/next navigation, dark mode, sidebar collapse, code block copy/wrap toggle (happy-dom)
+- `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e (Markdown / mixed / v0.3 features, validate)
+- `build.mermaid-prerender.test.ts` … Mermaid pre-render (verifies config integration and SVG embedding via fake renderer injection; end-to-end rendering and runtime-not-injected gating are confirmed only in environments with a real Chromium)
+- `build.v04.test.ts` … e2e (`watchSite` rebuild, `serveSite` delivery and live-reload injection, `serveSite` serving HTML even with pdf/both configuration and respecting an explicit `-o`)
+- `build.pdf.test.ts` … PDF output (v0.5. browserless verification of `resolveOutputs` html/pdf/both output path resolution, format branching and configuration (pageSize/margin/printBackground) integration via fake `PdfGenerator` injection, embedImages override, bookmark outline passing. Actual PDF generation = `%PDF-`, `/Outlines`, and `/UseOutlines` confirmed only in environments with a real Chromium)
+- `pipeline/pdfOutline.test.ts` … PDF bookmarks (`sidebarToOutline` tree conversion, `collectDests`/`remapDests`, `addOutline` referencing `/Dests` to build folder→page `/Outlines` and set `/UseOutlines`. Destinations absent / empty tree returns the original PDF. pdf-lib only, browserless)
+- `config.test.ts` … configuration resolution (including `pdf` schema defaults, completion of missing margins, rejection of unknown keys, rejection of invalid `--format`, and default output paths per format)

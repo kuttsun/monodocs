@@ -1,179 +1,164 @@
-# OSS・npm 公開ロードマップ
+# OSS / npm Publishing Roadmap
 
-最終更新: 2026-07-14
+Last updated: 2026-07-14
 
-## 1. 目的
+## 1. Purpose
 
-monodocs を MIT License の OSS として公開し、次の方法で安定して導入できる状態を目指す。
+Publish monodocs as OSS under the MIT License, aiming for a state where it can be reliably installed via the following method.
 
 ```bash
 npm install -g monodocs
 monodocs build ./docs -o ./dist/manual.html
 ```
 
-または、一時的なインストールで利用できるようにする。
+Alternatively, make it usable via a temporary install.
 
 ```bash
 npx monodocs build ./docs -o ./dist/manual.html
 ```
 
-初期リリースは npm パッケージのみとする。SEA 単体バイナリは npm 版の公開・運用が安定した後の
-将来対応とし、v0.6 の完了条件には含めない。利用者向け Docker イメージは提供せず、既存の
-開発・テスト用 Docker 環境は維持する。
+The initial release will be the npm package only. The SEA standalone binary is deferred to the future, after publishing and operating the npm version has stabilized, and is not included in the completion criteria for v0.6. No Docker image will be provided for users; the existing Docker environment for development and testing will be maintained.
 
-## 2. 基本方針
+## 2. Basic Policy
 
-- ソースコードは MIT License で公開する。
-- 正式な公開基盤は GitHub とし、現在の GitLab リポジトリから段階的に移行する。
-- 移行完了までは GitLab を開発基盤として維持し、GitHub 固有のリリース自動化は移行後に構築する。
-- バージョンには Semantic Versioning を使用する。
-- 公開済みの成果物は差し替えず、不具合は新しいバージョンで修正する。
-- npm の初回公開では CLI パッケージ `monodocs` のみを公開する。
-- `@monodocs/core` は内部 workspace パッケージとして維持し、CLI の公開物へバンドルする。
-- npm 版では HTML、PDF、Mermaid pre-render を含む主要機能を提供する。
-- v0.6 は npm パッケージのみを配布し、SEA 単体バイナリは将来の独立したマイルストーンとする。
-- npm パッケージの生成と公開は CI から行い、手元で生成した成果物を公開しない。
+- Publish the source code under the MIT License.
+- The official publishing platform will be GitHub, migrating gradually from the current GitLab repository.
+- Until the migration is complete, maintain GitLab as the development platform, and build GitHub-specific release automation after the migration.
+- Use Semantic Versioning for versions.
+- Do not replace already-published artifacts; fix defects in new versions.
+- For the first npm publish, publish only the CLI package `monodocs`.
+- Maintain `@monodocs/core` as an internal workspace package and bundle it into the CLI's published artifact.
+- The npm version provides the main features including HTML, PDF, and Mermaid pre-render.
+- v0.6 distributes only the npm package; the SEA standalone binary is a separate future milestone.
+- Generate and publish the npm package from CI, and do not publish locally generated artifacts.
 
-## 3. 現状と解決すべき課題
+## 3. Current State and Issues to Resolve
 
-### 3.1 GitHub への移行
+### 3.1 Migration to GitHub
 
-現在は GitLab をソースリポジトリ、CI、Pages の基盤として利用しており、package metadata も
-GitLab の URL を参照している。正式な OSS 公開基盤は GitHub とするが、移行が完了するまでは
-既存の GitLab 運用を維持する。
+Currently GitLab is used as the platform for the source repository, CI, and Pages, and the package metadata also references GitLab URLs. The official OSS publishing platform will be GitHub, but the existing GitLab operation will be maintained until the migration is complete.
 
-GitHub への移行は M2 の完了および M4 のベータ公開より前に行い、次を同じ移行単位で更新する。
+Migration to GitHub will be done before the completion of M2 and the beta release of M4, updating the following within the same migration unit.
 
-- Git remote とデフォルトブランチ
-- `homepage`、`repository`、`bugs` の URL
-- GitHub Actions の Pull Request CI
-- GitHub Releases と Artifact Attestations
+- Git remote and default branch
+- The `homepage`, `repository`, and `bugs` URLs
+- GitHub Actions Pull Request CI
+- GitHub Releases and Artifact Attestations
 - npm Trusted Publishing
-- Issue / Pull Request template と非公開の脆弱性報告経路
-- README、公式サイト、開発文書内のリポジトリ URL
+- Issue / Pull Request templates and the private vulnerability reporting path
+- Repository URLs in the README, official site, and development documents
 
-移行までは `.gitlab-ci.yml` の Pages 配信を維持する。将来破棄する GitLab 固有のリリース処理は
-増やさず、format、typecheck、test、build、bundle などの検証手順は package scripts として
-プラットフォーム非依存に保つ。
+Until the migration, maintain the Pages delivery in `.gitlab-ci.yml`. Do not add more GitLab-specific release processing that will be discarded in the future, and keep verification steps such as format, typecheck, test, build, and bundle platform-independent as package scripts.
 
-### 3.2 npm パッケージ構造
+### 3.2 npm Package Structure
 
-現在の CLI は非公開の `@monodocs/core` に `workspace:*` で依存している。
+The current CLI depends on the private `@monodocs/core` via `workspace:*`.
 
 ```text
 monodocs CLI
   └─ @monodocs/core
 ```
 
-このままでは CLI だけを npm に公開できない。初回公開では core の公開 API を確定せず、CLI の
-成果物へバンドルして単一パッケージとして配布する。
+As is, only the CLI cannot be published to npm. For the first publish, do not finalize core's public API, and instead bundle it into the CLI's artifact and distribute it as a single package.
 
-### 3.3 SEA バイナリは将来対応
+### 3.3 SEA Binary Is a Future Task
 
-現在の開発用 SEA ビルドは `puppeteer-core` を外部依存にしているため、次の制限がある。v0.6 では
-SEA を利用者向けに配布せず、npm 安定版の公開後に対応機能、対象 OS / CPU、署名、インストール
-方法を改めて設計する。
+The current SEA build for development treats `puppeteer-core` as an external dependency, so it has the following limitations. In v0.6, the SEA will not be distributed to users, and after publishing the stable npm version, the supported features, target OS / CPU, signing, and installation method will be redesigned.
 
-| 機能                    | SEA バイナリ | npm 版の目標 |
-| ----------------------- | ------------ | ------------ |
-| HTML 生成               | 対応         | 対応         |
-| `validate`              | 対応         | 対応         |
-| `watch` / `serve`       | 対応         | 対応         |
-| PDF 出力                | 非対応       | 対応         |
-| Mermaid client mode     | 対応         | 対応         |
-| Mermaid pre-render mode | 非対応       | 対応         |
+| Feature                 | SEA Binary    | npm Version Goal |
+| ----------------------- | ------------- | ---------------- |
+| HTML generation         | Supported     | Supported        |
+| `validate`              | Supported     | Supported        |
+| `watch` / `serve`       | Supported     | Supported        |
+| PDF output              | Not supported | Supported        |
+| Mermaid client mode     | Supported     | Supported        |
+| Mermaid pre-render mode | Not supported | Supported        |
 
-## 4. マイルストーン
+## 4. Milestones
 
-| ID  | マイルストーン       | 主な成果物                                        |
-| --- | -------------------- | ------------------------------------------------- |
-| M0  | 公開方針確定         | 正式リポジトリ、npm 名、所有者、対応環境          |
-| M1  | OSS 基盤整備         | CONTRIBUTING、SECURITY、Issue / PR 運用           |
-| M2  | CI 基盤整備          | test、typecheck、build、HTML / PDF スモークテスト |
-| M3  | npm パッケージ完成   | インストール可能な npm tarball                    |
-| M4  | npm ベータ公開       | `monodocs@next`                                   |
-| M5  | npm 安定版公開       | `monodocs@latest`                                 |
-| M6  | 公開後の保守運用確立 | バージョン更新、脆弱性対応、EOL、権限棚卸し       |
+| ID  | Milestone                          | Main Deliverables                                               |
+| --- | ---------------------------------- | --------------------------------------------------------------- |
+| M0  | Finalize publishing policy         | Official repository, npm name, owner, supported envs            |
+| M1  | Set up OSS foundation              | CONTRIBUTING, SECURITY, Issue / PR operation                    |
+| M2  | Set up CI foundation               | test, typecheck, build, HTML / PDF smoke test                   |
+| M3  | Complete npm package               | Installable npm tarball                                         |
+| M4  | npm beta publish                   | `monodocs@next`                                                 |
+| M5  | npm stable publish                 | `monodocs@latest`                                               |
+| M6  | Establish post-publish maintenance | Version updates, vulnerability handling, EOL, permission review |
 
-SEA 単体バイナリは M5 の npm 安定版公開後に着手を判断する将来項目とし、npm 公開の前提条件にしない。
+The SEA standalone binary is a future item whose start will be decided after the M5 npm stable publish, and it is not a prerequisite for the npm publish.
 
-## 5. M0: 公開方針の確定
+## 5. M0: Finalize Publishing Policy
 
-### 5.1 確定した初期方針
+### 5.1 Confirmed Initial Policy
 
-- npm パッケージは個人所有とし、初期メンテナーは `kuttsun` のみとする。実際に使用する npm
-  アカウント名は公開作業の直前に最終確認する。
-- npm 版は Node.js 22 以上を対象とする。
-- npm 版の初期対応対象は Linux x64 と Windows x64 とし、ベータ公開前に GitHub Actions で
-  HTML、validate、watch、serve を検証する。Linux arm64 と macOS arm64 は継続検証できる
-  環境を用意した段階で追加を判断する。
-- SEA 単体バイナリは v0.6 の対象外とし、npm 安定版の公開後に改めて検討する。
-- Chromium は自動ダウンロードしない。`PUPPETEER_EXECUTABLE_PATH` を最優先し、未指定の場合は
-  Linux の標準的な Chromium / Google Chrome の配置場所を探索する。
-- 0.x 期間は最新 minor を通常サポートし、過去 minor は重大な脆弱性のみ対応する。
-- 変更履歴の正本は GitHub Releases とし、重要な変更と既知の制限を Release notes に記載する。
-- npm registry 上の `monodocs` の利用可否は、GitHub 移行および公開作業の直前に最終確認する。
+- The npm package will be individually owned, with the initial maintainer being only `kuttsun`. The actual npm account name to be used will be finalized just before the publishing work.
+- The npm version targets Node.js 22 or later.
+- The initial supported targets for the npm version are Linux x64 and Windows x64, and HTML, validate, watch, and serve will be verified with GitHub Actions before the beta publish. Linux arm64 and macOS arm64 will be considered for addition once an environment for continuous verification is available.
+- The SEA standalone binary is out of scope for v0.6 and will be reconsidered after the npm stable publish.
+- Chromium will not be auto-downloaded. `PUPPETEER_EXECUTABLE_PATH` takes top priority, and if unspecified, the standard Chromium / Google Chrome install locations on Linux will be searched.
+- During the 0.x period, provide normal support for the latest minor, and address only critical vulnerabilities for past minors.
+- The canonical source of the changelog will be GitHub Releases, with important changes and known limitations recorded in the release notes.
+- The availability of `monodocs` on the npm registry will be finalized just before the GitHub migration and publishing work.
 
-### 5.2 決定事項
+### 5.2 Decisions
 
-- [x] 正式な公開基盤を GitHub とし、現在の GitLab リポジトリから段階的に移行する。
-- [ ] GitHub への移行を完了し、正式なソースリポジトリを一本化する。
-- [ ] `homepage`、`repository`、`bugs`の URL を正式なリポジトリへ統一する。
-- [x] npm のパッケージ名を `monodocs` とする。
-- [ ] npm registry でパッケージ名を利用できることを最終確認する。
-- [x] npm パッケージは個人が所有する。
-- [x] npm の初期メンテナーを `kuttsun` のみにする。
-- [x] 初回は CLI のみを公開し、core は内部パッケージとして維持する方針を確定する。
-- [x] npm 版は Node.js 22 以上をサポートする。
-- [x] npm 版の初期対応対象を Linux x64 と Windows x64 とする。
-- [x] SEA 単体バイナリを v0.6 の配布対象から外す。
-- [x] Chromium は自動取得せず、環境変数とシステム上の実行ファイルから探索する。
-- [x] 0.x のサポート対象と EOL 方針を決める。
+- [x] Make GitHub the official publishing platform and migrate gradually from the current GitLab repository.
+- [ ] Complete the migration to GitHub and consolidate the official source repository.
+- [ ] Unify the `homepage`, `repository`, and `bugs` URLs to the official repository.
+- [x] Set the npm package name to `monodocs`.
+- [ ] Finalize that the package name is available on the npm registry.
+- [x] The npm package is individually owned.
+- [x] Make `kuttsun` the only initial npm maintainer.
+- [x] Finalize the policy of publishing only the CLI initially and maintaining core as an internal package.
+- [x] The npm version supports Node.js 22 or later.
+- [x] Set the initial supported targets of the npm version to Linux x64 and Windows x64.
+- [x] Exclude the SEA standalone binary from the v0.6 distribution targets.
+- [x] Do not auto-acquire Chromium; search from environment variables and executables on the system.
+- [x] Decide the support targets and EOL policy for 0.x.
 
-### 5.3 完了条件
+### 5.3 Completion Criteria
 
-- 公開方針が本文書または ADR に記録されている。
-- パッケージ名、所有者、公開権限、正式リポジトリが確定している。
-- CLI と core の公開境界が確定している。
-- 対応する Node.js、OS、CPU、Chromium の範囲が明文化されている。
+- The publishing policy is recorded in this document or an ADR.
+- The package name, owner, publishing permissions, and official repository are finalized.
+- The publishing boundary between the CLI and core is finalized.
+- The supported ranges of Node.js, OS, CPU, and Chromium are documented.
 
-## 6. M1: OSS 基盤整備
+## 6. M1: Set Up OSS Foundation
 
-### 6.1 ドキュメント
+### 6.1 Documentation
 
-- [ ] `README.md` にインストール、基本操作、対応環境、既知の制限を記載する。
-- [x] `LICENSE` に MIT License が正しく記載されていることを確認する。
-- [x] `CONTRIBUTING.md` を追加する。
-- [x] `SECURITY.md` を追加する。
-- [x] GitHub Releases を変更履歴の正本とする。
-- [ ] 必要に応じて `CODE_OF_CONDUCT.md` を追加する。
-- [x] サポート範囲と SLA を提供しないことを明記する。
-- [x] コントリビューションが MIT License で提供されることを明記する。
+- [ ] Document installation, basic operations, supported environments, and known limitations in `README.md`.
+- [x] Confirm that the MIT License is correctly stated in `LICENSE`.
+- [x] Add `CONTRIBUTING.md`.
+- [x] Add `SECURITY.md`.
+- [x] Make GitHub Releases the canonical source of the changelog.
+- [ ] Add `CODE_OF_CONDUCT.md` if needed.
+- [x] Clearly state that no support scope or SLA is provided.
+- [x] Clearly state that contributions are provided under the MIT License.
 
-### 6.2 リポジトリ運用
+### 6.2 Repository Operation
 
-- [ ] バグ報告用 Issue template を追加する。
-- [ ] 機能要望用 Issue template を追加する。
-- [ ] Pull Request template を追加する。
-- [ ] 脆弱性の非公開報告経路を有効化する。
-- [ ] デフォルトブランチを保護する。
-- [ ] CI 成功とレビューをマージ条件にする。
-- [ ] Dependabot または Renovate の導入方針を決める。
-- [ ] 依存関係追加時のライセンス確認ルールを定める。
+- [ ] Add an Issue template for bug reports.
+- [ ] Add an Issue template for feature requests.
+- [ ] Add a Pull Request template.
+- [ ] Enable a private reporting path for vulnerabilities.
+- [ ] Protect the default branch.
+- [ ] Make CI success and review merge conditions.
+- [ ] Decide on an adoption policy for Dependabot or Renovate.
+- [ ] Establish rules for license verification when adding dependencies.
 
-### 6.3 完了条件
+### 6.3 Completion Criteria
 
-- 第三者が README と CONTRIBUTING だけでビルド・テストできる。
-- Issue、PR、脆弱性報告の受付方法が明確になっている。
-- LICENSE と第三者ライセンス表記を配布物へ含める方針が確立している。
+- A third party can build and test using only the README and CONTRIBUTING.
+- The methods for receiving Issues, PRs, and vulnerability reports are clear.
+- A policy for including LICENSE and third-party license notices in distributions is established.
 
-## 7. M2: CI 基盤整備
+## 7. M2: Set Up CI Foundation
 
 ### 7.1 Pull Request CI
 
-すべての Pull Request で、少なくとも次を実行する。Linux x64 と Windows x64 の matrix を用意し、
-OS 固有でない検証に加えて、Chromium を使う PDF / pre-render も両方の OS で行う。Chromium の
-実行ファイルは CI で明示的に用意し、`PUPPETEER_EXECUTABLE_PATH` で指定する。
+For every Pull Request, run at least the following. Prepare a matrix of Linux x64 and Windows x64, and in addition to non-OS-specific verification, run PDF / pre-render that use Chromium on both OSes. The Chromium executable will be explicitly prepared in CI and specified with `PUPPETEER_EXECUTABLE_PATH`.
 
 ```text
 pnpm install --frozen-lockfile
@@ -184,51 +169,51 @@ pnpm test
 pnpm bundle
 ```
 
-- [ ] format check を実行する。
-- [ ] workspace 全体をビルドする。
-- [ ] typecheck を実行する。
-- [ ] 全テストを実行する。
-- [ ] CLI バンドルを生成する。
-- [ ] 第三者ライセンス一覧を生成・検証する。
-- [ ] 依存関係変更時に既知の脆弱性を検査する。
+- [ ] Run the format check.
+- [ ] Build the entire workspace.
+- [ ] Run typecheck.
+- [ ] Run all tests.
+- [ ] Generate the CLI bundle.
+- [ ] Generate and verify the third-party license list.
+- [ ] Inspect for known vulnerabilities when dependencies change.
 
-### 7.2 スモークテスト
+### 7.2 Smoke Test
 
-- [ ] `monodocs --version`を確認する。
-- [ ] `monodocs --help`を確認する。
-- [ ] Markdown から HTML を生成する。
-- [ ] Markdown / AsciiDoc 混在文書から HTML を生成する。
-- [ ] `validate`を実行する。
-- [ ] Linux x64 と Windows x64 で npm 版 CLI の基本フローを実行する。
-- [ ] Linux x64 と Windows x64 で Chromium を指定し、PDF と Mermaid pre-render を実行する。
-- [ ] 生成 PDF が `%PDF-`で始まることを確認する。
-- [ ] 公開予定物に LICENSE と第三者ライセンス表記が含まれることを確認する。
+- [ ] Confirm `monodocs --version`.
+- [ ] Confirm `monodocs --help`.
+- [ ] Generate HTML from Markdown.
+- [ ] Generate HTML from a mixed Markdown / AsciiDoc document.
+- [ ] Run `validate`.
+- [ ] Run the basic flow of the npm version CLI on Linux x64 and Windows x64.
+- [ ] Specify Chromium on Linux x64 and Windows x64 and run PDF and Mermaid pre-render.
+- [ ] Confirm that the generated PDF begins with `%PDF-`.
+- [ ] Confirm that the artifacts to be published include LICENSE and third-party license notices.
 
-### 7.3 完了条件
+### 7.3 Completion Criteria
 
-- 壊れた成果物を main にマージできない。
-- HTML と PDF の代表的な生成フローが CI で検証される。
-- ライセンス表記の欠落を CI で検出できる。
+- Broken artifacts cannot be merged into main.
+- Representative generation flows for HTML and PDF are verified in CI.
+- Missing license notices can be detected in CI.
 
-## 8. M3: npm パッケージ完成
+## 8. M3: Complete npm Package
 
 ### 8.1 package metadata
 
-- [ ] CLI の `private: true`を削除する。
-- [ ] 正式なバージョンを設定する。
-- [ ] `homepage`を正式な URL にする。
-- [ ] `repository`を正式な URL にする。
-- [ ] `bugs`を正式な Issue URL にする。
-- [ ] `engines.node`を設定する。
-- [ ] `bin.monodocs`を公開する実行ファイルへ向ける。
-- [ ] `files`を許可リストとして定義する。
-- [ ] `publishConfig.access`を設定する。
-- [ ] `LICENSE`をパッケージへ含める。
-- [ ] `THIRD-PARTY-NOTICES.txt`をパッケージへ含める。
+- [ ] Remove the CLI's `private: true`.
+- [ ] Set the official version.
+- [ ] Make `homepage` the official URL.
+- [ ] Make `repository` the official URL.
+- [ ] Make `bugs` the official Issue URL.
+- [ ] Set `engines.node`.
+- [ ] Point `bin.monodocs` to the executable to be published.
+- [ ] Define `files` as an allowlist.
+- [ ] Set `publishConfig.access`.
+- [ ] Include `LICENSE` in the package.
+- [ ] Include `THIRD-PARTY-NOTICES.txt` in the package.
 
-### 8.2 パッケージ構造
+### 8.2 Package Structure
 
-初回公開では次の単一パッケージを目標とする。
+For the first publish, aim for the following single package.
 
 ```text
 package/
@@ -240,25 +225,25 @@ package/
     └── monodocs.cjs
 ```
 
-- [ ] `@monodocs/core`を公開物へバンドルする。
-- [ ] 公開物から `workspace:*`依存を排除する。
-- [ ] CLI の shebang と実行権限を確認する。
-- [ ] テーマとクライアントアセットを公開物へ含める。
-- [ ] 不要なテスト、設定、秘密情報を公開物から除外する。
+- [ ] Bundle `@monodocs/core` into the artifact.
+- [ ] Eliminate `workspace:*` dependencies from the artifact.
+- [ ] Verify the CLI's shebang and execute permissions.
+- [ ] Include themes and client assets in the artifact.
+- [ ] Exclude unnecessary tests, configuration, and secrets from the artifact.
 
-### 8.3 PDF と Chromium
+### 8.3 PDF and Chromium
 
-- [ ] npm 版から `puppeteer-core`を解決できるようにする。
-- [x] システム Chromium の探索方法を定義する。
-- [x] `PUPPETEER_EXECUTABLE_PATH` で Chromium の明示パスを設定できるようにする。
-- [x] Chromium がない場合に具体的なエラーを表示する。
-- [x] HTML だけを使う利用者へ Chromium を自動ダウンロードしない。
-- [ ] npm 版で PDF 出力を検証する。
-- [ ] npm 版で Mermaid pre-render を検証する。
+- [ ] Make `puppeteer-core` resolvable from the npm version.
+- [x] Define the search method for system Chromium.
+- [x] Allow setting an explicit Chromium path with `PUPPETEER_EXECUTABLE_PATH`.
+- [x] Display a specific error when Chromium is absent.
+- [x] Do not auto-download Chromium for users who use only HTML.
+- [ ] Verify PDF output in the npm version.
+- [ ] Verify Mermaid pre-render in the npm version.
 
-### 8.4 tarball 検証
+### 8.4 tarball Verification
 
-公開前に npm tarball を生成し、空の環境へインストールして検証する。
+Before publishing, generate the npm tarball, install it into a clean environment, and verify.
 
 ```bash
 npm pack
@@ -268,74 +253,74 @@ monodocs build ./docs -o ./dist/manual.html
 monodocs build ./docs --format pdf -o ./dist/manual.pdf
 ```
 
-- [ ] tarball のファイル一覧をスナップショットまたは許可リストで検証する。
-- [ ] tarball だけから CLI をインストールできる。
-- [ ] HTML、PDF、validate、serve を実行できる。
-- [ ] パッケージサイズとインストール時間を確認する。
+- [ ] Verify the tarball's file list with a snapshot or allowlist.
+- [ ] The CLI can be installed from the tarball alone.
+- [ ] HTML, PDF, validate, and serve can be run.
+- [ ] Confirm the package size and installation time.
 
-### 8.5 完了条件
+### 8.5 Completion Criteria
 
-- npm tarball だけで主要機能が動作する。
-- 公開物に `workspace:*`が残っていない。
-- LICENSE と第三者ライセンス表記が含まれている。
-- npm 版だけで主要機能とインストール経路が完結している。
+- The main features work with the npm tarball alone.
+- No `workspace:*` remains in the artifact.
+- LICENSE and third-party license notices are included.
+- The main features and installation path are complete with the npm version alone.
 
-## 9. M4: npm ベータ公開
+## 9. M4: npm Beta Publish
 
-### 9.1 公開方法
+### 9.1 Publishing Method
 
-ベータ版は `latest`ではなく `next`へ公開する。
+Publish the beta version to `next`, not `latest`.
 
 ```bash
 npm publish --tag next
 npm install -g monodocs@next
 ```
 
-- [ ] `0.6.0-beta.1`を発行する。
-- [ ] GitHub Actions の Trusted Publishing を設定する。
-- [ ] 長期 npm write token を CI に保存しない。
-- [ ] リリース用 Environment に承認を設定する。
-- [ ] npm provenance が生成されることを確認する。
-- [ ] npm アカウントで 2FA を必須にする。
-- [ ] 公開権限を必要最小限のメンテナーへ限定する。
+- [ ] Issue `0.6.0-beta.1`.
+- [ ] Set up GitHub Actions Trusted Publishing.
+- [ ] Do not store a long-lived npm write token in CI.
+- [ ] Set up approval for the release Environment.
+- [ ] Confirm that npm provenance is generated.
+- [ ] Require 2FA on the npm account.
+- [ ] Limit publishing permissions to the minimum necessary maintainers.
 
-### 9.2 ベータ検証
+### 9.2 Beta Verification
 
-- [ ] `npm install -g monodocs@next`を確認する。
-- [ ] `npx monodocs@next`を確認する。
-- [ ] サポート対象 OS でインストールする。
-- [ ] サポート対象 Node.js でインストールする。
-- [ ] HTML と PDF を生成する。
-- [ ] Mermaid client / pre-render を確認する。
-- [ ] watch / serve を確認する。
-- [ ] Chromium 検出とエラー表示を確認する。
-- [ ] アンインストールと再インストールを確認する。
-- [ ] README の手順を新規環境で再現する。
+- [ ] Confirm `npm install -g monodocs@next`.
+- [ ] Confirm `npx monodocs@next`.
+- [ ] Install on supported OSes.
+- [ ] Install on supported Node.js.
+- [ ] Generate HTML and PDF.
+- [ ] Confirm Mermaid client / pre-render.
+- [ ] Confirm watch / serve.
+- [ ] Confirm Chromium detection and error display.
+- [ ] Confirm uninstall and reinstall.
+- [ ] Reproduce the README steps in a fresh environment.
 
-### 9.3 完了条件
+### 9.3 Completion Criteria
 
-- 第三者が `monodocs@next`をインストールできる。
-- 主要機能にリリースを妨げる不具合がない。
-- npm 上で公開元の provenance を確認できる。
-- README の導入手順が再現可能である。
+- A third party can install `monodocs@next`.
+- No defects blocking the release in the main features.
+- The publish source provenance can be confirmed on npm.
+- The installation steps in the README are reproducible.
 
-## 10. M5: npm 安定版公開
+## 10. M5: npm Stable Publish
 
-### 10.1 リリース手順
+### 10.1 Release Procedure
 
-1. バージョン更新 PR を作成する。
-2. CHANGELOG または Release notes を更新する。
-3. 全 CI を通す。
-4. `npm pack`成果物を検査する。
-5. tarball を新規環境へインストールしてスモークテストする。
-6. PR を main へマージする。
-7. `v0.6.0`タグを作成する。
-8. CI で GitHub Release を生成する。
-9. CI から npm へ公開する。
-10. npm から公開版を再インストールして検証する。
-11. README、公式サイト、ステータス文書を更新する。
+1. Create a version update PR.
+2. Update the CHANGELOG or Release notes.
+3. Pass all CI.
+4. Inspect the `npm pack` artifact.
+5. Install the tarball into a fresh environment and smoke test.
+6. Merge the PR into main.
+7. Create the `v0.6.0` tag.
+8. Generate the GitHub Release in CI.
+9. Publish to npm from CI.
+10. Reinstall the published version from npm and verify.
+11. Update the README, official site, and status documents.
 
-### 10.2 公開後の確認
+### 10.2 Post-Publish Verification
 
 ```bash
 npm install -g monodocs
@@ -343,75 +328,74 @@ monodocs --version
 monodocs build ./docs -o ./dist/manual.html
 ```
 
-- [ ] Git タグ、GitHub Release、npm version が一致している。
-- [ ] `latest`が意図した安定版を指している。
-- [ ] LICENSE と第三者ライセンス表記が含まれている。
-- [ ] npm provenance を確認できる。
-- [ ] HTML と PDF の公開後スモークテストが通る。
-- [ ] README だけで導入・利用できる。
+- [ ] The Git tag, GitHub Release, and npm version match.
+- [ ] `latest` points to the intended stable version.
+- [ ] LICENSE and third-party license notices are included.
+- [ ] npm provenance can be confirmed.
+- [ ] The post-publish smoke tests for HTML and PDF pass.
+- [ ] It can be adopted and used with the README alone.
 
-### 10.3 完了条件
+### 10.3 Completion Criteria
 
-- `npm install -g monodocs`で導入できる。
-- `npx monodocs`で実行できる。
-- サポート対象環境で HTML と PDF を生成できる。
-- 問題発生時の修正版公開手順が確立している。
+- It can be installed with `npm install -g monodocs`.
+- It can be run with `npx monodocs`.
+- HTML and PDF can be generated in supported environments.
+- A procedure for publishing a fixed version when problems occur is established.
 
-## 11. M6: 公開後の保守運用
+## 11. M6: Post-Publish Maintenance
 
-### 11.1 バージョニング
+### 11.1 Versioning
 
-- patch: 後方互換のバグ修正。
-- minor: 後方互換の機能追加。
-- major: 破壊的変更。
-- `next`: プレリリース。
-- `latest`: 安定版。
+- patch: Backward-compatible bug fixes.
+- minor: Backward-compatible feature additions.
+- major: Breaking changes.
+- `next`: Pre-release.
+- `latest`: Stable version.
 
-  0.x 期間は最新 minor を通常サポート対象とし、過去 minor は重大な脆弱性のみ対応する。
+  During the 0.x period, treat the latest minor as the normal support target, and address only critical vulnerabilities for past minors.
 
-### 11.2 セキュリティ対応
+### 11.2 Security Handling
 
-- [ ] Critical / High の脆弱性を通常リリースより優先して対応する。
-- [ ] 公開前は Security Advisory などで非公開に調整する。
-- [ ] 修正版公開後に影響範囲と対処方法を案内する。
-- [ ] 必要に応じて npm の問題バージョンを deprecate する。
-- [ ] 公開済みバージョンを安易に unpublish しない。
+- [ ] Address Critical / High vulnerabilities with priority over regular releases.
+- [ ] Coordinate privately via Security Advisory or similar before disclosure.
+- [ ] Announce the scope of impact and mitigation after publishing the fixed version.
+- [ ] Deprecate the problematic npm version if needed.
+- [ ] Do not carelessly unpublish already-published versions.
 
-### 11.3 定期作業
+### 11.3 Recurring Tasks
 
-- [ ] 依存関係を定期更新する。
-- [ ] 脆弱性アラートを確認する。
-- [ ] npm maintainer 権限を定期的に棚卸しする。
-- [ ] Trusted Publisher 設定を監査する。
-- [ ] Node.js と Chromium の対応範囲を見直す。
-- [ ] EOL バージョンを告知する。
-- [ ] Issue とダウンロード状況から優先課題を見直す。
+- [ ] Update dependencies regularly.
+- [ ] Check vulnerability alerts.
+- [ ] Periodically review npm maintainer permissions.
+- [ ] Audit the Trusted Publisher settings.
+- [ ] Review the supported ranges of Node.js and Chromium.
+- [ ] Announce EOL versions.
+- [ ] Review priority issues based on Issues and download status.
 
-## 12. 将来: SEA 単体バイナリ
+## 12. Future: SEA Standalone Binary
 
-SEA 単体バイナリは npm 安定版の公開・運用後に、利用者の需要と保守コストを確認して着手を
-判断する。v0.6 のリリースを妨げる前提条件にはしない。
+The SEA standalone binary will have its start decided after publishing and operating the npm stable version, by confirming user demand and maintenance cost. It will not be a prerequisite that blocks the v0.6 release.
 
-着手する場合は、少なくとも次を改めて決める。
+If started, decide at least the following anew.
 
-- 対象 OS / CPU と各環境の CI runner
-- PDF / Mermaid pre-render を含めるか、HTML 系機能だけに限定するか
-- GitHub Release asset の形式、SHA-256、provenance
-- POSIX `install.sh`、Windows `install.ps1`、コード署名の要否
-- Node.js ランタイムを同梱することによるサイズと更新頻度
-- npm 版とのバージョン対応およびサポート期間
+- Target OS / CPU and the CI runners for each environment
+- Whether to include PDF / Mermaid pre-render or limit to HTML-related features only
+- The format of GitHub Release assets, SHA-256, and provenance
+- The need for POSIX `install.sh`, Windows `install.ps1`, and code signing
+- The size and update frequency from bundling the Node.js runtime
+- Version correspondence with the npm version and the support period
 
-## 13. リリース共通ルール
+## 13. Common Release Rules
 
-- 同じバージョンの成果物を再生成・差し替えしない。
-- 問題がある場合は新しい patch または prerelease を発行する。
-- バージョンタグ、CLI の `--version`、package.json、GitHub Release を一致させる。
-- 安定版を公開する前に prerelease でインストール経路を検証する。
-- Release notes に機能追加、修正、破壊的変更、既知の制限を記載する。
-- npm tarball に LICENSE と第三者ライセンス表記を含める。
-- リリース操作は CI から行い、公開権限を最小化する。
+- Do not regenerate or replace artifacts of the same version.
+- If there is a problem, issue a new patch or prerelease.
+- Match the version tag, the CLI's `--version`, package.json, and the GitHub Release.
+- Verify the installation path with a prerelease before publishing the stable version.
+- Record feature additions, fixes, breaking changes, and known limitations in the Release notes.
+- Include LICENSE and third-party license notices in the npm tarball.
+- Perform release operations from CI, and minimize publishing permissions.
 
-## 14. 参考資料
+## 14. References
 
 - [npm package scope, access level, and visibility](https://docs.npmjs.com/package-scope-access-level-and-visibility/)
 - [Creating and publishing scoped public packages](https://docs.npmjs.com/creating-and-publishing-scoped-public-packages/)

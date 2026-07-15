@@ -1,121 +1,113 @@
-# 開発ガイド
+# Development Guide
 
-## 開発方針
+## Development Policy
 
-- **ホスト環境を汚さない**: Node.js / pnpm はホストにグローバルインストールせず、
-  開発・ビルド・テストはすべて devcontainer（または Docker コンテナ）内で実行する。
-- **アプリとサイトを分離**: アプリ本体は `app/`、将来公開する紹介サイトは `site/`、
-  開発ドキュメントは `docs/` に置く。
-- **Source Renderer Architecture**: Markdown / AsciiDoc など各ソース形式は専用 renderer で
-  処理し、共通の `Page` モデルに正規化してから出力する（[roadmap.md](roadmap.md) 11章）。
-- **段階的リリース**: ロードマップのバージョン単位で機能を追加する（[status.md](status.md)）。
+- **Don't pollute the host environment**: Node.js / pnpm are not installed globally on the host;
+  all development, builds, and tests are run inside the devcontainer (or a Docker container).
+- **Separate the app from the site**: The application itself lives in `app/`, the promotional site to be published in the future lives in `site/`,
+  and development documentation lives in `docs/`.
+- **Source Renderer Architecture**: Each source format such as Markdown / AsciiDoc is
+  processed by a dedicated renderer, normalized into a common `Page` model, and then output ([roadmap.md](roadmap.md), chapter 11).
+- **Incremental releases**: Features are added per roadmap version ([status.md](status.md)).
 
-## ディレクトリ構成
+## Directory Structure
 
 ```text
 monodocs/
-  app/                      # アプリ本体（pnpm モノレポ）
+  app/                      # The application itself (pnpm monorepo)
     packages/
-      core/                 # 変換処理の中核（@monodocs/core）
+      core/                 # Core of the conversion processing (@monodocs/core)
         src/
-          sources/          # 各形式の SourceRenderer（markdown / asciidoc）
+          sources/          # SourceRenderer for each format (markdown / asciidoc)
           pipeline/         # buildPages / buildSidebar / renderSingleHtml
-          themes/default/   # HTML テンプレート / CSS / クライアント JS
-      cli/                  # CLI（monodocs コマンド）
-  examples/ja/              # 全記法・全機能のショーケース（日本語。markdown / asciidoc / mixed）
-  examples/en/              # 同上の英語版
-  site/                     # アプリ紹介の静的 Web サイト（VitePress）
-  docs/                     # 開発ドキュメント（本フォルダ）
-  scripts/app.sh            # 専用イメージ内でコマンドを実行するヘルパー
-  Dockerfile.dev            # 開発・ビルド・テスト用イメージ（pnpm 焼き込み）
-  .devcontainer/            # VS Code Dev Containers 用（任意。Dockerfile.dev を利用）
+          themes/default/   # HTML template / CSS / client JS
+      cli/                  # CLI (monodocs command)
+  examples/ja/              # Showcase of all notations and all features (Japanese. markdown / asciidoc / mixed)
+  examples/en/              # English version of the above
+  site/                     # Static web site introducing the app (VitePress)
+  docs/                     # Development documentation (this folder)
+  scripts/app.sh            # Helper that runs commands inside the dedicated image
+  Dockerfile.dev            # Image for development / build / test (with pnpm baked in)
+  .devcontainer/            # For VS Code Dev Containers (optional. Uses Dockerfile.dev)
   README.md
 ```
 
-## 開発環境（専用 Docker イメージ）
+## Development Environment (Dedicated Docker Image)
 
-ホストに Node / pnpm を入れず、専用イメージ **`monodocs-dev`** の中で開発・ビルド・
-テストする。イメージは Node 22 に pnpm（`app/package.json` の `packageManager` と同一の
-バージョン）を焼き込んであるため、corepack による pnpm の都度ダウンロードが発生しない。
+Instead of installing Node / pnpm on the host, develop, build, and test inside the dedicated image **`monodocs-dev`**. The image bakes in pnpm on top of Node 22 (the same version as `packageManager` in `app/package.json`), so pnpm is not downloaded each time via corepack.
 
-### 必要なもの
+### What You Need
 
-- Docker のみ（VS Code / devcontainer は不要）
+- Docker only (VS Code / devcontainer are not required)
 
-### イメージのビルド（初回のみ）
+### Building the Image (First Time Only)
 
 ```bash
 docker build -f Dockerfile.dev -t monodocs-dev .
 ```
 
-### よく使うコマンド（ヘルパー `scripts/app.sh` 経由）
+### Frequently Used Commands (via the `scripts/app.sh` helper)
 
-`scripts/app.sh` は `monodocs-dev` が無ければ自動ビルドし、作業ツリーをマウントして
-`app/` 内でコマンドを実行する。**ホスト側で**実行する。
+`scripts/app.sh` automatically builds `monodocs-dev` if it does not exist, mounts the working tree, and runs commands inside `app/`. Run it **on the host side**.
 
 ```bash
-scripts/app.sh pnpm install     # 依存をインストール
-scripts/app.sh pnpm build       # 全パッケージをビルド（tsc）+ テーマアセットのコピー
-scripts/app.sh pnpm test        # テスト（vitest）
-scripts/app.sh pnpm typecheck   # 型チェック
-scripts/app.sh pnpm format      # Prettier で整形
+scripts/app.sh pnpm install     # Install dependencies
+scripts/app.sh pnpm build       # Build all packages (tsc) + copy theme assets
+scripts/app.sh pnpm test        # Tests (vitest)
+scripts/app.sh pnpm typecheck   # Type check
+scripts/app.sh pnpm format      # Format with Prettier
 ```
 
-ローカルプレビュー（ホストのブラウザで `http://localhost:4173/`）。
-依存インストール（初回のみ）・ビルド・`serve --host 0.0.0.0` をまとめて行う
-ショートカット `scripts/app-serve.sh` が手軽:
+Local preview (in your host's browser at `http://localhost:4173/`).
+The shortcut `scripts/app-serve.sh`, which performs dependency installation (first time only), the build, and `serve --host 0.0.0.0` all at once, is convenient:
 
 ```bash
 scripts/app-serve.sh
-# 別ポート: MONODOCS_PORT=8080 scripts/app-serve.sh --port 8080
+# Different port: MONODOCS_PORT=8080 scripts/app-serve.sh --port 8080
 ```
 
-個別に起動する場合（`scripts/app-serve.sh` は内部でこれに委譲する）:
+To start it individually (`scripts/app-serve.sh` delegates to this internally):
 
 ```bash
 scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0
-# 別ポート: MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0 --port 8080
+# Different port: MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0 --port 8080
 ```
 
-> コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
-> （`scripts/app-serve.sh` は自動で付与し、`scripts/app.sh` は `MONODOCS_PORT`（既定 4173）を公開する）。
-> `http://0.0.0.0:...` ではなく `http://localhost:...` を開く。
+> To expose the served content from inside the container to the host, `serve` requires `--host 0.0.0.0`
+> (`scripts/app-serve.sh` adds it automatically, and `scripts/app.sh` exposes `MONODOCS_PORT` (default 4173)).
+> Open `http://localhost:...` rather than `http://0.0.0.0:...`.
 
-単一 HTML（配布物）をファイルに出力する:
+To output a single HTML (distributable) to a file:
 
 ```bash
 scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/manual.html
 ```
 
-### 単一実行ファイル（ネイティブバイナリ）をビルドする
+### Building a Single Executable File (Native Binary)
 
-`scripts/app.sh` / `scripts/app-serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、
-作業ディレクトリも `/work/app` のため、**リポジトリ配下のパスしか配信できない**（リポジトリ外の
-任意ディレクトリを指せない。`app/` の外を指すには `../examples/ja` のように `../` を付ける）。これを
-避けて任意の場所のドキュメントを試すには、ホストで直接動く単一実行ファイルを使う。
+`scripts/app.sh` / `scripts/app-serve.sh` mount only the repository (`/work`) into the container, and the working directory is `/work/app`, so **they can only serve paths under the repository** (you cannot point to an arbitrary directory outside the repository; to point outside `app/`, prefix with `../` as in `../examples/ja`). To avoid this and try out documents in an arbitrary location, use a single executable file that runs directly on the host.
 
-`scripts/app-build.sh` が依存込みの単一ネイティブバイナリ（Node 22 の
-[Single Executable Application](https://nodejs.org/api/single-executable-applications.html)）を
-`app/dist/monodocs` に出力する。esbuild で全依存とテーマアセットを 1 ファイルにバンドルし、
-SEA blob を `postject` で node バイナリへ注入する。**ホストに node は不要**（ビルド環境と
-同じ OS/arch 向け）。
+`scripts/app-build.sh` outputs a single native binary with dependencies included (Node 22's
+[Single Executable Application](https://nodejs.org/api/single-executable-applications.html)) to
+`app/dist/monodocs`. It bundles all dependencies and theme assets into one file with esbuild, and
+injects the SEA blob into the node binary with `postject`. **node is not required on the host** (targeted at the same OS/arch as the build environment).
 
 ```bash
-scripts/app-build.sh                              # → app/dist/monodocs を生成
+scripts/app-build.sh                              # → Generates app/dist/monodocs
 
-# 以降はホストで直接実行（Docker 不要・任意ディレクトリを指せる）
-app/dist/monodocs serve ~/任意のドキュメント       # ローカルプレビュー（--host 0.0.0.0 不要）
-app/dist/monodocs build ~/任意のドキュメント -o ~/manual.html
+# From here on, run directly on the host (no Docker needed; can point to any directory)
+app/dist/monodocs serve ~/any-docs                # Local preview (--host 0.0.0.0 not needed)
+app/dist/monodocs build ~/any-docs -o ~/manual.html
 ```
 
-> - 出力は約 130 MiB（node ランタイム同梱のため）。`app/dist/` は `.gitignore` 済み。
-> - テーマアセット（`template.html` / `style.css` / `app.js`）と mermaid inline ランタイムは
->   バンドル時に `globalThis.__MONODOCS_ASSETS__` へ埋め込む（`scripts/bundle.mjs`）。
->   `loadTheme` / `mermaidRuntimeScript` はこの埋め込みを優先し、無ければ従来どおりファイルから読む。
-> - バンドルだけ欲しいとき（ホストに node がある場合）は `scripts/app.sh pnpm bundle` で
->   `app/dist/monodocs.cjs` を生成し `node app/dist/monodocs.cjs ...` で実行できる。
+> - The output is about 130 MiB (because the node runtime is bundled). `app/dist/` is already in `.gitignore`.
+> - Theme assets (`template.html` / `style.css` / `app.js`) and the mermaid inline runtime are
+>   embedded into `globalThis.__MONODOCS_ASSETS__` at bundle time (`scripts/bundle.mjs`).
+>   `loadTheme` / `mermaidRuntimeScript` prefer this embedded data and fall back to reading from files as before if it is absent.
+> - When you only want the bundle (if you have node on the host), run `scripts/app.sh pnpm bundle` to
+>   generate `app/dist/monodocs.cjs`, and run it with `node app/dist/monodocs.cjs ...`.
 
-### ヘルパーを使わず `docker run` で実行する場合
+### Running with `docker run` Without the Helper
 
 ```bash
 docker run --rm -it -v "$PWD":/work -w /work/app monodocs-dev pnpm test
@@ -123,72 +115,67 @@ docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app monodocs-dev \
   node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
 ```
 
-### VS Code Dev Containers（任意）
+### VS Code Dev Containers (Optional)
 
-必須ではない。使う場合、`.devcontainer` は同じ `Dockerfile.dev` からイメージを構築する。
-**Dev Containers: Reopen in Container** で起動すると `postCreate` で `pnpm install` が走り、
-コンテナ内では `pnpm build` / `pnpm test` を直接実行できる（`scripts/app.sh` は不要）。
-コンテナ内で `node packages/cli/dist/index.js serve examples/ja` を実行すると、
-VS Code がポート 4173 を自動フォワードする（`--host` は不要）。
+This is not required. If you use it, `.devcontainer` builds the image from the same `Dockerfile.dev`.
+When you start it with **Dev Containers: Reopen in Container**, `pnpm install` runs in `postCreate`,
+and inside the container you can run `pnpm build` / `pnpm test` directly (`scripts/app.sh` is not needed).
+When you run `node packages/cli/dist/index.js serve examples/ja` inside the container,
+VS Code automatically forwards port 4173 (`--host` is not needed).
 
-## アーキテクチャ
+## Architecture
 
 ```text
 Markdown / AsciiDoc files
-      ↓  Source Renderer（形式ごと）
-   Page[]（共通モデル）
+      ↓  Source Renderer (per format)
+   Page[] (shared model)
       ↓  buildSidebar / renderSingleHtml
   single HTML
-      ↓  (optional) headless browser   ※ PDF は v0.5 で対応予定
+      ↓  (optional) headless browser   PDF support starts in v0.5
      PDF
 ```
 
-- `core/src/sources/<format>/renderer.ts` … `SourceRenderer` 実装（`extractMeta` / `render`）
-- `core/src/pipeline/buildPages.ts` … ソースを `Page` に正規化（route / page id の重複検知）
-- `core/src/pipeline/buildSidebar.ts` … フォルダ構造からサイドバーツリーを生成
-- `core/src/pipeline/renderSingleHtml.ts` … テンプレートに埋め込み単一 HTML を生成（目次/検索用のページデータも埋め込む）
-- `core/src/themes/default/` … テンプレート / CSS / クライアント JS（hash route 切り替え・検索・目次・前後ナビ・ダークモード・折りたたみ）
-- `core/src/watch.ts` … 入力・設定の変更を監視して再ビルド（`fs.watch`、デバウンス付き）
-- `core/src/serve.ts` … ローカル HTTP 配信 + 監視 + SSE ライブリロード
+- `core/src/sources/<format>/renderer.ts` … `SourceRenderer` implementation (`extractMeta` / `render`)
+- `core/src/pipeline/buildPages.ts` … Normalizes sources into `Page` (detects duplicate route / page ids)
+- `core/src/pipeline/buildSidebar.ts` … Generates the sidebar tree from the folder structure
+- `core/src/pipeline/renderSingleHtml.ts` … Embeds into the template to generate a single HTML (also embeds page data for the table of contents / search)
+- `core/src/themes/default/` … Template / CSS / client JS (hash route switching, search, table of contents, prev/next navigation, dark mode, collapsing)
+- `core/src/watch.ts` … Watches for changes to inputs and configuration and rebuilds (`fs.watch`, with debounce)
+- `core/src/serve.ts` … Local HTTP serving + watching + SSE live reload
 
-単一 HTML 内での見出し ID 衝突を避けるため、各見出し / 要素 ID は
-`{page-id}-{元のID}` に prefix する（AsciiDoc の同一文書内 xref も追従して書き換える）。
+To avoid heading ID collisions within a single HTML, each heading / element ID is
+prefixed to `{page-id}-{original ID}` (AsciiDoc's intra-document xrefs are also rewritten to follow suit).
 
-### UI（chrome）の言語
+### Language of the UI (chrome)
 
-テーマの UI 文言（コピー/折り返し、前後ナビ、検索、目次など）は**英語で統一する**。
-ユーザーが用意した Markdown / AsciiDoc を単一 HTML にまとめる仕様上、読者の言語に追従する
-ランタイム i18n は単一ファイルでは意味が薄いため行わない。本文の言語とは独立した UI ラベルと
-割り切り、国際的に読める英語をデフォルトとする。クライアント側の動的文言は
-`themes/default/app.js` の `LABELS` に集約し、静的文言は `template.html` に置く（将来 config で
-ビルド時に言語/ラベルを差し替えられる余地を残すための集約）。
+The theme's UI text (copy/wrap, prev/next navigation, search, table of contents, etc.) is **standardized in English**.
+Given the design of bundling user-provided Markdown / AsciiDoc into a single HTML, runtime i18n that follows the reader's language has little meaning in a single file, so it is not done. We treat UI labels as independent of the body language and settle on internationally readable English as the default. Client-side dynamic text is consolidated in `LABELS` in `themes/default/app.js`, and static text is placed in `template.html` (this consolidation leaves room to swap languages/labels at build time via config in the future).
 
-### PDF のフォント
+### PDF Fonts
 
-PDF 出力（`--format pdf` / `both`）と Mermaid pre-render はヘッドレス Chromium で描画するため、
-**本文に出す文字種のフォントが実行環境に無いと PDF で豆腐（□ / ☒）になる**（HTML はブラウザ側の
-フォントで表示するため影響しない）。`Dockerfile.dev` には以下を同梱している:
+Because PDF output (`--format pdf` / `both`) and Mermaid pre-render are drawn with headless Chromium,
+**if the runtime environment lacks a font for the character types that appear in the body, they become tofu (□ / ☒) in the PDF** (HTML is unaffected because it is displayed with the browser's fonts). `Dockerfile.dev` bundles the following:
 
-- `fonts-noto-cjk` … 日本語（CJK）
-- `fonts-noto-color-emoji` … 絵文字（`✅` / `⚠️` など）
+- `fonts-noto-cjk` … Japanese (CJK)
+- `fonts-noto-color-emoji` … Emoji (`✅` / `⚠️`, etc.)
 
-フォントを追加したら `docker build -f Dockerfile.dev -t monodocs-dev .` でイメージを再ビルドする
-（`scripts/app.sh` はイメージが**無いときだけ**自動ビルドするので、Dockerfile 変更後は手動再ビルドが必要）。
-自前環境で PDF を出す場合は、使う文字種に応じたフォントを別途インストールする。
+After adding fonts, rebuild the image with `docker build -f Dockerfile.dev -t monodocs-dev .`
+(`scripts/app.sh` auto-builds the image **only when it is absent**, so a manual rebuild is required after changing the Dockerfile).
+If you produce PDFs in your own environment, separately install fonts appropriate for the character types you use.
 
-## 入力の前提（セキュリティ）
+## Input Assumptions (Security)
 
-`monodocs` は **自分（チーム）が管理する信頼できるドキュメント** を変換する用途を想定する。
+`monodocs` is intended for converting **trusted documents that you (your team) manage**.
 
-- Markdown は生 HTML を通さない（remark-rehype の既定でドロップ）。
-- AsciiDoc は passthrough により著者が意図した生 HTML を出力でき、その HTML はサニタイズせず
-  そのまま埋め込む。したがって **信頼できない AsciiDoc を変換すると XSS になり得る**。
-- AsciiDoc の `include::[]` は `safe` モードで入力ファイルのディレクトリ配下に jail する
-  （`base_dir` を入力ファイルのディレクトリに設定）。外部ファイルの読み込みはできない。
-- 画像の data URI 埋め込みは、実体パス（symlink 解決後）が入力ルート配下にあるものだけを対象とする。
-  入力ルート外を指す画像は埋め込まず警告する。
-- 画像サイズ上限（`assets.maxInlineSize`）超過時の挙動は `assets.onLargeImage` で選ぶ:
-  `warn`（警告して埋め込む。既定）/ `external`（埋め込まず元 src のまま）/ `error`（ビルド失敗）。
+- Markdown does not pass through raw HTML (dropped by default by remark-rehype).
+- AsciiDoc can output author-intended raw HTML via passthrough, and that HTML is embedded as-is without sanitization.
+  Therefore, **converting untrusted AsciiDoc can lead to XSS**.
+- AsciiDoc's `include::[]` is jailed under the input file's directory in `safe` mode
+  (`base_dir` is set to the input file's directory). Reading external files is not possible.
+- Data URI embedding of images targets only those whose real path (after symlink resolution) is under the input root.
+  Images pointing outside the input root are not embedded and a warning is issued.
+- The behavior when the image size limit (`assets.maxInlineSize`) is exceeded is chosen with `assets.onLargeImage`:
+  `warn` (warn and embed; default) / `external` (do not embed, keep the original src) / `error` (fail the build).
 
-信頼できない入力を扱う必要が出た場合は、`rehype-sanitize` 等によるサニタイズ層の追加を検討する
-（現状は未導入。導入すると著者が意図した HTML/passthrough も制限される点に注意）。
+If you need to handle untrusted input, consider adding a sanitization layer with `rehype-sanitize` or similar
+(not currently introduced; note that introducing it also restricts author-intended HTML/passthrough).

@@ -2,118 +2,240 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language policy
+
+The repository-wide language policy is defined in [AGENTS.md](AGENTS.md). Read and follow it before modifying
+repository artifacts or choosing the conversation language. In particular, keep AI-facing repository
+documentation in English while communicating with each user in their preferred language.
+
 ## What this is
 
-`monodocs` は複数の Markdown / AsciiDoc ファイルを **単一の自己完結 HTML（将来は PDF）** にまとめる CLI ツール。入力は分割管理したまま、配布物だけを 1 ファイル化する。Pandoc 代替ではなく「単一ファイル配布特化の軽量ジェネレータ」を目指す。仕様とロードマップは [docs/roadmap.md](docs/roadmap.md)、実装状況は [docs/status.md](docs/status.md)。
+`monodocs` is a CLI tool that combines multiple Markdown and AsciiDoc files into a **single self-contained
+HTML document** (and now PDF). Source documents remain split for maintenance, while the distributable output
+is a single file. It is not intended to replace Pandoc; it is a lightweight generator focused on single-file
+distribution. See [docs/roadmap.md](docs/roadmap.md) for the specification and roadmap, and
+[docs/status.md](docs/status.md) for implementation status.
 
-## 開発環境とコマンド
+## Development environment and commands
 
-**ホスト環境を汚さない方針。** Node.js / pnpm はホストに入れず、専用 Docker イメージ `monodocs-dev`（`Dockerfile.dev`、pnpm を焼き込み済み）内で実行する。コードはすべて `app/`（pnpm モノレポ）配下。
+**Do not pollute the host environment.** Do not install Node.js or pnpm globally on the host. Run development,
+build, and test commands in the dedicated `monodocs-dev` Docker image (`Dockerfile.dev`, with pnpm installed).
+All application code is under `app/`, which is a pnpm monorepo.
 
-ホストから `scripts/app.sh` 経由で実行する（イメージが無ければ自動ビルド。作業ツリーをマウントし `app/` で実行）:
-
-```bash
-scripts/app.sh pnpm install      # 依存インストール
-scripts/app.sh pnpm build        # 全パッケージ tsc ビルド + テーマアセットの dist コピー
-scripts/app.sh pnpm test         # vitest run（全テスト）
-scripts/app.sh pnpm typecheck    # pnpm -r typecheck（各パッケージ tsc --noEmit）
-scripts/app.sh pnpm format       # prettier --write .
-scripts/app.sh pnpm format:check # prettier --check .
-```
-
-単一テスト:
+Run commands from the host through `scripts/app.sh`. It builds the image automatically when missing, mounts
+the working tree, and runs commands from `app/`:
 
 ```bash
-scripts/app.sh pnpm exec vitest run packages/core/src/route.test.ts   # ファイル単位
-scripts/app.sh pnpm exec vitest run -t "rewrites links"               # テスト名で絞り込み
+scripts/app.sh pnpm install      # Install dependencies
+scripts/app.sh pnpm build        # Build all packages with tsc and copy theme assets to dist
+scripts/app.sh pnpm test         # Run all tests with vitest
+scripts/app.sh pnpm typecheck    # Run tsc --noEmit in every package
+scripts/app.sh pnpm format       # Format with Prettier
+scripts/app.sh pnpm format:check # Check formatting with Prettier
 ```
 
-CLI をローカルで試す（ビルド後。ホストのブラウザで見るには `--host 0.0.0.0`）:
+Run an individual test:
+
+```bash
+scripts/app.sh pnpm exec vitest run packages/core/src/route.test.ts
+scripts/app.sh pnpm exec vitest run -t "rewrites links"
+```
+
+Try the CLI locally after building. Use `--host 0.0.0.0` to access the server from the host browser:
 
 ```bash
 scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/manual.html
 scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0  # http://localhost:4173/
 ```
 
-> 注意:
-> - `scripts/app.sh` は**ホスト側**で使う。devcontainer 内やコンテナのシェルに入っている場合は `pnpm ...` を直接実行する（`scripts/app.sh` は docker-in-docker になる）。
-> - イメージを使わず素の Node イメージで動かすと corepack が pnpm を都度ダウンロードする。`monodocs-dev` はそれを避けるための専用イメージ。pnpm バージョンは `app/package.json` の `packageManager` と `Dockerfile.dev` の `PNPM_VERSION` を一致させる。
-> - `node node_modules/.bin/tsc` のような呼び方は shell ラッパーのため失敗する。直接叩くなら `node node_modules/typescript/bin/tsc ...` / `./node_modules/.bin/vitest ...`、通常は `pnpm` 経由が安全。
+Notes:
 
-## アーキテクチャ（Source Renderer Architecture）
+- Use `scripts/app.sh` **from the host**. Inside a devcontainer or container shell, run `pnpm ...` directly;
+  otherwise, `scripts/app.sh` attempts Docker-in-Docker.
+- When using a plain Node image instead of the dedicated image, Corepack downloads pnpm on demand.
+  `monodocs-dev` avoids that. Keep `packageManager` in `app/package.json` aligned with `PNPM_VERSION` in
+  `Dockerfile.dev`.
+- Commands such as `node node_modules/.bin/tsc` fail because the file is a shell wrapper. If direct execution
+  is necessary, use `node node_modules/typescript/bin/tsc ...` or `./node_modules/.bin/vitest ...`; normally,
+  use pnpm.
 
-中心思想は **「形式ごとに専用 renderer で処理し、共通の `Page` モデルへ正規化してから出力する」**（[docs/roadmap.md](docs/roadmap.md) 11章）。Markdown と AsciiDoc を同じ処理で扱おうとしない。型定義は [app/packages/core/src/types.ts](app/packages/core/src/types.ts) に集約。
+## Architecture (Source Renderer Architecture)
 
-ビルドの中核は [build.ts](app/packages/core/src/build.ts) の `preparePages()`（`buildSite` と `validateSite` が共用）。データフロー:
+The core principle is: **process each source format with its own renderer, normalize it into the shared `Page`
+model, and only then generate output** (see section 11 of [docs/roadmap.md](docs/roadmap.md)). Do not try to
+process Markdown and AsciiDoc through the same renderer. Shared types live in
+[app/packages/core/src/types.ts](app/packages/core/src/types.ts).
 
-```
+The central build function is `preparePages()` in [build.ts](app/packages/core/src/build.ts), shared by
+`buildSite` and `validateSite`. Data flow:
+
+```text
 loadConfig (config.ts)
-  → scanSourceFiles (scan.ts)          入力走査・拡張子マップで形式判定・exclude 適用
-  → buildPages (pipeline/buildPages.ts) 各 SourceRenderer で render → Page[] に正規化
-  → postprocessPages (pipeline/postprocess.ts) HAST 上でリンク変換・画像 data URI 化・Mermaid 変換・shiki ハイライト
-  → buildSidebar (pipeline/buildSidebar.ts) フォルダ構造からサイドバーツリー生成
-  → renderSingleHtml (pipeline/renderSingleHtml.ts) テンプレートへ埋め込み単一 HTML 生成
-  → writeOutput (build.ts)
+  -> scanSourceFiles (scan.ts)           scan inputs, detect formats by extension, apply exclusions
+  -> buildPages (pipeline/buildPages.ts) render with each SourceRenderer and normalize to Page[]
+  -> postprocessPages (pipeline/postprocess.ts) rewrite links, embed images as data URIs,
+                                           transform Mermaid, and apply Shiki highlighting on HAST
+  -> buildSidebar (pipeline/buildSidebar.ts) build the sidebar tree from the directory structure
+  -> renderSingleHtml (pipeline/renderSingleHtml.ts) inject content into the template
+  -> writeOutput (build.ts)
 ```
 
-各形式の renderer は [sources/markdown/renderer.ts](app/packages/core/src/sources/markdown/renderer.ts)（unified/remark/rehype）と [sources/asciidoc/renderer.ts](app/packages/core/src/sources/asciidoc/renderer.ts)（Asciidoctor.js）。共通の `SourceRenderer` インターフェース（`extractMeta` / `render`）を実装する。メタデータの正規化（frontmatter / `:sd-*:` → `PageMeta`）は [sources/meta.ts](app/packages/core/src/sources/meta.ts)。
+Format-specific renderers are [sources/markdown/renderer.ts](app/packages/core/src/sources/markdown/renderer.ts)
+(unified/remark/rehype) and
+[sources/asciidoc/renderer.ts](app/packages/core/src/sources/asciidoc/renderer.ts) (Asciidoctor.js). Both
+implement the shared `SourceRenderer` interface (`extractMeta` / `render`). Metadata normalization
+(frontmatter or `:sd-*:` to `PageMeta`) is in [sources/meta.ts](app/packages/core/src/sources/meta.ts).
 
-### 単一 HTML 化に伴う重要な不変条件
+### Critical invariants for single-HTML output
 
-- **見出し ID の衝突回避**: 複数ファイルを 1 つの HTML に入れるため、すべての要素 ID を `{page-id}-{元のID}` に prefix する。Markdown 側は `collectHeadingsAndText`（renderer 内 rehype プラグイン）、AsciiDoc 側も同様に prefix し、同一文書内の xref/アンカーも追従して書き換える。`buildPages` は **route だけでなく page id の衝突も検知してエラー**にする（例: `a-b.md` と `a/b.md` は同じ page id になる）。
-- **ルーティング**: 相対パスから拡張子を除いた route を生成（`index` → `/`）。単一 HTML 内は hash route（`#/setup/install`）で疑似ページ切り替え。`href` は `encodeURI` 済み、`data-route` は生のまま保持し、クライアント側で `decodeURI` して照合する（日本語・空白対応。[themes/default/app.js](app/packages/core/src/themes/default/app.js)）。
-- **リンク変換**: `.md` / `.adoc` / `.html` 相当リンクと AsciiDoc xref を hash route へ。見出しアンカー（`file.md#見出し`）はファイル単位までの解決で、アンカー部分は落として警告する（未対応）。
-- **ID prefix の共通化**: Markdown / AsciiDoc 双方の renderer が [sources/prefixIds.ts](app/packages/core/src/sources/prefixIds.ts) の `prefixIdsAndCollect` を使い、全要素 ID の prefix・同一文書内アンカー書き換え・見出し/テキスト収集を共通で行う。脚注など自動生成 ID もこれで衝突を回避する。
+- **Prevent heading ID collisions**: Because multiple files are placed in one HTML document, prefix every
+  element ID with `{page-id}-`. Markdown uses the `collectHeadingsAndText` rehype plugin in its renderer;
+  AsciiDoc applies the same prefix and rewrites xrefs and anchors within the same document. `buildPages` must
+  detect and reject page ID collisions as well as route collisions. For example, `a-b.md` and `a/b.md` produce
+  the same page ID.
+- **Routing**: Generate routes from relative paths without extensions, with `index` mapped to `/`. Use hash
+  routes such as `#/setup/install` for pseudo-page navigation within the single HTML document. Store an
+  `encodeURI`-encoded value in `href` and the raw route in `data-route`; the client decodes it with `decodeURI`
+  before matching, supporting Japanese characters and spaces. See
+  [themes/default/app.js](app/packages/core/src/themes/default/app.js).
+- **Link rewriting**: Rewrite links equivalent to `.md`, `.adoc`, and `.html`, plus AsciiDoc xrefs, to hash
+  routes. Heading links such as `file.md#heading` currently resolve only to the file; drop the anchor and emit
+  a warning.
+- **Shared ID prefixing**: Both renderers use `prefixIdsAndCollect` from
+  [sources/prefixIds.ts](app/packages/core/src/sources/prefixIds.ts) to prefix every element ID, rewrite
+  same-document anchors, and collect headings and text. This also prevents collisions in generated IDs such as
+  footnotes.
 
-対応記法と、単一 HTML 化に伴い対応できない／意図的に制限する記法は [docs/syntax.md](docs/syntax.md) にまとめる。記法の対応範囲を変えたらこの文書も更新する。
+Document supported syntax and syntax that is unsupported or intentionally constrained by single-HTML output
+in [docs/syntax.md](docs/syntax.md). Update that document whenever syntax support changes.
 
-### Mermaid（`mermaid.mode`: client / pre-render）
+### Mermaid (`mermaid.mode`: client / pre-render)
 
-Mermaid には 2 つの描画方式がある。**client**（既定）は HTML に mermaid ランタイムを載せてブラウザで描画する（`mermaid.runtime` が `cdn`=CDN 参照 / `inline`=バンドル埋め込み。[themes/mermaid.ts](app/packages/core/src/themes/mermaid.ts)）。inline は自己完結だが図が 1 個でも約 975KB(gzip) を all-or-nothing で払う。**pre-render** は [pipeline/mermaidPrerender.ts](app/packages/core/src/pipeline/mermaidPrerender.ts) が Puppeteer（`puppeteer-core` + システム Chromium。`optionalDependencies`・動的 import）で各図をビルド時に SVG 化し、[postprocess.ts](app/packages/core/src/pipeline/postprocess.ts) の `processMermaidPrerender` が **raw ノードで HAST に挿入**する（HTML パーサを通さず `viewBox`/`<defs>`/`url(#…)`/`foreignObject` を保つため serializer は `allowDangerousHtml`）。
+Mermaid supports two rendering modes. **client** (the default) includes the Mermaid runtime in the HTML and
+renders diagrams in the browser. `mermaid.runtime` selects `cdn` for a CDN reference or `inline` for an embedded
+bundle; see [themes/mermaid.ts](app/packages/core/src/themes/mermaid.ts). Inline mode is self-contained but adds
+about 975 KB gzip whenever at least one diagram exists. **pre-render** uses
+[pipeline/mermaidPrerender.ts](app/packages/core/src/pipeline/mermaidPrerender.ts) with Puppeteer
+(`puppeteer-core`, system Chromium, an optional dependency loaded dynamically) to convert every diagram to SVG
+during the build. `processMermaidPrerender` in
+[postprocess.ts](app/packages/core/src/pipeline/postprocess.ts) inserts SVG as a **raw HAST node**. The serializer
+uses `allowDangerousHtml` so that `viewBox`, `<defs>`, `url(#...)`, and `foreignObject` survive without passing
+through an HTML parser.
 
-- **id 採番**: SVG の id は pre-render SVG が `prefixIdsAndCollect` の後段で入り prefix 対象外のため、ビルド全体で単調増加する **ASCII セーフでグローバル一意な `mermaid-{n}`** を自前採番して衝突（`url(#…)`・`<style> #id{}`）を防ぐ。`page.id`（Unicode・数字始まりあり）は使わない。
-- **ランタイム注入ゲート**: pre-render は静的 SVG なのでランタイム JS を注入しない（[build.ts](app/packages/core/src/build.ts) の `bodyScripts` は `hasMermaid && enabled && mode === "client"` のときだけ）。
-- **エラーの区別（fail fast）**: **環境／セットアップエラー**（Chromium・puppeteer-core 不在、ブラウザ起動失敗）は `MermaidPrerenderSetupError` として `processMermaidPrerender` が**再 throw してビルドを止める**（図単位のフォールバックで握りつぶさない）。一方**図単位の描画エラー**（構文エラー等）は警告を出して当該ブロックを `<pre class="mermaid">`（ソース表示）へフォールバックする。`createPuppeteerPrerenderer` は setup 系の失敗をこの型で投げる。
-- **レンダラのライフサイクル**: `buildSite` が pre-render 時に lazy 起動のレンダラを作り `preparePages` へ注入して `finally` で close（図 0 個なら Chromium 非起動）。`validateSite` は `mermaidMode` を `client` に上書きして browserless（**pre-render の実描画・構文エラーは validate 対象外**）。build 経路で pre-render 指定なのに未注入なら握りつぶさずエラー。
-- **制限**: SVG のテーマはビルド時固定（読者のダーク/ライトトグルに追従しない。`colorScheme: auto` は light 相当）。**バンドル版 CLI（単一 `.cjs` / 単一実行ファイル）では利用不可**（node_modules を持たず `puppeteer-core` を解決できない。`bundle.mjs` は `external` にし、実行時は動的 import 失敗を案内文言で受ける）。Chromium は `PUPPETEER_EXECUTABLE_PATH` で明示（Dockerfile.dev に同梱）。
+- **ID allocation**: Pre-rendered SVG is inserted after `prefixIdsAndCollect` and therefore does not receive
+  page prefixes. Allocate globally unique, monotonically increasing, ASCII-safe IDs in the form `mermaid-{n}`
+  across the build to prevent collisions in `url(#...)` and `<style> #id{}`. Do not use `page.id`, which may
+  contain Unicode or begin with a digit.
+- **Runtime injection gate**: Pre-rendered SVG is static, so do not inject runtime JavaScript. In
+  [build.ts](app/packages/core/src/build.ts), `bodyScripts` is included only when
+  `hasMermaid && enabled && mode === "client"`.
+- **Distinguish errors and fail fast**: Treat environment or setup failures, such as missing Chromium,
+  missing `puppeteer-core`, or browser startup failure, as `MermaidPrerenderSetupError`. `processMermaidPrerender`
+  must rethrow these errors and stop the build rather than hiding them behind per-diagram fallback. For
+  diagram-specific render failures such as syntax errors, warn and replace the affected block with
+  `<pre class="mermaid">` showing the source. `createPuppeteerPrerenderer` throws setup failures using this type.
+- **Renderer lifecycle**: In pre-render mode, `buildSite` creates a lazy renderer, passes it to `preparePages`,
+  and closes it in `finally`. Chromium must not start when there are no diagrams. `validateSite` overrides
+  `mermaidMode` to `client`, keeping validation browserless; actual pre-rendering and its syntax errors are not
+  covered by validation. If a build requests pre-render mode without an injected renderer, fail rather than
+  swallowing the error.
+- **Limitations**: The SVG theme is fixed at build time and does not follow the reader's dark/light toggle;
+  `colorScheme: auto` behaves like light mode. Pre-rendering is unavailable in the bundled CLI (single `.cjs`
+  or standalone executable), because it has no `node_modules` from which to resolve `puppeteer-core`.
+  `bundle.mjs` marks it as external, and the dynamic-import failure provides guidance at runtime. Specify
+  Chromium through `PUPPETEER_EXECUTABLE_PATH`; it is included in `Dockerfile.dev`.
 
-### クライアントテーマ
+### Client theme
 
-[themes/default/](app/packages/core/src/themes/default/) に `template.html` / `style.css` / `app.js`。`renderSingleHtml` がトークン（`{{htmlAttrs}}` `{{title}}` `{{style}}` `{{sidebar}}` `{{pages}}` `{{siteDataJson}}` `{{appJs}}` `{{bodyScripts}}`）を差し替える。`window.__MONODOCS_DATA__` に検索・目次・前後ナビ用のページデータ（route/title/hidden/見出し/本文テキスト）を埋め込む。`app.js` は検索・ページ内目次・前後ナビ・ダークモード・サイドバー折りたたみ・hash routing を担当（素の IIFE。要素は常に null ガード）。print 時は `@media print` で全ページを縦展開。
+[themes/default/](app/packages/core/src/themes/default/) contains `template.html`, `style.css`, and `app.js`.
+`renderSingleHtml` replaces the tokens `{{htmlAttrs}}`, `{{title}}`, `{{style}}`, `{{sidebar}}`, `{{pages}}`,
+`{{siteDataJson}}`, `{{appJs}}`, and `{{bodyScripts}}`. `window.__MONODOCS_DATA__` contains page data for search,
+the table of contents, and previous/next navigation: route, title, hidden flag, headings, and body text. `app.js`
+implements search, table of contents, previous/next navigation, dark mode, sidebar collapsing, and hash routing
+as a plain IIFE whose element access is always null-guarded. Print CSS expands every page vertically.
 
-- **サイドバーの折りたたみ深さ（`sidebar.collapseDepth`）**: `renderSingleHtml` の `renderSidebar` が、この階層より深いディレクトリに `collapsed` クラスをサーバ側で付けて既定で畳む（トップレベルを深さ 1 とする。`0`=全畳み / 未指定=全展開）。**隠す（hide）のではなく畳む（collapse）**ため、深いページへの到達性は失わない（クライアントの開閉トグルでいつでも開ける）。深さ制限でナビから消す方式は採らない。
-- **目次の見出し深さ（`toc.maxLevel`）**: `__MONODOCS_DATA__` に埋め込む見出しを h2〜`maxLevel`（2〜6、既定 3）で絞る。見出しは到達済みページ内のアンカーなので、ここを浅くしても到達性は失わない（本文には常に表示される）。`toc-level-4..6` の字下げ CSS も用意済み。
-- **フォルダ名の表示**: サイドバーのフォルダ名は強制大文字化しない（`.sidebar-dir-title` から `text-transform: uppercase` を撤去済み。原文の大小をそのまま表示）。
-- **表示タイトル変換（`sidebar.titleTransform`）**: 明示タイトル（frontmatter `title` / `:sd-title:`）以外の表示タイトルにだけ適用する。`page` は `titleFrom: "heading"` で採用された見出し・ファイル名由来タイトル、`directory` はフォルダ名に適用する。各変換は `{ type: "none" }`（既定）= 無変換、`{ type: "stripNumberPrefix" }` = `01_setup` / `001-intro` のような先頭数字プレフィックスを除去、`{ type: "regex", pattern, replacement, flags }` = 正規表現置換（`flags` は任意。`g` / `i` / `u` など JS `RegExp` の flags を指定可能）。**route / page id / 本文中の見出し表示は不変**。
-- **タイトルの取得元（`sidebar.titleFrom`）**: ページタイトルの優先順位を切り替える。`"heading"`（既定）= 明示タイトル → 見出し（Markdown H1 / AsciiDoc `= Title`）→ ファイル名。`"filename"` = 見出しを飛ばし、明示タイトルが無ければファイル名を使う（見出しは本文に残るがナビ名にはしたくない運用向け）。**明示タイトル（frontmatter `title` / `:sd-title:`）は `titleFrom` に関わらず常に最優先**。`extractMeta`/`toPageMeta` が明示タイトル（`PageMeta.title`）と見出しタイトル（`PageMeta.headingTitle`）を別フィールドに分離して保持し、`buildPages` の `resolveTitle` が `titleFrom` に応じて解決する。`"filename"` のときはファイル名が指定された取得元なので「タイトル欠落」警告は出さない。**route / page id は不変**。
-- **単一ページフォルダの繰り上げ（`sidebar.flattenSingleChild`）**: ドキュメント＋関連画像を 1 フォルダにまとめると、そのフォルダはサイドバー上ページを 1 つしか持たず階層が冗長になる。`true`（既定 `false`）で「**ページちょうど 1 つ・サブフォルダ 0** のディレクトリ」を畳み、唯一のページを親へ繰り上げる（[buildSidebar.ts](app/packages/core/src/pipeline/buildSidebar.ts) の `flattenSingleChildDirs` がツリー構築後にボトムアップ再帰で適用。`a/b/single.md` のような単一チェーンも端のページまで畳む）。**画像はページに数えない**ので動機ケースは自動判定できる。複数ページを持つフォルダや、唯一の子が複数ページのサブフォルダであるフォルダ（構造を持つ）は対象外。**route / page id は不変**で、`collapseDepth` などと同じく到達性を失わず表示構造だけを変える。
-- **初期配色（`html.colorScheme`）**: ドキュメントを開いたときの初期テーマ。`"light"`（既定）/ `"dark"` / `"auto"`（OS の `prefers-color-scheme` に追従）。`html.theme`（テンプレート名）とは別物。`renderSingleHtml` が `light`/`dark` のとき `<html>` に `data-theme` を**サーバ側で出力**して CSS 評価前に配色を確定させ、FOUC（ダーク OS で一瞬ダーク→ライトへ反転）と JS 無効時の未適用を防ぐ。`auto` は属性を出さず OS 追従。値は `__MONODOCS_DATA__.colorScheme` にも埋め込み、`app.js` の `setupTheme` が**読者の選択（localStorage `monodocs:theme`）を最優先**、無ければこの初期値で `applyTheme` する。読者がトグルで切り替えると以降は localStorage が優先。
+- **Sidebar collapse depth (`sidebar.collapseDepth`)**: `renderSidebar` in `renderSingleHtml` adds the `collapsed`
+  class server-side to directories deeper than this value. Top-level directories have depth 1; `0` collapses
+  all directories, and an omitted value expands all. This must **collapse, not hide**, so every deep page remains
+  reachable through client-side toggles. Do not implement depth limits by removing navigation entries.
+- **Table-of-contents depth (`toc.maxLevel`)**: Filter headings embedded in `__MONODOCS_DATA__` to h2 through
+  `maxLevel`, where the allowed range is 2-6 and the default is 3. These headings are anchors within an already
+  reachable page, so reducing the depth does not remove content. CSS indentation exists for `toc-level-4` through
+  `toc-level-6`.
+- **Directory name display**: Preserve the original letter case in sidebar directory names. Do not restore
+  `text-transform: uppercase` on `.sidebar-dir-title`.
+- **Display title transformation (`sidebar.titleTransform`)**: Apply transformations only to display titles
+  that are not explicit frontmatter `title` or `:sd-title:` values. `page` applies to heading- or filename-based
+  page titles chosen with `titleFrom: "heading"`; `directory` applies to directory names. Each transformation is
+  `{ type: "none" }` by default, `{ type: "stripNumberPrefix" }` to remove leading numeric prefixes such as
+  `01_setup` or `001-intro`, or `{ type: "regex", pattern, replacement, flags }` for JavaScript `RegExp`
+  replacement. Routes, page IDs, and headings in page content must not change.
+- **Page title source (`sidebar.titleFrom`)**: `"heading"` (default) uses explicit title, then Markdown H1 or
+  AsciiDoc `= Title`, then filename. `"filename"` skips headings and uses the filename unless an explicit title
+  exists. Explicit frontmatter `title` and `:sd-title:` always take precedence. `extractMeta` and `toPageMeta`
+  keep explicit `PageMeta.title` separate from `PageMeta.headingTitle`; `resolveTitle` in `buildPages` selects
+  according to `titleFrom`. Do not warn about a missing title in `"filename"` mode because the filename is the
+  requested source. Routes and page IDs must not change.
+- **Flatten single-page directories (`sidebar.flattenSingleChild`)**: When `true` (default `false`), flatten a
+  directory with **exactly one page and no subdirectories**, promoting that page to its parent. This handles
+  folders containing one document plus related images; images do not count as pages. `flattenSingleChildDirs`
+  in [buildSidebar.ts](app/packages/core/src/pipeline/buildSidebar.ts) applies this recursively bottom-up after
+  building the tree, so a chain such as `a/b/single.md` also flattens. Do not flatten directories with multiple
+  pages or directories whose only child is a structured subdirectory with multiple pages. Routes and page IDs
+  remain unchanged; this affects only display structure and must not reduce reachability.
+- **Initial color scheme (`html.colorScheme`)**: Sets the initial theme to `"light"` (default), `"dark"`, or
+  `"auto"` (follow `prefers-color-scheme`). It is separate from `html.theme`, which selects the template.
+  `renderSingleHtml` emits `data-theme` on `<html>` server-side for `light` and `dark`, resolving the theme before
+  CSS evaluation and avoiding FOUC or failure when JavaScript is disabled. For `auto`, omit the attribute and
+  follow the OS. Also embed the value in `__MONODOCS_DATA__.colorScheme`. `setupTheme` in `app.js` gives the
+  reader's `localStorage` value `monodocs:theme` highest priority, otherwise applying this initial value. Once
+  the reader toggles the theme, the stored value takes precedence on later visits.
 
-> **テーマアセットの dist コピーが必須**: `tsc` は `.html/.css/.js` を dist へコピーしないため、`packages/core/scripts/copy-theme.mjs` が `src/themes` → `dist/themes` をコピーする（`pnpm build` に含まれる）。`loadTheme` は実行時に `src/themes`（vitest）/ `dist/themes`（ビルド後）を参照する。テーマを編集したら再ビルドが必要。
+> **Theme assets must be copied to `dist`**: `tsc` does not copy `.html`, `.css`, or `.js`. The build runs
+> `packages/core/scripts/copy-theme.mjs` to copy `src/themes` to `dist/themes`. `loadTheme` reads from
+> `src/themes` under Vitest and `dist/themes` after building. Rebuild after editing theme assets.
 
 ### watch / serve
 
-[watch.ts](app/packages/core/src/watch.ts) は `fs.watch`（可能なら recursive、デバウンス付き）で入力・設定を監視して再ビルド。**出力ファイルへの書き込みイベントは無視**して自己再ビルドループを防ぐ。入力ディレクトリ不在時は例外を投げる。[serve.ts](app/packages/core/src/serve.ts) は HTTP 配信 + `watchSite` + SSE ライブリロード。依存追加を避けるため chokidar 等は使わず Node 標準で実装している。
+[watch.ts](app/packages/core/src/watch.ts) uses `fs.watch` with recursive mode where available and debouncing to
+watch inputs and configuration, then rebuilds. It ignores write events for output files to prevent rebuild loops
+and throws when the input directory does not exist. [serve.ts](app/packages/core/src/serve.ts) provides HTTP
+serving, `watchSite`, and SSE live reload. It uses only Node APIs rather than adding chokidar or similar dependencies.
 
-## テスト方針
+## Test policy
 
-vitest。ユニット（route/format 判定/各 renderer/サイドバー）、e2e（`buildSite()` で一時ディレクトリから単一 HTML 生成・検証）、**クライアントテスト**（`@vitest-environment happy-dom` で `app.js` を `new Function(theme.appJs)()` 実行し、hash routing・検索・目次・ダークモード等を検証。例: [themes/default/app.v04.test.ts](app/packages/core/src/themes/default/app.v04.test.ts)）。詳細は [docs/testing.md](docs/testing.md)。
+Use Vitest. Tests include unit tests for routing, format detection, renderers, and sidebar generation; end-to-end
+tests that call `buildSite()` on temporary source trees and inspect the generated single HTML; and **client tests**
+that run `app.js` under `@vitest-environment happy-dom` with `new Function(theme.appJs)()` to exercise hash
+routing, search, the table of contents, dark mode, and related behavior. See
+[themes/default/app.v04.test.ts](app/packages/core/src/themes/default/app.v04.test.ts) and
+[docs/testing.md](docs/testing.md).
 
-## 入力の前提（セキュリティ）
+## Input trust and security
 
-**信頼できる（自チーム管理の）ドキュメントの変換が前提。** Markdown は生 HTML を通さない（remark-rehype 既定でドロップ）が、**AsciiDoc は passthrough で生 HTML を出力でき、それをサニタイズせず埋め込む** → 信頼できない AsciiDoc は XSS になり得る。AsciiDoc の `include::[]` は safe モードで入力ファイルのディレクトリ配下に jail。画像 data URI 埋め込みは実体パス（symlink 解決後）が入力ルート配下のものだけが対象。詳細は [docs/development.md](docs/development.md)。
+Only convert **trusted documents managed by the user's team**. Markdown raw HTML is discarded by the default
+remark-rehype behavior. AsciiDoc, however, can emit raw HTML through passthrough, and monodocs embeds it without
+sanitization, so untrusted AsciiDoc can cause XSS. AsciiDoc `include::[]` runs in safe mode and is jailed under
+the input file's directory. Images are embedded as data URIs only when their resolved real paths, including
+symlink resolution, remain under the input root. See [docs/development.md](docs/development.md).
 
-## 進め方
+## Workflow
 
-ロードマップのバージョン単位で機能を追加する（v0.1=Markdown単一HTML / v0.2=AsciiDoc・混在 / v0.3=リンク・画像・Mermaid・validate / v0.4=検索・目次・watch/serve / v0.5=PDF …）。各バージョン完了時に [docs/status.md](docs/status.md) と [docs/testing.md](docs/testing.md) を更新する。コミットメッセージは日本語・conventional prefix・末尾に対象バージョン（例: `feat: …（v0.4）`）。
+Add features by roadmap version: v0.1 for Markdown single HTML; v0.2 for AsciiDoc and mixed input; v0.3 for links,
+images, Mermaid, and validation; v0.4 for search, table of contents, watch, and serve; v0.5 for PDF; and later
+versions as defined in the roadmap. At each version boundary, update [docs/status.md](docs/status.md) and
+[docs/testing.md](docs/testing.md). Commit messages use a Conventional Commits prefix, an English description,
+and the target version at the end, for example `feat: add search indexing (v0.4)`.
 
-## レビュー（必須ルール）
+## Review (required)
 
-**実装がまとまったら（typecheck / test / format を通したうえで）、`codex` CLI にコードレビューを依頼し、指摘に対応する。** これはこのリポジトリの運用ルール。
+After an implementation is complete and typecheck, tests, and formatting pass, request a code review from the
+`codex` CLI and address the findings. This is a repository workflow requirement.
 
 ```bash
-codex review --uncommitted          # コミット前: staged/unstaged/untracked を対象
-codex review --commit <SHA>         # コミット後: 特定コミットの変更を対象
+codex review --uncommitted          # Review staged, unstaged, and untracked changes before a commit
+codex review --commit <SHA>         # Review a specific commit
 ```
 
-`--uncommitted` はカスタムプロンプトと併用不可。指摘（P1/P2 等）が出たら原則修正し、対応内容を報告する。
+`--uncommitted` cannot be combined with a custom prompt. Resolve P1 and P2 findings by default and report how
+they were addressed.
