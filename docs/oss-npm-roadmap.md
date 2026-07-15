@@ -197,7 +197,7 @@ pnpm bundle
 
 ## 8. M3: Complete npm Package
 
-### 8.1 package metadata
+### 8.1 Package Metadata
 
 - [ ] Remove the CLI's `private: true`.
 - [ ] Set the official version.
@@ -241,7 +241,7 @@ package/
 - [ ] Verify PDF output in the npm version.
 - [ ] Verify Mermaid pre-render in the npm version.
 
-### 8.4 tarball Verification
+### 8.4 Tarball Verification
 
 Before publishing, generate the npm tarball, install it into a clean environment, and verify.
 
@@ -352,7 +352,7 @@ monodocs build ./docs -o ./dist/manual.html
 - `next`: Pre-release.
 - `latest`: Stable version.
 
-  During the 0.x period, treat the latest minor as the normal support target, and address only critical vulnerabilities for past minors.
+During the 0.x period, treat the latest minor as the normal support target, and address only critical vulnerabilities for past minors.
 
 ### 11.2 Security Handling
 

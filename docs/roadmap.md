@@ -960,10 +960,10 @@ graph TD
 This is converted into the following.
 
 ```text
-<div class="mermaid">
+<pre class="mermaid">
 graph TD
   A --> B
-</div>
+</pre>
 ```
 
 ---
@@ -1274,16 +1274,29 @@ Disadvantages:
 
 Simple partial-match search.
 
-Search index example:
+Search-related client data example:
 
 ```js
-window.__SEARCH_INDEX__ = [
-  {
-    route: "/setup/install",
-    title: "Installation",
-    text: "How to install...",
-  },
-];
+window.__MONODOCS_DATA__ = {
+  title: "Manual",
+  initialRoute: "/setup/install",
+  colorScheme: "light",
+  pages: [
+    {
+      route: "/setup/install",
+      title: "Installation",
+      hidden: false,
+      headings: [
+        {
+          id: "setup-install-prerequisites",
+          text: "Prerequisites",
+          level: 2,
+        },
+      ],
+      text: "How to install...",
+    },
+  ],
+};
 ```
 
 Search targets:
@@ -1323,7 +1336,7 @@ Candidates for support:
     <div id="app">
       <aside id="sidebar">{{sidebar}}</aside>
 
-      <main id="main">{{pages}}</main>
+      <main id="content">{{pages}}</main>
     </div>
 
     <script>
@@ -1834,7 +1847,6 @@ Support more advanced document generation.
 
 Implementation scope:
 
-- Mermaid pre-render mode
 - Search improvements
 - Improved Japanese search
 - Custom themes
@@ -1845,7 +1857,6 @@ Implementation scope:
 
 Completion criteria:
 
-- Mermaid can be pre-rendered as SVG
 - Search is practical even for large-scale documents
 - There is a distributable that can run without Node.js
 - Themes can be switched
@@ -2015,9 +2026,9 @@ Countermeasures:
 
 Countermeasures:
 
-- Initially client mode
-- Add waiting for rendering completion during PDF output
-- Implement pre-render mode in the future
+- Support both client and pre-render modes
+- Wait for client-mode rendering to complete during PDF output
+- Use pre-render mode to embed diagrams as SVG at build time when JavaScript-free output is required
 
 ### 33.5 Full Compatibility with GitHub Flavored Markdown Is Difficult
 
