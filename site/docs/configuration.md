@@ -236,5 +236,5 @@ For AsciiDoc:
 
 ## See also
 
-- [Supported syntax](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/syntax.md) — what is supported and what single-file bundling intentionally restricts.
-- [Roadmap](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/roadmap.md) — the version plan.
+- [Supported syntax](https://github.com/kuttsun/monodocs/blob/main/docs/syntax.md) — what is supported and what single-file bundling intentionally restricts.
+- [Roadmap](https://github.com/kuttsun/monodocs/blob/main/docs/roadmap.md) — the version plan.

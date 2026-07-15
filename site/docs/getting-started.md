@@ -17,7 +17,7 @@ The output is a single HTML with no external runtime: in-page search, a table of
 monodocs is not published to a package registry yet, so build it from source. The development toolchain runs **inside Docker**, so you don't need Node or pnpm on your host:
 
 ```bash
-git clone https://gitlab.com/kuttsun/monodocs.git
+git clone https://github.com/kuttsun/monodocs.git
 cd monodocs
 
 scripts/app.sh pnpm install
@@ -39,5 +39,5 @@ scripts/app.sh node packages/cli/dist/index.js serve examples/en --host 0.0.0.0
 
 - See [Command Options](/docs/commands) for the CLI reference (`build` / `watch` / `serve` / `validate`).
 - See [Configuration](/docs/configuration) for the `monodocs.config.yml` options.
-- See [the roadmap](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/roadmap.md) for the version plan.
-- See [supported syntax](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/syntax.md) for what is supported and what single-file bundling intentionally restricts.
+- See [the roadmap](https://github.com/kuttsun/monodocs/blob/main/docs/roadmap.md) for the version plan.
+- See [supported syntax](https://github.com/kuttsun/monodocs/blob/main/docs/syntax.md) for what is supported and what single-file bundling intentionally restricts.

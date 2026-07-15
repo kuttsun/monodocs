@@ -1,15 +1,14 @@
 # monodocs へのコントリビューション
 
-monodocs への Issue、ドキュメント改善、バグ修正、機能提案を歓迎します。現在の開発基盤は
-GitLab ですが、正式公開前に GitHub へ移行する予定です。本書では両方をまとめて Issue、
-Pull/Merge Request と表記します。
+monodocs への Issue、ドキュメント改善、バグ修正、機能提案を歓迎します。公式の開発基盤は
+[GitHub](https://github.com/kuttsun/monodocs) です。
 
 ## はじめに
 
 - セキュリティ上の問題は公開 Issue にせず、[SECURITY.md](SECURITY.md) の手順で報告してください。
 - 大きな仕様変更は実装前に Issue で目的と設計を相談してください。
-- 小さなバグ修正やドキュメント修正は、直接 Pull/Merge Request を作成して構いません。
-- 保守はベストエフォートで行い、Issue や Pull/Merge Request への応答時間は保証しません。
+- 小さなバグ修正やドキュメント修正は、直接 Pull Request を作成して構いません。
+- 保守はベストエフォートで行い、Issue や Pull Request への応答時間は保証しません。
 
 ## 開発環境
 
@@ -27,7 +26,7 @@ VS Code Dev Containers を使う場合や、コンテナ内のシェルで作業
 
 ## 変更前の確認
 
-Pull/Merge Request を作成する前に、アプリの検証一式を実行してください。
+Pull Request を作成する前に、アプリの検証一式を実行してください。
 
 ```bash
 scripts/app.sh pnpm ci:check
@@ -47,9 +46,9 @@ scripts/app.sh pnpm exec vitest run -t "rewrites links"
 - 挙動を変更する場合は、対応するテストを追加または更新してください。
 - 利用者向けの挙動や設定を変更する場合は、README と関連する `docs/` も更新してください。
 - 依存関係を追加する場合は、用途、バンドルサイズ、ライセンス、単一ファイル配布への影響を確認してください。
-- コミットメッセージは Conventional Commits の prefix を使い、日本語で変更内容を記述してください。
+- コミットメッセージは Conventional Commits の prefix を使い、英語で変更内容を記述してください。
 
-## Pull/Merge Request
+## Pull Request
 
 説明には、少なくとも次を含めてください。
 

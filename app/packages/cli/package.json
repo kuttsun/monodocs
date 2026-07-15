@@ -5,14 +5,14 @@
   "description": "monodocs CLI — 複数の Markdown / AsciiDoc を単一の自己完結 HTML / PDF にまとめる",
   "license": "MIT",
   "author": "kuttsun",
-  "homepage": "https://gitlab.com/kuttsun/monodocs",
+  "homepage": "https://github.com/kuttsun/monodocs",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/kuttsun/monodocs.git",
+    "url": "https://github.com/kuttsun/monodocs.git",
     "directory": "app/packages/cli"
   },
   "bugs": {
-    "url": "https://gitlab.com/kuttsun/monodocs/-/issues"
+    "url": "https://github.com/kuttsun/monodocs/issues"
   },
   "keywords": [
     "markdown",

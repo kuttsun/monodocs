@@ -1,6 +1,6 @@
 # OSS / npm Publishing Roadmap
 
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
 ## 1. Purpose
 
@@ -22,8 +22,8 @@ The initial release will be the npm package only. The SEA standalone binary is d
 ## 2. Basic Policy
 
 - Publish the source code under the MIT License.
-- The official publishing platform will be GitHub, migrating gradually from the current GitLab repository.
-- Until the migration is complete, maintain GitLab as the development platform, and build GitHub-specific release automation after the migration.
+- GitHub is the official source repository and publishing platform.
+- Retain GitLab only for the existing Pages delivery until GitHub Pages replaces it; build all new release automation on GitHub.
 - Use Semantic Versioning for versions.
 - Do not replace already-published artifacts; fix defects in new versions.
 - For the first npm publish, publish only the CLI package `monodocs`.
@@ -36,19 +36,22 @@ The initial release will be the npm package only. The SEA standalone binary is d
 
 ### 3.1 Migration to GitHub
 
-Currently GitLab is used as the platform for the source repository, CI, and Pages, and the package metadata also references GitLab URLs. The official OSS publishing platform will be GitHub, but the existing GitLab operation will be maintained until the migration is complete.
+The source repository, default branch, and package metadata have migrated to GitHub. GitLab is retained temporarily only for the existing Pages delivery until GitHub Pages replaces it.
 
-Migration to GitHub will be done before the completion of M2 and the beta release of M4, updating the following within the same migration unit.
+Completed migration items:
 
 - Git remote and default branch
 - The `homepage`, `repository`, and `bugs` URLs
+- Repository URLs in the official site and contributor documentation
+
+Remaining GitHub setup items to complete before M2 and the M4 beta release:
+
 - GitHub Actions Pull Request CI
 - GitHub Releases and Artifact Attestations
 - npm Trusted Publishing
 - Issue / Pull Request templates and the private vulnerability reporting path
-- Repository URLs in the README, official site, and development documents
 
-Until the migration, maintain the Pages delivery in `.gitlab-ci.yml`. Do not add more GitLab-specific release processing that will be discarded in the future, and keep verification steps such as format, typecheck, test, build, and bundle platform-independent as package scripts.
+Until GitHub Pages replaces it, maintain the existing Pages delivery in `.gitlab-ci.yml`. Do not add more GitLab-specific release processing that will be discarded, and keep verification steps such as format, typecheck, test, build, and bundle platform-independent as package scripts.
 
 ### 3.2 npm Package Structure
 
@@ -103,9 +106,9 @@ The SEA standalone binary is a future item whose start will be decided after the
 
 ### 5.2 Decisions
 
-- [x] Make GitHub the official publishing platform and migrate gradually from the current GitLab repository.
-- [ ] Complete the migration to GitHub and consolidate the official source repository.
-- [ ] Unify the `homepage`, `repository`, and `bugs` URLs to the official repository.
+- [x] Make GitHub the official source repository and publishing platform.
+- [x] Complete the source repository migration to GitHub.
+- [x] Unify the `homepage`, `repository`, and `bugs` URLs to the official repository.
 - [x] Set the npm package name to `monodocs`.
 - [ ] Finalize that the package name is available on the npm registry.
 - [x] The npm package is individually owned.

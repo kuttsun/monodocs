@@ -17,7 +17,7 @@ monodocs build ./docs -o ./dist/manual.html
 monodocs はまだパッケージレジストリに公開していないため、ソースからビルドします。開発ツールチェーンは **Docker 内** で動くので、ホストに Node / pnpm を入れる必要はありません。
 
 ```bash
-git clone https://gitlab.com/kuttsun/monodocs.git
+git clone https://github.com/kuttsun/monodocs.git
 cd monodocs
 
 scripts/app.sh pnpm install
@@ -39,5 +39,5 @@ scripts/app.sh node packages/cli/dist/index.js serve examples/ja --host 0.0.0.0
 
 - コマンド一覧とオプションは [コマンドオプション](/ja/docs/commands)（`build` / `watch` / `serve` / `validate`）を参照してください。
 - `monodocs.config.yml` の設定項目は [設定ファイル](/ja/docs/configuration) を参照してください。
-- バージョン計画は [ロードマップ](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/roadmap.md) を参照してください。
-- 対応記法と、単一ファイル化に伴う制限は [対応記法](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/syntax.md) にまとまっています。
+- バージョン計画は [ロードマップ](https://github.com/kuttsun/monodocs/blob/main/docs/roadmap.md) を参照してください。
+- 対応記法と、単一ファイル化に伴う制限は [対応記法](https://github.com/kuttsun/monodocs/blob/main/docs/syntax.md) にまとまっています。

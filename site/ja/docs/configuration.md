@@ -236,5 +236,5 @@ AsciiDoc の場合:
 
 ## 関連
 
-- [対応記法](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/syntax.md) — 対応範囲と、単一ファイル化に伴う制限。
-- [ロードマップ](https://gitlab.com/kuttsun/monodocs/-/blob/main/docs/roadmap.md) — バージョン計画。
+- [対応記法](https://github.com/kuttsun/monodocs/blob/main/docs/syntax.md) — 対応範囲と、単一ファイル化に伴う制限。
+- [ロードマップ](https://github.com/kuttsun/monodocs/blob/main/docs/roadmap.md) — バージョン計画。

@@ -16,16 +16,12 @@ import { defineConfig } from 'vitepress'
 // リンクは VitePress が SPA 内部遷移として横取りし 404 を描くため、ナビからのリンクには
 // 必ず target: '_blank' を付けてネイティブ遷移させ、dead link チェックからも除外する。
 
-const repo = 'https://gitlab.com/kuttsun/monodocs'
+const repo = 'https://github.com/kuttsun/monodocs'
 
-// GitLab Pages の project pages はサブパス配信（例 /monodocs/）。footer の生 HTML リンクは
+// GitHub Pages と移行期間中の GitLab Pages は project pages のサブパス配信（例 /monodocs/）。
+// footer の生 HTML リンクは
 // VitePress のルーティングを経由しないため、base を明示的に前置してリンク切れを防ぐ。
 const base = process.env.SITE_BASE ?? '/'
-
-// GitLab ロゴ（socialLinks 用のカスタム svg）。
-const gitlabIcon = {
-  svg: '<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>GitLab</title><path d="m23.6 9.6-.03-.08-3.26-8.5a.85.85 0 0 0-.84-.54.85.85 0 0 0-.5.2.85.85 0 0 0-.28.43l-2.2 6.74H7.5L5.3 1.1A.84.84 0 0 0 4.5.55a.85.85 0 0 0-.5.2.85.85 0 0 0-.27.42L.46 9.52l-.03.08a6.05 6.05 0 0 0 2.01 7l.01.01.04.03 4.96 3.71 2.45 1.86 1.5 1.13a1 1 0 0 0 1.2 0l1.5-1.13 2.45-1.86 4.99-3.73.01-.01a6.05 6.05 0 0 0 2-7Z"/></svg>'
-}
 
 export default defineConfig({
   // GitHub / GitLab の project pages はサブパス（例 /monodocs/）で配信されるため、
@@ -134,7 +130,7 @@ export default defineConfig({
 
   themeConfig: {
     // 全ロケール共通
-    socialLinks: [{ icon: gitlabIcon, link: repo }],
+    socialLinks: [{ icon: 'github', link: repo }],
 
     search: {
       provider: 'local',

@@ -10,8 +10,8 @@ hero:
       text: はじめる
       link: /ja/docs/getting-started
     - theme: alt
-      text: GitLab で見る
-      link: https://gitlab.com/kuttsun/monodocs
+      text: GitHub で見る
+      link: https://github.com/kuttsun/monodocs
 
 features:
   - title: 単一ファイル出力

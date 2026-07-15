@@ -10,8 +10,8 @@ hero:
       text: Get Started
       link: /docs/getting-started
     - theme: alt
-      text: View on GitLab
-      link: https://gitlab.com/kuttsun/monodocs
+      text: View on GitHub
+      link: https://github.com/kuttsun/monodocs
 
 features:
   - title: Single-file output
