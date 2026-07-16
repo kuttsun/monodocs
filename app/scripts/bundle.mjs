@@ -19,6 +19,7 @@ const coreSrc = resolve(appRoot, "packages/core/src");
 const themeDir = resolve(coreSrc, "themes/default");
 const entry = resolve(appRoot, "packages/cli/src/index.ts");
 const cliDir = resolve(appRoot, "packages/cli");
+const cliPackage = JSON.parse(await readFile(resolve(cliDir, "package.json"), "utf8"));
 const packageDistDir = resolve(cliDir, "dist");
 const outfile = resolve(packageDistDir, "monodocs.cjs");
 const legacyDistDir = resolve(appRoot, "dist");
@@ -57,7 +58,10 @@ const result = await build({
       `globalThis.__MONODOCS_ASSETS__=${JSON.stringify(assets)};` +
       `var __monodocsImportMetaUrl=require("node:url").pathToFileURL(__filename).href;`,
   },
-  define: { "import.meta.url": "__monodocsImportMetaUrl" },
+  define: {
+    "import.meta.url": "__monodocsImportMetaUrl",
+    __MONODOCS_VERSION__: JSON.stringify(cliPackage.version),
+  },
   // puppeteer-core は optionalDependency で mermaid.mode: pre-render のときだけ動的 import する。
   // バンドルには含めない（Chromium 起動用に実体ファイルを要し、自己完結バンドルに載せられない）。
   // → このバンドル（単一 .cjs / SEA）は node_modules を持たないため pre-render 非対応。

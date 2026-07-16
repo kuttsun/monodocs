@@ -1,4 +1,19 @@
 {
+  "name": "monodocs",
+  "version": "0.6.0-beta.1",
+  "description": "Generate a single self-contained HTML or PDF document from Markdown and AsciiDoc files.",
+  "license": "MIT",
+  "author": "kuttsun",
+  "homepage": "https://github.com/kuttsun/monodocs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kuttsun/monodocs.git",
+    "directory": "app/packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/kuttsun/monodocs/issues"
+  },
+  "keywords": ["markdown", "asciidoc", "documentation", "single-file", "html", "pdf", "cli"],
   "bin": {
     "monodocs": "./dist/monodocs.cjs"
   },
