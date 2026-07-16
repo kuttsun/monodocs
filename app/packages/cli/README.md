@@ -10,6 +10,9 @@ Markdown and AsciiDoc files.
   `PUPPETEER_EXECUTABLE_PATH` when the browser is not discoverable on the
   system path.
 
+The npm package supports HTML and PDF output as well as Mermaid client and
+pre-render modes. The standalone SEA binary is a separate future distribution.
+
 ## Installation
 
 ```bash

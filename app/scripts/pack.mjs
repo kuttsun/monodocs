@@ -3,7 +3,7 @@
 // imports @monodocs/core. The generated package contains only the bundled CLI
 // and its optional Puppeteer dependency, so no workspace protocol leaks into
 // the tarball.
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,15 +12,37 @@ const appRoot = resolve(here, "..");
 const cliDir = resolve(appRoot, "packages/cli");
 const stageDir = resolve(appRoot, "dist/npm/monodocs");
 
-const [developmentPackage, publishPackage] = await Promise.all([
+const [developmentPackage, publishOverrides] = await Promise.all([
   readFile(resolve(cliDir, "package.json"), "utf8").then(JSON.parse),
   readFile(resolve(cliDir, "package.publish.json"), "utf8").then(JSON.parse),
 ]);
 
-if (developmentPackage.version !== publishPackage.version) {
-  throw new Error(
-    `package version mismatch: package.json=${developmentPackage.version}, package.publish.json=${publishPackage.version}`,
-  );
+const publishPackage = {
+  name: developmentPackage.name,
+  version: developmentPackage.version,
+  description: developmentPackage.description,
+  license: developmentPackage.license,
+  author: developmentPackage.author,
+  homepage: developmentPackage.homepage,
+  repository: developmentPackage.repository,
+  bugs: developmentPackage.bugs,
+  keywords: developmentPackage.keywords,
+  ...publishOverrides,
+};
+
+const requiredArtifacts = [
+  resolve(cliDir, "dist/monodocs.cjs"),
+  resolve(cliDir, "LICENSE"),
+  resolve(cliDir, "README.md"),
+  resolve(cliDir, "THIRD-PARTY-NOTICES.txt"),
+];
+
+for (const artifact of requiredArtifacts) {
+  try {
+    await access(artifact);
+  } catch {
+    throw new Error(`missing package artifact: ${artifact}. Run \`pnpm bundle\` first.`);
+  }
 }
 
 await rm(stageDir, { recursive: true, force: true });
