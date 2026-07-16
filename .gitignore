@@ -4,6 +4,7 @@ node_modules/
 
 # build output
 dist/
+app/packages/cli/THIRD-PARTY-NOTICES.txt
 *.tsbuildinfo
 
 # test / coverage
