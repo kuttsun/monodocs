@@ -40,40 +40,45 @@ function fakePdfGenerator() {
 
 describe("resolveOutputs", () => {
   it("html は outputFile をそのまま HTML に使う", async () => {
-    const c = await loadConfig({ outputFile: "/abs/manual.html", format: "html" }, dir);
-    expect(resolveOutputs(c, dir)).toEqual({ html: "/abs/manual.html" });
+    const output = join(dir, "abs", "manual.html");
+    const c = await loadConfig({ outputFile: output, format: "html" }, dir);
+    expect(resolveOutputs(c, dir)).toEqual({ html: output });
   });
 
   it("pdf は outputFile をそのまま PDF に使う", async () => {
-    const c = await loadConfig({ outputFile: "/abs/manual.pdf", format: "pdf" }, dir);
-    expect(resolveOutputs(c, dir)).toEqual({ pdf: "/abs/manual.pdf" });
+    const output = join(dir, "abs", "manual.pdf");
+    const c = await loadConfig({ outputFile: output, format: "pdf" }, dir);
+    expect(resolveOutputs(c, dir)).toEqual({ pdf: output });
   });
 
   it("both はディレクトリ -o の中へ manual.html / manual.pdf を出す", async () => {
-    const c = await loadConfig({ outputFile: "/abs/out", format: "both" }, dir);
+    const output = join(dir, "abs", "out");
+    const c = await loadConfig({ outputFile: output, format: "both" }, dir);
     expect(resolveOutputs(c, dir)).toEqual({
-      html: "/abs/out/manual.html",
-      pdf: "/abs/out/manual.pdf",
+      html: join(output, "manual.html"),
+      pdf: join(output, "manual.pdf"),
     });
   });
 
   it("both は -o を常にディレクトリ扱いする（ドットを含む名前も誤判定しない）", async () => {
-    const c = await loadConfig({ outputFile: "/abs/dist/v1.0", format: "both" }, dir);
+    const output = join(dir, "abs", "dist", "v1.0");
+    const c = await loadConfig({ outputFile: output, format: "both" }, dir);
     expect(resolveOutputs(c, dir)).toEqual({
-      html: "/abs/dist/v1.0/manual.html",
-      pdf: "/abs/dist/v1.0/manual.pdf",
+      html: join(output, "manual.html"),
+      pdf: join(output, "manual.pdf"),
     });
   });
 
   it("既定出力は format ごとに拡張子／形が変わる", async () => {
-    const html = await loadConfig({ format: "html" }, "/base");
-    expect(resolveOutputs(html, "/base")).toEqual({ html: "/base/dist/manual.html" });
-    const pdf = await loadConfig({ format: "pdf" }, "/base");
-    expect(resolveOutputs(pdf, "/base")).toEqual({ pdf: "/base/dist/manual.pdf" });
-    const both = await loadConfig({ format: "both" }, "/base");
-    expect(resolveOutputs(both, "/base")).toEqual({
-      html: "/base/dist/manual.html",
-      pdf: "/base/dist/manual.pdf",
+    const base = join(dir, "base");
+    const html = await loadConfig({ format: "html" }, base);
+    expect(resolveOutputs(html, base)).toEqual({ html: join(base, "dist", "manual.html") });
+    const pdf = await loadConfig({ format: "pdf" }, base);
+    expect(resolveOutputs(pdf, base)).toEqual({ pdf: join(base, "dist", "manual.pdf") });
+    const both = await loadConfig({ format: "both" }, base);
+    expect(resolveOutputs(both, base)).toEqual({
+      html: join(base, "dist", "manual.html"),
+      pdf: join(base, "dist", "manual.pdf"),
     });
   });
 });

@@ -92,5 +92,5 @@ describe.skipIf(!chromium)("buildSite - mermaid pre-render (real Chromium)", () 
     // pre-render では client ランタイム（cdn / inline bundle）を注入しない。
     expect(html).not.toContain("cdn.jsdelivr.net/npm/mermaid");
     expect(html).not.toContain("mermaid.initialize");
-  });
+  }, 60_000);
 });

@@ -65,9 +65,9 @@ describe("buildSite (e2e)", () => {
     await writeFile(
       configFile,
       [
-        `input: "${tdocs}"`,
+        `input: ${JSON.stringify(tdocs)}`,
         "output:",
-        `  path: "${tout}"`,
+        `  path: ${JSON.stringify(tout)}`,
         "sidebar:",
         "  titleTransform:",
         "    page:",
@@ -104,9 +104,9 @@ describe("buildSite (e2e)", () => {
     await writeFile(
       configFile,
       [
-        `input: "${tdocs}"`,
+        `input: ${JSON.stringify(tdocs)}`,
         "output:",
-        `  path: "${tout}"`,
+        `  path: ${JSON.stringify(tout)}`,
         "html:",
         "  contentWidth: full",
         "",

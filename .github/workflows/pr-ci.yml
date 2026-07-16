@@ -1,0 +1,130 @@
+name: PR CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App CI (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+            chromium: /usr/bin/google-chrome
+            vitest_workers: 4
+          - name: Windows
+            os: windows-latest
+            chromium: 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+            vitest_workers: 1
+    env:
+      PUPPETEER_EXECUTABLE_PATH: ${{ matrix.chromium }}
+      VITEST_MAX_WORKERS: ${{ matrix.vitest_workers }}
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install app dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit app dependencies
+        run: pnpm audit
+
+      - name: Run app checks
+        run: pnpm ci:check
+
+      - name: Verify third-party notices
+        run: >-
+          node -e "const fs = require('node:fs'); const text =
+          fs.readFileSync('dist/THIRD-PARTY-NOTICES.txt', 'utf8'); const match =
+          /Components: (\d+)/.exec(text); if (!match || Number(match[1]) < 1 ||
+          text.includes('—  UNKNOWN')) throw new Error('Invalid third-party notices');"
+
+      - name: Smoke test application outputs
+        run: |
+          node dist/monodocs.cjs --version
+          node dist/monodocs.cjs --help
+          node dist/monodocs.cjs validate ../examples/en
+          node dist/monodocs.cjs build ../examples/en -o dist/ci-smoke.html
+          node -e "require('node:fs').writeFileSync('dist/ci-smoke-pre-render.yml', 'mermaid:\n  mode: pre-render\n')"
+          node packages/cli/dist/index.js build ../examples/en -c dist/ci-smoke-pre-render.yml -o dist/ci-smoke-pre-render.html
+          node -e "const html = require('node:fs').readFileSync('dist/ci-smoke-pre-render.html', 'utf8'); if (!html.includes('<svg')) throw new Error('Pre-rendered SVG not found');"
+          node packages/cli/dist/index.js build ../examples/en --format pdf -o dist/ci-smoke.pdf
+          node -e "const magic = require('node:fs').readFileSync('dist/ci-smoke.pdf').subarray(0, 5).toString('latin1'); if (magic !== '%PDF-') throw new Error('Invalid PDF header');"
+
+      - name: Generate site demos
+        if: matrix.name == 'Linux'
+        run: |
+          node dist/monodocs.cjs build ../examples/en -o ../site/public/manual.html
+          node dist/monodocs.cjs build ../examples/ja -o ../site/public/ja/manual.html
+
+      - name: Upload site demos
+        if: matrix.name == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-demos
+          path: |
+            site/public/manual.html
+            site/public/ja/manual.html
+          if-no-files-found: error
+          retention-days: 1
+
+  site:
+    name: Site CI
+    needs: app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Download site demos
+        uses: actions/download-artifact@v4
+        with:
+          name: site-demos
+          path: site/public
+
+      - name: Install site dependencies
+        run: npm ci
+
+      - name: Audit site dependencies
+        run: npm audit
+
+      - name: Build production site
+        run: npm run docs:build
