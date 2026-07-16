@@ -21,11 +21,14 @@ jobs:
           - name: Linux
             os: ubuntu-latest
             chromium: /usr/bin/google-chrome
+            vitest_workers: 4
           - name: Windows
             os: windows-latest
             chromium: 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+            vitest_workers: 1
     env:
       PUPPETEER_EXECUTABLE_PATH: ${{ matrix.chromium }}
+      VITEST_MAX_WORKERS: ${{ matrix.vitest_workers }}
     defaults:
       run:
         working-directory: app
