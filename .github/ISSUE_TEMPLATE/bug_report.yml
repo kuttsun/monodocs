@@ -1,0 +1,82 @@
+name: Bug report
+description: Report a reproducible problem with monodocs
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve monodocs.
+
+        Do not disclose security vulnerabilities or sensitive information here. Follow the [security policy](https://github.com/kuttsun/monodocs/security/policy) instead.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and did not find a duplicate.
+          required: true
+        - label: This report does not disclose a security vulnerability or sensitive information.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+      description: Describe what went wrong and how it affected you.
+      placeholder: A clear and concise description of the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Provide the smallest example and the exact commands needed to reproduce the problem.
+      placeholder: |
+        1. Create or use these input files and configuration: ...
+        2. Run: ...
+        3. Observe: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe what you expected monodocs to do.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the monodocs version or commit, OS, Node.js version, and Chromium version when relevant.
+      placeholder: |
+        - monodocs version or commit:
+        - OS:
+        - Node.js:
+        - Chromium (if relevant):
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: Share the relevant monodocs configuration. Remove secrets and private content.
+      render: yaml
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Add relevant logs or warnings. Remove secrets and private content.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add screenshots, sample documents, or other context. Remove secrets and private content.

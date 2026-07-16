@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest an improvement or new capability for monodocs
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement. For large changes, use this issue to discuss the goal and design before starting implementation.
+
+        Do not include security vulnerabilities or sensitive information. Follow the [security policy](https://github.com/kuttsun/monodocs/security/policy) instead.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and did not find a duplicate request.
+          required: true
+        - label: This request does not disclose a security vulnerability or sensitive information.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Describe the problem you want to solve and who would benefit from it.
+      placeholder: I am trying to ... but ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior or interface you would like monodocs to provide.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any workarounds or alternative designs you considered.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add examples, mockups, related tools, or other information that may help evaluate the request. Remove secrets and private content.
