@@ -12,10 +12,12 @@ monodocs は正式公開前の開発段階です。v0.6.0 の公開までは `ma
 
 脆弱性や機密情報に関わる問題を、公開 Issue、Pull Request、Discussion へ投稿しないでください。
 
-GitHub の非公開脆弱性報告はまだ有効化していません。有効化するまでは、
-`***REMOVED***` 宛てにメールで報告してください。
-件名の先頭に `[monodocs security]` を付け、本文や添付ファイルへ必要以上の秘密情報を含めないで
-ください。GitHub の非公開脆弱性報告を有効化した後は、この文書を更新し、その報告経路を正本とします。
+GitHub の Private vulnerability reporting を唯一の報告窓口として使用します。リポジトリの
+Security ページで `Report a vulnerability` を選択し、非公開フォームから報告してください。
+メールによる脆弱性報告は受け付けていません。
+
+`Report a vulnerability` が表示されない場合、Private vulnerability reporting はまだ有効化されて
+いません。その場合も脆弱性の詳細を公開せず、報告経路が有効化されるまでお待ちください。
 
 報告には、可能な範囲で次を含めてください。
 
