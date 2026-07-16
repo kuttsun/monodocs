@@ -1,8 +1,8 @@
 {
   "name": "monodocs",
-  "version": "0.0.0",
+  "version": "0.6.0-beta.1",
   "private": true,
-  "description": "monodocs CLI — 複数の Markdown / AsciiDoc を単一の自己完結 HTML / PDF にまとめる",
+  "description": "Generate a single self-contained HTML or PDF document from Markdown and AsciiDoc files.",
   "license": "MIT",
   "author": "kuttsun",
   "homepage": "https://github.com/kuttsun/monodocs",

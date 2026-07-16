@@ -2,6 +2,7 @@
 import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { buildSite, serveSite, validateSite, watchSite, type OutputFormat } from "@monodocs/core";
+import packageJson from "../package.json" with { type: "json" };
 
 /** 既定のブラウザで URL を開く（プラットフォーム別。失敗しても致命的ではない）。 */
 function openBrowser(url: string): void {
@@ -32,7 +33,7 @@ const program = new Command();
 program
   .name("monodocs")
   .description("複数の Markdown / AsciiDoc から単一 HTML / PDF を生成する")
-  .version("0.0.0");
+  .version(packageJson.version);
 
 program
   .command("build")

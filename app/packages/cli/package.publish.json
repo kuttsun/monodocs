@@ -1,0 +1,16 @@
+{
+  "bin": {
+    "monodocs": "./dist/monodocs.cjs"
+  },
+  "files": ["dist/monodocs.cjs", "LICENSE", "README.md", "THIRD-PARTY-NOTICES.txt"],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
+  "optionalDependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

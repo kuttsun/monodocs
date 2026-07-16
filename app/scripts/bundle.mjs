@@ -9,7 +9,7 @@
 // それを優先して使う（src 側の埋め込みフォールバックは themes/index.ts を参照）。
 import { build } from "esbuild";
 import { createRequire } from "node:module";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,7 +18,10 @@ const appRoot = resolve(here, "..");
 const coreSrc = resolve(appRoot, "packages/core/src");
 const themeDir = resolve(coreSrc, "themes/default");
 const entry = resolve(appRoot, "packages/cli/src/index.ts");
-const outfile = resolve(appRoot, "dist/monodocs.cjs");
+const cliDir = resolve(appRoot, "packages/cli");
+const packageDistDir = resolve(cliDir, "dist");
+const outfile = resolve(packageDistDir, "monodocs.cjs");
+const legacyDistDir = resolve(appRoot, "dist");
 
 // 既定テーマのアセットを読み込んで埋め込む。
 const [template, style, appJs] = await Promise.all([
@@ -67,6 +70,7 @@ const result = await build({
 });
 
 const bytes = Object.values(result.metafile.outputs).reduce((n, o) => n + o.bytes, 0);
+await chmod(outfile, 0o755);
 console.log(`bundle: ${outfile} (${(bytes / 1024 / 1024).toFixed(1)} MiB)`);
 
 // --- 第三者ライセンス表記（THIRD-PARTY-NOTICES.txt）の生成 ---
@@ -250,6 +254,13 @@ const body = notices
   })
   .join("\n");
 
-const noticesFile = resolve(dirname(outfile), "THIRD-PARTY-NOTICES.txt");
+const noticesFile = resolve(cliDir, "THIRD-PARTY-NOTICES.txt");
 await writeFile(noticesFile, `${header}\n${body}\n`, "utf8");
 console.log(`notices: ${noticesFile} (${notices.length} components)`);
+
+// Keep the existing development/SEA entry point available while the published
+// npm artifact is assembled from packages/cli.
+await mkdir(legacyDistDir, { recursive: true });
+await copyFile(outfile, resolve(legacyDistDir, "monodocs.cjs"));
+await chmod(resolve(legacyDistDir, "monodocs.cjs"), 0o755);
+await copyFile(noticesFile, resolve(legacyDistDir, "THIRD-PARTY-NOTICES.txt"));
