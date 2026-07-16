@@ -2,14 +2,14 @@
 import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { buildSite, serveSite, validateSite, watchSite, type OutputFormat } from "@monodocs/core";
+import packageJson from "../package.json" with { type: "json" };
 
 declare const __MONODOCS_VERSION__: string;
 
-// `pnpm build` also emits an unbundled development entry point, so retain a
-// fallback for that file. The published CJS bundle replaces this constant with
-// the package version during bundling.
+// The published CJS bundle replaces this constant at build time. The unbundled
+// development entry point reads the same package manifest as its fallback.
 const CLI_VERSION =
-  typeof __MONODOCS_VERSION__ === "string" ? __MONODOCS_VERSION__ : "0.6.0-beta.1";
+  typeof __MONODOCS_VERSION__ === "string" ? __MONODOCS_VERSION__ : packageJson.version;
 
 /** 既定のブラウザで URL を開く（プラットフォーム別。失敗しても致命的ではない）。 */
 function openBrowser(url: string): void {
