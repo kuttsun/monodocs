@@ -3,6 +3,14 @@ import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { buildSite, serveSite, validateSite, watchSite, type OutputFormat } from "@monodocs/core";
 
+declare const __MONODOCS_VERSION__: string;
+
+// `pnpm build` also emits an unbundled development entry point, so retain a
+// fallback for that file. The published CJS bundle replaces this constant with
+// the package version during bundling.
+const CLI_VERSION =
+  typeof __MONODOCS_VERSION__ === "string" ? __MONODOCS_VERSION__ : "0.6.0-beta.1";
+
 /** 既定のブラウザで URL を開く（プラットフォーム別。失敗しても致命的ではない）。 */
 function openBrowser(url: string): void {
   const platform = process.platform;
@@ -32,7 +40,7 @@ const program = new Command();
 program
   .name("monodocs")
   .description("複数の Markdown / AsciiDoc から単一 HTML / PDF を生成する")
-  .version("0.0.0");
+  .version(CLI_VERSION);
 
 program
   .command("build")

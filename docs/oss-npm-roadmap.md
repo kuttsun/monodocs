@@ -1,6 +1,6 @@
 # OSS / npm Publishing Roadmap
 
-Last updated: 2026-07-15
+Last updated: 2026-07-16
 
 ## 1. Purpose
 
@@ -57,14 +57,14 @@ Until GitHub Pages replaces it, maintain the existing Pages delivery in `.gitlab
 
 ### 3.2 npm Package Structure
 
-The current CLI depends on the private `@monodocs/core` via `workspace:*`.
+The development CLI depends on the private `@monodocs/core` via `workspace:*`.
 
 ```text
 monodocs CLI
   └─ @monodocs/core
 ```
 
-As is, only the CLI cannot be published to npm. For the first publish, do not finalize core's public API, and instead bundle it into the CLI's artifact and distribute it as a single package.
+The development CLI remains private so workspace development and type checking can use the internal core package. The release pipeline creates a separate staging directory with a publish manifest, the bundled CLI, and the required notices. For the first publish, do not finalize core's public API, and instead bundle it into the CLI artifact and distribute it as a single package.
 
 ### 3.3 SEA Binary Is a Future Task
 
@@ -112,7 +112,7 @@ The SEA standalone binary is a future item whose start will be decided after the
 - [x] Complete the source repository migration to GitHub.
 - [x] Unify the `homepage`, `repository`, and `bugs` URLs to the official repository.
 - [x] Set the npm package name to `monodocs`.
-- [ ] Finalize that the package name is available on the npm registry.
+- [x] Confirm that the package name is available on the npm registry.
 - [x] The npm package is individually owned.
 - [x] Make `kuttsun` the only initial npm maintainer.
 - [x] Finalize the policy of publishing only the CLI initially and maintaining core as an internal package.
@@ -204,17 +204,17 @@ pnpm bundle
 
 ### 8.1 Package Metadata
 
-- [ ] Remove the CLI's `private: true`.
-- [ ] Set the official version.
-- [ ] Make `homepage` the official URL.
-- [ ] Make `repository` the official URL.
-- [ ] Make `bugs` the official Issue URL.
-- [ ] Set `engines.node`.
-- [ ] Point `bin.monodocs` to the executable to be published.
-- [ ] Define `files` as an allowlist.
-- [ ] Set `publishConfig.access`.
-- [ ] Include `LICENSE` in the package.
-- [ ] Include `THIRD-PARTY-NOTICES.txt` in the package.
+- [x] Keep the development CLI private and generate the publish manifest in a separate staging directory.
+- [x] Set the initial prerelease version.
+- [x] Make `homepage` the official URL.
+- [x] Make `repository` the official URL.
+- [x] Make `bugs` the official Issue URL.
+- [x] Set `engines.node`.
+- [x] Point `bin.monodocs` to the executable to be published.
+- [x] Define `files` as an allowlist.
+- [x] Set `publishConfig.access`.
+- [x] Include `LICENSE` in the package.
+- [x] Include `THIRD-PARTY-NOTICES.txt` in the package.
 
 ### 8.2 Package Structure
 
@@ -230,21 +230,21 @@ package/
     └── monodocs.cjs
 ```
 
-- [ ] Bundle `@monodocs/core` into the artifact.
-- [ ] Eliminate `workspace:*` dependencies from the artifact.
-- [ ] Verify the CLI's shebang and execute permissions.
-- [ ] Include themes and client assets in the artifact.
-- [ ] Exclude unnecessary tests, configuration, and secrets from the artifact.
+- [x] Bundle `@monodocs/core` into the artifact.
+- [x] Eliminate `workspace:*` dependencies from the artifact.
+- [x] Verify the CLI's shebang and execute permissions.
+- [x] Include themes and client assets in the artifact.
+- [x] Exclude unnecessary tests, configuration, and secrets from the artifact.
 
 ### 8.3 PDF and Chromium
 
-- [ ] Make `puppeteer-core` resolvable from the npm version.
+- [x] Make `puppeteer-core` resolvable from the npm version.
 - [x] Define the search method for system Chromium.
 - [x] Allow setting an explicit Chromium path with `PUPPETEER_EXECUTABLE_PATH`.
 - [x] Display a specific error when Chromium is absent.
 - [x] Do not auto-download Chromium for users who use only HTML.
-- [ ] Verify PDF output in the npm version.
-- [ ] Verify Mermaid pre-render in the npm version.
+- [x] Verify PDF output in the npm version.
+- [x] Verify Mermaid pre-render in the npm version.
 
 ### 8.4 Tarball Verification
 
@@ -258,8 +258,8 @@ monodocs build ./docs -o ./dist/manual.html
 monodocs build ./docs --format pdf -o ./dist/manual.pdf
 ```
 
-- [ ] Verify the tarball's file list with a snapshot or allowlist.
-- [ ] The CLI can be installed from the tarball alone.
+- [x] Verify the tarball's file list with an allowlist.
+- [x] The CLI can be installed from the tarball alone.
 - [ ] HTML, PDF, validate, and serve can be run.
 - [ ] Confirm the package size and installation time.
 

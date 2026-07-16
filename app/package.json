@@ -14,6 +14,8 @@
     "build": "pnpm -r build",
     "bundle": "node scripts/bundle.mjs",
     "build:bin": "node scripts/bundle.mjs && node scripts/sea.mjs",
+    "package:stage": "pnpm bundle && node scripts/pack.mjs",
+    "pack:check": "pnpm package:stage && npm pack --dry-run --json dist/npm/monodocs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm -r typecheck",
