@@ -36,6 +36,14 @@ monodocs/
 
 Instead of installing Node / pnpm on the host, develop, build, and test inside the dedicated image **`monodocs-dev`**. The image bakes in pnpm on top of Node 22 (the same version as `packageManager` in `app/package.json`), so pnpm is not downloaded each time via corepack.
 
+### Site Dependency Security Override
+
+The standalone package under `site/` temporarily overrides Vite to `~6.4.3`. VitePress 1.6.4 still
+declares Vite `^5.4.14`, but that line resolves to versions covered by the Vite and esbuild security
+advisories detected by Dependabot. The override is intentionally limited to Vite 6.4 patch releases
+and must continue to pass `npm ci`, `npm audit`, and the VitePress production build. Revisit and remove
+it when upgrading to a stable VitePress release whose declared Vite range includes a secure version.
+
 ### What You Need
 
 - Docker only (VS Code / devcontainer are not required)

@@ -43,13 +43,15 @@ Completed migration items:
 - Git remote and default branch
 - The `homepage`, `repository`, and `bugs` URLs
 - Repository URLs in the official site and contributor documentation
+- Issue and pull request templates
+- Private vulnerability reporting
+- Dependency graph, Dependabot alerts and security updates, secret scanning, and push protection
 
 Remaining GitHub setup items to complete before M2 and the M4 beta release:
 
 - GitHub Actions Pull Request CI
 - GitHub Releases and Artifact Attestations
 - npm Trusted Publishing
-- Issue / Pull Request templates and the private vulnerability reporting path
 
 Until GitHub Pages replaces it, maintain the existing Pages delivery in `.gitlab-ci.yml`. Do not add more GitLab-specific release processing that will be discarded, and keep verification steps such as format, typecheck, test, build, and bundle platform-independent as package scripts.
 
