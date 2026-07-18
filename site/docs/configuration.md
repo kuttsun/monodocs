@@ -99,7 +99,7 @@ html:
 
 | Key             | Type                  | Default               | Description                                                  |
 | --------------- | --------------------- | --------------------- | ------------------------------------------------------------ |
-| `output.format` | `html` `pdf` `both`   | `html`                | Output format. Overridden by `-f, --format`. PDF is planned. |
+| `output.format` | `html` `pdf` `both`   | `html`                | Output format. Overridden by `-f, --format`.                 |
 | `output.path`   | string                | `./dist/manual.html`  | Output file path. Overridden by `-o, --output`. Relative to the config file. |
 
 ### `sources`

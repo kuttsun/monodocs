@@ -1,19 +1,28 @@
-# monodocs へのコントリビューション
+# Contributing to monodocs
 
-monodocs への Issue、ドキュメント改善、バグ修正、機能提案を歓迎します。公式の開発基盤は
-[GitHub](https://github.com/kuttsun/monodocs) です。
+Issues, documentation improvements, bug fixes, and feature proposals are welcome. The official development
+platform is [GitHub](https://github.com/kuttsun/monodocs).
 
-## はじめに
+## Before You Start
 
-- セキュリティ上の問題は公開 Issue にせず、[SECURITY.md](SECURITY.md) の手順で報告してください。
-- 大きな仕様変更は実装前に Issue で目的と設計を相談してください。
-- 小さなバグ修正やドキュメント修正は、直接 Pull Request を作成して構いません。
-- 保守はベストエフォートで行い、Issue や Pull Request への応答時間は保証しません。
+- Report security vulnerabilities through the process in [SECURITY.md](SECURITY.md), not through a public issue.
+- Discuss the purpose and design of substantial changes in an issue before implementation.
+- Small bug fixes and documentation corrections may be submitted directly as pull requests.
+- Maintenance is provided on a best-effort basis. Response times for issues and pull requests are not guaranteed.
+- No particular editor, AI assistant, or automated review product is required to contribute.
 
-## 開発環境
+## Repository Language Policy
 
-開発・ビルド・テストには Docker を使用します。ホストへの Node.js / pnpm のグローバル
-インストールは不要です。
+- Write project instructions, specifications, architecture documents, roadmaps, development documentation,
+  and code comments in English.
+- Keep intentionally localized user-facing content in its target language. This includes the localized website,
+  examples, and user documentation.
+- Preserve technical identifiers, commands, paths, and code in their original form.
+- Do not add personal language or tooling preferences to version-controlled repository instructions.
+
+## Development Environment
+
+Development, builds, and tests run in Docker. Do not install Node.js or pnpm globally on the host.
 
 ```bash
 scripts/app.sh pnpm install
@@ -21,46 +30,65 @@ scripts/app.sh pnpm build
 scripts/app.sh pnpm test
 ```
 
-VS Code Dev Containers を使う場合や、コンテナ内のシェルで作業する場合は `app/` へ移動し、
-`pnpm` コマンドを直接実行してください。詳細は [開発ガイド](docs/development.md) を参照してください。
+When using VS Code Dev Containers or an existing container shell, change to `app/` and run `pnpm` commands
+directly. See the [development guide](docs/development.md) for setup details and command variants.
 
-## 変更前の確認
+## Required Checks
 
-Pull Request を作成する前に、アプリの検証一式を実行してください。
+Before submitting a pull request, run the application verification suite:
 
 ```bash
 scripts/app.sh pnpm ci:check
 ```
 
-このコマンドは format check、build、typecheck、test、CLI bundle を順番に実行します。単一テストを
-実行する場合は、次のように Vitest のファイルまたはテスト名を指定できます。
+This runs the format check, build, typecheck, tests, and CLI bundle generation. When changing npm distribution,
+also verify the staged package:
+
+```bash
+scripts/app.sh pnpm package:verify
+```
+
+Run an individual Vitest file or matching test with:
 
 ```bash
 scripts/app.sh pnpm exec vitest run packages/core/src/route.test.ts
 scripts/app.sh pnpm exec vitest run -t "rewrites links"
 ```
 
-## 変更の方針
+The complete test policy and coverage map are in [docs/testing.md](docs/testing.md).
 
-- 既存の Markdown / AsciiDoc 混在処理と、共通 `Page` モデルへの正規化を維持してください。
-- 挙動を変更する場合は、対応するテストを追加または更新してください。
-- 利用者向けの挙動や設定を変更する場合は、README と関連する `docs/` も更新してください。
-- 依存関係を追加する場合は、用途、バンドルサイズ、ライセンス、単一ファイル配布への影響を確認してください。
-- コミットメッセージは Conventional Commits の prefix を使い、英語で変更内容を記述してください。
+## Change Guidelines
 
-## Pull Request
+- Preserve the source renderer architecture: process each source format with its own renderer, then normalize
+  it into the shared `Page` model. See [docs/architecture.md](docs/architecture.md).
+- Preserve the single-file output invariants documented in [docs/architecture.md](docs/architecture.md),
+  including globally unique element IDs, stable routes, and page reachability.
+- Add or update tests when behavior changes.
+- Update the README and relevant files under `docs/` when user-facing behavior, configuration, supported syntax,
+  or limitations change.
+- Check purpose, bundle-size impact, license compatibility, and single-file distribution impact before adding a
+  dependency.
+- Keep changes focused. Do not mix unrelated formatting or refactoring into a pull request.
 
-説明には、少なくとも次を含めてください。
+Features are organized by roadmap version. At a version boundary, update [docs/status.md](docs/status.md) and
+[docs/testing.md](docs/testing.md). Commit messages use a Conventional Commits prefix, an English description,
+and the target version at the end, for example:
 
-- 変更の目的
-- 主な変更点
-- 実行した検証
-- 既知の制限や後続作業
+```text
+feat: add search indexing (v0.4)
+```
 
-変更範囲を小さく保ち、無関係な整形やリファクタリングを混ぜないでください。
+## Pull Requests
 
-## ライセンス
+Include at least the following in the pull request description:
 
-このリポジトリへのコントリビューションは、別途明示的に合意した場合を除き、プロジェクトと同じ
-[MIT License](LICENSE) の下で提供されるものとします。依存関係や第三者のコードを追加する場合は、
-そのライセンスが配布方針と両立することを確認してください。
+- Purpose of the change
+- Main implementation changes
+- Verification performed
+- Known limitations or follow-up work
+
+## License
+
+Unless explicitly agreed otherwise, contributions are provided under the project's [MIT License](LICENSE).
+When adding dependencies or third-party code, confirm that their licenses are compatible with the distribution
+policy.

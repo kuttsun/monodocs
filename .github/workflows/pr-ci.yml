@@ -66,6 +66,9 @@ jobs:
           /Components: (\d+)/.exec(text); if (!match || Number(match[1]) < 1 ||
           text.includes('—  UNKNOWN')) throw new Error('Invalid third-party notices');"
 
+      - name: Verify installable npm package
+        run: pnpm package:verify
+
       - name: Smoke test application outputs
         run: |
           node dist/monodocs.cjs --version

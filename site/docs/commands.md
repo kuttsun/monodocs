@@ -35,7 +35,7 @@ monodocs build [input] [options]
 | `[input]`               | `./docs`               | Input directory to scan.                                     |
 | `-o, --output <file>`   | `./dist/manual.html`   | Output file path. Overrides `output.path`.                   |
 | `-c, --config <file>`   | auto-detected          | Config file. Uses `monodocs.config.yml` if present.          |
-| `-f, --format <format>` | `html`                 | Output format: `html` \| `pdf` \| `both`. Overrides `output.format`. PDF is planned (v0.5). |
+| `-f, --format <format>` | `html`                 | Output format: `html` \| `pdf` \| `both`. Overrides `output.format`. |
 
 ```bash
 # Build ./docs into ./dist/manual.html
