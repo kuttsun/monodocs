@@ -15,6 +15,7 @@ function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: appRoot,
     encoding: "utf8",
+    shell: process.platform === "win32" && command === npmCommand,
     stdio: options.capture ? "pipe" : "inherit",
   });
   if (result.status !== 0) {
@@ -22,7 +23,8 @@ function run(command, args, options = {}) {
       process.stderr.write(result.stdout ?? "");
       process.stderr.write(result.stderr ?? "");
     }
-    throw new Error(`${command} ${args.join(" ")} failed with status ${result.status}`);
+    const detail = result.error ? `: ${result.error.message}` : "";
+    throw new Error(`${command} ${args.join(" ")} failed with status ${result.status}${detail}`);
   }
   return result.stdout ?? "";
 }
