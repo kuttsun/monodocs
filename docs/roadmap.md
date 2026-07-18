@@ -102,10 +102,10 @@ CLI name:
 monodocs
 ```
 
-Candidate npm package name:
+npm package name:
 
 ```text
-@your-org/monodocs
+monodocs
 ```
 
 > The former name was `single-docs`. The CLI command has been unified to `monodocs` (`single-docs` / `sdocs` were not adopted because the names conflict with existing tools).
@@ -274,19 +274,19 @@ monodocs build ./docs -o ./dist/manual.html
 Global install:
 
 ```bash
-npm install -g @your-org/monodocs
+npm install -g monodocs
 ```
 
 One-off execution:
 
 ```bash
-npx @your-org/monodocs build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/manual.html
 ```
 
 Project-local introduction:
 
 ```bash
-npm install -D @your-org/monodocs
+npm install -D monodocs
 ```
 
 `package.json` example:
@@ -1525,7 +1525,7 @@ Do not write conversion logic inside the VS Code extension.
 ```text
 vscode-extension
   ↓
-@your-org/monodocs-core
+@monodocs/core
   ↓
 buildSite()
 ```

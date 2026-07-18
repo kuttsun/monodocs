@@ -16,14 +16,17 @@ pre-render modes. The standalone SEA binary is a separate future distribution.
 ## Installation
 
 ```bash
-npm install -g monodocs
+npm install -g monodocs@next
 ```
 
 Or run it without a global installation:
 
 ```bash
-npx monodocs build ./docs -o ./dist/manual.html
+npx monodocs@next build ./docs -o ./dist/manual.html
 ```
+
+The `next` tag is used during the v0.6 prerelease. After the stable release,
+installing `monodocs` without a tag will select the stable version.
 
 ## Usage
 
