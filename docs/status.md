@@ -1,19 +1,19 @@
 # Implementation Status
 
-Last updated: 2026-07-04
+Last updated: 2026-07-18
 
 ## Support Status
 
-| Feature                                           | State      | Target Version |
-| ------------------------------------------------- | ---------- | -------------- |
-| Development environment (devcontainer / monorepo) | ✅ Done    | -              |
-| Markdown → single HTML (MVP)                      | ✅ Done    | v0.1           |
-| AsciiDoc support / mixed-format support           | ✅ Done    | v0.2           |
-| Link conversion / image embedding / Mermaid       | ✅ Done    | v0.3           |
-| Search / table of contents / watch / serve        | ✅ Done    | v0.4           |
-| PDF output                                        | ✅ Done    | v0.5           |
-| npm / GitHub Actions                              | 🚧 Planned | v0.6           |
-| VS Code extension                                 | 🚧 Planned | v0.7           |
+| Feature                                           | State          | Target Version |
+| ------------------------------------------------- | -------------- | -------------- |
+| Development environment (devcontainer / monorepo) | ✅ Done        | -              |
+| Markdown → single HTML (MVP)                      | ✅ Done        | v0.1           |
+| AsciiDoc support / mixed-format support           | ✅ Done        | v0.2           |
+| Link conversion / image embedding / Mermaid       | ✅ Done        | v0.3           |
+| Search / table of contents / watch / serve        | ✅ Done        | v0.4           |
+| PDF output                                        | ✅ Done        | v0.5           |
+| npm / GitHub Actions                              | 🚧 In progress | v0.6           |
+| VS Code extension                                 | 🚧 Planned     | v0.7           |
 
 ## Completion Criteria Status
 
@@ -69,6 +69,20 @@ Last updated: 2026-07-04
 - [x] Puppeteer startup handling is unified in `pipeline/browser.ts` and shared between Mermaid pre-render and PDF (environment errors fail fast with `BrowserSetupError`)
 - [x] Since `serve` is for preview purposes, it serves HTML even when the configuration is pdf/both (it does not regenerate the PDF each time; an explicit `-o` is respected)
 - [x] PDF output is not available in the bundled CLI (single `.cjs` / single executable) (`puppeteer-core` is made `external`; the npm-installed version is required)
+
+### v0.6: Distribution / CI Support
+
+- [x] The publishing policy, supported environments, npm package boundary, and 0.x support policy are defined
+- [x] Contribution and security policies plus bug, feature, and pull request templates are present
+- [x] Pull request CI runs formatting, build, typecheck, tests, bundle generation, dependency audit, and license notice verification on Linux x64 and Windows x64
+- [x] Pull request CI smoke-tests HTML, validate, PDF, and Mermaid pre-render, including the PDF header, on Linux x64 and Windows x64
+- [x] A publish staging directory and allowlisted npm tarball can be generated without `workspace:*` dependencies
+- [x] The staged `0.6.0-beta.1` tarball has been installed locally and smoke-tested for HTML, PDF, validate, Mermaid pre-render, and serve
+- [x] Install and smoke-test the actual npm tarball in CI on Linux x64 and Windows x64
+- [ ] Complete repository security and branch-protection settings
+- [ ] Configure npm Trusted Publishing, release approval, provenance, and maintainer 2FA
+- [ ] Publish and verify `0.6.0-beta.1` under the `next` tag
+- [ ] Publish and verify the stable `0.6.0` release
 
 ## Supported Syntax
 

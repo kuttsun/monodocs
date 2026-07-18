@@ -144,14 +144,14 @@ The SEA standalone binary is a future item whose start will be decided after the
 
 ### 6.2 Repository Operation
 
-- [ ] Add an Issue template for bug reports.
-- [ ] Add an Issue template for feature requests.
-- [ ] Add a Pull Request template.
+- [x] Add an Issue template for bug reports.
+- [x] Add an Issue template for feature requests.
+- [x] Add a Pull Request template.
 - [ ] Enable a private reporting path for vulnerabilities.
 - [ ] Protect the default branch.
 - [ ] Make CI success and review merge conditions.
 - [ ] Decide on an adoption policy for Dependabot or Renovate.
-- [ ] Establish rules for license verification when adding dependencies.
+- [x] Establish rules for license verification when adding dependencies.
 
 ### 6.3 Completion Criteria
 
@@ -174,25 +174,25 @@ pnpm test
 pnpm bundle
 ```
 
-- [ ] Run the format check.
-- [ ] Build the entire workspace.
-- [ ] Run typecheck.
-- [ ] Run all tests.
-- [ ] Generate the CLI bundle.
-- [ ] Generate and verify the third-party license list.
-- [ ] Inspect for known vulnerabilities when dependencies change.
+- [x] Run the format check.
+- [x] Build the entire workspace.
+- [x] Run typecheck.
+- [x] Run all tests.
+- [x] Generate the CLI bundle.
+- [x] Generate and verify the third-party license list.
+- [x] Inspect for known vulnerabilities when dependencies change.
 
 ### 7.2 Smoke Test
 
-- [ ] Confirm `monodocs --version`.
-- [ ] Confirm `monodocs --help`.
-- [ ] Generate HTML from Markdown.
-- [ ] Generate HTML from a mixed Markdown / AsciiDoc document.
-- [ ] Run `validate`.
-- [ ] Run the basic flow of the npm version CLI on Linux x64 and Windows x64.
-- [ ] Specify Chromium on Linux x64 and Windows x64 and run PDF and Mermaid pre-render.
-- [ ] Confirm that the generated PDF begins with `%PDF-`.
-- [ ] Confirm that the artifacts to be published include LICENSE and third-party license notices.
+- [x] Confirm `monodocs --version`.
+- [x] Confirm `monodocs --help`.
+- [x] Generate HTML from Markdown.
+- [x] Generate HTML from a mixed Markdown / AsciiDoc document.
+- [x] Run `validate`.
+- [x] Run the basic flow of the npm version CLI on Linux x64 and Windows x64.
+- [x] Specify Chromium on Linux x64 and Windows x64 and run PDF and Mermaid pre-render.
+- [x] Confirm that the generated PDF begins with `%PDF-`.
+- [x] Confirm that the artifacts to be published include LICENSE and third-party license notices.
 
 ### 7.3 Completion Criteria
 
@@ -260,8 +260,15 @@ monodocs build ./docs --format pdf -o ./dist/manual.pdf
 
 - [x] Verify the tarball's file list with an allowlist.
 - [x] The CLI can be installed from the tarball alone.
-- [ ] HTML, PDF, validate, and serve can be run.
-- [ ] Confirm the package size and installation time.
+- [x] HTML, PDF, validate, and serve can be run.
+- [x] Confirm the package size and installation time.
+
+Local tarball verification on 2026-07-18 used `monodocs-0.6.0-beta.1.tgz` in the Node.js 22 development
+container. The tarball was 3,458,471 bytes (17,608,414 bytes unpacked), contained five allowlisted files,
+installed 81 packages in approximately six seconds, and successfully ran `--version`, `--help`, `validate`,
+HTML output, PDF output, Mermaid pre-render, and `serve`. The generated PDF began with `%PDF-`. This local
+verification is also automated by `pnpm package:verify`, which runs in pull request CI on both supported
+operating systems.
 
 ### 8.5 Completion Criteria
 
