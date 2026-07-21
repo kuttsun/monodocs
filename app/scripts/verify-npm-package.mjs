@@ -90,6 +90,7 @@ try {
   const expectedFiles = [
     "LICENSE",
     "README.md",
+    "README.ja.md",
     "THIRD-PARTY-NOTICES.txt",
     "dist/monodocs.cjs",
     "package.json",

@@ -1,5 +1,7 @@
 # Implementation Status
 
+[日本語](ja/status.md)
+
 Last updated: 2026-07-18
 
 ## Support Status

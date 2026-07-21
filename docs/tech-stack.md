@@ -1,5 +1,7 @@
 # Tech Stack
 
+[日本語](ja/tech-stack.md)
+
 | Category               | Adopted                                                                                                   |
 | ---------------------- | --------------------------------------------------------------------------------------------------------- |
 | Language / Runtime     | TypeScript 6 (NodeNext / strict), Node.js 22 LTS                                                          |

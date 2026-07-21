@@ -1,0 +1,73 @@
+name: バグ報告（日本語）
+description: monodocs で再現可能な問題を報告する
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        monodocs の改善にご協力いただきありがとうございます。
+
+        セキュリティ脆弱性や機密情報はここに記載せず、[セキュリティポリシー](https://github.com/kuttsun/monodocs/blob/main/SECURITY.ja.md)に従ってください。
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 送信前の確認
+      options:
+        - label: 既存 Issue を検索し、重複がないことを確認した。
+          required: true
+        - label: この報告にセキュリティ脆弱性や機密情報は含まれていない。
+          required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 問題の説明
+      description: 発生した問題と影響を説明してください。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: 最小の例と、再現に必要な正確なコマンドを記載してください。
+      placeholder: |
+        1. 次の入力ファイルと設定を用意する: ...
+        2. 次を実行する: ...
+        3. 次の結果を確認する: ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+      description: monodocs に期待した動作を説明してください。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 実行環境
+      description: monodocs のバージョンまたは commit、OS、Node.js、必要に応じて Chromium のバージョンを記載してください。
+      placeholder: |
+        - monodocs version または commit:
+        - OS:
+        - Node.js:
+        - Chromium（該当する場合）:
+    validations:
+      required: true
+  - type: textarea
+    id: configuration
+    attributes:
+      label: 設定
+      description: 関連する monodocs 設定を共有してください。secrets や private content は除いてください。
+      render: yaml
+  - type: textarea
+    id: logs
+    attributes:
+      label: ログ
+      description: 関連するログや警告を追加してください。secrets や private content は除いてください。
+      render: shell
+  - type: textarea
+    id: context
+    attributes:
+      label: 補足
+      description: screenshot、sample document、その他の情報を追加してください。secrets や private content は除いてください。

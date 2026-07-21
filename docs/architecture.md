@@ -1,5 +1,7 @@
 # Architecture
 
+[日本語](ja/architecture.md)
+
 `monodocs` combines multiple Markdown and AsciiDoc sources into one self-contained HTML document and can
 optionally render that document as PDF. It is a lightweight generator focused on single-file distribution,
 not a replacement for Pandoc. See [roadmap.md](roadmap.md) for the specification and [status.md](status.md) for

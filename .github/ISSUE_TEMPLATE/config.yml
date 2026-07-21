@@ -3,3 +3,6 @@ contact_links:
   - name: Security vulnerability
     url: https://github.com/kuttsun/monodocs/security/policy
     about: Report vulnerabilities privately by following the security policy.
+  - name: セキュリティ脆弱性
+    url: https://github.com/kuttsun/monodocs/security/policy
+    about: セキュリティポリシーに従い、脆弱性を非公開で報告してください。

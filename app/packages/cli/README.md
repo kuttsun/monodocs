@@ -1,5 +1,7 @@
 # monodocs
 
+[日本語](README.ja.md)
+
 Generate a single self-contained HTML or PDF document from a directory of
 Markdown and AsciiDoc files.
 

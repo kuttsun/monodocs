@@ -1,5 +1,7 @@
 # OSS / npm Publishing Roadmap
 
+[日本語](ja/oss-npm-roadmap.md)
+
 Last updated: 2026-07-16
 
 ## 1. Purpose
@@ -224,6 +226,7 @@ For the first publish, aim for the following single package.
 package/
 ├── package.json
 ├── README.md
+├── README.ja.md
 ├── LICENSE
 ├── THIRD-PARTY-NOTICES.txt
 └── dist/
@@ -264,7 +267,7 @@ monodocs build ./docs --format pdf -o ./dist/manual.pdf
 - [x] Confirm the package size and installation time.
 
 Local tarball verification on 2026-07-18 used `monodocs-0.6.0-beta.1.tgz` in the Node.js 22 development
-container. The tarball was 3,458,538 bytes (17,608,570 bytes unpacked), contained five allowlisted files,
+container. The tarball was 3,458,538 bytes (17,608,570 bytes unpacked), contained the expected allowlisted files,
 installed 81 packages in approximately five seconds, and successfully ran `--version`, `--help`, `validate`,
 HTML output, PDF output, Mermaid pre-render, and `serve`. The generated PDF began with `%PDF-`. This local
 verification is also automated by `pnpm package:verify`, which runs in pull request CI on both supported

@@ -34,6 +34,7 @@ const requiredArtifacts = [
   resolve(cliDir, "dist/monodocs.cjs"),
   resolve(cliDir, "LICENSE"),
   resolve(cliDir, "README.md"),
+  resolve(cliDir, "README.ja.md"),
   resolve(cliDir, "THIRD-PARTY-NOTICES.txt"),
 ];
 
@@ -52,6 +53,7 @@ await Promise.all([
   cp(resolve(cliDir, "dist/monodocs.cjs"), resolve(stageDir, "dist/monodocs.cjs")),
   cp(resolve(cliDir, "LICENSE"), resolve(stageDir, "LICENSE")),
   cp(resolve(cliDir, "README.md"), resolve(stageDir, "README.md")),
+  cp(resolve(cliDir, "README.ja.md"), resolve(stageDir, "README.ja.md")),
   cp(resolve(cliDir, "THIRD-PARTY-NOTICES.txt"), resolve(stageDir, "THIRD-PARTY-NOTICES.txt")),
   writeFile(resolve(stageDir, "package.json"), `${JSON.stringify(publishPackage, null, 2)}\n`),
 ]);

@@ -1,0 +1,44 @@
+name: 機能要望（日本語）
+description: monodocs の改善や新機能を提案する
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        改善のご提案ありがとうございます。大きな変更では、実装前にこの Issue で目的と設計を相談してください。
+
+        セキュリティ脆弱性や機密情報は含めず、[セキュリティポリシー](https://github.com/kuttsun/monodocs/blob/main/SECURITY.ja.md)に従ってください。
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 送信前の確認
+      options:
+        - label: 既存 Issue を検索し、重複する要望がないことを確認した。
+          required: true
+        - label: この要望にセキュリティ脆弱性や機密情報は含まれていない。
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 問題またはユースケース
+      description: 解決したい問題と、その改善が役立つ利用者を説明してください。
+      placeholder: 私は ... をしようとしていますが、... が課題です。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案する解決策
+      description: monodocs に期待する動作や interface を説明してください。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 検討した代替案
+      description: 検討した workaround や別の設計を説明してください。
+  - type: textarea
+    id: context
+    attributes:
+      label: 補足
+      description: 評価に役立つ例、mockup、関連 tool、その他の情報を追加してください。secrets や private content は除いてください。

@@ -1,5 +1,7 @@
 # Contributing to monodocs
 
+[日本語](CONTRIBUTING.ja.md)
+
 Issues, documentation improvements, bug fixes, and feature proposals are welcome. The official development
 platform is [GitHub](https://github.com/kuttsun/monodocs).
 
@@ -13,10 +15,14 @@ platform is [GitHub](https://github.com/kuttsun/monodocs).
 
 ## Repository Language Policy
 
-- Write project instructions, specifications, architecture documents, roadmaps, development documentation,
-  and code comments in English.
-- Keep intentionally localized user-facing content in its target language. This includes the localized website,
-  examples, and user documentation.
+- Use English as the default language for human-readable repository documents. Keep the default document at
+  its conventional path, such as `README.md` or `docs/development.md`.
+- Maintain a Japanese counterpart for each human-readable document. Use `*.ja.md` at the repository or package
+  root, and mirror files under `docs/ja/` and `site/ja/` for documentation trees.
+- Add reciprocal language links near the beginning of each English/Japanese document pair, except where the
+  documentation framework provides its own locale switcher.
+- Update both language versions in the same change when shared facts, instructions, or behavior change.
+- Write code comments in English.
 - Preserve technical identifiers, commands, paths, and code in their original form.
 - Do not add personal language or tooling preferences to version-controlled repository instructions.
 

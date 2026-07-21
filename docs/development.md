@@ -1,5 +1,7 @@
 # Development Guide
 
+[日本語](ja/development.md)
+
 ## Development Policy
 
 - **Don't pollute the host environment**: Node.js / pnpm are not installed globally on the host;

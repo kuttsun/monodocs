@@ -1,5 +1,7 @@
 # Supported Syntax and Limitations
 
+[日本語](ja/syntax.md)
+
 `monodocs` processes Markdown and AsciiDoc with their respective dedicated renderers, normalizes them into a common `Page` model, and then bundles them into a **single HTML** file ([roadmap.md](roadmap.md) Chapter 11). This document specifies the supported syntax as well as the **syntax that cannot be supported / is intentionally restricted due to the need to unify multiple files into one HTML**.
 
 - Markdown: [unified](https://unifiedjs.com/) / remark / rehype (CommonMark + GitHub Flavored Markdown)

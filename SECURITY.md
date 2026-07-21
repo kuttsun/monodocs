@@ -1,37 +1,31 @@
-# セキュリティポリシー
+# Security Policy
 
-## サポート範囲
+[日本語](SECURITY.ja.md)
 
-monodocs は正式公開前の開発段階です。v0.6.0 の公開までは `main` ブランチのみを対象に、
-セキュリティ修正をベストエフォートで提供します。応答時間や修正期限に関する SLA はありません。
+## Supported versions
 
-0.x の公開後は、原則として最新 minor をサポート対象とし、過去 minor は重大な脆弱性のみ対応します。
-個別バージョンの扱いを変更する場合は、Release notes で告知します。
+`monodocs` is under development and has not reached its first stable release. Until v0.6.0 is released, security fixes are provided for the `main` branch on a best-effort basis. There is no SLA for response or remediation times.
 
-## 脆弱性の報告
+After the 0.x releases begin, the latest minor version will normally be supported. Older minor versions will receive fixes only for critical vulnerabilities. Changes to version support will be announced in the release notes.
 
-脆弱性や機密情報に関わる問題を、公開 Issue、Pull Request、Discussion へ投稿しないでください。
+## Reporting a vulnerability
 
-GitHub の Private vulnerability reporting を唯一の報告窓口として使用します。リポジトリの
-Security ページで `Report a vulnerability` を選択し、非公開フォームから報告してください。
-メールによる脆弱性報告は受け付けていません。
+Do not post vulnerabilities or sensitive information in a public issue, pull request, or discussion.
 
-報告には、可能な範囲で次を含めてください。
+Use GitHub Private Vulnerability Reporting as the only reporting channel. Open the repository's Security page, select **Report a vulnerability**, and submit the private form. Vulnerability reports are not accepted by email.
 
-- 影響を受けるバージョンまたはコミット
-- 問題の概要と想定される影響
-- 再現手順または最小の再現例
-- 実行環境（OS、Node.js、Chromium、monodocs の設定）
-- 回避策がある場合はその内容
+Include the following information when possible:
 
-修正が公開されるまで、脆弱性の詳細を第三者へ共有しないようお願いします。受領後は内容を確認し、
-影響範囲、修正方法、公開時期を調整しますが、初回応答や修正完了までの時間は保証しません。
+- Affected version or commit
+- Summary and expected impact
+- Reproduction steps or a minimal reproducer
+- Environment details (OS, Node.js, Chromium, and monodocs configuration)
+- Any known workaround
 
-## セキュリティ上の前提
+Please do not share vulnerability details with third parties until a fix is published. We will review the report and coordinate its scope, remediation, and disclosure, but cannot guarantee an initial-response or resolution time.
 
-monodocs は、利用者自身または信頼できるチームが管理するドキュメントの変換を前提とします。
-特に AsciiDoc は生 HTML を出力できるため、信頼できない入力を変換すると、生成 HTML を閲覧した際に
-任意のスクリプトが実行される可能性があります。入力の制約については
-[開発ガイド](docs/development.md)を参照してください。
+## Security assumptions
 
-一般的な利用方法の質問、機能要望、秘密情報を含まないバグは通常の公開 Issue を利用してください。
+`monodocs` is intended to convert documents managed by you or a trusted team. AsciiDoc can emit raw HTML; converting untrusted input may therefore execute arbitrary scripts when the generated HTML is opened. See the [security boundaries](docs/architecture.md#security-boundaries) for details.
+
+Use a regular public issue for usage questions, feature requests, and bugs that do not contain sensitive information.

@@ -1,5 +1,7 @@
 # Testing
 
+[日本語](ja/testing.md)
+
 ## Policy
 
 - The test runner uses [vitest](https://vitest.dev/).
