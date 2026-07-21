@@ -99,7 +99,7 @@ html:
 
 | キー            | 型                  | 既定値                | 説明                                                       |
 | --------------- | ------------------- | --------------------- | ---------------------------------------------------------- |
-| `output.format` | `html` `pdf` `both` | `html`                | 出力形式。`-f, --format` で上書き。PDF は対応予定。         |
+| `output.format` | `html` `pdf` `both` | `html`                | 出力形式。`-f, --format` で上書き。                         |
 | `output.path`   | string              | `./dist/manual.html`  | 出力ファイルパス。`-o, --output` で上書き。設定ファイル基準の相対パス。 |
 
 ### `sources`

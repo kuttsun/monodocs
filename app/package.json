@@ -16,7 +16,7 @@
     "build:bin": "node scripts/bundle.mjs && node scripts/sea.mjs",
     "package:stage": "pnpm bundle && node scripts/pack.mjs",
     "pack:check": "pnpm package:stage && npm pack --dry-run --json dist/npm/monodocs",
-    "package:smoke": "pnpm package:stage && node scripts/package-smoke.mjs",
+    "package:verify": "pnpm package:stage && node scripts/verify-npm-package.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm -r typecheck",

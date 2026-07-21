@@ -7,7 +7,8 @@
 - **Separate the app from the site**: The application itself lives in `app/`, the promotional site to be published in the future lives in `site/`,
   and development documentation lives in `docs/`.
 - **Source Renderer Architecture**: Each source format such as Markdown / AsciiDoc is
-  processed by a dedicated renderer, normalized into a common `Page` model, and then output ([roadmap.md](roadmap.md), chapter 11).
+  processed by a dedicated renderer, normalized into a common `Page` model, and then output
+  ([architecture.md](architecture.md)).
 - **Incremental releases**: Features are added per roadmap version ([status.md](status.md)).
 
 ## Directory Structure
@@ -64,7 +65,14 @@ scripts/app.sh pnpm build       # Build all packages (tsc) + copy theme assets
 scripts/app.sh pnpm test        # Tests (vitest)
 scripts/app.sh pnpm typecheck   # Type check
 scripts/app.sh pnpm format      # Format with Prettier
+scripts/app.sh pnpm format:check # Check formatting without changing files
+scripts/app.sh pnpm ci:check    # Format check, build, typecheck, tests, and CLI bundle
+scripts/app.sh pnpm package:verify # Build, install, and smoke-test the npm package artifact
 ```
+
+Use `scripts/app.sh` only from the host. Inside a devcontainer or container shell, run `pnpm` directly to avoid
+attempting Docker-in-Docker. Keep `packageManager` in `app/package.json` aligned with `PNPM_VERSION` in
+`Dockerfile.dev`.
 
 Local preview (in your host's browser at `http://localhost:4173/`).
 The shortcut `scripts/app-serve.sh`, which performs dependency installation (first time only), the build, and `serve --host 0.0.0.0` all at once, is convenient:
@@ -133,6 +141,9 @@ VS Code automatically forwards port 4173 (`--host` is not needed).
 
 ## Architecture
 
+See [architecture.md](architecture.md) for the complete architecture, implementation invariants, security
+boundaries, and output constraints. The high-level flow is:
+
 ```text
 Markdown / AsciiDoc files
       ↓  Source Renderer (per format)
@@ -153,6 +164,9 @@ Markdown / AsciiDoc files
 
 To avoid heading ID collisions within a single HTML, each heading / element ID is
 prefixed to `{page-id}-{original ID}` (AsciiDoc's intra-document xrefs are also rewritten to follow suit).
+
+When changing supported syntax or a single-file constraint, update [syntax.md](syntax.md). When completing a
+roadmap version, update [status.md](status.md) and [testing.md](testing.md).
 
 ### Language of the UI (chrome)
 

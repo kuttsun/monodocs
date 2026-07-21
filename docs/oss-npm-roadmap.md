@@ -151,7 +151,7 @@ The SEA standalone binary is a future item whose start will be decided after the
 - [ ] Protect the default branch.
 - [ ] Make CI success and review merge conditions.
 - [ ] Decide on an adoption policy for Dependabot or Renovate.
-- [ ] Establish rules for license verification when adding dependencies.
+- [x] Establish rules for license verification when adding dependencies.
 
 ### 6.3 Completion Criteria
 
@@ -189,8 +189,8 @@ pnpm bundle
 - [x] Generate HTML from Markdown.
 - [x] Generate HTML from a mixed Markdown / AsciiDoc document.
 - [x] Run `validate`.
-- [ ] Run the basic flow of the npm version CLI on Linux x64 and Windows x64.
-- [ ] Specify Chromium on Linux x64 and Windows x64 and run PDF and Mermaid pre-render.
+- [x] Run the basic flow of the npm version CLI on Linux x64 and Windows x64.
+- [x] Specify Chromium on Linux x64 and Windows x64 and run PDF and Mermaid pre-render.
 - [x] Confirm that the generated PDF begins with `%PDF-`.
 - [x] Confirm that the artifacts to be published include LICENSE and third-party license notices.
 
@@ -263,6 +263,13 @@ monodocs build ./docs --format pdf -o ./dist/manual.pdf
 - [x] HTML, PDF, validate, and serve can be run.
 - [x] Confirm the package size and installation time.
 
+Local tarball verification on 2026-07-18 used `monodocs-0.6.0-beta.1.tgz` in the Node.js 22 development
+container. The tarball was 3,458,538 bytes (17,608,570 bytes unpacked), contained five allowlisted files,
+installed 81 packages in approximately five seconds, and successfully ran `--version`, `--help`, `validate`,
+HTML output, PDF output, Mermaid pre-render, and `serve`. The generated PDF began with `%PDF-`. This local
+verification is also automated by `pnpm package:verify`, which runs in pull request CI on both supported
+operating systems.
+
 ### 8.5 Completion Criteria
 
 - The main features work with the npm tarball alone.
@@ -274,7 +281,23 @@ monodocs build ./docs --format pdf -o ./dist/manual.pdf
 
 ### 9.1 Publishing Method
 
-Publish the beta version to `next`, not `latest`.
+The `release.yml` workflow publishes from a GitHub Release on a GitHub-hosted runner. It verifies that the
+release tag exactly matches the CLI package version, maps prereleases to `next` and stable versions to `latest`,
+runs the full checks and tarball verification, and then publishes through npm Trusted Publishing. The workflow
+uses the `npm` GitHub Environment so repository-side approval can gate publication.
+
+Configure npm Trusted Publishing with these exact values before creating the release:
+
+| Setting           | Value         |
+| ----------------- | ------------- |
+| GitHub owner      | `kuttsun`     |
+| Repository        | `monodocs`    |
+| Workflow filename | `release.yml` |
+| Environment       | `npm`         |
+| Allowed action    | `npm publish` |
+
+Publish the beta version to `next`, not `latest`. Trusted Publishing generates provenance automatically; the
+workflow also passes `--provenance` explicitly so that intent remains visible in the release definition.
 
 ```bash
 npm publish --tag next
@@ -282,6 +305,7 @@ npm install -g monodocs@next
 ```
 
 - [ ] Issue `0.6.0-beta.1`.
+- [x] Add the GitHub Release-triggered publishing workflow.
 - [ ] Set up GitHub Actions Trusted Publishing.
 - [ ] Do not store a long-lived npm write token in CI.
 - [ ] Set up approval for the release Environment.

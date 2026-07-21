@@ -18,6 +18,8 @@ Run from the host using the dedicated image (see [development.md](development.md
 ```bash
 scripts/app.sh pnpm test         # run all at once (vitest run)
 scripts/app.sh pnpm test:watch   # watch
+scripts/app.sh pnpm ci:check     # format, build, typecheck, tests, and CLI bundle
+scripts/app.sh pnpm package:verify # build, install, and smoke-test the npm package artifact
 ```
 
 When using `docker run` directly:
@@ -28,14 +30,15 @@ docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 
 Inside a devcontainer, or when you are in the container's shell, you can run `pnpm test` directly in `app/`.
 
-## Test Results (as of 2026-07-04)
+## Test Results (as of 2026-07-18)
 
-| Item         | Result     |
-| ------------ | ---------- |
-| Test Files   | 22 passed  |
-| Tests        | 195 passed |
-| typecheck    | passed     |
-| format:check | passed     |
+| Item           | Result     |
+| -------------- | ---------- |
+| Test Files     | 22 passed  |
+| Tests          | 198 passed |
+| typecheck      | passed     |
+| format:check   | passed     |
+| package:verify | passed     |
 
 Main test targets:
 

@@ -35,7 +35,7 @@ monodocs build [input] [options]
 | `[input]`               | `./docs`               | 走査する入力ディレクトリ。                                 |
 | `-o, --output <file>`   | `./dist/manual.html`   | 出力ファイルパス。`output.path` を上書き。                 |
 | `-c, --config <file>`   | 自動検出               | 設定ファイル。`monodocs.config.yml` があれば使用。         |
-| `-f, --format <format>` | `html`                 | 出力形式: `html` \| `pdf` \| `both`。`output.format` を上書き。PDF は対応予定（v0.5）。 |
+| `-f, --format <format>` | `html`                 | 出力形式: `html` \| `pdf` \| `both`。`output.format` を上書き。 |
 
 ```bash
 # ./docs を ./dist/manual.html にビルド
