@@ -84,6 +84,8 @@ html:
   theme: default
   colorScheme: light # light | dark | auto (follows the OS setting)
   contentWidth: 860px # a CSS length, or "full" for the full available width
+  contentWidthToggle: true # show the standard/wide toggle
+  contentWidthDefault: standard # standard | wide (used until the reader chooses)
 ```
 
 ## Reference
@@ -195,6 +197,8 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | `html.theme`         | string          | `default`   | Theme name used for the output HTML.                                                  |
 | `html.colorScheme`   | `light` `dark` `auto` | `light` | Initial color scheme when a document is opened. `auto` follows the OS `prefers-color-scheme`. Once a reader toggles it in the UI, the choice is saved in the browser and takes precedence (distinct from the `html.theme` template name). |
 | `html.contentWidth`  | string / number | `860px`     | Max width of the content area. A CSS length (`px`, `rem`, `em`, `ch`, `vw`, `%`) or a number (px). `full` (or `none`) expands to the full available width. |
+| `html.contentWidthToggle` | boolean | `true` | Show the reader-facing standard/wide content toggle. When `false`, stored reader choices and `html.contentWidthDefault` are ignored. |
+| `html.contentWidthDefault` | `standard` `wide` | `standard` | Initial content-width state. A reader's saved choice takes precedence. |
 
 ## Page order and titles
 

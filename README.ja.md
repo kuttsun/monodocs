@@ -216,6 +216,7 @@ html:
   theme: "default"
   contentWidth: "860px" # 固定幅。例: "1100px" / "72rem" / full=横幅いっぱい
   contentWidthToggle: true # false で読者向けの幅切替ボタンを非表示
+  contentWidthDefault: "standard" # standard | wide（読者が選択するまでの初期状態）
 ```
 
 設定項目の全体像は [docs/ja/roadmap.md](docs/ja/roadmap.md) の「12. 設定ファイル」を参照してください。

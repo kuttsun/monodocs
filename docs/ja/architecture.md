@@ -71,7 +71,7 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
 `themes/default/` は `template.html`、`style.css`、`app.js` を含みます。`renderSingleHtml` は次のトークンを置換します。
 
 ```text
-{{htmlAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
+{{htmlAttrs}} {{bodyAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
 {{#contentWidthToggle}}...{{/contentWidthToggle}}
 ```
@@ -89,6 +89,7 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
 - `html.colorScheme` は初期テーマを制御し、保存済みの `monodocs:theme` を優先します。
 - 本文幅トグルは、読みやすい既定の最大幅と利用可能な横幅いっぱいの表示を切り替えます。
   読者の選択は `monodocs:content-width` に保存し、印刷・PDF レイアウトには影響させません。
+  `html.contentWidthDefault` では、読者の選択が保存されるまでの初期状態を `standard` / `wide` から選べます。
   `html.contentWidthToggle: false` ではボタンを出力せず、保存済みの読者設定も適用しません。
 
 テーマ UI ラベルは本文言語から独立した英語に統一します。動的ラベルは `app.js` の `LABELS`、静的ラベルは `template.html` に置きます。

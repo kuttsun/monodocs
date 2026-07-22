@@ -16,7 +16,11 @@ type ClientPage = {
  */
 async function mountClient(
   pages: ClientPage[],
-  options: { colorScheme?: string; contentWidthToggle?: boolean } = {},
+  options: {
+    colorScheme?: string;
+    contentWidthToggle?: boolean;
+    contentWidthDefault?: string;
+  } = {},
 ): Promise<void> {
   const theme = await loadTheme("default");
 
@@ -62,6 +66,7 @@ async function mountClient(
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
     initialRoute: pages[0]?.route,
     colorScheme: options.colorScheme,
+    contentWidthDefault: options.contentWidthDefault,
     pages,
   };
 
@@ -246,9 +251,23 @@ describe("v0.4 client features (app.js)", () => {
     );
   });
 
+  it("applies the configured initial content width when nothing is stored", async () => {
+    await mountClient(SAMPLE, { contentWidthDefault: "wide" });
+    expect(document.body.classList.contains("content-wide")).toBe(true);
+    expect(document.getElementById("content-width-toggle")!.getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+  });
+
+  it("lets the stored choice win over the configured initial content width", async () => {
+    window.localStorage.setItem("monodocs:content-width", "standard");
+    await mountClient(SAMPLE, { contentWidthDefault: "wide" });
+    expect(document.body.classList.contains("content-wide")).toBe(false);
+  });
+
   it("ignores the stored wide choice when the content-width toggle is disabled", async () => {
     window.localStorage.setItem("monodocs:content-width", "wide");
-    await mountClient(SAMPLE, { contentWidthToggle: false });
+    await mountClient(SAMPLE, { contentWidthToggle: false, contentWidthDefault: "wide" });
     expect(document.getElementById("content-width-toggle")).toBeNull();
     expect(document.body.classList.contains("content-wide")).toBe(false);
   });

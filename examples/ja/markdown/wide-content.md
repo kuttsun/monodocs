@@ -8,6 +8,7 @@ order: 7
 本文は読みやすい幅（既定で最大 860px）に保たれます。設定ファイルの
 `html.contentWidth` で固定幅を変えたり、`full` で横幅いっぱいまで広げたりできます。
 読者に幅を切り替えさせない場合は `html.contentWidthToggle` を `false` にします。
+読者が選択するまでワイド幅で開くには `html.contentWidthDefault` を `wide` にします。
 それより幅の広い表・コードブロック・画像・図がどう表示されるかを確認するサンプルです。
 
 > [!NOTE]

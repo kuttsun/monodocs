@@ -745,6 +745,8 @@ html:
   contentWidth: "860px"
   # 読者向けの標準幅／ワイド幅切替ボタンを表示する
   contentWidthToggle: true
+  # 読者が選択するまでの初期状態: standard / wide
+  contentWidthDefault: "standard"
   darkMode: true
 
 pdf:

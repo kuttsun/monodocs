@@ -483,7 +483,8 @@
       document.body.classList.remove("content-wide");
       return;
     }
-    applyContentWidth(storedContentWidth());
+    // Prefer the reader's stored choice; otherwise use the configured initial state.
+    applyContentWidth(storedContentWidth() || data.contentWidthDefault);
     btn.addEventListener("click", function () {
       var next = document.body.classList.contains("content-wide") ? "standard" : "wide";
       applyContentWidth(next);

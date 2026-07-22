@@ -1,5 +1,5 @@
 import type { Page, SidebarNode } from "../types.js";
-import { parseContentWidth, type ColorScheme } from "../config.js";
+import { parseContentWidth, type ColorScheme, type ContentWidthDefault } from "../config.js";
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, injectToken } from "../util/html.js";
 
@@ -14,6 +14,8 @@ export type RenderHtmlInput = {
   contentWidth?: string;
   /** 読者向けの本文幅切替ボタンを表示するか。未指定は true。 */
   contentWidthToggle?: boolean;
+  /** Initial state when the content-width toggle is shown. Defaults to standard. */
+  contentWidthDefault?: ContentWidthDefault;
   /**
    * この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
    * undefined は折りたたみなし。トップレベルのディレクトリを深さ 1 とする。
@@ -116,6 +118,16 @@ function rootThemeAttr(colorScheme: ColorScheme | undefined): string {
   return "";
 }
 
+/** Return the `<body>` attribute that applies the configured width before client JS runs. */
+function bodyContentWidthAttr(
+  contentWidthToggle: boolean | undefined,
+  contentWidthDefault: ContentWidthDefault | undefined,
+): string {
+  return contentWidthToggle !== false && contentWidthDefault === "wide"
+    ? ' class="content-wide"'
+    : "";
+}
+
 /** テーマ内の単純な条件ブロックを残すか、内容ごと除去する。 */
 function renderConditionalBlock(template: string, name: string, enabled: boolean): string {
   const start = `{{#${name}}}`;
@@ -140,6 +152,7 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   const tocMaxLevel = input.tocMaxLevel ?? 3;
   // 既定はライト。サーバ出力の data-theme と __MONODOCS_DATA__ の値を必ず一致させる。
   const colorScheme: ColorScheme = input.colorScheme ?? "light";
+  const contentWidthDefault: ContentWidthDefault = input.contentWidthDefault ?? "standard";
 
   const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth);
   const pagesHtml = input.pages.map(renderArticle).join("\n");
@@ -148,6 +161,8 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     initialRoute: input.pages[0]?.route ?? "/",
     // 読者がまだ配色を選んでいないときに使う初期配色（"light" / "dark" / "auto"）。
     colorScheme,
+    // Initial state used until the reader stores a choice ("standard" / "wide").
+    contentWidthDefault,
     // 目次・検索・前後ナビ用のページメタ（本文 HTML は含めない）。
     pages: input.pages.map((page) => pageData(page, tocMaxLevel)),
   });
@@ -158,6 +173,11 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     input.contentWidthToggle !== false,
   );
   html = injectToken(html, "{{htmlAttrs}}", rootThemeAttr(colorScheme));
+  html = injectToken(
+    html,
+    "{{bodyAttrs}}",
+    bodyContentWidthAttr(input.contentWidthToggle, contentWidthDefault),
+  );
   html = injectToken(html, "{{title}}", escapeHtml(input.title));
   html = injectToken(html, "{{style}}", styleWithOverrides(theme.style, input));
   html = injectToken(html, "{{sidebar}}", sidebarHtml);

@@ -180,6 +180,7 @@ export async function buildSite(
     colorScheme: config.colorScheme,
     contentWidth: config.contentWidth,
     contentWidthToggle: config.contentWidthToggle,
+    contentWidthDefault: config.contentWidthDefault,
     sidebarCollapseDepth: config.sidebarCollapseDepth,
     tocMaxLevel: config.tocMaxLevel,
     bodyScripts,

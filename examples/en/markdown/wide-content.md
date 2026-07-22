@@ -8,6 +8,7 @@ order: 7
 The body is kept at a comfortable reading width (max 860px by default). You can change the
 fixed width with `html.contentWidth` in the config file, or set it to `full` to span the full width.
 Set `html.contentWidthToggle` to `false` when readers should not be able to change that width.
+Set `html.contentWidthDefault` to `wide` to start in wide mode until the reader makes a choice.
 This sample shows how tables, code blocks, images, and diagrams wider than that are displayed.
 
 > [!NOTE]

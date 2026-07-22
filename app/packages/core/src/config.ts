@@ -47,6 +47,11 @@ export type MermaidMode = "client" | "pre-render";
  * 選択が優先され、この初期値は無視される。`html.theme`（テンプレート名）とは別物。
  */
 export type ColorScheme = "light" | "dark" | "auto";
+/**
+ * Initial state of the content-width toggle.
+ * A reader's localStorage choice takes precedence after they use the toggle.
+ */
+export type ContentWidthDefault = "standard" | "wide";
 
 const regexTitleTransformSchema = z
   .object({
@@ -141,6 +146,8 @@ const configFileSchema = z.object({
       contentWidth: z.union([z.string(), z.number()]).optional(),
       /** 読者向けの本文幅切替ボタンを表示するか（既定 true）。 */
       contentWidthToggle: z.boolean().optional(),
+      /** Initial content-width toggle state (default: standard). */
+      contentWidthDefault: z.enum(["standard", "wide"]).optional(),
       // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
       // 読者がトグルで切り替えると localStorage の選択が優先される。
       colorScheme: z.enum(["light", "dark", "auto"]).optional(),
@@ -202,6 +209,8 @@ export type ResolvedConfig = {
   contentWidth: string;
   /** 読者向けの本文幅切替ボタンを表示するか。 */
   contentWidthToggle: boolean;
+  /** Initial state when the content-width toggle is shown. */
+  contentWidthDefault: ContentWidthDefault;
   embedImages: boolean;
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
@@ -360,6 +369,7 @@ export async function loadConfig(
     colorScheme: fileConfig.html?.colorScheme ?? "light",
     contentWidth: parseContentWidth(fileConfig.html?.contentWidth),
     contentWidthToggle: fileConfig.html?.contentWidthToggle ?? true,
+    contentWidthDefault: fileConfig.html?.contentWidthDefault ?? "standard",
     embedImages: fileConfig.assets?.embedImages ?? true,
     maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
     onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",

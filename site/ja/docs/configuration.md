@@ -84,6 +84,8 @@ html:
   theme: default
   colorScheme: light # light | dark | auto（OS 設定に追従）
   contentWidth: 860px # CSS 長さ、または "full"（残り幅いっぱい）
+  contentWidthToggle: true # 標準幅／ワイド幅切替ボタンを表示
+  contentWidthDefault: standard # standard | wide（読者が選択するまでの初期状態）
 ```
 
 ## リファレンス
@@ -195,6 +197,8 @@ sidebar:
 | `html.theme`        | string          | `default` | 出力 HTML に使うテーマ名。                                                  |
 | `html.colorScheme`  | `light` `dark` `auto` | `light` | ドキュメントを開いたときの初期配色。`auto` は OS の `prefers-color-scheme` に追従。読者が画面のトグルで切り替えるとブラウザに保存され、以降はそちらが優先される（`html.theme` のテンプレート名とは別物）。 |
 | `html.contentWidth` | string / number | `860px`   | 本文領域の最大幅。CSS 長さ（`px`・`rem`・`em`・`ch`・`vw`・`%`）または数値（px）。`full`（または `none`）で残り幅いっぱいに広げる。 |
+| `html.contentWidthToggle` | boolean | `true` | 読者向けの標準幅／ワイド幅切替ボタンを表示する。`false` の場合は保存済みの読者設定と `html.contentWidthDefault` を無視する。 |
+| `html.contentWidthDefault` | `standard` `wide` | `standard` | 本文幅の初期状態。読者の選択が保存されている場合はそちらを優先する。 |
 
 ## ページの並び順とタイトル
 

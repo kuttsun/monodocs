@@ -70,6 +70,37 @@ describe("renderSingleHtml", () => {
     expect(html).not.toContain("{{/contentWidthToggle}}");
   });
 
+  it("embeds and applies the configured initial content width", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    const html = await renderSingleHtml({
+      title: "T",
+      pages,
+      sidebar,
+      contentWidthDefault: "wide",
+    });
+
+    expect(html).toContain('<body class="content-wide">');
+    expect(html).toContain('"contentWidthDefault":"wide"');
+  });
+
+  it("ignores the initial content width when the toggle is disabled", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    const html = await renderSingleHtml({
+      title: "T",
+      pages,
+      sidebar,
+      contentWidthToggle: false,
+      contentWidthDefault: "wide",
+    });
+
+    expect(html).toContain("<body>");
+    expect(html).not.toContain('<body class="content-wide">');
+  });
+
   it("rejects unsafe content width values at the render boundary", async () => {
     const pages: Page[] = [page("/p", "p", "Page")];
     const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];

@@ -98,7 +98,7 @@ precedence over automatic system-browser discovery.
 `app.js`. `renderSingleHtml` replaces these template tokens:
 
 ```text
-{{htmlAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
+{{htmlAttrs}} {{bodyAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
 {{#contentWidthToggle}}...{{/contentWidthToggle}}
 ```
@@ -124,6 +124,7 @@ Preserve these display and reachability invariants:
   `monodocs:theme` preference takes precedence.
 - The content-width toggle switches between the readable default maximum width and the full available width.
   A reader's choice is stored in `monodocs:content-width`; it must not affect print or PDF layout.
+  `html.contentWidthDefault` selects `standard` or `wide` until the reader makes a stored choice.
   `html.contentWidthToggle: false` omits the button and ignores any stored reader choice.
 
 Theme UI labels are standardized in English and are independent of document body language. Dynamic labels are

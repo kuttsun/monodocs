@@ -745,6 +745,8 @@ html:
   contentWidth: "860px"
   # Show the reader-facing standard/wide content toggle
   contentWidthToggle: true
+  # Initial toggle state until the reader chooses: standard / wide
+  contentWidthDefault: "standard"
   darkMode: true
 
 pdf:
