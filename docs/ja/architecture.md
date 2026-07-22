@@ -73,6 +73,7 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
 ```text
 {{htmlAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
+{{#contentWidthToggle}}...{{/contentWidthToggle}}
 ```
 
 `window.__MONODOCS_DATA__` にはルーティング、検索、ページ内目次、前後ナビ用の情報を格納します。クライアントは plain IIFE であり、要素アクセスの null guard を維持します。印刷 CSS は全ページを縦に展開します。
@@ -86,6 +87,9 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
 - `sidebar.titleFrom: "heading"` は明示タイトル、見出し、ファイル名の順です。`"filename"` は見出しを飛ばしますが明示タイトルを上書きしません。
 - `sidebar.flattenSingleChild` は、ページが一つでサブディレクトリがない場合だけ表示上フラット化し、到達可能性を失わせません。
 - `html.colorScheme` は初期テーマを制御し、保存済みの `monodocs:theme` を優先します。
+- 本文幅トグルは、読みやすい既定の最大幅と利用可能な横幅いっぱいの表示を切り替えます。
+  読者の選択は `monodocs:content-width` に保存し、印刷・PDF レイアウトには影響させません。
+  `html.contentWidthToggle: false` ではボタンを出力せず、保存済みの読者設定も適用しません。
 
 テーマ UI ラベルは本文言語から独立した英語に統一します。動的ラベルは `app.js` の `LABELS`、静的ラベルは `template.html` に置きます。
 

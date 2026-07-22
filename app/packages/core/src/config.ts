@@ -139,6 +139,8 @@ const configFileSchema = z.object({
     .object({
       theme: z.string().optional(),
       contentWidth: z.union([z.string(), z.number()]).optional(),
+      /** 読者向けの本文幅切替ボタンを表示するか（既定 true）。 */
+      contentWidthToggle: z.boolean().optional(),
       // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
       // 読者がトグルで切り替えると localStorage の選択が優先される。
       colorScheme: z.enum(["light", "dark", "auto"]).optional(),
@@ -198,6 +200,8 @@ export type ResolvedConfig = {
   colorScheme: ColorScheme;
   /** 本文領域の最大幅。`full` 指定時は CSS の `none` に解決する。 */
   contentWidth: string;
+  /** 読者向けの本文幅切替ボタンを表示するか。 */
+  contentWidthToggle: boolean;
   embedImages: boolean;
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
@@ -355,6 +359,7 @@ export async function loadConfig(
     theme: fileConfig.html?.theme ?? "default",
     colorScheme: fileConfig.html?.colorScheme ?? "light",
     contentWidth: parseContentWidth(fileConfig.html?.contentWidth),
+    contentWidthToggle: fileConfig.html?.contentWidthToggle ?? true,
     embedImages: fileConfig.assets?.embedImages ?? true,
     maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
     onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",

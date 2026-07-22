@@ -33,6 +33,7 @@ describe("renderSingleHtml", () => {
     // data-route はクライアントで decode 後に比較するため生のまま。
     expect(html).toContain('data-route="/ガイド"');
     expect(html).toContain("__MONODOCS_DATA__");
+    expect(html).toContain('id="content-width-toggle"');
   });
 
   it("escapes HTML special characters in titles", async () => {
@@ -51,6 +52,22 @@ describe("renderSingleHtml", () => {
 
     expect(html).toContain("--content-max-width: 860px;");
     expect(html).toContain("--content-max-width: none;");
+  });
+
+  it("omits the content-width toggle when disabled", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    const html = await renderSingleHtml({
+      title: "T",
+      pages,
+      sidebar,
+      contentWidthToggle: false,
+    });
+
+    expect(html).not.toContain('id="content-width-toggle"');
+    expect(html).not.toContain("{{#contentWidthToggle}}");
+    expect(html).not.toContain("{{/contentWidthToggle}}");
   });
 
   it("rejects unsafe content width values at the render boundary", async () => {

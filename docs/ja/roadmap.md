@@ -743,6 +743,8 @@ html:
   theme: "default"
   # 本文領域の最大幅。例: "860px" / "1100px" / "72rem" / full
   contentWidth: "860px"
+  # 読者向けの標準幅／ワイド幅切替ボタンを表示する
+  contentWidthToggle: true
   darkMode: true
 
 pdf:

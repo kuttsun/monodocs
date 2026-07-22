@@ -76,6 +76,7 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     expect(config.sidebarFlattenSingleChild).toBe(false);
     expect(config.sidebarTitleFrom).toBe("heading");
     expect(config.contentWidth).toBe("860px");
+    expect(config.contentWidthToggle).toBe(true);
     expect(config.colorScheme).toBe("light");
   });
 
@@ -219,6 +220,12 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     await writeConfig("html:\n  contentWidth: full\n");
     const config = await loadConfig({}, dir);
     expect(config.contentWidth).toBe("none");
+  });
+
+  it("can disable html.contentWidthToggle", async () => {
+    await writeConfig("html:\n  contentWidthToggle: false\n");
+    const config = await loadConfig({}, dir);
+    expect(config.contentWidthToggle).toBe(false);
   });
 
   it("rejects invalid html.contentWidth", async () => {

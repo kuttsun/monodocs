@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-07-18
+Last updated: 2026-07-22
 
 ## Support Status
 
@@ -52,6 +52,7 @@ Last updated: 2026-07-18
 - [x] With `sidebar.titleFrom: "filename"`, the file name can be used as the page title even when a heading (H1 / `= Title`) exists (an explicit title frontmatter `title` / `:sd-title:` always takes top priority). The default is `"heading"` (frontmatter → heading → file name)
 - [x] `sidebar.flattenSingleChild` collapses folder hierarchies that contain only a single page (with no subfolders) and promotes that sole page to the parent (eliminating redundant hierarchy when a document and images are grouped into one folder; routes are unchanged so reachability is preserved)
 - [x] Dark mode is supported (follows the OS setting; manual toggling is saved to localStorage)
+- [x] The main content can be toggled between the readable default width and the full available width (the reader's choice is saved to localStorage, making wide tables and diagrams easier to view; `html.contentWidthToggle: false` hides the control)
 - [x] A print layout that expands all pages vertically when printing (`@media print`)
 - [x] Code blocks are syntax-highlighted with shiki (dual theme follows dark mode; a background that stays distinguishable from body text even in light mode)
 - [x] Copy / word-wrap toggle buttons are shown on code blocks (shown on hover; injected client-side)

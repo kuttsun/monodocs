@@ -743,6 +743,8 @@ html:
   theme: "default"
   # Maximum width of the body area. e.g.: "860px" / "1100px" / "72rem" / full
   contentWidth: "860px"
+  # Show the reader-facing standard/wide content toggle
+  contentWidthToggle: true
   darkMode: true
 
 pdf:

@@ -2,7 +2,8 @@
 :sd-order: 105
 
 The body is kept at a comfortable reading width (max 860px by default). You can change the fixed width with
-`html.contentWidth` in the config file, or set it to `full` to span the full width. This sample shows how
+`html.contentWidth` in the config file, or set it to `full` to span the full width. Set
+`html.contentWidthToggle` to `false` when readers should not be able to change that width. This sample shows how
 tables, listings, and images wider than that look in AsciiDoc. Elements that don't fit the body width scroll
 horizontally within the element, and images are scaled down to fit the body width.
 

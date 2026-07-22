@@ -179,6 +179,7 @@ export async function buildSite(
     theme: config.theme,
     colorScheme: config.colorScheme,
     contentWidth: config.contentWidth,
+    contentWidthToggle: config.contentWidthToggle,
     sidebarCollapseDepth: config.sidebarCollapseDepth,
     tocMaxLevel: config.tocMaxLevel,
     bodyScripts,

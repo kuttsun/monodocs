@@ -17,6 +17,7 @@
 - Reads order, visibility, and descriptions from frontmatter or `:sd-*:` attributes
 - Provides full-text search, an in-page table of contents, and previous/next navigation
 - Supports dark mode and a print layout that expands every page
+- Lets readers toggle the main content between a readable default width and the full available width
 - Generates PDF files with bookmarks and inter-page links through Chromium
 - Rebuilds on changes with `watch` and provides live reload with `serve`
 - Detects broken links and missing images with `validate`
@@ -100,7 +101,7 @@ Open `http://localhost:4173/`. Use `Ctrl+C` to stop the server. To select anothe
 MONODOCS_PORT=8080 scripts/app-serve.sh --port 8080
 ```
 
-The showcase covers mixed Markdown/AsciiDoc input, sidebar behavior, search, the table of contents, navigation, dark mode, code highlighting, Mermaid, embedded images, rewritten links, and print layout. See the [development guide](docs/development.md) for individual build and test commands.
+The showcase covers mixed Markdown/AsciiDoc input, sidebar behavior, search, the table of contents, navigation, dark mode, the persistent content-width toggle, code highlighting, Mermaid, embedded images, rewritten links, and print layout. See the [development guide](docs/development.md) for individual build and test commands.
 
 ## Configuration
 
@@ -139,6 +140,7 @@ highlight:
 html:
   theme: "default"
   contentWidth: "860px"
+  contentWidthToggle: true # false hides the reader-facing width toggle
 ```
 
 See the [roadmap and specification](docs/roadmap.md) for the complete configuration model.

@@ -109,6 +109,7 @@ describe("buildSite (e2e)", () => {
         `  path: ${JSON.stringify(tout)}`,
         "html:",
         "  contentWidth: full",
+        "  contentWidthToggle: false",
         "",
       ].join("\n"),
     );
@@ -117,6 +118,7 @@ describe("buildSite (e2e)", () => {
       await buildSite({ configFile });
       const html = await readFile(tout, "utf8");
       expect(html).toContain("--content-max-width: none;");
+      expect(html).not.toContain('id="content-width-toggle"');
     } finally {
       await rm(tdir, { recursive: true, force: true });
     }

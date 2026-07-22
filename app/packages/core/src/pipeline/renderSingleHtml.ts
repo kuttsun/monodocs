@@ -12,6 +12,8 @@ export type RenderHtmlInput = {
   colorScheme?: ColorScheme;
   /** 本文領域の最大幅。`full` / `none` の場合は利用可能な横幅いっぱいに広げる。 */
   contentWidth?: string;
+  /** 読者向けの本文幅切替ボタンを表示するか。未指定は true。 */
+  contentWidthToggle?: boolean;
   /**
    * この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
    * undefined は折りたたみなし。トップレベルのディレクトリを深さ 1 とする。
@@ -114,6 +116,24 @@ function rootThemeAttr(colorScheme: ColorScheme | undefined): string {
   return "";
 }
 
+/** テーマ内の単純な条件ブロックを残すか、内容ごと除去する。 */
+function renderConditionalBlock(template: string, name: string, enabled: boolean): string {
+  const start = `{{#${name}}}`;
+  const end = `{{/${name}}}`;
+  const startIndex = template.indexOf(start);
+  const endIndex = template.indexOf(end, startIndex + start.length);
+  // この機能に対応していないカスタムテーマはそのまま扱う。
+  if (startIndex === -1 || endIndex === -1) return template;
+  if (enabled) {
+    return (
+      template.slice(0, startIndex) +
+      template.slice(startIndex + start.length, endIndex) +
+      template.slice(endIndex + end.length)
+    );
+  }
+  return template.slice(0, startIndex) + template.slice(endIndex + end.length);
+}
+
 /** Page[] とサイドバーから自己完結した単一 HTML を生成する。 */
 export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> {
   const theme = await loadTheme(input.theme ?? "default");
@@ -132,7 +152,11 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     pages: input.pages.map((page) => pageData(page, tocMaxLevel)),
   });
 
-  let html = theme.template;
+  let html = renderConditionalBlock(
+    theme.template,
+    "contentWidthToggle",
+    input.contentWidthToggle !== false,
+  );
   html = injectToken(html, "{{htmlAttrs}}", rootThemeAttr(colorScheme));
   html = injectToken(html, "{{title}}", escapeHtml(input.title));
   html = injectToken(html, "{{style}}", styleWithOverrides(theme.style, input));

@@ -32,12 +32,12 @@ docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 
 Inside a devcontainer, or when you are in the container's shell, you can run `pnpm test` directly in `app/`.
 
-## Test Results (as of 2026-07-18)
+## Test Results (as of 2026-07-22)
 
 | Item           | Result     |
 | -------------- | ---------- |
 | Test Files     | 22 passed  |
-| Tests          | 198 passed |
+| Tests          | 203 passed |
 | typecheck      | passed     |
 | format:check   | passed     |
 | package:verify | passed     |
@@ -54,12 +54,12 @@ Main test targets:
 - `pipeline/buildPages.test.ts` … duplicate detection of route / page id
 - `pipeline/buildSidebar.test.ts` … folder-structure sidebar
 - `pipeline/postprocess.test.ts` … link conversion, image data URI embedding, Mermaid conversion (client / pre-render SVG conversion, globally unique ids, verbatim preservation of complex SVG, per-diagram error source fallback, fail fast on environment errors `BrowserSetupError` (including `MermaidPrerenderSetupError`), renderer-not-injected error), shiki code highlighting, common structuring of admonition / GFM alert
-- `pipeline/renderSingleHtml.test.ts` … href encoding, HTML escaping, client page data (table of contents/search)
+- `pipeline/renderSingleHtml.test.ts` … href encoding, HTML escaping, optional content-width control, client page data (table of contents/search)
 - `themes/default/app.test.ts` … client hash routing (happy-dom)
-- `themes/default/app.v04.test.ts` … search, in-page table of contents, prev/next navigation, dark mode, sidebar collapse, code block copy/wrap toggle (happy-dom)
+- `themes/default/app.v04.test.ts` … search, in-page table of contents, prev/next navigation, dark mode, persistent content-width toggle, sidebar collapse, code block copy/wrap toggle (happy-dom)
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e (Markdown / mixed / v0.3 features, validate)
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render (verifies config integration and SVG embedding via fake renderer injection; end-to-end rendering and runtime-not-injected gating are confirmed only in environments with a real Chromium)
 - `build.v04.test.ts` … e2e (`watchSite` rebuild, `serveSite` delivery and live-reload injection, `serveSite` serving HTML even with pdf/both configuration and respecting an explicit `-o`)
 - `build.pdf.test.ts` … PDF output (v0.5. browserless verification of `resolveOutputs` html/pdf/both output path resolution, format branching and configuration (pageSize/margin/printBackground) integration via fake `PdfGenerator` injection, embedImages override, bookmark outline passing. Actual PDF generation = `%PDF-`, `/Outlines`, and `/UseOutlines` confirmed only in environments with a real Chromium)
 - `pipeline/pdfOutline.test.ts` … PDF bookmarks (`sidebarToOutline` tree conversion, `collectDests`/`remapDests`, `addOutline` referencing `/Dests` to build folder→page `/Outlines` and set `/UseOutlines`. Destinations absent / empty tree returns the original PDF. pdf-lib only, browserless)
-- `config.test.ts` … configuration resolution (including `pdf` schema defaults, completion of missing margins, rejection of unknown keys, rejection of invalid `--format`, and default output paths per format)
+- `config.test.ts` … configuration resolution (including content-width toggle, `pdf` schema defaults, completion of missing margins, rejection of unknown keys, rejection of invalid `--format`, and default output paths per format)

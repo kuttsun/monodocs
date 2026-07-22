@@ -16,7 +16,7 @@ type ClientPage = {
  */
 async function mountClient(
   pages: ClientPage[],
-  options: { colorScheme?: string } = {},
+  options: { colorScheme?: string; contentWidthToggle?: boolean } = {},
 ): Promise<void> {
   const theme = await loadTheme("default");
 
@@ -33,6 +33,10 @@ async function mountClient(
         `<article class="page" data-route="${p.route}"${i === 0 ? "" : " hidden"}>${p.title}</article>`,
     )
     .join("");
+  const contentWidthToggle =
+    options.contentWidthToggle === false
+      ? ""
+      : `<button id="content-width-toggle" aria-pressed="false"></button>`;
 
   document.body.innerHTML =
     `<button id="sidebar-show">☰</button>` +
@@ -41,6 +45,7 @@ async function mountClient(
     `<div class="sidebar-header">T</div>` +
     `<div class="sidebar-tools">` +
     `<input id="search-input" type="search" />` +
+    contentWidthToggle +
     `<button id="theme-toggle"><span class="theme-toggle-icon"></span></button>` +
     `<button id="sidebar-toggle" aria-expanded="true">«</button>` +
     `</div>` +
@@ -96,6 +101,7 @@ describe("v0.4 client features (app.js)", () => {
   beforeEach(() => {
     window.location.hash = "";
     document.body.innerHTML = "";
+    document.body.className = "";
     document.documentElement.removeAttribute("data-theme");
     try {
       window.localStorage.clear();
@@ -212,6 +218,39 @@ describe("v0.4 client features (app.js)", () => {
   it("follows the OS setting for the auto color scheme (no data-theme)", async () => {
     await mountClient(SAMPLE, { colorScheme: "auto" });
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+
+  it("toggles wide content and persists the choice", async () => {
+    await mountClient(SAMPLE);
+    const btn = document.getElementById("content-width-toggle")!;
+    expect(document.body.classList.contains("content-wide")).toBe(false);
+    expect(btn.getAttribute("aria-pressed")).toBe("false");
+
+    btn.click();
+    expect(document.body.classList.contains("content-wide")).toBe(true);
+    expect(btn.getAttribute("aria-pressed")).toBe("true");
+    expect(btn.getAttribute("title")).toBe("Use standard content width");
+    expect(window.localStorage.getItem("monodocs:content-width")).toBe("wide");
+
+    btn.click();
+    expect(document.body.classList.contains("content-wide")).toBe(false);
+    expect(window.localStorage.getItem("monodocs:content-width")).toBe("standard");
+  });
+
+  it("applies the stored wide content choice on load", async () => {
+    window.localStorage.setItem("monodocs:content-width", "wide");
+    await mountClient(SAMPLE);
+    expect(document.body.classList.contains("content-wide")).toBe(true);
+    expect(document.getElementById("content-width-toggle")!.getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+  });
+
+  it("ignores the stored wide choice when the content-width toggle is disabled", async () => {
+    window.localStorage.setItem("monodocs:content-width", "wide");
+    await mountClient(SAMPLE, { contentWidthToggle: false });
+    expect(document.getElementById("content-width-toggle")).toBeNull();
+    expect(document.body.classList.contains("content-wide")).toBe(false);
   });
 
   it("collapses the sidebar and reopens via the floating button", async () => {

@@ -13,6 +13,7 @@
   });
 
   var STORAGE_THEME = "monodocs:theme";
+  var STORAGE_CONTENT_WIDTH = "monodocs:content-width";
 
   // クライアント UI（chrome）の文言。読者の言語に追従する i18n はせず、英語で統一する
   // （著者が用意したドキュメント本文の言語とは独立した UI ラベル）。将来 config から
@@ -26,6 +27,8 @@
     copy: "Copy",
     copied: "Copied!",
     copyFailed: "Copy failed",
+    useWideContent: "Use wide content",
+    useStandardContent: "Use standard content width",
   };
   // 同一ルートへの遷移後にスクロールしたい見出し ID（あれば）。
   var pendingHeadingId = null;
@@ -446,6 +449,48 @@
     });
   }
 
+  // ---- content width ----
+  function storedContentWidth() {
+    try {
+      return window.localStorage.getItem(STORAGE_CONTENT_WIDTH);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function storeContentWidth(width) {
+    try {
+      window.localStorage.setItem(STORAGE_CONTENT_WIDTH, width);
+    } catch (e) {
+      // localStorage を利用できなくても、このページ内での切り替えは維持する。
+    }
+  }
+
+  function applyContentWidth(width) {
+    var wide = width === "wide";
+    document.body.classList.toggle("content-wide", wide);
+    var btn = document.getElementById("content-width-toggle");
+    if (btn) {
+      btn.setAttribute("aria-pressed", wide ? "true" : "false");
+      btn.title = wide ? LABELS.useStandardContent : LABELS.useWideContent;
+    }
+  }
+
+  function setupContentWidth() {
+    var btn = document.getElementById("content-width-toggle");
+    if (!btn) {
+      // 著者がトグルを無効化した場合は、同じ origin に残った読者設定も適用しない。
+      document.body.classList.remove("content-wide");
+      return;
+    }
+    applyContentWidth(storedContentWidth());
+    btn.addEventListener("click", function () {
+      var next = document.body.classList.contains("content-wide") ? "standard" : "wide";
+      applyContentWidth(next);
+      storeContentWidth(next);
+    });
+  }
+
   // ---- sidebar collapse ----
   // 折りたたみボタンはサイドバー内（テーマ切替の隣）、再表示ボタンは折りたたみ時のみ
   // 表示される固定ボタン。
@@ -600,6 +645,7 @@
     window.__sdRouted = true;
 
     setupTheme();
+    setupContentWidth();
     setupSearch();
     setupSidebarToggle();
     setupSidebarDirs();
