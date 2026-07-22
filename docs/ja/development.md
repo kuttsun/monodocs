@@ -152,7 +152,7 @@ Markdown / AsciiDoc files
    Page[]（共通モデル）
       ↓  buildSidebar / renderSingleHtml
   single HTML
-      ↓  (optional) headless browser   ※ PDF は v0.5 で対応予定
+      ↓  (optional) headless browser   ※ PDF 対応は v0.5 から
      PDF
 ```
 
