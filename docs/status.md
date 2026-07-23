@@ -85,7 +85,7 @@ Last updated: 2026-07-23
 - [x] The staged `0.6.0-beta.1` tarball has been installed locally and smoke-tested for HTML, PDF, validate, Mermaid pre-render, and serve
 - [x] Install and smoke-test the actual npm tarball in CI on Linux x64 and Windows x64
 - [x] Prepare a GitHub Release-triggered npm publishing workflow with version/tag validation, release approval, OIDC, and provenance
-- [ ] Complete repository security and branch-protection settings
+- [x] Complete repository security and branch-protection settings
 - [ ] Configure npm Trusted Publishing, release approval, provenance, and maintainer 2FA
 - [ ] Publish and verify `0.6.0-beta.1` under the `next` tag
 - [ ] Publish and verify the stable `0.6.0` release

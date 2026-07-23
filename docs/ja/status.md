@@ -85,7 +85,7 @@
 - [x] staged `0.6.0-beta.1` tarball をローカルインストールし HTML、PDF、validate、Mermaid pre-render、serve を smoke test
 - [x] Linux x64 / Windows x64 の CI で実際の npm tarball を install・smoke test
 - [x] version/tag validation、release approval、OIDC、provenance を備えた GitHub Release 起点の npm publish workflow を準備
-- [ ] リポジトリの security・branch protection 設定を完了
+- [x] リポジトリの security・branch protection 設定を完了
 - [ ] npm Trusted Publishing、release approval、provenance、maintainer 2FA を設定
 - [ ] `next` tag で `0.6.0-beta.1` を公開・検証
 - [ ] stable `0.6.0` を公開・検証
