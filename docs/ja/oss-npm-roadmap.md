@@ -2,7 +2,7 @@
 
 [English](../oss-npm-roadmap.md)
 
-最終更新: 2026-07-18
+最終更新: 2026-07-24
 
 ## 1. 目的
 
@@ -300,14 +300,14 @@ npm publish --tag next
 npm install -g monodocs@next
 ```
 
-- [ ] `0.6.0-beta.1`を発行する。
+- [x] `0.6.0-beta.1`を発行する。
 - [x] GitHub Release 起点の publish workflow を追加する。
-- [ ] GitHub Actions の Trusted Publishing を設定する。
-- [ ] 長期 npm write token を CI に保存しない。
+- [x] GitHub Actions の Trusted Publishing を設定する。
+- [x] 長期 npm write token を CI に保存しない。
 - [x] リリース用 Environment に承認を設定する。
-- [ ] npm provenance が生成されることを確認する。
+- [x] npm provenance が生成されることを確認する。
 - [x] npm アカウントで 2FA を必須にする。
-- [ ] 公開権限を必要最小限のメンテナーへ限定する。
+- [x] 公開権限を必要最小限のメンテナーへ限定する。
 
 ### 9.2 ベータ検証
 

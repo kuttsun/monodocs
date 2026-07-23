@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-07-23
+Last updated: 2026-07-24
 
 ## Support Status
 
@@ -86,8 +86,9 @@ Last updated: 2026-07-23
 - [x] Install and smoke-test the actual npm tarball in CI on Linux x64 and Windows x64
 - [x] Prepare a GitHub Release-triggered npm publishing workflow with version/tag validation, release approval, OIDC, and provenance
 - [x] Complete repository security and branch-protection settings
-- [ ] Configure npm Trusted Publishing, release approval, provenance, and maintainer 2FA
-- [ ] Publish and verify `0.6.0-beta.1` under the `next` tag
+- [x] Configure npm Trusted Publishing, release approval, provenance, and maintainer 2FA
+- [x] Publish `0.6.0-beta.1` to npm under the `next` tag (as the first published version it is also the current `latest` until the stable release)
+- [ ] Verify the published `0.6.0-beta.1` (fresh install, HTML / PDF / serve smoke test, README reproduction)
 - [ ] Publish and verify the stable `0.6.0` release
 
 ## Supported Syntax
