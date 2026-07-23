@@ -73,6 +73,7 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
 ```text
 {{htmlAttrs}} {{bodyAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
+{{contentWidthTogglePressed}} {{contentWidthToggleTitle}}
 {{#contentWidthToggle}}...{{/contentWidthToggle}}
 ```
 

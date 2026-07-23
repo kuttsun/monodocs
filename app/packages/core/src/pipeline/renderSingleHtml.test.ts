@@ -83,6 +83,8 @@ describe("renderSingleHtml", () => {
 
     expect(html).toContain('<body class="content-wide">');
     expect(html).toContain('"contentWidthDefault":"wide"');
+    expect(html).toContain('title="Use standard content width"');
+    expect(html).toContain('aria-pressed="true"');
   });
 
   it("ignores the initial content width when the toggle is disabled", async () => {

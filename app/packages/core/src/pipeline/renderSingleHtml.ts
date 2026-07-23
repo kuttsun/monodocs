@@ -128,6 +128,16 @@ function bodyContentWidthAttr(
     : "";
 }
 
+/** Return the initial accessible state for the content-width toggle button. */
+function contentWidthToggleState(contentWidthDefault: ContentWidthDefault): {
+  pressed: string;
+  title: string;
+} {
+  return contentWidthDefault === "wide"
+    ? { pressed: "true", title: "Use standard content width" }
+    : { pressed: "false", title: "Use wide content" };
+}
+
 /** テーマ内の単純な条件ブロックを残すか、内容ごと除去する。 */
 function renderConditionalBlock(template: string, name: string, enabled: boolean): string {
   const start = `{{#${name}}}`;
@@ -153,6 +163,7 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   // 既定はライト。サーバ出力の data-theme と __MONODOCS_DATA__ の値を必ず一致させる。
   const colorScheme: ColorScheme = input.colorScheme ?? "light";
   const contentWidthDefault: ContentWidthDefault = input.contentWidthDefault ?? "standard";
+  const contentWidthState = contentWidthToggleState(contentWidthDefault);
 
   const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth);
   const pagesHtml = input.pages.map(renderArticle).join("\n");
@@ -178,6 +189,8 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     "{{bodyAttrs}}",
     bodyContentWidthAttr(input.contentWidthToggle, contentWidthDefault),
   );
+  html = injectToken(html, "{{contentWidthTogglePressed}}", contentWidthState.pressed);
+  html = injectToken(html, "{{contentWidthToggleTitle}}", contentWidthState.title);
   html = injectToken(html, "{{title}}", escapeHtml(input.title));
   html = injectToken(html, "{{style}}", styleWithOverrides(theme.style, input));
   html = injectToken(html, "{{sidebar}}", sidebarHtml);
