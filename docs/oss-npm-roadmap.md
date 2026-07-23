@@ -149,9 +149,9 @@ The SEA standalone binary is a future item whose start will be decided after the
 - [x] Add an Issue template for bug reports.
 - [x] Add an Issue template for feature requests.
 - [x] Add a Pull Request template.
-- [ ] Enable a private reporting path for vulnerabilities.
-- [ ] Protect the default branch.
-- [ ] Make CI success and review merge conditions.
+- [x] Enable a private reporting path for vulnerabilities.
+- [x] Protect the default branch.
+- [x] Make CI success and review merge conditions.
 - [ ] Decide on an adoption policy for Dependabot or Renovate.
 - [x] Establish rules for license verification when adding dependencies.
 
