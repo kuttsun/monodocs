@@ -311,9 +311,9 @@ npm install -g monodocs@next
 - [x] Add the GitHub Release-triggered publishing workflow.
 - [ ] Set up GitHub Actions Trusted Publishing.
 - [ ] Do not store a long-lived npm write token in CI.
-- [ ] Set up approval for the release Environment.
+- [x] Set up approval for the release Environment.
 - [ ] Confirm that npm provenance is generated.
-- [ ] Require 2FA on the npm account.
+- [x] Require 2FA on the npm account.
 - [ ] Limit publishing permissions to the minimum necessary maintainers.
 
 ### 9.2 Beta Verification

@@ -304,9 +304,9 @@ npm install -g monodocs@next
 - [x] GitHub Release 起点の publish workflow を追加する。
 - [ ] GitHub Actions の Trusted Publishing を設定する。
 - [ ] 長期 npm write token を CI に保存しない。
-- [ ] リリース用 Environment に承認を設定する。
+- [x] リリース用 Environment に承認を設定する。
 - [ ] npm provenance が生成されることを確認する。
-- [ ] npm アカウントで 2FA を必須にする。
+- [x] npm アカウントで 2FA を必須にする。
 - [ ] 公開権限を必要最小限のメンテナーへ限定する。
 
 ### 9.2 ベータ検証
