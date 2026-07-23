@@ -32,7 +32,7 @@ export default defineConfig({
   cleanUrls: true,
 
   // 開発用 README はページ化しない（/README.html を出力させない）。
-  srcExclude: ['**/README.md'],
+  srcExclude: ['**/README.md', '**/README.ja.md'],
 
   // /manual.html・/ja/manual.html は VitePress 管轄外（public/ の静的アセット）なので dead link 対象外。
   ignoreDeadLinks: [/^\/manual\.html$/, /^\/ja\/manual\.html$/],
