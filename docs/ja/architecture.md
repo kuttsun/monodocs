@@ -92,6 +92,8 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
   読者の選択は `monodocs:content-width` に保存し、印刷・PDF レイアウトには影響させません。
   `html.contentWidthDefault` では、読者の選択が保存されるまでの初期状態を `standard` / `wide` から選べます。
   `html.contentWidthToggle: false` ではボタンを出力せず、保存済みの読者設定も適用しません。
+- `html.imageLightbox` は、リンクのない装飾目的以外の本文画像をキーボードでも操作できるダイアログで拡大表示します。
+  既定で有効とし、リンクまたはボタン内の画像では親要素の操作を維持し、`alt` が明示的に空の画像は装飾画像のままにし、印刷および PDF 出力にはダイアログを表示しません。
 
 テーマ UI ラベルは本文言語から独立した英語に統一します。動的ラベルは `app.js` の `LABELS`、静的ラベルは `template.html` に置きます。
 

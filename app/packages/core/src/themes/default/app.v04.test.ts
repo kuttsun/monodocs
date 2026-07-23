@@ -20,6 +20,8 @@ async function mountClient(
     colorScheme?: string;
     contentWidthToggle?: boolean;
     contentWidthDefault?: string;
+    articleHtml?: string;
+    imageLightbox?: boolean;
   } = {},
 ): Promise<void> {
   const theme = await loadTheme("default");
@@ -34,13 +36,19 @@ async function mountClient(
   const articles = pages
     .map(
       (p, i) =>
-        `<article class="page" data-route="${p.route}"${i === 0 ? "" : " hidden"}>${p.title}</article>`,
+        `<article class="page" data-route="${p.route}"${i === 0 ? "" : " hidden"}>${p.title}${i === 0 ? (options.articleHtml ?? "") : ""}</article>`,
     )
     .join("");
   const contentWidthToggle =
     options.contentWidthToggle === false
       ? ""
       : `<button id="content-width-toggle" aria-pressed="false"></button>`;
+  const imageLightbox =
+    options.imageLightbox === false
+      ? ""
+      : `<dialog id="image-lightbox"><button id="image-lightbox-close"></button>` +
+        `<figure><img id="image-lightbox-image" alt="" />` +
+        `<figcaption id="image-lightbox-caption" hidden></figcaption></figure></dialog>`;
 
   document.body.innerHTML =
     `<button id="sidebar-show">☰</button>` +
@@ -61,7 +69,8 @@ async function mountClient(
     `</aside>` +
     `<main id="content">${articles}<nav id="page-nav"></nav></main>` +
     `<aside id="toc"><div class="toc-title">On this page</div><nav id="toc-nav"></nav></aside>` +
-    `</div>`;
+    `</div>` +
+    imageLightbox;
 
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
     initialRoute: pages[0]?.route,
@@ -127,6 +136,64 @@ describe("v0.4 client features (app.js)", () => {
     await mountClient(SAMPLE);
     navigate("/");
     expect(document.getElementById("toc")!.hidden).toBe(true);
+  });
+
+  it("opens content images in a lightbox and preserves linked image behavior", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml:
+        '<img id="previewable" src="diagram.png" alt="Architecture diagram" />' +
+        '<a href="full.png"><img id="linked-image" src="thumbnail.png" alt="Linked" /></a>' +
+        '<img id="decorative-image" src="decoration.png" alt="" />',
+    });
+
+    const trigger = document.getElementById("previewable")!;
+    const linked = document.getElementById("linked-image")!;
+    const decorative = document.getElementById("decorative-image")!;
+    expect(trigger.classList.contains("image-lightbox-trigger")).toBe(true);
+    expect(trigger.getAttribute("role")).toBe("button");
+    expect(trigger.getAttribute("tabindex")).toBe("0");
+    expect(linked.classList.contains("image-lightbox-trigger")).toBe(false);
+    expect(decorative.classList.contains("image-lightbox-trigger")).toBe(false);
+
+    trigger.focus();
+    trigger.click();
+    const dialog = document.getElementById("image-lightbox")!;
+    expect(dialog.hasAttribute("open")).toBe(true);
+    expect(document.getElementById("image-lightbox-image")!.getAttribute("src")).toContain(
+      "diagram.png",
+    );
+    expect(document.getElementById("image-lightbox-caption")!.textContent).toBe(
+      "Architecture diagram",
+    );
+
+    document.getElementById("image-lightbox-close")!.click();
+    expect(dialog.hasAttribute("open")).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+
+    trigger.click();
+    dialog.click();
+    expect(dialog.hasAttribute("open")).toBe(false);
+  });
+
+  it.each(["Enter", " "])("opens the image lightbox with the %j key", async (key) => {
+    await mountClient(SAMPLE, {
+      articleHtml: '<img id="previewable" src="diagram.png" alt="Diagram" />',
+    });
+
+    const trigger = document.getElementById("previewable")!;
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    expect(document.getElementById("image-lightbox")!.hasAttribute("open")).toBe(true);
+  });
+
+  it("does not enhance images when the lightbox is disabled", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml: '<img id="plain-image" src="diagram.png" alt="Diagram" />',
+      imageLightbox: false,
+    });
+
+    expect(
+      document.getElementById("plain-image")!.classList.contains("image-lightbox-trigger"),
+    ).toBe(false);
   });
 
   it("renders prev/next navigation across visible pages only", async () => {

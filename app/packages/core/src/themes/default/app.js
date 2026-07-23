@@ -29,6 +29,7 @@
     copyFailed: "Copy failed",
     useWideContent: "Use wide content",
     useStandardContent: "Use standard content width",
+    openImagePreview: "Open image preview",
   };
   // 同一ルートへの遷移後にスクロールしたい見出し ID（あれば）。
   var pendingHeadingId = null;
@@ -639,6 +640,81 @@
     });
   }
 
+  // ---- image lightbox ----
+  function setupImageLightbox() {
+    var dialog = document.getElementById("image-lightbox");
+    var preview = document.getElementById("image-lightbox-image");
+    var caption = document.getElementById("image-lightbox-caption");
+    var closeBtn = document.getElementById("image-lightbox-close");
+    if (!dialog || !preview || !caption || !closeBtn) return;
+
+    var lastTrigger = null;
+
+    function resetPreview() {
+      preview.removeAttribute("src");
+      preview.alt = "";
+      caption.textContent = "";
+      caption.hidden = true;
+      if (lastTrigger && typeof lastTrigger.focus === "function") lastTrigger.focus();
+      lastTrigger = null;
+    }
+
+    function closeLightbox() {
+      if (typeof dialog.close === "function") {
+        dialog.close();
+      } else {
+        dialog.removeAttribute("open");
+        resetPreview();
+      }
+    }
+
+    function openLightbox(trigger) {
+      var src = trigger.currentSrc || trigger.getAttribute("src");
+      if (!src) return;
+      var alt = trigger.getAttribute("alt") || "";
+      lastTrigger = trigger;
+      preview.src = src;
+      preview.alt = alt;
+      caption.textContent = alt;
+      caption.hidden = alt.length === 0;
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute("open", "");
+      }
+    }
+
+    document.querySelectorAll("#content img").forEach(function (img) {
+      // Preserve parent interactions and the semantics of explicitly decorative images.
+      if (img.closest && img.closest("a, button")) return;
+      if (img.hasAttribute("alt") && img.getAttribute("alt") === "") return;
+      img.classList.add("image-lightbox-trigger");
+      img.setAttribute("role", "button");
+      img.setAttribute("tabindex", "0");
+      img.setAttribute("aria-haspopup", "dialog");
+      var alt = img.getAttribute("alt");
+      img.setAttribute(
+        "aria-label",
+        alt ? LABELS.openImagePreview + ": " + alt : LABELS.openImagePreview,
+      );
+      img.addEventListener("click", function () {
+        openLightbox(img);
+      });
+      img.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openLightbox(img);
+        }
+      });
+    });
+
+    closeBtn.addEventListener("click", closeLightbox);
+    dialog.addEventListener("click", function (e) {
+      if (e.target === dialog) closeLightbox();
+    });
+    dialog.addEventListener("close", resetPreview);
+  }
+
   // ---- init ----
   function init() {
     // ルート確定済みの目印。これ以降に読み込まれた Mermaid ランタイムは
@@ -651,6 +727,7 @@
     setupSidebarToggle();
     setupSidebarDirs();
     setupCodeBlocks();
+    setupImageLightbox();
 
     if (window.location.hash) {
       onRouteChange();

@@ -16,6 +16,8 @@ export type RenderHtmlInput = {
   contentWidthToggle?: boolean;
   /** Initial state when the content-width toggle is shown. Defaults to standard. */
   contentWidthDefault?: ContentWidthDefault;
+  /** Whether the image lightbox is enabled. Defaults to true. */
+  imageLightbox?: boolean;
   /**
    * この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
    * undefined は折りたたみなし。トップレベルのディレクトリを深さ 1 とする。
@@ -183,6 +185,7 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     "contentWidthToggle",
     input.contentWidthToggle !== false,
   );
+  html = renderConditionalBlock(html, "imageLightbox", input.imageLightbox !== false);
   html = injectToken(html, "{{htmlAttrs}}", rootThemeAttr(colorScheme));
   html = injectToken(
     html,

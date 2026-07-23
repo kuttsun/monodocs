@@ -747,6 +747,8 @@ html:
   contentWidthToggle: true
   # 読者が選択するまでの初期状態: standard / wide
   contentWidthDefault: "standard"
+  # リンクのない装飾目的以外の本文画像をダイアログで拡大表示する
+  imageLightbox: true
   darkMode: true
 
 pdf:

@@ -142,6 +142,7 @@ html:
   contentWidth: "860px"
   contentWidthToggle: true # false hides the reader-facing width toggle
   contentWidthDefault: "standard" # standard | wide (used until the reader chooses)
+  imageLightbox: true # click unlinked, non-decorative content images to enlarge them
 ```
 
 See the [roadmap and specification](docs/roadmap.md) for the complete configuration model.

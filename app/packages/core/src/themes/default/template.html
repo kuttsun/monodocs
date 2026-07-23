@@ -75,6 +75,23 @@
         <nav id="toc-nav"></nav>
       </aside>
     </div>
+{{#imageLightbox}}
+    <dialog id="image-lightbox" aria-label="Image preview">
+      <button
+        id="image-lightbox-close"
+        type="button"
+        aria-label="Close image preview"
+        title="Close image preview"
+        autofocus
+      >
+        ×
+      </button>
+      <figure class="image-lightbox-content">
+        <img id="image-lightbox-image" alt="" />
+        <figcaption id="image-lightbox-caption" hidden></figcaption>
+      </figure>
+    </dialog>
+{{/imageLightbox}}
     <script>
       window.__MONODOCS_DATA__ = {{siteDataJson}};
     </script>

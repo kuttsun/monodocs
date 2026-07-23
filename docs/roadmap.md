@@ -747,6 +747,8 @@ html:
   contentWidthToggle: true
   # Initial toggle state until the reader chooses: standard / wide
   contentWidthDefault: "standard"
+  # Enlarge unlinked, non-decorative content images in a dialog
+  imageLightbox: true
   darkMode: true
 
 pdf:

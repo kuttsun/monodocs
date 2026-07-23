@@ -34,6 +34,7 @@ describe("renderSingleHtml", () => {
     expect(html).toContain('data-route="/ガイド"');
     expect(html).toContain("__MONODOCS_DATA__");
     expect(html).toContain('id="content-width-toggle"');
+    expect(html).toContain('id="image-lightbox"');
   });
 
   it("escapes HTML special characters in titles", async () => {
@@ -68,6 +69,22 @@ describe("renderSingleHtml", () => {
     expect(html).not.toContain('id="content-width-toggle"');
     expect(html).not.toContain("{{#contentWidthToggle}}");
     expect(html).not.toContain("{{/contentWidthToggle}}");
+  });
+
+  it("omits the image lightbox when disabled", async () => {
+    const pages: Page[] = [page("/p", "p", "Page")];
+    const sidebar: SidebarNode[] = [{ type: "page", title: "Page", route: "/p", pageId: "p" }];
+
+    const html = await renderSingleHtml({
+      title: "T",
+      pages,
+      sidebar,
+      imageLightbox: false,
+    });
+
+    expect(html).not.toContain('id="image-lightbox"');
+    expect(html).not.toContain("{{#imageLightbox}}");
+    expect(html).not.toContain("{{/imageLightbox}}");
   });
 
   it("embeds and applies the configured initial content width", async () => {

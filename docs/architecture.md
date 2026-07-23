@@ -127,6 +127,10 @@ Preserve these display and reachability invariants:
   A reader's choice is stored in `monodocs:content-width`; it must not affect print or PDF layout.
   `html.contentWidthDefault` selects `standard` or `wide` until the reader makes a stored choice.
   `html.contentWidthToggle: false` omits the button and ignores any stored reader choice.
+- `html.imageLightbox` enables a keyboard-accessible dialog for unlinked, non-decorative content images by
+  default.
+  Images inside links or buttons retain the parent interaction, and the dialog must not appear in print or PDF
+  output. Images with an explicit empty `alt` retain their decorative semantics.
 
 Theme UI labels are standardized in English and are independent of document body language. Dynamic labels are
 centralized in `LABELS` in `app.js`; static labels live in `template.html`.

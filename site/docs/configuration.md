@@ -86,6 +86,7 @@ html:
   contentWidth: 860px # a CSS length, or "full" for the full available width
   contentWidthToggle: true # show the standard/wide toggle
   contentWidthDefault: standard # standard | wide (used until the reader chooses)
+  imageLightbox: true # click unlinked, non-decorative content images to enlarge them
 ```
 
 ## Reference
@@ -199,6 +200,7 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | `html.contentWidth`  | string / number | `860px`     | Max width of the content area. A CSS length (`px`, `rem`, `em`, `ch`, `vw`, `%`) or a number (px). `full` (or `none`) expands to the full available width. |
 | `html.contentWidthToggle` | boolean | `true` | Show the reader-facing standard/wide content toggle. When `false`, stored reader choices and `html.contentWidthDefault` are ignored. |
 | `html.contentWidthDefault` | `standard` `wide` | `standard` | Initial content-width state. A reader's saved choice takes precedence. |
+| `html.imageLightbox` | boolean | `true` | Open unlinked, non-decorative content images in a viewport-sized dialog when clicked or activated from the keyboard. Linked images retain their original link behavior, and images with an explicit empty `alt` remain decorative. The dialog is omitted from print and PDF output. |
 
 ## Page order and titles
 

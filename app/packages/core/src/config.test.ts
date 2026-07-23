@@ -78,6 +78,7 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     expect(config.contentWidth).toBe("860px");
     expect(config.contentWidthToggle).toBe(true);
     expect(config.contentWidthDefault).toBe("standard");
+    expect(config.imageLightbox).toBe(true);
     expect(config.colorScheme).toBe("light");
   });
 
@@ -233,6 +234,17 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     await writeConfig("html:\n  contentWidthDefault: wide\n");
     const config = await loadConfig({}, dir);
     expect(config.contentWidthDefault).toBe("wide");
+  });
+
+  it("can disable html.imageLightbox", async () => {
+    await writeConfig("html:\n  imageLightbox: false\n");
+    const config = await loadConfig({}, dir);
+    expect(config.imageLightbox).toBe(false);
+  });
+
+  it("rejects an invalid html.imageLightbox", async () => {
+    await writeConfig("html:\n  imageLightbox: sometimes\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
   });
 
   it("rejects an invalid html.contentWidthDefault", async () => {

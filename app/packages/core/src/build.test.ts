@@ -111,6 +111,7 @@ describe("buildSite (e2e)", () => {
         "  contentWidth: full",
         "  contentWidthToggle: false",
         "  contentWidthDefault: wide",
+        "  imageLightbox: false",
         "",
       ].join("\n"),
     );
@@ -120,6 +121,7 @@ describe("buildSite (e2e)", () => {
       const html = await readFile(tout, "utf8");
       expect(html).toContain("--content-max-width: none;");
       expect(html).not.toContain('id="content-width-toggle"');
+      expect(html).not.toContain('id="image-lightbox"');
       expect(html).toContain('"contentWidthDefault":"wide"');
     } finally {
       await rm(tdir, { recursive: true, force: true });
