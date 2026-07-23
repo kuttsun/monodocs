@@ -182,6 +182,8 @@ export async function buildSite(
     contentWidthToggle: config.contentWidthToggle,
     contentWidthDefault: config.contentWidthDefault,
     imageLightbox: config.imageLightbox,
+    branding: config.branding,
+    generatorVersion: options.generatorVersion,
     sidebarCollapseDepth: config.sidebarCollapseDepth,
     tocMaxLevel: config.tocMaxLevel,
     bodyScripts,

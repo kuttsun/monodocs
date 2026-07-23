@@ -79,6 +79,7 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     expect(config.contentWidthToggle).toBe(true);
     expect(config.contentWidthDefault).toBe("standard");
     expect(config.imageLightbox).toBe(true);
+    expect(config.branding).toBe(true);
     expect(config.colorScheme).toBe("light");
   });
 
@@ -244,6 +245,17 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
 
   it("rejects an invalid html.imageLightbox", async () => {
     await writeConfig("html:\n  imageLightbox: sometimes\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+  });
+
+  it("can disable html.branding", async () => {
+    await writeConfig("html:\n  branding: false\n");
+    const config = await loadConfig({}, dir);
+    expect(config.branding).toBe(false);
+  });
+
+  it("rejects an invalid html.branding", async () => {
+    await writeConfig("html:\n  branding: hidden\n");
     await expect(loadConfig({}, dir)).rejects.toThrow();
   });
 

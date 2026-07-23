@@ -76,6 +76,7 @@
 
 ### v0.6: 配布・CI 対応
 
+- [x] 生成した HTML と PDF の文書末尾に、リンク付きの monodocs 名と CLI バージョンを既定で表示する（`html.branding: false` でフッターを非表示）
 - [x] 公開方針、対応環境、npm package 境界、0.x のサポート方針を定義
 - [x] コントリビューション・セキュリティ方針、bug・feature・pull request template を用意
 - [x] Linux x64 / Windows x64 の Pull Request CI で format、build、typecheck、test、bundle、dependency audit、license notice を検証

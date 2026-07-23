@@ -76,6 +76,7 @@ Last updated: 2026-07-23
 
 ### v0.6: Distribution / CI Support
 
+- [x] Generated HTML and PDF show a linked monodocs name and CLI version at the document end by default (`html.branding: false` hides the footer)
 - [x] The publishing policy, supported environments, npm package boundary, and 0.x support policy are defined
 - [x] Contribution and security policies plus bug, feature, and pull request templates are present
 - [x] Pull request CI runs formatting, build, typecheck, tests, bundle generation, dependency audit, and license notice verification on Linux x64 and Windows x64

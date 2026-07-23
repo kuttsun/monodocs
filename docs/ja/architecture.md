@@ -75,6 +75,8 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
 {{contentWidthTogglePressed}} {{contentWidthToggleTitle}}
 {{#contentWidthToggle}}...{{/contentWidthToggle}}
+{{generatorVersion}}
+{{#branding}}...{{/branding}} {{#generatorVersion}}...{{/generatorVersion}}
 ```
 
 `window.__MONODOCS_DATA__` にはルーティング、検索、ページ内目次、前後ナビ用の情報を格納します。クライアントは plain IIFE であり、要素アクセスの null guard を維持します。印刷 CSS は全ページを縦に展開します。
@@ -94,6 +96,9 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
   `html.contentWidthToggle: false` ではボタンを出力せず、保存済みの読者設定も適用しません。
 - `html.imageLightbox` は、リンクのない装飾目的以外の本文画像をキーボードでも操作できるダイアログで拡大表示します。
   既定で有効とし、リンクまたはボタン内の画像では親要素の操作を維持し、`alt` が明示的に空の画像は装飾画像のままにし、印刷および PDF 出力にはダイアログを表示しません。
+- `html.branding` は、HTML と PDF の末尾にフッターを既定で表示します。
+  CLI は実行時にパッケージのバージョンを渡し、レンダラーはその値をエスケープします。
+  バージョンがない場合はバージョン部分だけを省略し、`html.branding: false` ではフッター全体を出力しません。
 
 テーマ UI ラベルは本文言語から独立した英語に統一します。動的ラベルは `app.js` の `LABELS`、静的ラベルは `template.html` に置きます。
 

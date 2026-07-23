@@ -88,13 +88,15 @@ describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () 
     const out = join(dir, "pdf-only", "manual.pdf");
     const { gen, calls, state } = fakePdfGenerator();
     const result = await buildSite(
-      { inputDir: docs, outputFile: out, format: "pdf" },
+      { inputDir: docs, outputFile: out, format: "pdf", generatorVersion: "1.2.3" },
       { pdfGenerator: gen },
     );
     expect(result.outputs).toEqual([out]);
     expect(existsSync(out)).toBe(true);
     expect(existsSync(join(dir, "pdf-only", "manual.html"))).toBe(false);
     expect(calls).toHaveLength(1);
+    expect(calls[0]!.html).toContain(">monodocs v1.2.3</a>");
+    expect(calls[0]!.html.match(/class="document-footer"/g)).toHaveLength(1);
     expect(calls[0]!.options.pageSize).toBe("A4");
     expect(calls[0]!.options.margin).toEqual({
       top: "20mm",

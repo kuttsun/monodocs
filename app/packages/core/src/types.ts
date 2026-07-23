@@ -155,6 +155,8 @@ export type BuildOptions = {
   outputFile?: string;
   configFile?: string;
   format?: OutputFormat;
+  /** 生成物のブランディング表示に埋め込む monodocs のバージョン。 */
+  generatorVersion?: string;
 };
 
 /** {@link buildSite} の結果。 */

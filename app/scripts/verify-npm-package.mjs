@@ -111,6 +111,7 @@ try {
   const packageJson = await readFile(join(packageRoot, "package.json"), "utf8");
   if (packageJson.includes("workspace:*"))
     throw new Error("Published package contains workspace:* dependencies");
+  const installedPackage = JSON.parse(packageJson);
 
   const outputDir = join(temporaryRoot, "output");
   const markdownFixtureDir = join(temporaryRoot, "markdown");
@@ -130,6 +131,11 @@ try {
   runCli(cli, ["build", fixtureDir, "-o", htmlOutput]);
   runCli(cli, ["build", fixtureDir, "--format", "pdf", "-o", pdfOutput]);
   runCli(cli, ["build", fixtureDir, "-c", prerenderConfig, "-o", prerenderOutput]);
+
+  const markdownHtml = await readFile(markdownOutput, "utf8");
+  if (!markdownHtml.includes(`>monodocs v${installedPackage.version}</a>`)) {
+    throw new Error("Generated HTML does not contain the installed CLI version in its footer");
+  }
 
   const pdfHeader = (await readFile(pdfOutput)).subarray(0, 5).toString("latin1");
   if (pdfHeader !== "%PDF-") throw new Error(`Invalid PDF header: ${pdfHeader}`);

@@ -749,6 +749,8 @@ html:
   contentWidthDefault: "standard"
   # Enlarge unlinked, non-decorative content images in a dialog
   imageLightbox: true
+  # Show the generator name and version at the end of HTML and PDF output
+  branding: true
   darkMode: true
 
 pdf:

@@ -852,6 +852,17 @@ body.content-wide #content {
   display: none;
 }
 
+.document-footer {
+  margin-top: 2.5rem;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.document-footer a {
+  color: inherit;
+}
+
 .page-nav-item {
   /* 枠は付けずテキストだけで見せる（Vue ドキュメント風）。上段に「← Prev / Next →」の
      小さなラベル、下段にページタイトルのリンクを縦に並べる。 */
@@ -1019,6 +1030,7 @@ body.content-wide #content {
   }
   /* ブロックの途中改ページを避ける（1 ページに収まる限り分割しない）。ページ高を超える
      ものは Chromium が必要に応じて分割する。 */
+  .document-footer,
   #content .admonition,
   #content figure,
   #content pre,

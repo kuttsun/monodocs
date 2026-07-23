@@ -18,6 +18,10 @@ export type RenderHtmlInput = {
   contentWidthDefault?: ContentWidthDefault;
   /** Whether the image lightbox is enabled. Defaults to true. */
   imageLightbox?: boolean;
+  /** Whether the monodocs branding footer is shown. Defaults to true. */
+  branding?: boolean;
+  /** monodocs version shown in the branding footer. Omitted when unavailable. */
+  generatorVersion?: string;
   /**
    * この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
    * undefined は折りたたみなし。トップレベルのディレクトリを深さ 1 とする。
@@ -166,6 +170,7 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   const colorScheme: ColorScheme = input.colorScheme ?? "light";
   const contentWidthDefault: ContentWidthDefault = input.contentWidthDefault ?? "standard";
   const contentWidthState = contentWidthToggleState(contentWidthDefault);
+  const generatorVersion = input.generatorVersion?.trim();
 
   const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth);
   const pagesHtml = input.pages.map(renderArticle).join("\n");
@@ -186,6 +191,12 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     input.contentWidthToggle !== false,
   );
   html = renderConditionalBlock(html, "imageLightbox", input.imageLightbox !== false);
+  html = renderConditionalBlock(html, "branding", input.branding !== false);
+  html = renderConditionalBlock(
+    html,
+    "generatorVersion",
+    generatorVersion !== undefined && generatorVersion !== "",
+  );
   html = injectToken(html, "{{htmlAttrs}}", rootThemeAttr(colorScheme));
   html = injectToken(
     html,
@@ -194,6 +205,7 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   );
   html = injectToken(html, "{{contentWidthTogglePressed}}", contentWidthState.pressed);
   html = injectToken(html, "{{contentWidthToggleTitle}}", contentWidthState.title);
+  html = injectToken(html, "{{generatorVersion}}", escapeHtml(generatorVersion ?? ""));
   html = injectToken(html, "{{title}}", escapeHtml(input.title));
   html = injectToken(html, "{{style}}", styleWithOverrides(theme.style, input));
   html = injectToken(html, "{{sidebar}}", sidebarHtml);

@@ -102,6 +102,8 @@ precedence over automatic system-browser discovery.
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
 {{contentWidthTogglePressed}} {{contentWidthToggleTitle}}
 {{#contentWidthToggle}}...{{/contentWidthToggle}}
+{{generatorVersion}}
+{{#branding}}...{{/branding}} {{#generatorVersion}}...{{/generatorVersion}}
 ```
 
 `window.__MONODOCS_DATA__` contains page information used by routing, search, the table of contents, and
@@ -131,6 +133,9 @@ Preserve these display and reachability invariants:
   default.
   Images inside links or buttons retain the parent interaction, and the dialog must not appear in print or PDF
   output. Images with an explicit empty `alt` retain their decorative semantics.
+- `html.branding` shows a footer at the end of HTML and PDF output by default.
+  The CLI supplies its package version at runtime; the renderer escapes that value and omits only the version
+  when no value is available. `html.branding: false` omits the complete footer.
 
 Theme UI labels are standardized in English and are independent of document body language. Dynamic labels are
 centralized in `LABELS` in `app.js`; static labels live in `template.html`.

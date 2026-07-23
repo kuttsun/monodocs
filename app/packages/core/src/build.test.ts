@@ -25,7 +25,12 @@ afterAll(async () => {
 
 describe("buildSite (e2e)", () => {
   it("generates a single HTML with all (non-excluded) pages", async () => {
-    const result = await buildSite({ inputDir: docs, outputFile: out, format: "html" });
+    const result = await buildSite({
+      inputDir: docs,
+      outputFile: out,
+      format: "html",
+      generatorVersion: "1.2.3",
+    });
 
     expect(result.pages).toBe(2); // _partial.md は除外される
     expect(result.outputs).toEqual([out]);
@@ -40,6 +45,7 @@ describe("buildSite (e2e)", () => {
     expect(html).toContain('id="setup-install-steps"');
     // サイドバーの hash route リンク
     expect(html).toContain('href="#/setup/install"');
+    expect(html).toContain(">monodocs v1.2.3</a>");
   });
 
   it("throws when the input directory does not exist", async () => {
@@ -112,6 +118,7 @@ describe("buildSite (e2e)", () => {
         "  contentWidthToggle: false",
         "  contentWidthDefault: wide",
         "  imageLightbox: false",
+        "  branding: false",
         "",
       ].join("\n"),
     );
@@ -122,6 +129,7 @@ describe("buildSite (e2e)", () => {
       expect(html).toContain("--content-max-width: none;");
       expect(html).not.toContain('id="content-width-toggle"');
       expect(html).not.toContain('id="image-lightbox"');
+      expect(html).not.toContain('class="document-footer"');
       expect(html).toContain('"contentWidthDefault":"wide"');
     } finally {
       await rm(tdir, { recursive: true, force: true });

@@ -150,6 +150,8 @@ const configFileSchema = z.object({
       contentWidthDefault: z.enum(["standard", "wide"]).optional(),
       /** Whether unlinked, non-decorative content images open in a lightbox (default: true). */
       imageLightbox: z.boolean().optional(),
+      /** Whether the generated document shows the monodocs branding footer (default: true). */
+      branding: z.boolean().optional(),
       // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
       // 読者がトグルで切り替えると localStorage の選択が優先される。
       colorScheme: z.enum(["light", "dark", "auto"]).optional(),
@@ -215,6 +217,8 @@ export type ResolvedConfig = {
   contentWidthDefault: ContentWidthDefault;
   /** Whether the image lightbox is enabled. */
   imageLightbox: boolean;
+  /** monodocs のブランディングフッターを表示するか。 */
+  branding: boolean;
   embedImages: boolean;
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
@@ -375,6 +379,7 @@ export async function loadConfig(
     contentWidthToggle: fileConfig.html?.contentWidthToggle ?? true,
     contentWidthDefault: fileConfig.html?.contentWidthDefault ?? "standard",
     imageLightbox: fileConfig.html?.imageLightbox ?? true,
+    branding: fileConfig.html?.branding ?? true,
     embedImages: fileConfig.assets?.embedImages ?? true,
     maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
     onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",

@@ -63,6 +63,7 @@ program
           outputFile: options.output,
           configFile: options.config,
           format: options.format as OutputFormat | undefined,
+          generatorVersion: CLI_VERSION,
         });
         reportBuild(result);
       } catch (error) {
@@ -79,7 +80,12 @@ program
   .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
   .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .action(async (input: string | undefined, options: { output?: string; config?: string }) => {
-    const opts = { inputDir: input, outputFile: options.output, configFile: options.config };
+    const opts = {
+      inputDir: input,
+      outputFile: options.output,
+      configFile: options.config,
+      generatorVersion: CLI_VERSION,
+    };
     try {
       await watchSite(opts, {
         onRebuild: reportBuild,
@@ -120,6 +126,7 @@ program
             configFile: options.config,
             port: options.port,
             host: options.host,
+            generatorVersion: CLI_VERSION,
           },
           {
             onRebuild: (result) => {

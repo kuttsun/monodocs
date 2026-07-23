@@ -37,7 +37,7 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 | 項目           | 結果       |
 | -------------- | ---------- |
 | Test Files     | 22 passed  |
-| Tests          | 216 passed |
+| Tests          | 220 passed |
 | typecheck      | 通過       |
 | format:check   | 通過       |
 | package:verify | 通過       |
@@ -54,7 +54,7 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `pipeline/buildPages.test.ts` … route / page id の重複検知
 - `pipeline/buildSidebar.test.ts` … フォルダ構造サイドバー
 - `pipeline/postprocess.test.ts` … リンク変換・画像 data URI 埋め込み・Mermaid 変換（client / pre-render の SVG 化・グローバル一意 id・複雑 SVG の verbatim 保持・図単位エラーのソースフォールバック・環境エラー `BrowserSetupError`（`MermaidPrerenderSetupError` を含む）の fail fast・renderer 未注入エラー）・shiki コードハイライト・admonition / GFM alert の共通構造化
-- `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・任意表示の本文幅切替と初期状態・画像 lightbox マークアップの有無・クライアント用ページデータ（目次/検索）
+- `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・任意表示の本文幅切替と初期状態・画像 lightbox マークアップの有無・ブランディングフッターとバージョンのエスケープ・クライアント用ページデータ（目次/検索）
 - `themes/default/app.test.ts` … クライアント hash routing（happy-dom）
 - `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・保存される本文幅トグルと設定由来の初期状態・サイドバー折りたたみ・コードブロックのコピー/折り返しトグル・画像 lightbox のマウス/キーボード/フォーカス操作とリンク付き/装飾画像の除外（happy-dom）
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e（Markdown / 混在 / v0.3 機能・validate）
@@ -62,4 +62,4 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入・`serveSite` が pdf/both 設定でも HTML を配信し明示 `-o` を尊重すること）
 - `build.pdf.test.ts` … PDF 出力（v0.5。`resolveOutputs` の html/pdf/both 出力パス解決・偽 `PdfGenerator` 注入で format 分岐と設定（pageSize/margin/printBackground）連携・embedImages 上書き・しおり outline の受け渡しを browserless 検証。実 Chromium がある環境でだけ実際の PDF 生成＝`%PDF-` と `/Outlines`・`/UseOutlines` を確認）
 - `pipeline/pdfOutline.test.ts` … PDF しおり（`sidebarToOutline` のツリー変換・`collectDests`/`remapDests`・`addOutline` が `/Dests` を参照して フォルダ→ページ の `/Outlines` を構築し `/UseOutlines` を設定。宛先が無い/空ツリーは元 PDF を返す。pdf-lib のみで browserless）
-- `config.test.ts` … 設定解決（本文幅と画像 lightbox の既定値/切替・`pdf` スキーマの既定値・欠落余白の補完・未知キー拒否・不正 `--format` の拒否・format 別の既定出力パス を含む）
+- `config.test.ts` … 設定解決（本文幅、画像 lightbox、ブランディングの既定値と切替・`pdf` スキーマの既定値・欠落余白の補完・未知キー拒否・不正 `--format` の拒否・format 別の既定出力パスを含む）

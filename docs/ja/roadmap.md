@@ -749,6 +749,8 @@ html:
   contentWidthDefault: "standard"
   # リンクのない装飾目的以外の本文画像をダイアログで拡大表示する
   imageLightbox: true
+  # HTML と PDF の末尾に生成ツール名とバージョンを表示する
+  branding: true
   darkMode: true
 
 pdf:
