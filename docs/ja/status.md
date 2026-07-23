@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-07-23
+最終更新: 2026-07-24
 
 ## 対応状況
 
@@ -86,8 +86,9 @@
 - [x] Linux x64 / Windows x64 の CI で実際の npm tarball を install・smoke test
 - [x] version/tag validation、release approval、OIDC、provenance を備えた GitHub Release 起点の npm publish workflow を準備
 - [x] リポジトリの security・branch protection 設定を完了
-- [ ] npm Trusted Publishing、release approval、provenance、maintainer 2FA を設定
-- [ ] `next` tag で `0.6.0-beta.1` を公開・検証
+- [x] npm Trusted Publishing、release approval、provenance、maintainer 2FA を設定
+- [x] `next` tag で `0.6.0-beta.1` を npm へ公開（最初の公開版のため、stable リリースまでは `latest` も同じ版を指す）
+- [ ] 公開した `0.6.0-beta.1` を検証（新規インストール、HTML / PDF / serve smoke test、README 再現）
 - [ ] stable `0.6.0` を公開・検証
 
 ## 対応記法
