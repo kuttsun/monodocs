@@ -312,16 +312,16 @@ npm install -g monodocs@next
 
 ### 9.2 ベータ検証
 
-- [ ] `npm install -g monodocs@next`を確認する。
-- [ ] `npx monodocs@next`を確認する。
-- [ ] サポート対象 OS でインストールする。
-- [ ] サポート対象 Node.js でインストールする。
-- [ ] HTML と PDF を生成する。
-- [ ] Mermaid client / pre-render を確認する。
-- [ ] watch / serve を確認する。
-- [ ] Chromium 検出とエラー表示を確認する。
-- [ ] アンインストールと再インストールを確認する。
-- [ ] README の手順を新規環境で再現する。
+- [x] `npm install -g monodocs@next`を確認する。
+- [x] `npx monodocs@next`を確認する。
+- [x] サポート対象 OS でインストールする。
+- [x] サポート対象 Node.js でインストールする。
+- [x] HTML と PDF を生成する。
+- [x] Mermaid client / pre-render を確認する。
+- [x] watch / serve を確認する。
+- [x] Chromium 検出とエラー表示を確認する。
+- [x] アンインストールと再インストールを確認する。
+- [x] README の手順を新規環境で再現する。
 
 ### 9.3 完了条件
 
