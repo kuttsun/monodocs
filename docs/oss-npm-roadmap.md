@@ -318,16 +318,16 @@ npm install -g monodocs@next
 
 ### 9.2 Beta Verification
 
-- [ ] Confirm `npm install -g monodocs@next`.
-- [ ] Confirm `npx monodocs@next`.
-- [ ] Install on supported OSes.
-- [ ] Install on supported Node.js.
-- [ ] Generate HTML and PDF.
-- [ ] Confirm Mermaid client / pre-render.
-- [ ] Confirm watch / serve.
-- [ ] Confirm Chromium detection and error display.
-- [ ] Confirm uninstall and reinstall.
-- [ ] Reproduce the README steps in a fresh environment.
+- [x] Confirm `npm install -g monodocs@next`.
+- [x] Confirm `npx monodocs@next`.
+- [x] Install on supported OSes.
+- [x] Install on supported Node.js.
+- [x] Generate HTML and PDF.
+- [x] Confirm Mermaid client / pre-render.
+- [x] Confirm watch / serve.
+- [x] Confirm Chromium detection and error display.
+- [x] Confirm uninstall and reinstall.
+- [x] Reproduce the README steps in a fresh environment.
 
 ### 9.3 Completion Criteria
 

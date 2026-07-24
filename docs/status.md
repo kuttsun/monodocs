@@ -87,8 +87,8 @@ Last updated: 2026-07-24
 - [x] Prepare a GitHub Release-triggered npm publishing workflow with version/tag validation, release approval, OIDC, and provenance
 - [x] Complete repository security and branch-protection settings
 - [x] Configure npm Trusted Publishing, release approval, provenance, and maintainer 2FA
-- [x] Publish `0.6.0-beta.1` to npm under the `next` tag (as the first published version it is also the current `latest` until the stable release)
-- [ ] Verify the published `0.6.0-beta.1` (fresh install, HTML / PDF / serve smoke test, README reproduction)
+- [x] Publish `0.6.0-beta.1`, then `0.6.0-beta.2` (adding Windows browser auto-detection), to npm under the `next` tag (the first published version also holds `latest` until the stable release)
+- [x] Verify the published beta on Linux x64 and Windows x64 (install, HTML / PDF / both / Mermaid pre-render, and browser auto-detection with no `PUPPETEER_EXECUTABLE_PATH`; plus manual serve / watch / uninstall / README checks)
 - [ ] Publish and verify the stable `0.6.0` release
 
 ## Supported Syntax

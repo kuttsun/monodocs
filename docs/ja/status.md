@@ -87,8 +87,8 @@
 - [x] version/tag validation、release approval、OIDC、provenance を備えた GitHub Release 起点の npm publish workflow を準備
 - [x] リポジトリの security・branch protection 設定を完了
 - [x] npm Trusted Publishing、release approval、provenance、maintainer 2FA を設定
-- [x] `next` tag で `0.6.0-beta.1` を npm へ公開（最初の公開版のため、stable リリースまでは `latest` も同じ版を指す）
-- [ ] 公開した `0.6.0-beta.1` を検証（新規インストール、HTML / PDF / serve smoke test、README 再現）
+- [x] `next` tag で `0.6.0-beta.1`、続いて `0.6.0-beta.2`（Windows のブラウザ自動検出を追加）を npm へ公開（最初の公開版のため、stable リリースまでは `latest` も同じ版を指す）
+- [x] 公開した beta を Linux x64 / Windows x64 で検証（install、HTML / PDF / both / Mermaid pre-render、`PUPPETEER_EXECUTABLE_PATH` なしのブラウザ自動検出、加えて serve / watch / uninstall / README の手動確認）
 - [ ] stable `0.6.0` を公開・検証
 
 ## 対応記法
