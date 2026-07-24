@@ -41,7 +41,7 @@ The initial v0.6 distribution is an npm package for Node.js 22 or later. Linux x
 | PDF / pre-render                | Requires system Chromium    |
 | Standalone SEA binary           | Outside the v0.6 scope      |
 
-Set `PUPPETEER_EXECUTABLE_PATH` when the browser cannot be discovered automatically. Windows users currently need to set it explicitly for PDF output and Mermaid pre-rendering.
+On Linux and Windows, a system-installed Chromium or Google Chrome is discovered automatically (on Windows, Chromium-based Microsoft Edge is also used as a fallback). Set `PUPPETEER_EXECUTABLE_PATH` to point at the browser explicitly when it is installed in a non-standard location, or on platforms without built-in detection such as macOS.
 
 ## Installation
 

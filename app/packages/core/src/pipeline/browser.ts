@@ -7,13 +7,40 @@ import { existsSync } from "node:fs";
  * ため型に依存せず最小 shape で扱い、動的 import する。
  */
 
-/** Chromium の実行パス候補（`PUPPETEER_EXECUTABLE_PATH` が無いとき順に探索）。 */
-const CHROMIUM_CANDIDATES = [
-  "/usr/bin/chromium",
-  "/usr/bin/chromium-browser",
-  "/usr/bin/google-chrome",
-  "/usr/bin/google-chrome-stable",
-];
+/**
+ * OS ごとの Chromium / Google Chrome（Windows では Microsoft Edge も）実行パス候補。
+ * `PUPPETEER_EXECUTABLE_PATH` が無いとき順に探索する。platform / env はテストのため差し替え可能。
+ * macOS など未対応 OS は候補を持たないため、`PUPPETEER_EXECUTABLE_PATH` の明示指定が必要。
+ */
+export function chromiumCandidates(
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  if (platform === "win32") {
+    const programFiles = env["ProgramFiles"] ?? "C:\\Program Files";
+    const programFilesX86 = env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)";
+    const localAppData = env["LOCALAPPDATA"];
+    return [
+      // Google Chrome（マシン共通インストール / ユーザー単位インストール）。
+      `${programFiles}\\Google\\Chrome\\Application\\chrome.exe`,
+      `${programFilesX86}\\Google\\Chrome\\Application\\chrome.exe`,
+      localAppData && `${localAppData}\\Google\\Chrome\\Application\\chrome.exe`,
+      // Chromium。
+      `${programFiles}\\Chromium\\Application\\chrome.exe`,
+      localAppData && `${localAppData}\\Chromium\\Application\\chrome.exe`,
+      // Chromium ベースの Microsoft Edge（Windows 10/11 標準搭載）を最後のフォールバックにする。
+      `${programFilesX86}\\Microsoft\\Edge\\Application\\msedge.exe`,
+      `${programFiles}\\Microsoft\\Edge\\Application\\msedge.exe`,
+    ].filter((p): p is string => Boolean(p));
+  }
+  // Linux（既定）。
+  return [
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+  ];
+}
 
 /**
  * ヘッドレスブラウザの**環境／セットアップ**エラー（`puppeteer-core` 不在・Chromium 不在・
@@ -51,11 +78,12 @@ interface PuppeteerLike {
 export function resolveChromiumPath(): string {
   const fromEnv = process.env.PUPPETEER_EXECUTABLE_PATH;
   if (fromEnv) return fromEnv;
-  const found = CHROMIUM_CANDIDATES.find((p) => existsSync(p));
+  const found = chromiumCandidates().find((p) => existsSync(p));
   if (found) return found;
   throw new BrowserSetupError(
-    "ヘッドレスブラウザには Chromium が必要です。PUPPETEER_EXECUTABLE_PATH を設定するか、" +
-      "Chromium をインストールしてください（開発用 Docker では Dockerfile.dev を参照）。",
+    "ヘッドレスブラウザには Chromium / Google Chrome（Windows では Microsoft Edge も可）が必要です。" +
+      "PUPPETEER_EXECUTABLE_PATH を設定するか、Google Chrome もしくは Chromium をインストールしてください" +
+      "（開発用 Docker では Dockerfile.dev を参照）。",
   );
 }
 
