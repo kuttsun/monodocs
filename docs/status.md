@@ -14,7 +14,7 @@ Last updated: 2026-07-24
 | Link conversion / image embedding / Mermaid       | ✅ Done        | v0.3           |
 | Search / table of contents / watch / serve        | ✅ Done        | v0.4           |
 | PDF output                                        | ✅ Done        | v0.5           |
-| npm / GitHub Actions                              | 🚧 In progress | v0.6           |
+| npm / GitHub Actions                              | ✅ Done        | v0.6           |
 | VS Code extension                                 | 🚧 Planned     | v0.7           |
 
 ## Completion Criteria Status
@@ -89,7 +89,7 @@ Last updated: 2026-07-24
 - [x] Configure npm Trusted Publishing, release approval, provenance, and maintainer 2FA
 - [x] Publish `0.6.0-beta.1`, then `0.6.0-beta.2` (adding Windows browser auto-detection), to npm under the `next` tag (the first published version also holds `latest` until the stable release)
 - [x] Verify the published beta on Linux x64 and Windows x64 (install, HTML / PDF / both / Mermaid pre-render, and browser auto-detection with no `PUPPETEER_EXECUTABLE_PATH`; plus manual serve / watch / uninstall / README checks)
-- [ ] Publish and verify the stable `0.6.0` release
+- [x] Publish and verify the stable `0.6.0` release
 
 ## Supported Syntax
 

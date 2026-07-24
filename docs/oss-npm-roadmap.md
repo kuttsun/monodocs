@@ -360,12 +360,12 @@ monodocs --version
 monodocs build ./docs -o ./dist/manual.html
 ```
 
-- [ ] The Git tag, GitHub Release, and npm version match.
-- [ ] `latest` points to the intended stable version.
-- [ ] LICENSE and third-party license notices are included.
-- [ ] npm provenance can be confirmed.
-- [ ] The post-publish smoke tests for HTML and PDF pass.
-- [ ] It can be adopted and used with the README alone.
+- [x] The Git tag, GitHub Release, and npm version match.
+- [x] `latest` points to the intended stable version.
+- [x] LICENSE and third-party license notices are included.
+- [x] npm provenance can be confirmed.
+- [x] The post-publish smoke tests for HTML and PDF pass.
+- [x] It can be adopted and used with the README alone.
 
 ### 10.3 Completion Criteria
 

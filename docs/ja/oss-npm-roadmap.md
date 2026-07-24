@@ -354,12 +354,12 @@ monodocs --version
 monodocs build ./docs -o ./dist/manual.html
 ```
 
-- [ ] Git タグ、GitHub Release、npm version が一致している。
-- [ ] `latest`が意図した安定版を指している。
-- [ ] LICENSE と第三者ライセンス表記が含まれている。
-- [ ] npm provenance を確認できる。
-- [ ] HTML と PDF の公開後スモークテストが通る。
-- [ ] README だけで導入・利用できる。
+- [x] Git タグ、GitHub Release、npm version が一致している。
+- [x] `latest`が意図した安定版を指している。
+- [x] LICENSE と第三者ライセンス表記が含まれている。
+- [x] npm provenance を確認できる。
+- [x] HTML と PDF の公開後スモークテストが通る。
+- [x] README だけで導入・利用できる。
 
 ### 10.3 完了条件
 
