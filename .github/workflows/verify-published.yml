@@ -1,0 +1,86 @@
+name: Verify published package
+
+# Manually verifies a PUBLISHED npm release of `monodocs` by installing it from
+# the registry on real GitHub-hosted runners and running the CLI smoke suite.
+# This complements PR CI (which smoke-tests the pre-publish tarball) by exercising
+# the actual published artifact on Linux x64 and Windows x64 — the M4.2 beta
+# verification step in docs/oss-npm-roadmap.md.
+#
+# Note: `serve` / `watch` (long-running) and the manual README reproduction are
+# intentionally out of scope here and remain manual checks.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dist_tag:
+        description: npm dist-tag or exact version to verify (e.g. next, latest, 0.6.0-beta.1)
+        default: next
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+            chromium: /usr/bin/google-chrome
+          - name: Windows
+            os: windows-latest
+            chromium: 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+    env:
+      PUPPETEER_EXECUTABLE_PATH: ${{ matrix.chromium }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install published monodocs@${{ inputs.dist_tag }}
+        run: npm install --global "monodocs@${{ inputs.dist_tag }}"
+
+      - name: Version and help
+        run: |
+          monodocs --version
+          monodocs --help
+
+      - name: Validate
+        run: monodocs validate examples/en
+
+      - name: Build HTML
+        run: |
+          mkdir -p out
+          monodocs build examples/en -o out/manual.html
+
+      - name: Assert self-contained HTML
+        run: |
+          node -e "const h=require('node:fs').readFileSync('out/manual.html','utf8'); if(!h.includes('data-route')) throw new Error('no pages rendered'); if(/src=\"https?:\/\//.test(h)) throw new Error('external asset reference found');"
+
+      - name: Build PDF
+        run: monodocs build examples/en --format pdf -o out/manual.pdf
+
+      - name: Assert PDF header
+        run: |
+          node -e "const m=require('node:fs').readFileSync('out/manual.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('invalid PDF header: '+m);"
+
+      - name: Build both (HTML + PDF)
+        run: monodocs build examples/en --format both -o out/both
+
+      - name: Mermaid pre-render
+        run: |
+          node -e "require('node:fs').writeFileSync('pre-render.yml','mermaid:\n  mode: pre-render\n');"
+          monodocs build examples/en -c pre-render.yml -o out/pre-render.html
+          node -e "const h=require('node:fs').readFileSync('out/pre-render.html','utf8'); if(!h.includes('<svg')) throw new Error('pre-rendered SVG not found');"
