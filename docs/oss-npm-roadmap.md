@@ -103,7 +103,7 @@ The SEA standalone binary is a future item whose start will be decided after the
 - The npm version targets Node.js 22 or later.
 - The initial supported targets for the npm version are Linux x64 and Windows x64, and HTML, validate, watch, and serve will be verified with GitHub Actions before the beta publish. Linux arm64 and macOS arm64 will be considered for addition once an environment for continuous verification is available.
 - The SEA standalone binary is out of scope for v0.6 and will be reconsidered after the npm stable publish.
-- Chromium will not be auto-downloaded. `PUPPETEER_EXECUTABLE_PATH` takes top priority, and if unspecified, the standard Chromium / Google Chrome install locations on Linux will be searched.
+- Chromium will not be auto-downloaded. `PUPPETEER_EXECUTABLE_PATH` takes top priority, and if unspecified, the standard Chromium / Google Chrome install locations are searched on Linux and Windows (on Windows, Chromium-based Microsoft Edge is also used as a fallback). macOS has no built-in candidates yet, so `PUPPETEER_EXECUTABLE_PATH` must be set there.
 - During the 0.x period, provide normal support for the latest minor, and address only critical vulnerabilities for past minors.
 - The canonical source of the changelog will be GitHub Releases, with important changes and known limitations recorded in the release notes.
 - The availability of `monodocs` on the npm registry will be finalized just before the GitHub migration and publishing work.
