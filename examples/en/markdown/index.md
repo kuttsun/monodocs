@@ -12,7 +12,7 @@ Each item shows the **source (raw Markdown)** first, then the **rendered output 
 Build example:
 
 ```bash
-monodocs build examples/en -o dist/showcase.html
+monodocs build examples/en -o dist/sample.html
 ```
 
 Open each category from the left sidebar:

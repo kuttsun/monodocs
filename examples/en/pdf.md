@@ -9,8 +9,8 @@ order: 2
 split across files while shipping a single deliverable — either HTML or PDF.
 
 ```bash
-monodocs build examples/en --format pdf  -o dist/showcase.pdf   # PDF only
-monodocs build examples/en --format both -o dist/showcase       # both HTML and PDF
+monodocs build examples/en --format pdf  -o dist/sample.pdf   # PDF only
+monodocs build examples/en --format both -o dist/sample       # both HTML and PDF
 ```
 
 - `--format both` treats `-o` as a **directory** and writes `manual.html` and `manual.pdf`

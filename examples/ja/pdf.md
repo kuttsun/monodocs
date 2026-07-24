@@ -9,8 +9,8 @@ order: 2
 配布物を 1 ファイル（HTML でも PDF でも）にまとめられます。
 
 ```bash
-monodocs build examples/ja --format pdf  -o dist/showcase.pdf   # PDF のみ
-monodocs build examples/ja --format both -o dist/showcase       # HTML と PDF の両方
+monodocs build examples/ja --format pdf  -o dist/sample.pdf   # PDF のみ
+monodocs build examples/ja --format both -o dist/sample       # HTML と PDF の両方
 ```
 
 - `--format both` は `-o` を **ディレクトリ**として扱い、その中に `manual.html` と

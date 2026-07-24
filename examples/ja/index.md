@@ -1,9 +1,9 @@
 ---
-title: ショーケース
+title: サンプル
 order: 1
 ---
 
-# monodocs ショーケース
+# monodocs サンプル
 
 `monodocs` の対応記法と機能を **1 つのサイト**でまとめて確認できるサンプルです。
 左サイドバーのフォルダから各カテゴリを開けます。
@@ -21,8 +21,8 @@ order: 1
 ## ビルド / プレビュー
 
 ```bash
-monodocs build examples/ja -o dist/showcase.html   # 単一 HTML
-monodocs build examples/ja --format pdf -o dist/showcase.pdf   # PDF
+monodocs build examples/ja -o dist/sample.html   # 単一 HTML
+monodocs build examples/ja --format pdf -o dist/sample.pdf   # PDF
 monodocs serve examples/ja            # http://127.0.0.1:4173/
 ```
 

@@ -18,4 +18,4 @@ No matter how deeply you split inputs into folders, the sidebar mirrors the fold
 A link from the third level back up to the first is also converted into a hash route within the single HTML.
 
 - One folder up: [Markdown samples](../index.md)
-- Root: [Showcase](../../index.md)
+- Root: [Sample](../../index.md)
