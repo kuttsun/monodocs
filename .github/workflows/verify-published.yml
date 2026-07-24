@@ -76,6 +76,16 @@ jobs:
         run: |
           node -e "const m=require('node:fs').readFileSync('out/manual.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('invalid PDF header: '+m);"
 
+      # End-to-end proof that the browser is discovered automatically (no
+      # PUPPETEER_EXECUTABLE_PATH): the runner has Google Chrome at a standard
+      # location, so a successful PDF here exercises the platform-aware
+      # candidate search (Linux /usr/bin, Windows Program Files / Edge fallback).
+      - name: Build PDF with browser auto-detection (no PUPPETEER_EXECUTABLE_PATH)
+        run: |
+          unset PUPPETEER_EXECUTABLE_PATH
+          monodocs build examples/en --format pdf -o out/auto-detect.pdf
+          node -e "const m=require('node:fs').readFileSync('out/auto-detect.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('auto-detection produced an invalid PDF header: '+m);"
+
       - name: Build both (HTML + PDF)
         run: |
           monodocs build examples/en --format both -o out/both
