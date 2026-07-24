@@ -14,7 +14,7 @@
 | リンク変換 / 画像埋め込み / Mermaid | ✅ 完了   | v0.3           |
 | 検索 / 目次 / watch / serve         | ✅ 完了   | v0.4           |
 | PDF 出力                            | ✅ 完了   | v0.5           |
-| npm / GitHub Actions                | 🚧 進行中 | v0.6           |
+| npm / GitHub Actions                | ✅ 完了   | v0.6           |
 | VS Code 拡張                        | 🚧 予定   | v0.7           |
 
 ## 完了条件の達成状況
@@ -89,7 +89,7 @@
 - [x] npm Trusted Publishing、release approval、provenance、maintainer 2FA を設定
 - [x] `next` tag で `0.6.0-beta.1`、続いて `0.6.0-beta.2`（Windows のブラウザ自動検出を追加）を npm へ公開（最初の公開版のため、stable リリースまでは `latest` も同じ版を指す）
 - [x] 公開した beta を Linux x64 / Windows x64 で検証（install、HTML / PDF / both / Mermaid pre-render、`PUPPETEER_EXECUTABLE_PATH` なしのブラウザ自動検出、加えて serve / watch / uninstall / README の手動確認）
-- [ ] stable `0.6.0` を公開・検証
+- [x] stable `0.6.0` を公開・検証
 
 ## 対応記法
 
