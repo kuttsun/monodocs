@@ -77,10 +77,12 @@ jobs:
           node -e "const m=require('node:fs').readFileSync('out/manual.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('invalid PDF header: '+m);"
 
       - name: Build both (HTML + PDF)
-        run: monodocs build examples/en --format both -o out/both
+        run: |
+          monodocs build examples/en --format both -o out/both
+          node -e "const fs=require('node:fs'); for (const f of ['out/both/manual.html','out/both/manual.pdf']) if(!fs.existsSync(f)) throw new Error('--format both did not create '+f); const m=fs.readFileSync('out/both/manual.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('invalid PDF header in both output: '+m);"
 
       - name: Mermaid pre-render
         run: |
           node -e "require('node:fs').writeFileSync('pre-render.yml','mermaid:\n  mode: pre-render\n');"
           monodocs build examples/en -c pre-render.yml -o out/pre-render.html
-          node -e "const h=require('node:fs').readFileSync('out/pre-render.html','utf8'); if(!h.includes('<svg')) throw new Error('pre-rendered SVG not found');"
+          node -e "const h=require('node:fs').readFileSync('out/pre-render.html','utf8'); if(!h.includes('<figure class=\"mermaid\"><svg')) throw new Error('Mermaid diagram was not pre-rendered to inline SVG');"
