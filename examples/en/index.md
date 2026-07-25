@@ -5,6 +5,8 @@ order: 1
 
 # monodocs Sample
 
+🌐 **English** · [日本語](https://kuttsun.github.io/monodocs/ja/manual.html)
+
 A sample that gathers monodocs' supported syntax and features into **a single site**.
 Open each category from the folders in the left sidebar.
 
