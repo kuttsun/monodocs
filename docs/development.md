@@ -39,6 +39,14 @@ monodocs/
 
 Instead of installing Node / pnpm on the host, develop, build, and test inside the dedicated image **`monodocs-dev`**. The image bakes in pnpm on top of Node 22 (the same version as `packageManager` in `app/package.json`), so pnpm is not downloaded each time via corepack.
 
+### App Dependency Security Override
+
+The `app/` workspace pins `postcss` to a patched release (`^8.5.18`) through pnpm `overrides` in
+`pnpm-workspace.yaml` (pnpm 11 no longer reads the `pnpm` field in `package.json`). `postcss <= 8.5.17`
+carries a high-severity path-traversal advisory (GHSA-r28c-9q8g-f849) and reaches the tree transitively
+via `vitest -> vite` — a dev/test-only dependency that is not shipped in the published bundle. The override
+keeps `pnpm audit` green; revisit and remove it once `vite` resolves a patched `postcss` on its own.
+
 ### Site Dependency Security Override
 
 The standalone package under `site/` temporarily overrides Vite to `~6.4.3`. VitePress 1.6.4 still
