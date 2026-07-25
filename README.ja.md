@@ -2,9 +2,7 @@
 
 [English](README.md)
 
-複数の Markdown / AsciiDoc ファイルから、**単一の HTML または PDF** ドキュメントを生成する CLI ツールです。ドキュメントは複数ファイルに分割して管理しながら、配布時には 1 ファイルにまとめられます。
-
-**単一ファイル配布に特化した軽量ドキュメントジェネレータ**です。
+**単一ファイル配布に特化した軽量ドキュメントジェネレータ**です。複数の Markdown / AsciiDoc ファイルから **単一の HTML または PDF** ドキュメントを生成する CLI ツールで、ドキュメントは複数ファイルに分割して管理しながら、配布時には 1 ファイルにまとめられます。
 
 **📖 ドキュメント → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス。[単一ファイルのサンプル](https://kuttsun.github.io/monodocs/ja/manual.html)もあります。
 
@@ -15,8 +13,6 @@
 - **ドキュメントサイト UX** — 全文検索・ページ内目次・前後ページナビ・ダークモードを内蔵。
 - **リッチなコンテンツ** — Mermaid 図と shiki コードハイライト（ダークモードに追従）に対応。
 - **PDF 出力** — しおり・ページ間リンク付きの PDF を Chromium 経由で生成。
-
-対応記法・機能の全体像は [docs/ja/status.md](docs/ja/status.md) を参照してください。
 
 ## インストール
 
@@ -47,7 +43,7 @@ monodocs serve ./docs                                 # 編集しながらライ
 monodocs validate ./docs                              # リンク切れ・画像欠落を検出
 ```
 
-全コマンド・オプションと `monodocs.config.yml` の設定リファレンスは[ドキュメントサイト](https://kuttsun.github.io/monodocs/ja/docs/getting-started)を参照してください。
+全コマンド・オプションと、設定ファイル `monodocs.config.yml` のリファレンスは[ドキュメントサイト](https://kuttsun.github.io/monodocs/ja/docs/getting-started)を参照してください。
 
 ## プロジェクトドキュメント
 
