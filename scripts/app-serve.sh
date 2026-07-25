@@ -7,7 +7,7 @@
 # そちらが面倒を見る。
 #
 # 例:
-#   scripts/app-serve.sh                      # examples/ja（全記法ショーケース）を配信
+#   scripts/app-serve.sh                      # examples/ja（全記法サンプル）を配信
 #   scripts/app-serve.sh ../examples/ja     # 入力ディレクトリを明示
 #   MONODOCS_PORT=8080 scripts/app-serve.sh ../examples/ja --port 8080
 #
@@ -17,7 +17,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/scripts/app.sh"
 
-# 入力ディレクトリ（省略時はショーケース）。残りは serve への追加引数として渡す。
+# 入力ディレクトリ（省略時はサンプル）。残りは serve への追加引数として渡す。
 # 先頭が `-` で始まるとき（例: `app-serve.sh --open`）はオプションなので DOCS は既定のまま。
 # examples/ はルート直下・app.sh は /work/app 基準で動くため ../ を付ける。
 DOCS="../examples/ja"

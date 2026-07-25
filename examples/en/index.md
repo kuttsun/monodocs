@@ -1,9 +1,9 @@
 ---
-title: Showcase
+title: Sample
 order: 1
 ---
 
-# monodocs Showcase
+# monodocs Sample
 
 A sample that gathers monodocs' supported syntax and features into **a single site**.
 Open each category from the folders in the left sidebar.
@@ -21,8 +21,8 @@ also converted into hash routes within the single HTML (mixed support).
 ## Build / preview
 
 ```bash
-monodocs build examples/en -o dist/showcase.html   # single HTML
-monodocs build examples/en --format pdf -o dist/showcase.pdf   # PDF
+monodocs build examples/en -o dist/sample.html   # single HTML
+monodocs build examples/en --format pdf -o dist/sample.pdf   # PDF
 monodocs serve examples/en            # http://127.0.0.1:4173/
 ```
 

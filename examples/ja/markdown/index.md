@@ -13,7 +13,7 @@ order: 1
 ビルド例:
 
 ```bash
-monodocs build examples/ja -o dist/showcase.html
+monodocs build examples/ja -o dist/sample.html
 ```
 
 各カテゴリは左サイドバーから開けます:

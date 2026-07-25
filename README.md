@@ -6,7 +6,7 @@
 
 It is a lightweight generator focused on single-file distribution.
 
-**📖 Full documentation → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference. Try the [live single-file demo](https://kuttsun.github.io/monodocs/manual.html).
+**📖 Full documentation → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference. Try the [single-file sample](https://kuttsun.github.io/monodocs/manual.html).
 
 ## Features
 
@@ -41,7 +41,7 @@ PDF output and Mermaid pre-rendering require a system-installed Chromium or Goog
 Markdown and AsciiDoc files may be mixed; the input directory structure becomes the sidebar.
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html           # single self-contained HTML
+monodocs build ./docs -o ./dist/doc.html              # single self-contained HTML
 monodocs build ./docs --format pdf -o ./dist/doc.pdf  # PDF (requires Chromium)
 monodocs serve ./docs                                 # live preview while editing
 monodocs validate ./docs                              # report broken links / missing images
@@ -62,8 +62,6 @@ For every command and option, and the `monodocs.config.yml` reference, see the [
 | Testing                   | [English](docs/testing.md)      | [日本語](docs/ja/testing.md)      |
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) before contributing and [SECURITY.md](SECURITY.md) to report a vulnerability privately.
-
-> **Trusted input only** — untrusted AsciiDoc can emit raw HTML that runs when the generated document is opened. See the [security boundaries](docs/architecture.md#security-boundaries).
 
 ## License
 

@@ -6,7 +6,7 @@
 
 **単一ファイル配布に特化した軽量ドキュメントジェネレータ**です。
 
-**📖 ドキュメント → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス。[単一ファイルのライブデモ](https://kuttsun.github.io/monodocs/ja/manual.html)もあります。
+**📖 ドキュメント → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス。[単一ファイルのサンプル](https://kuttsun.github.io/monodocs/ja/manual.html)もあります。
 
 ## 特徴
 
@@ -41,7 +41,7 @@ PDF 出力と Mermaid pre-render には、システムにインストールさ�
 入力は Markdown / AsciiDoc を混在でき、フォルダ構造がそのままサイドバーになります。
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html           # 自己完結した単一 HTML
+monodocs build ./docs -o ./dist/doc.html              # 自己完結した単一 HTML
 monodocs build ./docs --format pdf -o ./dist/doc.pdf  # PDF（要 Chromium）
 monodocs serve ./docs                                 # 編集しながらライブプレビュー
 monodocs validate ./docs                              # リンク切れ・画像欠落を検出
@@ -67,8 +67,6 @@ monodocs validate ./docs                              # リンク切れ・画像
 
 コントリビューションの手順は [CONTRIBUTING.ja.md](CONTRIBUTING.ja.md)、脆弱性を非公開で報告する方法は
 [SECURITY.ja.md](SECURITY.ja.md) を参照してください。
-
-> **入力は信頼できるものを前提とします** — 信頼できない AsciiDoc は生 HTML を出力し、開いた際にスクリプトが実行され得ます。詳細は[セキュリティ境界](docs/ja/architecture.md#セキュリティ境界)を参照してください。
 
 ## ライセンス
 

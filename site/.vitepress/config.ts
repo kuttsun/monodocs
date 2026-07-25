@@ -53,7 +53,7 @@ export default defineConfig({
           { text: 'Home', link: '/' },
           { text: 'Guide', link: '/docs/getting-started' },
           { text: 'License', link: '/docs/license' },
-          { text: 'Single-file demo', link: '/manual.html', target: '_blank', rel: 'noopener' }
+          { text: 'Single-file sample', link: '/manual.html', target: '_blank', rel: 'noopener' }
         ],
 
         sidebar: {
@@ -63,7 +63,22 @@ export default defineConfig({
               items: [
                 { text: 'Getting Started', link: '/docs/getting-started' },
                 { text: 'Command Options', link: '/docs/commands' },
-                { text: 'Configuration', link: '/docs/configuration' }
+                {
+                  text: 'Configuration',
+                  link: '/docs/configuration',
+                  collapsed: true,
+                  items: [
+                    { text: 'Top level', link: '/docs/configuration#top-level' },
+                    { text: 'output', link: '/docs/configuration#output' },
+                    { text: 'sources', link: '/docs/configuration#sources' },
+                    { text: 'sidebar', link: '/docs/configuration#sidebar' },
+                    { text: 'toc', link: '/docs/configuration#toc' },
+                    { text: 'assets', link: '/docs/configuration#assets' },
+                    { text: 'mermaid', link: '/docs/configuration#mermaid' },
+                    { text: 'highlight', link: '/docs/configuration#highlight' },
+                    { text: 'html', link: '/docs/configuration#html' }
+                  ]
+                }
               ]
             },
             {
@@ -93,7 +108,7 @@ export default defineConfig({
           { text: 'ホーム', link: '/ja/' },
           { text: 'ガイド', link: '/ja/docs/getting-started' },
           { text: 'ライセンス', link: '/ja/docs/license' },
-          { text: '単一ファイルデモ', link: '/ja/manual.html', target: '_blank', rel: 'noopener' }
+          { text: '単一ファイルサンプル', link: '/ja/manual.html', target: '_blank', rel: 'noopener' }
         ],
 
         sidebar: {
@@ -103,7 +118,22 @@ export default defineConfig({
               items: [
                 { text: 'はじめに', link: '/ja/docs/getting-started' },
                 { text: 'コマンドオプション', link: '/ja/docs/commands' },
-                { text: '設定ファイル', link: '/ja/docs/configuration' }
+                {
+                  text: '設定ファイル',
+                  link: '/ja/docs/configuration',
+                  collapsed: true,
+                  items: [
+                    { text: 'トップレベル', link: '/ja/docs/configuration#top-level' },
+                    { text: 'output', link: '/ja/docs/configuration#output' },
+                    { text: 'sources', link: '/ja/docs/configuration#sources' },
+                    { text: 'sidebar', link: '/ja/docs/configuration#sidebar' },
+                    { text: 'toc', link: '/ja/docs/configuration#toc' },
+                    { text: 'assets', link: '/ja/docs/configuration#assets' },
+                    { text: 'mermaid', link: '/ja/docs/configuration#mermaid' },
+                    { text: 'highlight', link: '/ja/docs/configuration#highlight' },
+                    { text: 'html', link: '/ja/docs/configuration#html' }
+                  ]
+                }
               ]
             },
             {

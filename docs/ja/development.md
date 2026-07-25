@@ -24,7 +24,7 @@ monodocs/
           pipeline/         # buildPages / buildSidebar / renderSingleHtml
           themes/default/   # HTML テンプレート / CSS / クライアント JS
       cli/                  # CLI（monodocs コマンド）
-  examples/ja/              # 全記法・全機能のショーケース（日本語。markdown / asciidoc / mixed）
+  examples/ja/              # 全記法・全機能のサンプル（日本語。markdown / asciidoc / mixed）
   examples/en/              # 同上の英語版
   site/                     # アプリ紹介の静的 Web サイト（VitePress）
   docs/                     # 開発ドキュメント（本フォルダ）

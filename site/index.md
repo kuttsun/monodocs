@@ -21,5 +21,5 @@ features:
   - title: Built for reading
     details: In-page search, table of contents, prev/next navigation, dark mode, and a print layout are all included.
   - title: Self-hosting docs
-    details: This very documentation can be exported as a single HTML by monodocs itself — try the Single-file demo in the top nav.
+    details: This very documentation can be exported as a single HTML by monodocs itself — try the Single-file sample in the top nav.
 ---

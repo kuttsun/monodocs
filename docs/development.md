@@ -25,7 +25,7 @@ monodocs/
           pipeline/         # buildPages / buildSidebar / renderSingleHtml
           themes/default/   # HTML template / CSS / client JS
       cli/                  # CLI (monodocs command)
-  examples/ja/              # Showcase of all notations and all features (Japanese. markdown / asciidoc / mixed)
+  examples/ja/              # Sample of all notations and all features (Japanese. markdown / asciidoc / mixed)
   examples/en/              # English version of the above
   site/                     # Static web site introducing the app (VitePress)
   docs/                     # Development documentation (this folder)
