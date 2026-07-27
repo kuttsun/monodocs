@@ -313,11 +313,13 @@ docker run --rm \
 
 ### 8.4 GitHub Actions
 
+No dedicated action is published; a workflow calls the npm CLI directly.
+
 ```yaml
-- uses: your-org/monodocs-action@v1
+- uses: actions/setup-node@v4
   with:
-    input: docs
-    output: dist/manual.html
+    node-version: 22
+- run: npx --yes monodocs build ./docs -o ./dist/manual.html
 ```
 
 ### 8.5 Standalone Binary
@@ -1806,8 +1808,7 @@ Make it easy to use for teams and CI.
 Implementation scope:
 
 - Prepare npm package publishing
-- Create a GitHub Action
-- GitLab CI sample
+- Document ready-to-use GitHub Actions and GitLab CI workflows
 - Improve the README
 - Improve examples
 - Decide on a versioning policy
@@ -1820,6 +1821,11 @@ Completion criteria:
 
 A Docker image for users will not be provided. The existing dedicated Docker image used in the development/test environment
 will continue to be maintained.
+
+A dedicated reusable GitHub Action (`monodocs-action`) is not published. monodocs is a plain npm CLI, so a workflow
+only needs `actions/setup-node` and `npx monodocs`, and a separate action would add a release and support surface with
+no benefit for that. The CI guide on the documentation site carries the GitHub Actions and GitLab CI workflows instead.
+Revisit this if usage shows that a reusable action would remove real boilerplate.
 
 ---
 

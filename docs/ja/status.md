@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-07-24
+最終更新: 2026-07-27
 
 ## 対応状況
 
@@ -90,6 +90,8 @@
 - [x] `next` tag で `0.6.0-beta.1`、続いて `0.6.0-beta.2`（Windows のブラウザ自動検出を追加）を npm へ公開（最初の公開版のため、stable リリースまでは `latest` も同じ版を指す）
 - [x] 公開した beta を Linux x64 / Windows x64 で検証（install、HTML / PDF / both / Mermaid pre-render、`PUPPETEER_EXECUTABLE_PATH` なしのブラウザ自動検出、加えて serve / watch / uninstall / README の手動確認）
 - [x] stable `0.6.0` を公開・検証
+- [x] `validate`、HTML、PDF の GitHub Actions / GitLab CI ワークフローを公式サイトに掲載
+      （専用の再利用可能な GitHub Action は公開しない。[roadmap.md](roadmap.md) を参照）
 
 ## 対応記法
 
