@@ -2,7 +2,7 @@
 
 [English](../oss-npm-roadmap.md)
 
-最終更新: 2026-07-24
+最終更新: 2026-07-27
 
 ## 1. 目的
 
@@ -149,7 +149,9 @@ SEA 単体バイナリは M5 の npm 安定版公開後に着手を判断する�
 - [x] `CONTRIBUTING.md` を追加する。
 - [x] `SECURITY.md` を追加する。
 - [x] GitHub Releases を変更履歴の正本とする。
-- [ ] 必要に応じて `CODE_OF_CONDUCT.md` を追加する。
+- [x] 現時点では `CODE_OF_CONDUCT.md` を追加しないと決定する。期待する振る舞いは `CONTRIBUTING.md` に
+      記載しており、メンテナーは 1 人で、行動規範に明記できる報告窓口も無い（脆弱性報告は GitHub の
+      非公開報告のみに限定している）。コントリビューターが増えた時点で再検討する。
 - [x] サポート範囲と SLA を提供しないことを明記する。
 - [x] コントリビューションが MIT License で提供されることを明記する。
 
@@ -161,7 +163,10 @@ SEA 単体バイナリは M5 の npm 安定版公開後に着手を判断する�
 - [x] 脆弱性の非公開報告経路を有効化する。
 - [x] デフォルトブランチを保護する。
 - [x] CI 成功とレビューをマージ条件にする。
-- [ ] Dependabot または Renovate の導入方針を決める。
+- [x] Renovate ではなく Dependabot を採用し、`.github/dependabot.yml` で設定する。Dependabot alerts と
+      security updates はリポジトリで有効化済みのため、新しいサービスを増やさずに済む。定期更新は
+      GitHub Actions、`app/` workspace、`site/` パッケージを対象に毎月実行し、minor と patch はセット
+      ごとにまとめ、major は個別に上げる。
 - [x] 依存関係追加時のライセンス確認ルールを定める。
 
 ### 6.3 完了条件

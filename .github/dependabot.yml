@@ -1,0 +1,49 @@
+# Scheduled dependency updates.
+#
+# Security updates are enabled separately in the repository settings and are not
+# affected by this file; these are the routine version bumps.
+#
+# The repository holds two independent dependency sets: the CLI / core workspace
+# in app/ (pnpm) and the documentation site in site/ (npm). Minor and patch
+# updates are grouped into one pull request per set to keep review cost low,
+# while majors arrive individually because they need their own verification.
+version: 2
+
+updates:
+  # Actions used by pr-ci, release, verify-published, and deploy-site.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns: ['*']
+
+  # CLI / core workspace. Runtime dependencies here are bundled into the
+  # published npm package, so PR CI must pass before any of these merge.
+  - package-ecosystem: npm
+    directory: /app
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+    groups:
+      app:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  # Documentation site. Never shipped to users.
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+    groups:
+      site:
+        patterns: ['*']
+        update-types: [minor, patch]

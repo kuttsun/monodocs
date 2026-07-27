@@ -2,7 +2,7 @@
 
 [日本語](ja/oss-npm-roadmap.md)
 
-Last updated: 2026-07-24
+Last updated: 2026-07-27
 
 ## 1. Purpose
 
@@ -141,7 +141,10 @@ The SEA standalone binary is a future item whose start will be decided after the
 - [x] Add `CONTRIBUTING.md`.
 - [x] Add `SECURITY.md`.
 - [x] Make GitHub Releases the canonical source of the changelog.
-- [ ] Add `CODE_OF_CONDUCT.md` if needed.
+- [x] Decide not to add a `CODE_OF_CONDUCT.md` for now. `CONTRIBUTING.md` states the expected conduct, the
+      project is maintained by a single person, and there is no separate reporting channel to name in one
+      (vulnerability reporting deliberately goes through GitHub private reporting only). Revisit if the number
+      of contributors grows.
 - [x] Clearly state that no support scope or SLA is provided.
 - [x] Clearly state that contributions are provided under the MIT License.
 
@@ -153,7 +156,10 @@ The SEA standalone binary is a future item whose start will be decided after the
 - [x] Enable a private reporting path for vulnerabilities.
 - [x] Protect the default branch.
 - [x] Make CI success and review merge conditions.
-- [ ] Decide on an adoption policy for Dependabot or Renovate.
+- [x] Adopt Dependabot rather than Renovate, configured in `.github/dependabot.yml`. Dependabot alerts and
+      security updates are already enabled on the repository, so no additional service is introduced. Scheduled
+      updates run monthly for GitHub Actions, the `app/` workspace, and the `site/` package, with minor and
+      patch updates grouped per set and majors raised individually.
 - [x] Establish rules for license verification when adding dependencies.
 
 ### 6.3 Completion Criteria
