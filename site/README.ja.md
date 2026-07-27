@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-monodocs 公式サイト（ランディング + ドキュメント）。**VitePress** で構築し、GitHub Pages / GitLab Pages のどちらでも配信できる静的出力を生成する。
+monodocs 公式サイト（ランディング + ドキュメント）。**VitePress** で構築し、`.github/workflows/deploy-site.yml` が GitHub Pages へデプロイする。
 
 `app/`（ツール本体の pnpm workspace）とは独立したスタンドアロン npm パッケージ。ビルドはすべて Docker 内で行い、ホストに Node / npm を入れる必要はない。
 
@@ -48,7 +48,7 @@ scripts/site-build.sh preview            # ↑ + プレビュー起動
 
 ## 公開先（base パス）
 
-GitHub / GitLab の **project pages はサブパス配信**（例: `https://kuttsun.gitlab.io/monodocs/`）なので、ビルド時に `SITE_BASE` を渡す。独自ドメイン / user pages なら不要（既定 `/`）。
+GitHub の **project pages はサブパス配信**（例: `https://kuttsun.github.io/monodocs/`）なので、デプロイ時に `SITE_BASE` を渡す。独自ドメイン / user pages なら不要（既定 `/`）。
 
 ```bash
 SITE_BASE=/monodocs/ scripts/site-build.sh

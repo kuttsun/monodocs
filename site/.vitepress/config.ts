@@ -18,13 +18,12 @@ import { defineConfig } from 'vitepress'
 
 const repo = 'https://github.com/kuttsun/monodocs'
 
-// GitHub Pages と移行期間中の GitLab Pages は project pages のサブパス配信（例 /monodocs/）。
-// footer の生 HTML リンクは
+// GitHub Pages の project pages はサブパス配信（例 /monodocs/）。footer の生 HTML リンクは
 // VitePress のルーティングを経由しないため、base を明示的に前置してリンク切れを防ぐ。
 const base = process.env.SITE_BASE ?? '/'
 
 export default defineConfig({
-  // GitHub / GitLab の project pages はサブパス（例 /monodocs/）で配信されるため、
+  // GitHub の project pages はサブパス（例 /monodocs/）で配信されるため、
   // base はビルド時に SITE_BASE で切り替える。独自ドメイン / user pages なら '/'。
   base,
 
