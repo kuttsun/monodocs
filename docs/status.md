@@ -15,7 +15,11 @@ Last updated: 2026-07-27
 | Search / table of contents / watch / serve        | ✅ Done        | v0.4           |
 | PDF output                                        | ✅ Done        | v0.5           |
 | npm / GitHub Actions                              | ✅ Done        | v0.6           |
-| VS Code extension                                 | 🚧 Planned     | v0.7           |
+| VS Code extension                                 | ⏸️ Frozen      | v0.7           |
+
+The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
+disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
+undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and v0.8 is the next milestone.
 
 ## Completion Criteria Status
 
