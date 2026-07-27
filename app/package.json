@@ -25,7 +25,7 @@
     "ci:check": "pnpm format:check && pnpm build && pnpm typecheck && pnpm test && pnpm bundle"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.1.1",
     "esbuild": "^0.28.1",
     "postject": "^1.0.0-alpha.6",
     "prettier": "^3.8.5",
