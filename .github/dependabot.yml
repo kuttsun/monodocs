@@ -30,6 +30,17 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: chore
+    # pnpm refuses to install versions younger than `minimumReleaseAge` (24 hours by
+    # default in pnpm 11) and checks the committed lockfile against it, so an update
+    # proposed too early fails CI at install. Stay clear of that cutoff.
+    cooldown:
+      default-days: 3
+    ignore:
+      # @types/node describes the runtime the code is compiled against, and this package
+      # supports the Node 22 line. Newer typings would let APIs missing from the oldest
+      # supported Node pass typecheck. Revisit when the supported floor moves to a new major.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       app:
         patterns: ['*']
@@ -43,6 +54,10 @@ updates:
     open-pull-requests-limit: 3
     commit-message:
       prefix: chore
+    # npm enforces no release-age policy of its own here, but the same reasoning applies:
+    # a freshly published version is the one most likely to be a compromised release.
+    cooldown:
+      default-days: 3
     groups:
       site:
         patterns: ['*']
