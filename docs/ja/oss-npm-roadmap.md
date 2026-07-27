@@ -27,7 +27,7 @@ npx monodocs build ./docs -o ./dist/manual.html
 
 - ソースコードは MIT License で公開する。
 - GitHub を正式なソースリポジトリおよび公開基盤とする。
-- GitLab は GitHub Pages への移行まで既存 Pages 配信だけに残し、新しいリリース自動化は GitHub に構築する。
+- ドキュメントサイト、CI、リリース自動化はすべて GitHub で行う。GitLab Pages 配信は廃止した。
 - バージョンには Semantic Versioning を使用する。
 - 公開済みの成果物は差し替えず、不具合は新しいバージョンで修正する。
 - npm の初回公開では CLI パッケージ `monodocs` のみを公開する。
@@ -40,7 +40,7 @@ npx monodocs build ./docs -o ./dist/manual.html
 
 ### 3.1 GitHub への移行
 
-ソースリポジトリ、デフォルトブランチ、package metadata は GitHub へ移行済みです。GitLab は GitHub Pages へ切り替えるまで、既存 Pages 配信だけに一時的に残します。
+GitHub への移行は完了しました。ソースリポジトリ、ドキュメントサイト、CI、リリースはすべて GitHub で運用します。
 
 移行済みの項目:
 
@@ -50,16 +50,14 @@ npx monodocs build ./docs -o ./dist/manual.html
 - Issue / Pull Request template
 - Private vulnerability reporting
 - Dependency graph、Dependabot alerts / security updates、secret scanning、push protection
-
-M2 完了と M4 beta release までに残る GitHub 設定:
-
 - GitHub Actions の Pull Request CI
 - GitHub Releases と Artifact Attestations
 - npm Trusted Publishing
+- GitHub Pages によるドキュメントサイト配信（`deploy-site.yml`）
 
-移行までは `.gitlab-ci.yml` の Pages 配信を維持する。将来破棄する GitLab 固有のリリース処理は
-増やさず、format、typecheck、test、build、bundle などの検証手順は package scripts として
-プラットフォーム非依存に保つ。
+GitLab を残していた理由は Pages 配信だけだったため、`.gitlab-ci.yml` は削除しました。format、typecheck、
+test、build、bundle などの検証手順は、GitHub Actions の外でも実行できるよう package scripts として
+プラットフォーム非依存に保ちます。
 
 ### 3.2 npm パッケージ構造
 

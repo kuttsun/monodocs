@@ -2,7 +2,7 @@
 
 [日本語](README.ja.md)
 
-The official monodocs landing page and documentation site. It is built with **VitePress** and produces static output suitable for GitHub Pages or GitLab Pages.
+The official monodocs landing page and documentation site. It is built with **VitePress** and deployed to GitHub Pages by `.github/workflows/deploy-site.yml`.
 
 The site is a standalone npm package, separate from the `app/` pnpm workspace. All builds run in Docker, so Node.js and npm are not required on the host.
 
@@ -48,7 +48,7 @@ scripts/site-build.sh preview            # Build and start the preview server
 
 ## Deployment base path
 
-GitHub or GitLab project pages are served from a subpath such as `https://kuttsun.github.io/monodocs/`. Pass `SITE_BASE` for those deployments. Omit it for a custom domain or user pages, where the default is `/`.
+GitHub project pages are served from a subpath such as `https://kuttsun.github.io/monodocs/`, so the deployment passes `SITE_BASE`. Omit it for a custom domain or user pages, where the default is `/`.
 
 ```bash
 SITE_BASE=/monodocs/ scripts/site-build.sh

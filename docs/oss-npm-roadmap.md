@@ -25,7 +25,7 @@ The initial release will be the npm package only. The SEA standalone binary is d
 
 - Publish the source code under the MIT License.
 - GitHub is the official source repository and publishing platform.
-- Retain GitLab only for the existing Pages delivery until GitHub Pages replaces it; build all new release automation on GitHub.
+- Use GitHub for the documentation site, CI, and release automation. The former GitLab Pages delivery has been retired.
 - Use Semantic Versioning for versions.
 - Do not replace already-published artifacts; fix defects in new versions.
 - For the first npm publish, publish only the CLI package `monodocs`.
@@ -38,7 +38,8 @@ The initial release will be the npm package only. The SEA standalone binary is d
 
 ### 3.1 Migration to GitHub
 
-The source repository, default branch, and package metadata have migrated to GitHub. GitLab is retained temporarily only for the existing Pages delivery until GitHub Pages replaces it.
+The migration to GitHub is complete. GitHub is now the only platform used for the source repository, the
+documentation site, CI, and releases.
 
 Completed migration items:
 
@@ -48,14 +49,14 @@ Completed migration items:
 - Issue and pull request templates
 - Private vulnerability reporting
 - Dependency graph, Dependabot alerts and security updates, secret scanning, and push protection
-
-Remaining GitHub setup items to complete before M2 and the M4 beta release:
-
 - GitHub Actions Pull Request CI
 - GitHub Releases and Artifact Attestations
 - npm Trusted Publishing
+- Documentation site delivery through GitHub Pages (`deploy-site.yml`)
 
-Until GitHub Pages replaces it, maintain the existing Pages delivery in `.gitlab-ci.yml`. Do not add more GitLab-specific release processing that will be discarded, and keep verification steps such as format, typecheck, test, build, and bundle platform-independent as package scripts.
+The Pages delivery was the last reason to keep GitLab, so `.gitlab-ci.yml` has been removed. Keep verification
+steps such as format, typecheck, test, build, and bundle platform-independent as package scripts so they remain
+runnable outside GitHub Actions.
 
 ### 3.2 npm Package Structure
 
