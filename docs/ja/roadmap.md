@@ -313,11 +313,13 @@ docker run --rm \
 
 ### 8.4 GitHub Actions
 
+専用の Action は公開せず、ワークフローから npm CLI を直接呼び出す。
+
 ```yaml
-- uses: your-org/monodocs-action@v1
+- uses: actions/setup-node@v4
   with:
-    input: docs
-    output: dist/manual.html
+    node-version: 22
+- run: npx --yes monodocs build ./docs -o ./dist/manual.html
 ```
 
 ### 8.5 単体バイナリ
@@ -1807,8 +1809,7 @@ Markdown / AsciiDoc の混在ドキュメントを単一 HTML に出力できる
 実装範囲：
 
 - npm パッケージ公開準備
-- GitHub Actions 作成
-- GitLab CI サンプル
+- そのまま使える GitHub Actions / GitLab CI ワークフローの文書化
 - README 整備
 - examples 整備
 - バージョニング方針決定
@@ -1821,6 +1822,11 @@ Markdown / AsciiDoc の混在ドキュメントを単一 HTML に出力できる
 
 利用者向け Docker イメージは提供しない。開発・テスト環境で使用する既存の専用 Docker イメージは
 引き続き維持する。
+
+専用の再利用可能な GitHub Action（`monodocs-action`）は公開しない。monodocs は普通の npm CLI であり、
+ワークフローに必要なのは `actions/setup-node` と `npx monodocs` だけなので、独立した Action を作ると
+リリースとサポートの対象が増えるだけになる。GitHub Actions と GitLab CI のワークフローは、公式サイトの
+CI ページに掲載する。定型処理を実際に減らせると分かった時点で再検討する。
 
 ---
 

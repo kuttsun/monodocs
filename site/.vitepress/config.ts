@@ -62,6 +62,7 @@ export default defineConfig({
               items: [
                 { text: 'Getting Started', link: '/docs/getting-started' },
                 { text: 'Command Options', link: '/docs/commands' },
+                { text: 'CI', link: '/docs/ci' },
                 {
                   text: 'Configuration',
                   link: '/docs/configuration',
@@ -117,6 +118,7 @@ export default defineConfig({
               items: [
                 { text: 'はじめに', link: '/ja/docs/getting-started' },
                 { text: 'コマンドオプション', link: '/ja/docs/commands' },
+                { text: 'CI で使う', link: '/ja/docs/ci' },
                 {
                   text: '設定ファイル',
                   link: '/ja/docs/configuration',

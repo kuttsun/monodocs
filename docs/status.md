@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-07-24
+Last updated: 2026-07-27
 
 ## Support Status
 
@@ -90,6 +90,8 @@ Last updated: 2026-07-24
 - [x] Publish `0.6.0-beta.1`, then `0.6.0-beta.2` (adding Windows browser auto-detection), to npm under the `next` tag (the first published version also holds `latest` until the stable release)
 - [x] Verify the published beta on Linux x64 and Windows x64 (install, HTML / PDF / both / Mermaid pre-render, and browser auto-detection with no `PUPPETEER_EXECUTABLE_PATH`; plus manual serve / watch / uninstall / README checks)
 - [x] Publish and verify the stable `0.6.0` release
+- [x] Document GitHub Actions and GitLab CI workflows for `validate`, HTML, and PDF on the documentation site
+      (a dedicated reusable GitHub Action is not published; see [roadmap.md](roadmap.md))
 
 ## Supported Syntax
 
