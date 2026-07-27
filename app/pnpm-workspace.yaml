@@ -2,8 +2,6 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: true
-minimumReleaseAgeExclude:
-  - prettier@3.8.5
 # postcss <= 8.5.17 has a high-severity path-traversal in source-map auto-loading
 # (GHSA-r28c-9q8g-f849). It is pulled transitively via vitest -> vite (a dev/test-only
 # dependency, not shipped in the published bundle). Force a patched release so `pnpm audit`

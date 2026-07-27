@@ -44,6 +44,14 @@ monodocs/
 
 `app/` ワークスペースは `postcss` を patched release（`^8.5.18`）へ pnpm `overrides`（`pnpm-workspace.yaml`）で固定しています（pnpm 11 系は `package.json` の `pnpm` フィールドを読まないため）。`postcss <= 8.5.17` は高深刻度の path traversal advisory（GHSA-r28c-9q8g-f849）を持ち、`vitest -> vite` 経由で transitive に入ります（dev/test 専用で、公開バンドルには含まれません）。この override により `pnpm audit` を green に保ちます。`vite` が自前で patched な `postcss` を解決するようになったら削除を再検討してください。
 
+### 依存関係の公開後経過時間ポリシー
+
+pnpm 11 は、公開から `minimumReleaseAge` 分（既定 1440 分＝24 時間）が経っていないバージョンをインストールしません。`pnpm install --frozen-lockfile` も、コミット済み lockfile を同じポリシーで検証します。悪意あるリリースはたいてい 1 時間ほどでレジストリから削除されるため、1 日待ってから取り込めばその時間帯をほぼ回避できます。この設定はリポジトリで指定しておらず、pnpm の既定値に任せています。
+
+したがって `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` で install が失敗する場合、そのバージョンが壊れているのではなく、lockfile が新しすぎるバージョンを指しているという意味です。ポリシーを迂回せず、カットオフを過ぎてから再実行してください。
+
+Dependabot は独自のスケジュールでバージョンを解決するため、`.github/dependabot.yml` では npm 系に 3 日の `cooldown` を設定し、CI が走る時点で pnpm のカットオフを過ぎているようにしています。ただし cooldown は Dependabot の security update には適用されません。緊急のセキュリティリリースは pnpm のカットオフより新しいことがあり、その場合は（一時的な `minimumReleaseAgeExclude` の追加など）意図的な判断が必要で、黙って迂回してはいけません。
+
 ### サイト依存関係のセキュリティ override
 
 `site/` の standalone package は Vite を一時的に `~6.4.3` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を継続して通してください。安全な Vite の範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。

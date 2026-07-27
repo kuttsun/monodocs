@@ -47,6 +47,24 @@ carries a high-severity path-traversal advisory (GHSA-r28c-9q8g-f849) and reache
 via `vitest -> vite` — a dev/test-only dependency that is not shipped in the published bundle. The override
 keeps `pnpm audit` green; revisit and remove it once `vite` resolves a patched `postcss` on its own.
 
+### Release-Age Policy for Dependencies
+
+pnpm 11 refuses to install any version published less than `minimumReleaseAge` minutes ago, defaulting to
+1440 (24 hours), and `pnpm install --frozen-lockfile` verifies the committed lockfile against the same
+policy. Malicious releases are usually removed from the registry within about an hour, so waiting a day
+before consuming a new version avoids most of that window. The repository does not configure the setting;
+it relies on the pnpm default.
+
+An install that fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` therefore means the lockfile references
+a version that is too new, not that the version is broken. Wait until it ages past the cutoff and re-run,
+rather than working around the policy.
+
+Because Dependabot resolves versions on its own schedule, `.github/dependabot.yml` sets a `cooldown` of three
+days for the npm ecosystems so proposed updates are already past the pnpm cutoff when their CI runs. Note that
+cooldown does not apply to Dependabot security updates: an urgent security release can still be newer than the
+pnpm cutoff, and that case needs a deliberate decision (for example a temporary `minimumReleaseAgeExclude`
+entry) rather than a silent bypass.
+
 ### Site Dependency Security Override
 
 The standalone package under `site/` temporarily overrides Vite to `~6.4.3`. VitePress 1.6.4 still
