@@ -4,13 +4,13 @@
   },
   "files": ["dist/monodocs.cjs", "LICENSE", "README.md", "README.ja.md", "THIRD-PARTY-NOTICES.txt"],
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12.0"
   },
   "publishConfig": {
     "access": "public",
     "tag": "next"
   },
   "optionalDependencies": {
-    "puppeteer-core": "^24.0.0"
+    "puppeteer-core": "^25.0.0"
   }
 }

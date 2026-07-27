@@ -6,7 +6,7 @@ Markdown と AsciiDoc のディレクトリから、自己完結した単一 HTM
 
 ## 必要環境
 
-- Node.js 22 以上
+- Node.js 22.12.0 以上
 - PDF 出力と Mermaid pre-render には Chromium または Google Chrome。システム上で自動検出できない場合は `PUPPETEER_EXECUTABLE_PATH` を設定してください。
 
 npm package は HTML / PDF 出力と Mermaid の client / pre-render mode に対応します。standalone SEA binary は将来の別配布です。

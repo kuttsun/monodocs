@@ -101,7 +101,8 @@ The SEA standalone binary is a future item whose start will be decided after the
 ### 5.1 Confirmed Initial Policy
 
 - The npm package will be individually owned, with the initial maintainer being only `kuttsun`. The actual npm account name to be used will be finalized just before the publishing work.
-- The npm version targets Node.js 22 or later.
+- The npm version targets Node.js 22.12.0 or later. The floor was `>=22` until `puppeteer-core` 25 raised
+  its own requirement to 22.12.0; PDF output and Mermaid pre-render depend on it, so the package follows.
 - The initial supported targets for the npm version are Linux x64 and Windows x64, and HTML, validate, watch, and serve will be verified with GitHub Actions before the beta publish. Linux arm64 and macOS arm64 will be considered for addition once an environment for continuous verification is available.
 - The SEA standalone binary is out of scope for v0.6 and will be reconsidered after the npm stable publish.
 - Chromium will not be auto-downloaded. `PUPPETEER_EXECUTABLE_PATH` takes top priority, and if unspecified, the standard Chromium / Google Chrome install locations are searched on Linux and Windows (on Windows, Chromium-based Microsoft Edge is also used as a fallback). macOS has no built-in candidates yet, so `PUPPETEER_EXECUTABLE_PATH` must be set there.
@@ -119,7 +120,7 @@ The SEA standalone binary is a future item whose start will be decided after the
 - [x] The npm package is individually owned.
 - [x] Make `kuttsun` the only initial npm maintainer.
 - [x] Finalize the policy of publishing only the CLI initially and maintaining core as an internal package.
-- [x] The npm version supports Node.js 22 or later.
+- [x] The npm version supports Node.js 22.12.0 or later (raised from `>=22` when adopting `puppeteer-core` 25).
 - [x] Set the initial supported targets of the npm version to Linux x64 and Windows x64.
 - [x] Exclude the SEA standalone binary from the v0.6 distribution targets.
 - [x] Do not auto-acquire Chromium; search from environment variables and executables on the system.

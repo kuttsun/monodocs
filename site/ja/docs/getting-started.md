@@ -12,7 +12,7 @@ monodocs build ./docs -o ./dist/manual.html
 
 ## インストール
 
-monodocs は npm で公開しています。Node.js 22 以上が必要で、対応プラットフォームは Linux x64 と Windows x64 です。
+monodocs は npm で公開しています。Node.js 22.12.0 以上が必要で、対応プラットフォームは Linux x64 と Windows x64 です。
 
 ```bash
 npm install -g monodocs

@@ -8,7 +8,7 @@ monodocs は普通の npm CLI なので、専用の Action やプラグインは
 
 | 要件 | 対象 |
 | ---- | ---- |
-| Node.js 22 以上 | すべて |
+| Node.js 22.12.0 以上 | すべて |
 | Chromium または Google Chrome | `--format pdf` / `--format both` と `mermaid.mode: pre-render` のみ |
 | ビルド時のネットワーク | `mermaid.mode: client` で CDN ランタイムを使う場合のみ |
 

@@ -12,7 +12,7 @@ The output is a single HTML with no external runtime: in-page search, a table of
 
 ## Install
 
-monodocs is published on npm and requires Node.js 22 or later. Linux x64 and Windows x64 are the supported platforms.
+monodocs is published on npm and requires Node.js 22.12.0 or later. Linux x64 and Windows x64 are the supported platforms.
 
 ```bash
 npm install -g monodocs

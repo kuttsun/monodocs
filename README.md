@@ -16,7 +16,7 @@
 
 ## Installation
 
-`monodocs` is distributed as an npm package for Node.js 22 or later. Linux x64 and Windows x64 are the supported platforms.
+`monodocs` is distributed as an npm package for Node.js 22.12.0 or later. Linux x64 and Windows x64 are the supported platforms.
 
 ```bash
 npm install -g monodocs
@@ -27,7 +27,7 @@ PDF output and Mermaid pre-rendering require a system-installed Chromium or Goog
 | Item                            | Support                     |
 | ------------------------------- | --------------------------- |
 | Distribution                    | npm (`npm install` / `npx`) |
-| Node.js                         | 22 or later                 |
+| Node.js                         | 22.12.0 or later            |
 | HTML / validate / watch / serve | Linux x64, Windows x64      |
 | PDF / pre-render                | Requires system Chromium    |
 | Standalone SEA binary           | Outside the v0.6 scope      |

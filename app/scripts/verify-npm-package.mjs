@@ -113,6 +113,22 @@ try {
     throw new Error("Published package contains workspace:* dependencies");
   const installedPackage = JSON.parse(packageJson);
 
+  // puppeteer-core is external in the bundle, so users resolve it from the publish manifest rather
+  // than from the workspace. The two ranges are maintained by hand in different files and can drift,
+  // which would leave users on a version nothing in CI exercises. Compare them here, where the
+  // published manifest is the one being smoke-tested.
+  const workspaceCore = JSON.parse(
+    await readFile(resolve(appRoot, "packages/core/package.json"), "utf8"),
+  );
+  const workspaceRange = workspaceCore.optionalDependencies?.["puppeteer-core"];
+  const publishedRange = installedPackage.optionalDependencies?.["puppeteer-core"];
+  if (workspaceRange !== publishedRange) {
+    throw new Error(
+      `puppeteer-core range mismatch: packages/core declares ${workspaceRange}, ` +
+        `the published package declares ${publishedRange}. Update package.publish.json as well.`,
+    );
+  }
+
   const outputDir = join(temporaryRoot, "output");
   const markdownFixtureDir = join(temporaryRoot, "markdown");
   const markdownOutput = join(outputDir, "markdown.html");

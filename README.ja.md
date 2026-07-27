@@ -16,7 +16,7 @@
 
 ## インストール
 
-`monodocs` は **npm パッケージ**として配布し、Node.js 22 以上で動作します。対応対象は Linux x64 と Windows x64 です。
+`monodocs` は **npm パッケージ**として配布し、Node.js 22.12.0 以上で動作します。対応対象は Linux x64 と Windows x64 です。
 
 ```bash
 npm install -g monodocs
@@ -27,7 +27,7 @@ PDF 出力と Mermaid pre-render には、システムにインストールさ�
 | 項目                            | 初期サポート方針                              |
 | ------------------------------- | --------------------------------------------- |
 | 配布方法                        | npm（`npm install` / `npx`）のみ              |
-| Node.js                         | 22 以上                                       |
+| Node.js                         | 22.12.0 以上                                  |
 | HTML / validate / watch / serve | Linux x64、Windows x64                        |
 | PDF / pre-render                | システムにインストールされた Chromium が必要  |
 | SEA 単体バイナリ                | v0.6 の対象外。npm 安定版の公開後に改めて検討 |
