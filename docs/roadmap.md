@@ -335,7 +335,7 @@ monodocs-macos-arm64
 
 ### 8.6 VS Code Extension
 
-To be provided after the core / CLI stabilizes.
+Frozen; see v0.7 in the roadmap section.
 
 Assumed features:
 
@@ -1507,6 +1507,8 @@ Validation targets:
 
 ## 26. VS Code Extension
 
+> This chapter describes a frozen milestone. See v0.7 in the roadmap section for why it is not scheduled.
+
 The VS Code extension is implemented after the core / CLI stabilizes.
 
 ### 26.1 Commands
@@ -1829,7 +1831,22 @@ Revisit this if usage shows that a reusable action would remove real boilerplate
 
 ---
 
-## v0.7: VS Code Extension
+## v0.7: VS Code Extension (frozen)
+
+**This milestone is frozen and not scheduled.** The version number stays reserved so the plan below remains
+readable if the work resumes; the next milestone to be worked on is v0.8.
+
+Three things led to the freeze:
+
+- Demand is unknown. No request for editor integration has arrived, and the npm CLI covers the same tasks
+  from a terminal or a `package.json` script.
+- The maintenance cost is disproportionate for a single maintainer. Marketplace publishing, signing, and a
+  release pipeline separate from npm would have to be built and kept working.
+- The core boundary is undecided. Section 26.3 assumes the extension calls `@monodocs/core` directly, but
+  core is still a private `0.0.0` workspace package with no public API, so that assumption cannot be acted on
+  without first settling whether the extension calls core or shells out to the CLI.
+
+Unfreezing means answering the third point first, because it determines the shape of everything else.
 
 Purpose:
 

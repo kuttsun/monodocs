@@ -15,7 +15,11 @@
 | 検索 / 目次 / watch / serve         | ✅ 完了   | v0.4           |
 | PDF 出力                            | ✅ 完了   | v0.5           |
 | npm / GitHub Actions                | ✅ 完了   | v0.6           |
-| VS Code 拡張                        | 🚧 予定   | v0.7           |
+| VS Code 拡張                        | ⏸️ 凍結   | v0.7           |
+
+VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
+メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
+[roadmap.md](roadmap.md) の v0.7 に記録しており、次のマイルストーンは v0.8 とする。
 
 ## 完了条件の達成状況
 
