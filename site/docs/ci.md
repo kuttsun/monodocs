@@ -8,7 +8,7 @@ monodocs is a plain npm CLI, so no dedicated action or plugin is required — in
 
 | Requirement | Applies to |
 | ----------- | ---------- |
-| Node.js 22 or later | Everything |
+| Node.js 22.12.0 or later | Everything |
 | Chromium or Google Chrome | `--format pdf` / `--format both` and `mermaid.mode: pre-render` only |
 | Network access at build time | `mermaid.mode: client` with the CDN runtime only |
 

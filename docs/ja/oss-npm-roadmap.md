@@ -105,7 +105,8 @@ SEA 単体バイナリは M5 の npm 安定版公開後に着手を判断する�
 
 - npm パッケージは個人所有とし、初期メンテナーは `kuttsun` のみとする。実際に使用する npm
   アカウント名は公開作業の直前に最終確認する。
-- npm 版は Node.js 22 以上を対象とする。
+- npm 版は Node.js 22.12.0 以上を対象とする。下限は `>=22` だったが、`puppeteer-core` 25 が自身の要件を
+  22.12.0 へ引き上げたため、これに合わせる（PDF 出力と Mermaid pre-render が依存している）。
 - npm 版の初期対応対象は Linux x64 と Windows x64 とし、ベータ公開前に GitHub Actions で
   HTML、validate、watch、serve を検証する。Linux arm64 と macOS arm64 は継続検証できる
   環境を用意した段階で追加を判断する。
@@ -127,7 +128,7 @@ SEA 単体バイナリは M5 の npm 安定版公開後に着手を判断する�
 - [x] npm パッケージは個人が所有する。
 - [x] npm の初期メンテナーを `kuttsun` のみにする。
 - [x] 初回は CLI のみを公開し、core は内部パッケージとして維持する方針を確定する。
-- [x] npm 版は Node.js 22 以上をサポートする。
+- [x] npm 版は Node.js 22.12.0 以上をサポートする（`puppeteer-core` 25 の採用に伴い `>=22` から引き上げ）。
 - [x] npm 版の初期対応対象を Linux x64 と Windows x64 とする。
 - [x] SEA 単体バイナリを v0.6 の配布対象から外す。
 - [x] Chromium は自動取得せず、環境変数とシステム上の実行ファイルから探索する。

@@ -7,7 +7,7 @@ Markdown and AsciiDoc files.
 
 ## Requirements
 
-- Node.js 22 or later
+- Node.js 22.12.0 or later
 - Chromium or Google Chrome for PDF output and Mermaid pre-rendering. Set
   `PUPPETEER_EXECUTABLE_PATH` when the browser is not discoverable on the
   system path.
