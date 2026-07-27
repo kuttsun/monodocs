@@ -4,9 +4,9 @@
 
 ## Supported versions
 
-`monodocs` is under development and has not reached its first stable release. Until v0.6.0 is released, security fixes are provided for the `main` branch on a best-effort basis. There is no SLA for response or remediation times.
+`monodocs` is in its 0.x series. The latest published minor version is the supported one: security fixes are released for it, and older minor versions receive fixes only for critical vulnerabilities. Support is provided on a best-effort basis, and there is no SLA for response or remediation times.
 
-After the 0.x releases begin, the latest minor version will normally be supported. Older minor versions will receive fixes only for critical vulnerabilities. Changes to version support will be announced in the release notes.
+Changes to version support are announced in the release notes.
 
 ## Reporting a vulnerability
 
