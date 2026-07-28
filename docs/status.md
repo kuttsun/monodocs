@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-07-28
+Last updated: 2026-07-29
 
 ## Support Status
 
@@ -115,6 +115,9 @@ undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and
 - [x] Wide content no longer disappears from the PDF: code blocks wrap, long unbreakable strings such as URLs break, tables are laid out as tables (not a scroll box) with the header row repeated on every page, and diagrams are capped at the page width
 - [x] On narrow screens the sidebar is an overlay drawer that starts closed, so the document opens on its content, and the page no longer scrolls horizontally
 - [x] Generated PDFs record the document title and `monodocs v<version>` as the creating and producing tool
+- [ ] Publish `0.8.0-beta.1` to npm under the `next` tag (0.7.0 is skipped: the version number stays reserved for the frozen VS Code extension milestone)
+- [ ] Verify the published beta on Linux x64 and Windows x64 (install, HTML / PDF / both / Mermaid pre-render, custom theme, custom sidebar, plus the release binary and its `.sha256` / `-NOTICES.txt`)
+- [ ] Publish and verify the stable `0.8.0` release, and pin the CI guide on the documentation site to it
 
 ## Supported Syntax
 

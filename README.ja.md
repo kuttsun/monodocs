@@ -24,13 +24,14 @@ npm install -g monodocs
 
 PDF 出力と Mermaid pre-render には、システムにインストールされた Chromium / Google Chrome が必要です（`monodocs` は自動ダウンロードしません）。Linux / Windows では標準的な配置場所から自動検出します（Windows では Chromium ベースの Microsoft Edge もフォールバックとして使います）。標準的でない場所や、自動検出の候補がない macOS などでは、`PUPPETEER_EXECUTABLE_PATH` で実行ファイルを明示してください。
 
-| 項目                            | 初期サポート方針                              |
-| ------------------------------- | --------------------------------------------- |
-| 配布方法                        | npm（`npm install` / `npx`）のみ              |
-| Node.js                         | 22.12.0 以上                                  |
-| HTML / validate / watch / serve | Linux x64、Windows x64                        |
-| PDF / pre-render                | システムにインストールされた Chromium が必要  |
-| SEA 単体バイナリ                | v0.6 の対象外。npm 安定版の公開後に改めて検討 |
+Node.js 無しで動くスタンドアロンバイナリを、Linux x64 / Windows x64 向けに各[リリース](https://github.com/kuttsun/monodocs/releases)へ添付しています。ヘッドレスブラウザをバンドルから外しているため、PDF 出力と Mermaid pre-render はバイナリでは利用できません。
+
+| 項目                            | サポート範囲                                   |
+| ------------------------------- | ---------------------------------------------- |
+| 配布方法                        | npm（`npm install` / `npx`）、リリースバイナリ |
+| Node.js                         | 22.12.0 以上（バイナリでは不要）               |
+| HTML / validate / watch / serve | Linux x64、Windows x64                         |
+| PDF / pre-render                | システムの Chromium が必要。npm パッケージのみ |
 
 ## クイックスタート
 
