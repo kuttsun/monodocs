@@ -1286,6 +1286,9 @@ window.__MONODOCS_DATA__ = {
   title: "Manual",
   initialRoute: "/setup/install",
   colorScheme: "light",
+  // Deepest level shown in the in-page table of contents. pages[].headings carries
+  // every h2+ heading so that search can jump to any of them.
+  tocMaxLevel: 3,
   pages: [
     {
       route: "/setup/install",
@@ -1310,16 +1313,41 @@ Search targets:
 - headings
 - plain text
 
-### 22.2 Future Implementation
+### 22.2 Scoring and Multiple Keywords
 
-Use something like `minisearch`.
+Already supported (v0.8). The search stays inside the theme's `app.js` with no added dependency:
+`minisearch` (the original candidate) would ship an index plus a runtime inside every generated
+document for gains that partial matching already covers, and monodocs bundles everything into one
+self-contained file.
 
-Candidates for support:
+The query is split on whitespace (the ideographic space included) into keywords, and a page is a hit
+only when **every** keyword appears in one of its fields (AND). Each keyword scores per field, so
+title hits outrank heading hits and heading hits outrank body hits. Repeated body occurrences add a
+capped bonus, and a query whose keywords appear in that order as a phrase gets an extra bonus (the whitespace between them may be of any kind or length). Ties
+keep document order.
 
-- Scoring
-- Multiple keywords
-- Highlighting
-- Improved Japanese search
+```text
+per keyword: title 100   heading 30   body 10 (+1 per extra occurrence, up to +5)
+phrase (highest applicable one only): title +40 / heading +20 / body +10
+```
+
+Keywords are matched after folding both sides to lowercase and mapping full-width alphanumerics
+(`ＰＤＦ`) to their half-width form. Folding preserves string length so highlight positions stay valid; NFKC is
+not used because it can change length. Japanese needs no word segmentation because matching is
+substring-based; a space-separated query works the same way as in English.
+
+A result that matched a heading links to that heading's element ID rather than the page top (the same
+mechanism as cross-file heading anchors, chapter 18.4), and shows the heading under the page title.
+Because search reaches any heading, the client receives every `h2`+ heading and narrows the in-page
+table of contents to `toc.maxLevel` itself.
+
+Keywords are highlighted with `<mark>` in the title, the heading, and the snippet. The snippet is the
+window of the body that contains the most distinct keywords.
+
+Remaining candidates:
+
+- In-body highlighting after navigating to a result
+- Keyboard navigation of the result list
 
 ---
 

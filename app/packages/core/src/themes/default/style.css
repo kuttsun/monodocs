@@ -386,13 +386,26 @@ body.sidebar-collapsed #sidebar {
   font-weight: 600;
 }
 
+/* 一致した見出し（その見出しへ直接飛ぶ結果）。 */
+.search-result-heading {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+
+.search-result-heading::before {
+  /* ページタイトルの下位であることを示す記号（読み上げ対象に含めてよい区切り）。 */
+  content: "› ";
+  color: var(--color-muted);
+}
+
 .search-result-snippet {
   display: block;
   font-size: 0.8rem;
   color: var(--color-muted);
 }
 
-.search-result-snippet mark {
+.search-result mark {
   background: var(--color-mark-bg);
   color: inherit;
 }

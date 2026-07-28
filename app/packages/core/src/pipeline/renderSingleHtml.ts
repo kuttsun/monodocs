@@ -88,10 +88,7 @@ function styleWithOverrides(style: string, input: RenderHtmlInput): string {
 }
 
 /** クライアント（目次・検索・前後ナビ）へ渡す 1 ページ分のデータ。 */
-function pageData(
-  page: Page,
-  tocMaxLevel: number,
-): {
+function pageData(page: Page): {
   route: string;
   title: string;
   hidden: boolean;
@@ -102,9 +99,11 @@ function pageData(
     route: page.route,
     title: page.title,
     hidden: page.hidden === true,
-    // 目次は h2 以降を対象にする（h1 はページタイトル相当のため除外）。最深レベルは設定で可変。
+    // h2 以降の見出しをすべて渡す（h1 はページタイトル相当のため除外）。検索は
+    // 一致した見出しへ直接飛ばすため深い見出しも必要で、目次側は tocMaxLevel で
+    // クライアントが絞り込む。
     headings: page.headings
-      .filter((h) => h.level >= 2 && h.level <= tocMaxLevel)
+      .filter((h) => h.level >= 2)
       .map((h) => ({ id: h.id, text: h.text, level: h.level })),
     text: page.text,
   };
@@ -181,8 +180,10 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     colorScheme,
     // Initial state used until the reader stores a choice ("standard" / "wide").
     contentWidthDefault,
+    // ページ内目次に出す見出しの最深レベル（クライアントが headings を絞り込む）。
+    tocMaxLevel,
     // 目次・検索・前後ナビ用のページメタ（本文 HTML は含めない）。
-    pages: input.pages.map((page) => pageData(page, tocMaxLevel)),
+    pages: input.pages.map(pageData),
   });
 
   let html = renderConditionalBlock(
