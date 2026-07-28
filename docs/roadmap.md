@@ -324,14 +324,31 @@ No dedicated action is published; a workflow calls the npm CLI directly.
 
 ### 8.5 Standalone Binary
 
-To be provided in the future.
+Already supported (v0.8). Every published GitHub Release carries a single executable per supported
+platform, built with Node 22's Single Executable Application support (`pnpm build:bin`), plus a
+`.sha256` file for verification and a `-NOTICES.txt` file. The binary embeds the npm dependencies and
+the Node.js runtime, and their licenses require the notices to travel with the redistributed
+artifact — a binary alone cannot carry them, so `pnpm build:bin` assembles the monodocs license, the
+Node.js license of the runtime it copied, and the generated third-party notices into one file that
+the release publishes next to each binary.
 
 ```text
-monodocs-windows-x64.exe
 monodocs-linux-x64
-monodocs-macos-x64
-monodocs-macos-arm64
+monodocs-windows-x64.exe
 ```
+
+Only the two platforms monodocs supports are published. macOS builds were listed in the original plan
+but are not produced: macOS is not in the supported set (it has no built-in browser detection either),
+and a build that can only ever be exercised on a CI runner would be published without anyone being
+able to reproduce a user's problem. Add them when macOS becomes a supported platform.
+
+PDF output and Mermaid `pre-render` are not available in the binary, because `puppeteer-core` is kept
+out of the bundle (chapter 21.2). The command fails with an explanatory message instead of degrading
+silently, and PR CI asserts that failure on both platforms so the limitation cannot rot.
+
+The binaries are unsigned. Code signing needs a certificate and a key-handling process that a single
+maintainer cannot run safely yet, so the documentation warns about the Windows SmartScreen prompt
+instead.
 
 ### 8.6 VS Code Extension
 

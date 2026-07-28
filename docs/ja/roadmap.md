@@ -324,14 +324,29 @@ docker run --rm \
 
 ### 8.5 単体バイナリ
 
-将来的に提供する。
+対応済み（v0.8）。公開した GitHub Release には、対応プラットフォームごとの単一実行ファイル
+（Node 22 の Single Executable Application を使う `pnpm build:bin` の出力）と、検証用の `.sha256`
+ファイル、そして `-NOTICES.txt` を添付する。バイナリは npm 依存と Node.js ランタイムを内包しており、
+それらのライセンスは再配布物に通知を伴わせることを求めるが、バイナリ単体では通知を持ち歩けない。
+そこで `pnpm build:bin` が monodocs のライセンス・複製した Node.js ランタイムのライセンス・生成済みの
+第三者ライセンス表記を 1 ファイルにまとめ、リリースで各バイナリの隣に公開する。
 
 ```text
-monodocs-windows-x64.exe
 monodocs-linux-x64
-monodocs-macos-x64
-monodocs-macos-arm64
+monodocs-windows-x64.exe
 ```
+
+公開するのは monodocs が対応する 2 プラットフォームだけとする。当初の計画には macOS 版もあったが
+提供しない。macOS は対応プラットフォームに含めておらず（ブラウザの自動検出も未対応）、CI ランナー
+でしか動かせないビルドを配ると、利用者の不具合を誰も再現できないまま公開することになるため。
+macOS を対応プラットフォームに加えるときに再検討する。
+
+バイナリでは PDF 出力と Mermaid の `pre-render` は使えない。`puppeteer-core` をバンドルに含めない
+ため（21.2 章）。黙って劣化させずエラーメッセージで失敗させ、その失敗を PR CI が両プラットフォーム
+で検証するので、この制約が形骸化しない。
+
+バイナリは署名しない。コード署名には証明書と鍵の取り扱い体制が要り、単独メンテナンス体制では
+安全に運用できないため、ドキュメントで Windows SmartScreen の警告について注意喚起する方針とする。
 
 ### 8.6 VS Code 拡張
 

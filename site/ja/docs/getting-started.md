@@ -32,6 +32,27 @@ npm install -D monodocs
 
 PDF 出力と Mermaid pre-render には、システムにインストールされた Chromium または Google Chrome が必要です（monodocs はブラウザを自動ダウンロードしません）。Linux と Windows では自動検出します（Windows では Chromium ベースの Microsoft Edge にもフォールバックします）。標準以外の場所にインストールしている場合や、自動検出に対応していない macOS などでは `PUPPETEER_EXECUTABLE_PATH` を指定してください。
 
+### スタンドアロンバイナリ（Node.js 不要）
+
+各リリースには Node ランタイムを同梱した単一実行ファイルも添付しています。Node.js が入っていない
+マシンでもそのまま動きます。[Releases ページ](https://github.com/kuttsun/monodocs/releases) から
+`monodocs-linux-x64` または `monodocs-windows-x64.exe` を、対応する `.sha256` ファイルとあわせて
+ダウンロードしてください。各バイナリには、同梱物（monodocs 本体・npm 依存・Node.js ランタイム）の
+ライセンスをまとめた `-NOTICES.txt` も添付しています。社内などで再配布する場合はバイナリと一緒に
+配布してください。
+
+```bash
+sha256sum -c monodocs-linux-x64.sha256   # ダウンロードの検証
+chmod +x monodocs-linux-x64
+./monodocs-linux-x64 build ./docs -o ./dist/manual.html
+```
+
+バイナリで使えるのは `build`（HTML）・`validate`・`watch`・`serve` です。**PDF 出力と Mermaid の
+`pre-render` は利用できません**。どちらもヘッドレスブラウザを `puppeteer-core` 経由で使いますが、
+これはバンドルに含めていないためで、実行するとその旨のエラーで失敗します。必要な場合は npm 版を
+使ってください。バイナリは署名していないため、Windows では初回実行時に SmartScreen の警告が出る
+ことがあります。
+
 ## 最初のビルド
 
 ```bash

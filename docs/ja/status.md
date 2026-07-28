@@ -109,7 +109,8 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [ ] テーマを切り替えられる
 - [x] カスタムサイドバー（`sidebar.mode: custom`）でサイドバーの構造・順序・タイトルを指定でき、同じ並びが前後ナビ・PDF のページ順・初期表示ページにも反映される
 - [x] カスタムサイドバーは存在しないパスをエラー、未掲載・`hidden`・重複を警告として報告する（`validate` で確認できる）
-- [ ] Node.js 無しで動く配布物（スタンドアロンバイナリ）を配布する
+- [x] Node.js 無しで動くスタンドアロンバイナリを Linux x64 / Windows x64 向けに GitHub Release へ `.sha256` と、同梱依存・Node.js ランタイムのライセンスをまとめた `-NOTICES.txt` を添えて添付する（macOS 版は公開しない。[roadmap.md](roadmap.md) 8.5 を参照）
+- [x] Pull Request CI が Linux x64 / Windows x64 でスタンドアロンバイナリをビルドし、PDF 出力が想定どおり失敗することも含めて smoke test する
 - [ ] Homebrew / Scoop / winget 対応を決定する
 - [ ] HTML / PDF の出力品質を改善する
 
