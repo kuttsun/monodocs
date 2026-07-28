@@ -106,7 +106,7 @@ export const markdownRenderer: SourceRenderer = {
   },
 
   async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
-    const out = { headings: [] as Heading[], text: "" };
+    const out = { headings: [] as Heading[], text: "", anchors: [] as string[] };
     let links: LinkRef[] = [];
 
     const file = await unified()
@@ -124,6 +124,7 @@ export const markdownRenderer: SourceRenderer = {
         const result = prefixIdsAndCollect(tree, context.page.id);
         out.headings = result.headings;
         out.text = result.text;
+        out.anchors = result.anchors;
       })
       .use(rehypeStringify)
       .process(source.raw);
@@ -132,6 +133,7 @@ export const markdownRenderer: SourceRenderer = {
       html: String(file),
       text: out.text,
       headings: out.headings,
+      anchors: out.anchors,
       links,
       assets: [],
     };

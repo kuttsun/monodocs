@@ -1089,19 +1089,7 @@ xref:install.adoc[インストール]
 
 ### 18.4 見出しリンク
 
-見出しリンクは難易度が高いため段階的に対応する。
-
-初期対応：
-
-```text
-ファイル単位リンクを優先する
-```
-
-将来対応：
-
-```text
-ファイル + 見出し ID を正確に変換する
-```
+対応済み。当初はファイル単位までの解決だったが、アンカーまで解決する。
 
 例：
 
@@ -1109,17 +1097,21 @@ xref:install.adoc[インストール]
 [認証設定](./config.md#認証設定)
 ```
 
-出力候補：
+出力：
 
 ```html
-<a href="#/setup/config?heading=setup-config-auth-settings">認証設定</a>
+<a href="#setup-config-認証設定">認証設定</a>
 ```
 
-または：
+当初の 2 候補のうち、`#/route?heading=…` ではなく要素 ID を採用した。要素 ID は
+`{page-id}-{元のID}`（19章）で既に一意化されており、テーマの router は「`/` で始まらない hash は
+その要素を含むページを表示する」経路を既に持ち、全ページを展開する PDF でも Chromium が同じ href を
+そのまま内部リンクにできる。`?heading=` 形式は route 記法と router の拡張が必要になるだけで、
+できることは変わらない。
 
-```html
-<a href="#setup-config-auth-settings">認証設定</a>
-```
+アンカーはリンク先ファイルが生成する ID と照合するため、Markdown から AsciiDoc の見出しを指す場合は
+Asciidoctor が生成する ID（例: `_details`）を書く必要がある。リンク先に存在しないアンカーはページ先頭へ
+フォールバックし、警告として報告する（`validate` で検出できる）。
 
 ---
 

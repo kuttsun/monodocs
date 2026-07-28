@@ -4,3 +4,11 @@
 Back to the Markdown page in the same folder: link:index.md[Mixed top].
 
 NOTE: AsciiDoc admonitions work as-is too.
+
+[#anchor-demo]
+== Anchor example
+
+This section carries an explicit `[#anchor-demo]` ID, so the Markdown side can jump straight
+here with `companion.adoc#anchor-demo`.
+
+The other direction works the same: xref:index.md#anchor-target-heading[“Anchor target heading” on the mixed top page].

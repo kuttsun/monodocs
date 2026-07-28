@@ -60,7 +60,7 @@ export const asciidocRenderer: SourceRenderer = {
   async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
     const rawHtml = (await convert(source.raw, buildOptions(source))) as string;
 
-    const out = { headings: [] as Heading[], text: "" };
+    const out = { headings: [] as Heading[], text: "", anchors: [] as string[] };
 
     // 全要素 ID を page id で prefix し、同一文書内アンカーを追従させる
     // （見出し・xref・脚注などの単一 HTML 内 ID 衝突を回避）。Markdown と共通処理。
@@ -70,6 +70,7 @@ export const asciidocRenderer: SourceRenderer = {
         const result = prefixIdsAndCollect(tree, context.page.id);
         out.headings = result.headings;
         out.text = result.text;
+        out.anchors = result.anchors;
       })
       .use(rehypeStringify)
       .process(rawHtml);
@@ -78,6 +79,7 @@ export const asciidocRenderer: SourceRenderer = {
       html: String(file),
       text: out.text,
       headings: out.headings,
+      anchors: out.anchors,
       links: [],
       assets: [],
     };

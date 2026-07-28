@@ -99,6 +99,11 @@ export type Page = {
   text: string;
 
   headings: Heading[];
+  /**
+   * 単一 HTML 内で一意化済みの要素 ID 一覧（見出し・脚注・明示アンカーなど）。
+   * 他ページからのアンカー付きリンク（`other.md#sec`）の解決先が実在するかの検証に使う。
+   */
+  anchors: string[];
   links: LinkRef[];
   assets: AssetRef[];
 };
@@ -129,6 +134,8 @@ export type RenderedContent = {
   html: string;
   text: string;
   headings: Heading[];
+  /** prefix 済みの全要素 ID（{@link Page.anchors} の元）。 */
+  anchors: string[];
   links: LinkRef[];
   assets: AssetRef[];
 };

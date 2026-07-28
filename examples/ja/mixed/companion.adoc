@@ -4,3 +4,11 @@
 同じフォルダの Markdown ページへ戻る: link:index.md[混在トップ]。
 
 NOTE: AsciiDoc 側の admonition もそのまま使えます。
+
+[#anchor-demo]
+== アンカーの例
+
+このセクションには `[#anchor-demo]` で ID を付けてあり、Markdown 側から
+`companion.adoc#anchor-demo` で直接ジャンプできます。
+
+逆向きも同じです: xref:index.md#アンカー先の見出し[混在トップの「アンカー先の見出し」]。

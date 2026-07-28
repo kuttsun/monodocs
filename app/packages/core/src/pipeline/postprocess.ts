@@ -73,11 +73,24 @@ function stripExtension(p: string): string {
   return ext ? p.slice(0, -ext.length) : p;
 }
 
-/** 相対パス（拡張子除く・index 正規化済み）→ route のマップを作る。 */
-function buildRouteMap(pages: Page[]): Map<string, string> {
-  const map = new Map<string, string>();
+/** リンク解決先のページ情報（route と、アンカー解決に必要な ID 情報）。 */
+type LinkTarget = {
+  route: string;
+  /** そのページの要素 ID に付く prefix（= page id）。 */
+  idPrefix: string;
+  /** そのページに実在する要素 ID の集合。 */
+  anchors: Set<string>;
+};
+
+/** 相対パス（拡張子除く・index 正規化済み）→ リンク解決先のマップを作る。 */
+function buildTargetMap(pages: Page[]): Map<string, LinkTarget> {
+  const map = new Map<string, LinkTarget>();
   for (const page of pages) {
-    map.set(stripExtension(normalizePath(page.relativePath)), page.route);
+    map.set(stripExtension(normalizePath(page.relativePath)), {
+      route: page.route,
+      idPrefix: page.id,
+      anchors: new Set(page.anchors),
+    });
   }
   return map;
 }
@@ -386,7 +399,7 @@ async function highlightCode(tree: HastRoot): Promise<void> {
   }
 }
 
-type LinkResolution = { href: string; hadFragment: boolean } | null | undefined;
+type LinkResolution = { href: string; unresolvedAnchor?: string } | null | undefined;
 type SourceLocation = { line: number; column: number };
 
 function safeDecodeUri(value: string): string | undefined {
@@ -516,14 +529,19 @@ function formatSourceRef(page: Page, href: string, locations: SourceLocationTrac
 
 /**
  * href を解決する。
- * - オブジェクトを返す → その href に書き換える（hadFragment=見出しアンカーを落とした）
+ * - オブジェクトを返す → その href に書き換える（unresolvedAnchor=アンカーを解決できず先頭に落とした）
  * - null → ドキュメントへのリンクだが解決できなかった（警告対象）
  * - undefined → 対象外（そのまま）
+ *
+ * アンカー付きリンク（`other.md#sec`）は、単一 HTML 内で一意化済みの要素 ID
+ * `{リンク先の page id}-{アンカー}` へ解決する。route（`#/other`）ではなく要素 ID を
+ * 指すのは、テーマの router が「`/` 始まりでない hash は当該要素を含むページを表示して
+ * スクロールする」経路を既に持ち、PDF でも展開済み本文の実要素を指せるため。
  */
 function resolveHref(
   href: string,
   pageRelPath: string,
-  routeMap: Map<string, string>,
+  targetMap: Map<string, LinkTarget>,
   linkExtensions: Set<string>,
 ): LinkResolution {
   if (!href || href.startsWith("#")) return undefined; // 同一ページ内アンカー等
@@ -539,15 +557,23 @@ function resolveHref(
 
   const dir = posix.dirname(normalizePath(pageRelPath));
   const targetKey = stripExtension(posix.normalize(posix.join(dir, decodePathPart(pathPart))));
-  const route = routeMap.get(targetKey);
-  if (!route) return null;
-  return { href: `#${route}`, hadFragment: hashIdx !== -1 };
+  const target = targetMap.get(targetKey);
+  if (!target) return null;
+
+  // `other.md#` のように空のアンカーはページ先頭リンクとして扱う（警告しない）。
+  const fragment = hashIdx === -1 ? "" : href.slice(hashIdx + 1);
+  if (!fragment) return { href: `#${target.route}` };
+
+  const anchorId = `${target.idPrefix}-${safeDecodeUri(fragment) ?? fragment}`;
+  if (target.anchors.has(anchorId)) return { href: `#${anchorId}` };
+  // 解決できないアンカーは従来どおりページ先頭へ落とし、警告で気づけるようにする。
+  return { href: `#${target.route}`, unresolvedAnchor: fragment };
 }
 
 function rewriteLinks(
   tree: HastRoot,
   page: Page,
-  routeMap: Map<string, string>,
+  targetMap: Map<string, LinkTarget>,
   linkExtensions: Set<string>,
   warnings: string[],
   locations: SourceLocationTracker,
@@ -556,16 +582,16 @@ function rewriteLinks(
     if (node.tagName !== "a") return;
     const href = node.properties.href;
     if (typeof href !== "string") return;
-    const resolved = resolveHref(href, page.relativePath, routeMap, linkExtensions);
+    const resolved = resolveHref(href, page.relativePath, targetMap, linkExtensions);
     if (resolved === null) {
       warnings.push(`Unresolved link "${href}" in "${formatSourceRef(page, href, locations)}".`);
       return;
     }
     if (resolved === undefined) return;
     node.properties.href = resolved.href;
-    if (resolved.hadFragment) {
+    if (resolved.unresolvedAnchor !== undefined) {
       warnings.push(
-        `Heading anchor in "${href}" is not supported yet; linked to page top in "${formatSourceRef(page, href, locations)}".`,
+        `Unresolved anchor "#${resolved.unresolvedAnchor}" in "${href}"; linked to page top in "${formatSourceRef(page, href, locations)}".`,
       );
     }
   });
@@ -650,7 +676,7 @@ export async function postprocessPages(
   pages: Page[],
   options: PostprocessOptions,
 ): Promise<PostprocessResult> {
-  const routeMap = buildRouteMap(pages);
+  const targetMap = buildTargetMap(pages);
   const linkExtensions = new Set([
     ...options.sourceExtensions.map((e) => e.toLowerCase()),
     ...EXTRA_LINK_EXTENSIONS,
@@ -705,7 +731,7 @@ export async function postprocessPages(
     rewriteLinks(
       tree,
       page,
-      routeMap,
+      targetMap,
       linkExtensions,
       warnings,
       new SourceLocationTracker(page, linkExtensions),

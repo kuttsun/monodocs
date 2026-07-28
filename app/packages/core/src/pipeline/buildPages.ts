@@ -131,6 +131,7 @@ export async function buildPages(
       html: rendered.html,
       text: rendered.text,
       headings: rendered.headings,
+      anchors: rendered.anchors,
       links: rendered.links,
       assets: rendered.assets,
     });

@@ -32,12 +32,12 @@ docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 
 Inside a devcontainer, or when you are in the container's shell, you can run `pnpm test` directly in `app/`.
 
-## Test Results (as of 2026-07-23)
+## Test Results (as of 2026-07-28)
 
 | Item           | Result     |
 | -------------- | ---------- |
-| Test Files     | 22 passed  |
-| Tests          | 220 passed |
+| Test Files     | 24 passed  |
+| Tests          | 232 passed |
 | typecheck      | passed     |
 | format:check   | passed     |
 | package:verify | passed     |
@@ -53,13 +53,14 @@ Main test targets:
 - `scan.test.ts` … scanning via extension map, custom extensions, exclusion
 - `pipeline/buildPages.test.ts` … duplicate detection of route / page id
 - `pipeline/buildSidebar.test.ts` … folder-structure sidebar
-- `pipeline/postprocess.test.ts` … link conversion, image data URI embedding, Mermaid conversion (client / pre-render SVG conversion, globally unique ids, verbatim preservation of complex SVG, per-diagram error source fallback, fail fast on environment errors `BrowserSetupError` (including `MermaidPrerenderSetupError`), renderer-not-injected error), shiki code highlighting, common structuring of admonition / GFM alert
+- `pipeline/postprocess.test.ts` … link conversion (including cross-file anchors: resolution to the target page's prefixed element ID, percent-encoded anchors, rejection of an ID that belongs to another page, page-top fallback with a warning for a missing anchor), image data URI embedding, Mermaid conversion (client / pre-render SVG conversion, globally unique ids, verbatim preservation of complex SVG, per-diagram error source fallback, fail fast on environment errors `BrowserSetupError` (including `MermaidPrerenderSetupError`), renderer-not-injected error), shiki code highlighting, common structuring of admonition / GFM alert
 - `pipeline/renderSingleHtml.test.ts` … href encoding, HTML escaping, optional content-width control and initial state, optional image lightbox markup, branding footer/version escaping, client page data (table of contents/search)
 - `themes/default/app.test.ts` … client hash routing (happy-dom)
 - `themes/default/app.v04.test.ts` … search, in-page table of contents, prev/next navigation, dark mode, persistent content-width toggle and configured initial state, sidebar collapse, code block copy/wrap toggle, image lightbox mouse/keyboard/focus behavior and linked/decorative-image exclusion (happy-dom)
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e (Markdown / mixed / v0.3 features, validate)
+- `build.anchors.test.ts` … e2e (cross-file heading anchors in both directions between Markdown and AsciiDoc, footnote anchors, `validate` warning for an anchor that does not exist)
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render (verifies config integration and SVG embedding via fake renderer injection; end-to-end rendering and runtime-not-injected gating are confirmed only in environments with a real Chromium)
 - `build.v04.test.ts` … e2e (`watchSite` rebuild, `serveSite` delivery and live-reload injection, `serveSite` serving HTML even with pdf/both configuration and respecting an explicit `-o`)
-- `build.pdf.test.ts` … PDF output (v0.5. browserless verification of `resolveOutputs` html/pdf/both output path resolution, format branching and configuration (pageSize/margin/printBackground) integration via fake `PdfGenerator` injection, embedImages override, bookmark outline passing. Actual PDF generation = `%PDF-`, `/Outlines`, and `/UseOutlines` confirmed only in environments with a real Chromium)
+- `build.pdf.test.ts` … PDF output (v0.5. browserless verification of `resolveOutputs` html/pdf/both output path resolution, format branching and configuration (pageSize/margin/printBackground) integration via fake `PdfGenerator` injection, embedImages override, bookmark outline passing. Actual PDF generation = `%PDF-`, `/Outlines`, `/UseOutlines`, internal link annotations for cross-page links, and a cross-file heading anchor landing on the heading rather than the page top, confirmed only in environments with a real Chromium)
 - `pipeline/pdfOutline.test.ts` … PDF bookmarks (`sidebarToOutline` tree conversion, `collectDests`/`remapDests`, `addOutline` referencing `/Dests` to build folder→page `/Outlines` and set `/UseOutlines`. Destinations absent / empty tree returns the original PDF. pdf-lib only, browserless)
 - `config.test.ts` … configuration resolution (including content-width, image-lightbox, and branding defaults/toggles, `pdf` schema defaults, completion of missing margins, rejection of unknown keys, rejection of invalid `--format`, and default output paths per format)
