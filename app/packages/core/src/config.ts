@@ -277,6 +277,10 @@ export type ResolvedConfig = {
   sidebarFlattenSingleChild: boolean;
   /** ページ内目次に出す見出しの最深レベル（2〜6）。 */
   tocMaxLevel: number;
+  /**
+   * テーマ。組み込みテーマ名（"default"）か、カスタムテーマディレクトリの絶対パス。
+   * 設定ファイルにパスらしき値が書かれていれば設定ファイル基準で解決する。
+   */
   theme: string;
   /** ドキュメントを開いたときの初期配色（"light" 既定 / "dark" / "auto" = OS 追従）。 */
   colorScheme: ColorScheme;
@@ -374,6 +378,22 @@ function resolveConfigRelativePath(baseDir: string, target: string): string {
   return isAbsolute(target) ? target : resolve(baseDir, target);
 }
 
+/**
+ * 設定の `html.theme` を解決する。`./my-theme` のようなパス表記は設定ファイル基準の
+ * 絶対パスにし、それ以外は組み込みテーマ名として渡す（存在確認は loadTheme が行う）。
+ * パス表記かどうかは区切り文字と先頭のドット・ドライブレターで判定する。
+ */
+function resolveTheme(baseDir: string, theme: string | undefined): string {
+  if (theme === undefined || theme === "") return "default";
+  const looksLikePath =
+    theme.startsWith(".") ||
+    theme.includes("/") ||
+    theme.includes("\\") ||
+    /^[A-Za-z]:/.test(theme) ||
+    isAbsolute(theme);
+  return looksLikePath ? resolveConfigRelativePath(baseDir, theme) : theme;
+}
+
 function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
   if (options.inputDir) {
     const inputConfigPath = resolve(cwd, options.inputDir, DEFAULT_CONFIG_FILE);
@@ -446,7 +466,7 @@ export async function loadConfig(
     sidebarTitleFrom: fileConfig.sidebar?.titleFrom ?? "heading",
     sidebarFlattenSingleChild: fileConfig.sidebar?.flattenSingleChild ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
-    theme: fileConfig.html?.theme ?? "default",
+    theme: resolveTheme(configBaseDir, fileConfig.html?.theme),
     colorScheme: fileConfig.html?.colorScheme ?? "light",
     contentWidth: parseContentWidth(fileConfig.html?.contentWidth),
     contentWidthToggle: fileConfig.html?.contentWidthToggle ?? true,

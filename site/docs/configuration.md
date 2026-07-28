@@ -239,12 +239,52 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 
 | Key                  | Type            | Default     | Description                                                                          |
 | -------------------- | --------------- | ----------- | ------------------------------------------------------------------------------------ |
-| `html.theme`         | string          | `default`   | Theme name used for the output HTML.                                                  |
+| `html.theme`         | string          | `default`   | Built-in theme name (`default`) or a path to a custom theme directory (`./my-theme`), resolved relative to the config file. See below. |
 | `html.colorScheme`   | `light` `dark` `auto` | `light` | Initial color scheme when a document is opened. `auto` follows the OS `prefers-color-scheme`. Once a reader toggles it in the UI, the choice is saved in the browser and takes precedence (distinct from the `html.theme` template name). |
 | `html.contentWidth`  | string / number | `860px`     | Max width of the content area. A CSS length (`px`, `rem`, `em`, `ch`, `vw`, `%`) or a number (px). `full` (or `none`) expands to the full available width. |
 | `html.contentWidthToggle` | boolean | `true` | Show the reader-facing standard/wide content toggle. When `false`, stored reader choices and `html.contentWidthDefault` are ignored. |
 | `html.contentWidthDefault` | `standard` `wide` | `standard` | Initial content-width state. A reader's saved choice takes precedence. |
 | `html.imageLightbox` | boolean | `true` | Open unlinked, non-decorative content images in a viewport-sized dialog when clicked or activated from the keyboard. Linked images retain their original link behavior, and images with an explicit empty `alt` remain decorative. The dialog is omitted from print and PDF output. |
+
+#### `html.theme` (custom theme)
+
+A value that looks like a path (it starts with `.`, contains a separator, or is absolute) is treated
+as a custom theme directory, resolved relative to the configuration file. Anything else is a built-in
+theme name.
+
+```yaml
+html:
+  theme: ./my-theme
+```
+
+The directory may contain any of these three files, and **whatever you leave out falls back to the
+default theme**:
+
+| File            | Replaces                                                                 |
+| --------------- | ------------------------------------------------------------------------ |
+| `style.css`     | All CSS of the document (the default stylesheet is not merged in).       |
+| `template.html` | The HTML skeleton, including where the sidebar, pages, and scripts go.    |
+| `app.js`        | The client script: hash routing, search, table of contents, prev/next, dark mode, code-block controls, and the image lightbox. |
+
+A style-only theme is therefore one file, and it keeps working when the client script gains features
+in a later release. Replacing `app.js` means taking over every interactive behavior listed above.
+
+A custom `template.html` must keep these tokens, which the build refuses to run without because the
+document would be unusable:
+
+```text
+{{style}}  {{sidebar}}  {{pages}}  {{siteDataJson}}  {{appJs}}  {{bodyScripts}}
+```
+
+These are optional: `{{title}}`, `{{htmlAttrs}}` (initial color scheme), `{{bodyAttrs}}` and
+`{{contentWidthTogglePressed}}` / `{{contentWidthToggleTitle}}` (content width), `{{generatorVersion}}`,
+and the `{{#contentWidthToggle}}` / `{{#imageLightbox}}` / `{{#branding}}` / `{{#generatorVersion}}`
+blocks. Dropping one just drops that feature from the output.
+
+Because the output is a single self-contained file, a theme cannot reference external assets. Inline
+fonts and images as data URIs in `style.css`. `monodocs watch` and `monodocs serve` also watch the
+theme directory, so edits show up in the preview. A theme is executable code in your document — treat
+it with the same trust as your documentation sources.
 
 ## Page order and titles
 

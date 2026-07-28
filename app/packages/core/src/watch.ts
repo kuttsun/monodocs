@@ -58,6 +58,9 @@ export async function watchSite(
     }
     building = true;
     try {
+      // 監視先の更新はビルドより先に行う。設定でテーマを差し替えた直後は新テーマが
+      // まだ壊れていてビルドが失敗しうるが、その修正を拾えなければテーマ制作に使えない。
+      await syncThemeWatch();
       const result = await buildSite(options);
       callbacks.onRebuild?.(result);
     } catch (error) {
@@ -93,18 +96,49 @@ export async function watchSite(
     };
   }
 
-  const watchers: FSWatcher[] = [];
+  const watchers = new Set<FSWatcher>();
   /** 監視を開始する。確立できない場合は例外を投げる（recursive は非対応時にフォールバック）。 */
-  function startWatch(target: string, baseDir: string, recursive: boolean): void {
+  function startWatch(target: string, baseDir: string, recursive: boolean): FSWatcher {
     try {
-      watchers.push(fsWatch(target, { recursive }, makeListener(baseDir)));
+      const watcher = fsWatch(target, { recursive }, makeListener(baseDir));
+      watchers.add(watcher);
+      return watcher;
     } catch (error) {
       // 一部環境は recursive 非対応。トップレベルのみ監視へフォールバックする。
-      if (recursive) {
-        startWatch(target, baseDir, false);
-        return;
-      }
+      if (recursive) return startWatch(target, baseDir, false);
       throw error;
+    }
+  }
+
+  // カスタムテーマ（絶対パス指定）のディレクトリ監視。テーマ制作中は style.css / app.js の
+  // 変更をそのままプレビューへ反映したいため。組み込みテーマは実行ファイルに同梱されるので
+  // 対象外。設定でテーマを変更できるので、監視対象は再ビルドのたびに見直す。
+  let themeWatcher: FSWatcher | null = null;
+  let watchedTheme: string | null = null;
+
+  async function syncThemeWatch(): Promise<void> {
+    let theme: string;
+    try {
+      theme = (await loadConfig(options, cwd)).theme;
+    } catch {
+      // 設定が一時的に壊れている場合は現在の監視を維持する（次の再ビルドで見直す）。
+      return;
+    }
+    const target = isAbsolute(theme) && existsSync(theme) ? theme : null;
+    if (target === watchedTheme) return;
+
+    if (themeWatcher) {
+      themeWatcher.close();
+      watchers.delete(themeWatcher);
+      themeWatcher = null;
+    }
+    watchedTheme = target;
+    if (!target) return;
+    try {
+      themeWatcher = startWatch(target, target, true);
+    } catch (error) {
+      // テーマ監視は best-effort。失敗しても入力と設定の監視は続ける。
+      callbacks.onError?.(error as Error);
     }
   }
 
@@ -118,6 +152,7 @@ export async function watchSite(
       callbacks.onError?.(error as Error);
     }
   }
+  await syncThemeWatch();
 
   // 初回ビルド。
   await rebuild();

@@ -36,8 +36,8 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 
 | 項目           | 結果       |
 | -------------- | ---------- |
-| Test Files     | 27 passed  |
-| Tests          | 261 passed |
+| Test Files     | 29 passed  |
+| Tests          | 276 passed |
 | typecheck      | 通過       |
 | format:check   | 通過       |
 | package:verify | 通過       |
@@ -55,12 +55,14 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `pipeline/buildSidebar.test.ts` … フォルダ構造サイドバー
 - `pipeline/buildSidebar.custom.test.ts` … カスタムサイドバー（`sidebar.items` の構造・順序・タイトル、`./`・バックスラッシュ区切りのパス、存在しないパスのエラー、未掲載・`hidden`・重複の警告、ページが消えたグループ、`orderPagesBySidebar` による閲覧順）
 - `pipeline/postprocess.test.ts` … リンク変換（ファイル跨ぎアンカーを含む: リンク先ページの prefix 済み要素 ID への解決・percent encode されたアンカー・別ページに属する ID の誤ヒット防止・存在しないアンカーの警告付きページ先頭フォールバック）・画像 data URI 埋め込み・Mermaid 変換（client / pre-render の SVG 化・グローバル一意 id・複雑 SVG の verbatim 保持・図単位エラーのソースフォールバック・環境エラー `BrowserSetupError`（`MermaidPrerenderSetupError` を含む）の fail fast・renderer 未注入エラー）・shiki コードハイライト・admonition / GFM alert の共通構造化
-- `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・任意表示の本文幅切替と初期状態・画像 lightbox マークアップの有無・ブランディングフッターとバージョンのエスケープ・クライアント用ページデータ（目次/検索用の h2 以降の全見出しと `tocMaxLevel`）
+- `pipeline/renderSingleHtml.test.ts` … href エンコード・HTML エスケープ・任意表示の本文幅切替と初期状態・画像 lightbox マークアップの有無・ブランディングフッターとバージョンのエスケープ・クライアント用ページデータ（目次/検索用の h2 以降の全見出しと `tocMaxLevel`）、本文やテーマ内の `{{...}}` を書き換えない 1 回走査のトークン置換
+- `themes/index.test.ts` … テーマ読み込み（組み込みテーマ名、未知の名前を組み込み一覧付きで拒否、カスタムディレクトリ、ファイル単位の既定テーマフォールバック、テーマファイルが 1 つも無いディレクトリ、必須トークンが欠けたテンプレート）
 - `themes/default/app.test.ts` … クライアント hash routing（happy-dom）
 - `themes/default/app.search.test.ts` … v0.8 の検索（複数キーワードの AND・フィールド別の順位付け・見出しへリンクし、クリック時に hash へアンカーを残す見出し単位の結果・タイトル/見出し/抜粋の強調・`toc.maxLevel` より深い見出しは目次に出ないが検索できること・大文字小文字と全角の畳み込み・全角空白区切りのキーワード）（happy-dom）
 - `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・保存される本文幅トグルと設定由来の初期状態・サイドバー折りたたみ・コードブロックのコピー/折り返しトグル・画像 lightbox のマウス/キーボード/フォーカス操作とリンク付き/装飾画像の除外（happy-dom）
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e（Markdown / 混在 / v0.3 機能・validate）
 - `build.sidebar-custom.test.ts` … e2e（カスタムサイドバーの描画と順序、前後ナビ・初期表示ページに効くページ順、未掲載ページの警告、存在しないパスに対する `validate` のエラー）
+- `build.theme.test.ts` … e2e（カスタムテーマ: 設定ファイル基準の `html.theme` 解決、style だけのテーマが既定の template / client を保つこと、template と client を差し替える全面テーマ、壊れた template でビルドが失敗すること、テーマに影響されない `validate`、設定によるテーマ切り替え（一時的に壊れたテーマへの切り替えを含む）に `watch` の監視先が追従すること）
 - `build.anchors.test.ts` … e2e（Markdown ↔ AsciiDoc 双方向のファイル跨ぎ見出しアンカー・脚注アンカー・存在しないアンカーの `validate` 警告）
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render（偽レンダラ注入で config 連携・SVG 埋め込みを検証。実 Chromium がある環境でだけ end-to-end 描画とランタイム未注入ゲートを確認）
 - `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入・`serveSite` が pdf/both 設定でも HTML を配信し明示 `-o` を尊重すること）

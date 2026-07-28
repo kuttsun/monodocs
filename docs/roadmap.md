@@ -1439,6 +1439,35 @@ Future:
 
 ---
 
+### 23.3 Custom Themes
+
+Already supported (v0.8). `html.theme` takes either a built-in theme name or a path to a directory,
+resolved relative to the configuration file. A path is anything that starts with `.`, contains a
+separator, or is absolute; everything else is a built-in name, and an unknown one is rejected with the
+list of built-ins rather than a missing-file error.
+
+A theme directory may hold `template.html`, `style.css`, and `app.js`, and **whatever it omits falls
+back to the default theme**. This is the central decision: restyling is the common case, and requiring
+a copy of `app.js` — which carries routing, search, the table of contents, prev/next navigation, dark
+mode, code-block controls, and the image lightbox — would turn every release into a merge for someone
+who only wanted different colors. A directory holding none of the three is rejected as a wrong path.
+
+A custom `template.html` must keep `{{style}}`, `{{sidebar}}`, `{{pages}}`, `{{siteDataJson}}`,
+`{{appJs}}`, and `{{bodyScripts}}`; the build fails naming the missing ones, because a document
+without them cannot show its content, run its client, or receive the Mermaid runtime. The remaining
+tokens and conditional blocks are optional and simply drop the feature they carry.
+
+Themes are read from the filesystem, so they work in every distribution form including the standalone
+binary, which only embeds the built-in theme. Resolution from `node_modules` is deliberately not
+implemented: it would not work in the binary, and a theme published on npm can still be pointed at
+through its path. `watch` / `serve` also watch the theme directory so that edits reach the preview.
+
+Because the output is one self-contained file, a theme cannot reference external assets; fonts and
+images belong in `style.css` as data URIs. A theme is executable code inside the document and carries
+the same trust as the documentation sources (chapter 33 and the security notes in development.md).
+
+---
+
 ## 24. PDF Output
 
 ### 24.1 Basic Policy
