@@ -144,6 +144,14 @@ Preserve these display and reachability invariants:
   A template that lacks `{{style}}`, `{{sidebar}}`, `{{pages}}`, `{{siteDataJson}}`, `{{appJs}}`, or
   `{{bodyScripts}}` must fail the build rather than produce a broken document. Themes are read from the
   filesystem so that every distribution form supports them, and they must not reference external assets.
+- Print and PDF have no scrollbars: anything the screen makes scrollable (code blocks, tables) must wrap or
+  be laid out to fit in print, and a table crossing a page break repeats its header row. Content must never be
+  silently cut off at the page edge.
+- Below 768 px the sidebar becomes an overlay drawer that starts closed, so the document opens on its content.
+  The drawer never leaves the page scrolling horizontally, and on wider viewports the sidebar stays permanent —
+  clicks outside it and `Escape` must not close it there.
+- Generated PDFs carry the document title and `monodocs v<version>` as Creator and Producer. The metadata pass
+  runs after the bookmark pass, because pdf-lib rewrites Producer whenever it saves.
 - `html.branding` shows a footer at the end of HTML and PDF output by default.
   The CLI supplies its package version at runtime; the renderer escapes that value and omits only the version
   when no value is available. `html.branding: false` omits the complete footer.

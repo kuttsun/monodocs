@@ -246,6 +246,23 @@ describe.skipIf(!chromium)("buildSite - PDF（実 Chromium）", () => {
     expect(pageMode instanceof PDFName && pageMode.asString()).toBe("/UseOutlines");
   }, 60_000);
 
+  it("records the document title and monodocs as the generating tool", async () => {
+    const out = join(dir, "real-meta", "manual.pdf");
+    await buildSite({
+      inputDir: docs,
+      outputFile: out,
+      format: "pdf",
+      generatorVersion: "1.2.3",
+    });
+    const { PDFDocument } = await import("pdf-lib");
+    // updateMetadata: false で読み、pdf-lib 自身が値を差し替えないようにする。
+    const doc = await PDFDocument.load(await readFile(out), { updateMetadata: false });
+    expect(doc.getTitle()).toBe("Documentation");
+    // 既定では Chromium の UA 文字列と pdf-lib が入る位置。
+    expect(doc.getCreator()).toBe("monodocs v1.2.3");
+    expect(doc.getProducer()).toBe("monodocs v1.2.3");
+  }, 60_000);
+
   it("makes in-content cross-page links clickable (internal link annotation)", async () => {
     const ldir = await mkdtemp(join(tmpdir(), "monodocs-pdf-links-"));
     const ldocs = join(ldir, "docs");

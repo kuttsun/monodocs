@@ -1514,6 +1514,32 @@ For PDF output, pay attention to the following.
 - Whether to include the sidebar
 - Full-page output that does not depend on the URL hash
 
+### 24.3.1 No Scrollbars on Paper (v0.8)
+
+On screen, anything wider than the content column stays readable because it scrolls: code blocks and
+tables have their own horizontal scrollbar, and the reader can pan the page. Paper has neither, so
+Chromium simply cuts the overflow off and the content is missing from the PDF with nothing to
+indicate it. Measured on A4 with the default margins (a 680 px content column), a `bash` command line
+reached 728 px and a paragraph with a long URL reached 862 px — both lost their tails.
+
+The print stylesheet therefore wraps instead of scrolling: `pre` becomes `pre-wrap` with
+`overflow-wrap: anywhere`, tables drop back to `display: table` with `table-layout: fixed` (the
+screen-side `display: block` that makes them scrollable also disables `thead` repetition, so a table
+crossing a page break lost its header row), cells break long words, and diagrams are capped at the
+page width. `overflow-wrap: break-word` on the content column covers long URLs in body text, on
+screen as well — the same unbreakable strings were also what forced narrow screens to scroll
+horizontally.
+
+### 24.3.2 Document Information (v0.8)
+
+A distributed PDF should say what produced it. Chromium leaves Creator as its own user-agent string
+and pdf-lib, used for the bookmark pass, writes itself into Producer; neither mentions monodocs, and
+the title stays empty so viewers show only the file name. `setPdfMetadata` sets the configured title
+and `monodocs v<version>` for both Creator and Producer, after the bookmark pass and with pdf-lib's
+`updateMetadata` disabled so that saving does not overwrite them again. It also raises the
+`DisplayDocTitle` viewer preference, without which a standards-following viewer keeps showing the
+file name even when a title is present.
+
 ### 24.4 Display Mode for PDF
 
 Separately from the pseudo-page display of the HTML, a print mode that lays out all pages vertically is provided for PDF.
@@ -1979,7 +2005,7 @@ Implementation scope:
 - Full support for custom sidebars
 - Standalone binary distribution
 - Homebrew / Scoop / winget support (decided against; see 8.5)
-- HTML / PDF output quality improvements
+- HTML / PDF output quality improvements (print clipping, narrow screens, PDF document information)
 
 Completion criteria:
 

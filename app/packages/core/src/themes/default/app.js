@@ -793,12 +793,93 @@
   // ---- sidebar collapse ----
   // 折りたたみボタンはサイドバー内（テーマ切替の隣）、再表示ボタンは折りたたみ時のみ
   // 表示される固定ボタン。
+  /**
+   * ドロワー表示になる幅かどうか（CSS の `@media (max-width: 768px)` と一致させる）。
+   * 広い画面ではサイドバーは常設なので、外側クリックや Esc で閉じない。
+   */
+  function isNarrow() {
+    return (
+      typeof window.matchMedia === "function" && window.matchMedia("(max-width: 768px)").matches
+    );
+  }
+
+  // 狭い画面のドロワーを閉じたことによる折りたたみか（画面が広がったら解除する）。
+  var drawerCollapsed = false;
+
+  /** 現在の画面幅における、サイドバーが開いているか。 */
+  function sidebarExpanded() {
+    return isNarrow()
+      ? document.body.classList.contains("sidebar-open")
+      : !document.body.classList.contains("sidebar-collapsed");
+  }
+
+  /**
+   * サイドバーの開閉状態を切り替える。表示（クラス）と支援技術向けの状態
+   * （aria-expanded）が食い違わないよう、開閉はすべてこの関数を通す。
+   *
+   * 狭い画面のドロワー開閉（sidebar-open）と、広い画面の折りたたみ（sidebar-collapsed）は
+   * 別の状態として扱う。ドロワーを閉じただけで折りたたみ状態にすると、画面を広げたときに
+   * 常設のはずのサイドバーが消えたままになる。
+   */
+  function setSidebarCollapsed(collapsed) {
+    var body = document.body;
+    body.classList.toggle("sidebar-collapsed", collapsed);
+    // 狭い画面ではドロワーとして重ねる。sidebar-collapsed も併せて扱うのは、
+    // style.css だけを差し替えたカスタムテーマ（ドロワー用の指定を持たない）でも
+    // 従来どおり閉じられるようにするため。
+    body.classList.toggle("sidebar-open", isNarrow() && !collapsed);
+    // 狭い画面で閉じた分の折りたたみは画面が広がった時点で解除する（広い画面では
+    // サイドバーは常設のため、そのままだと消えたままになる）。
+    drawerCollapsed = isNarrow() && collapsed;
+    if (collapsed) restoreFocusFromSidebar();
+    syncSidebarExpandedState();
+  }
+
+  /**
+   * 閉じたサイドバー内にフォーカスが残らないようにする。閉じたサイドバーは
+   * 不可視なので、そこにフォーカスがあるとキーボード操作の現在地を見失う。
+   */
+  function restoreFocusFromSidebar() {
+    var sidebar = document.getElementById("sidebar");
+    var active = document.activeElement;
+    if (!sidebar || !active || !sidebar.contains(active)) return;
+    var showBtn = document.getElementById("sidebar-show");
+    if (showBtn && typeof showBtn.focus === "function") showBtn.focus();
+    else if (typeof active.blur === "function") active.blur();
+  }
+
+  /**
+   * ボタンの aria-expanded を実際の見え方に合わせる。狭い画面ではドロワーが CSS で
+   * 閉じているため、テンプレートの初期値（aria-expanded="true"）のままだと支援技術に
+   * 開いていると伝わってしまう。画面幅が変われば開閉の意味も変わるので都度求め直す。
+   */
+  function syncSidebarExpandedState() {
+    var expanded = sidebarExpanded() ? "true" : "false";
+    ["sidebar-toggle", "sidebar-show"].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (btn) btn.setAttribute("aria-expanded", expanded);
+    });
+  }
+
   function setupSidebarToggle() {
     var hideBtn = document.getElementById("sidebar-toggle");
     var showBtn = document.getElementById("sidebar-show");
-    function setCollapsed(collapsed) {
-      document.body.classList.toggle("sidebar-collapsed", collapsed);
-      if (hideBtn) hideBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    var setCollapsed = setSidebarCollapsed;
+    syncSidebarExpandedState();
+    // 画面幅が変わればドロワー／常設が切り替わるので、状態を作り直す。
+    if (typeof window.matchMedia === "function") {
+      var mq = window.matchMedia("(max-width: 768px)");
+      if (typeof mq.addEventListener === "function") {
+        mq.addEventListener("change", function () {
+          if (!isNarrow() && drawerCollapsed) {
+            // ドロワーを閉じたまま画面が広がった場合。常設表示へ戻す。
+            document.body.classList.remove("sidebar-collapsed");
+            drawerCollapsed = false;
+          }
+          if (!isNarrow()) document.body.classList.remove("sidebar-open");
+          syncSidebarExpandedState();
+        });
+      }
     }
     if (hideBtn)
       hideBtn.addEventListener("click", function () {
@@ -808,6 +889,34 @@
       showBtn.addEventListener("click", function () {
         setCollapsed(false);
       });
+    // ドロワー表示時は、本文側（オーバーレイ）のクリックで閉じる。
+    document.addEventListener("click", function (e) {
+      if (!isNarrow() || !document.body.classList.contains("sidebar-open")) return;
+      var sidebar = document.getElementById("sidebar");
+      var target = e.target;
+      if (sidebar && target instanceof Node && sidebar.contains(target)) return;
+      if (showBtn && target instanceof Node && showBtn.contains(target)) return;
+      setCollapsed(true);
+    });
+    // Esc でも閉じられるようにする（ドロワーは本文を覆うため）。
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && isNarrow() && document.body.classList.contains("sidebar-open")) {
+        setCollapsed(true);
+      }
+    });
+  }
+
+  /** 狭い画面でサイドバー内のリンクを押したら、ドロワーを閉じて本文を見せる。 */
+  function setupSidebarAutoClose() {
+    var sidebar = document.getElementById("sidebar");
+    if (!sidebar) return;
+    sidebar.addEventListener("click", function (e) {
+      var target = e.target;
+      var link = target && target.closest ? target.closest("a[href]") : null;
+      if (!link) return;
+      if (!isNarrow() || !document.body.classList.contains("sidebar-open")) return;
+      setSidebarCollapsed(true);
+    });
   }
 
   // ディレクトリ見出しのクリックで子ツリーを開閉する。
@@ -1022,6 +1131,7 @@
     setupContentWidth();
     setupSearch();
     setupSidebarToggle();
+    setupSidebarAutoClose();
     setupSidebarDirs();
     setupCodeBlocks();
     setupImageLightbox();

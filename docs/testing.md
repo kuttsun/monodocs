@@ -36,8 +36,8 @@ Inside a devcontainer, or when you are in the container's shell, you can run `pn
 
 | Item           | Result     |
 | -------------- | ---------- |
-| Test Files     | 29 passed  |
-| Tests          | 276 passed |
+| Test Files     | 31 passed  |
+| Tests          | 287 passed |
 | typecheck      | passed     |
 | format:check   | passed     |
 | package:verify | passed     |
@@ -59,6 +59,7 @@ Main test targets:
 - `themes/index.test.ts` … theme loading (built-in name, unknown name rejected with the built-in list, custom directory, per-file fallback to the default theme, directory holding no theme files, template missing required tokens)
 - `themes/default/app.test.ts` … client hash routing (happy-dom)
 - `themes/default/app.search.test.ts` … v0.8 search (AND across multiple keywords, field-weighted ranking, heading-level results linking to the heading and keeping that anchor in the hash on click, keyword highlighting in title/heading/snippet, headings below `toc.maxLevel` searchable but hidden from the table of contents, case and full-width folding, keywords separated by an ideographic space) (happy-dom)
+- `themes/default/app.mobile.test.ts` … narrow-viewport sidebar drawer (opens from the toggle, closes after following a link, closes on Escape and on an outside click, and stays permanent on wide viewports) (happy-dom)
 - `themes/default/app.v04.test.ts` … search, in-page table of contents, prev/next navigation, dark mode, persistent content-width toggle and configured initial state, sidebar collapse, code block copy/wrap toggle, image lightbox mouse/keyboard/focus behavior and linked/decorative-image exclusion (happy-dom)
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e (Markdown / mixed / v0.3 features, validate)
 - `build.sidebar-custom.test.ts` … e2e (custom sidebar rendering and order, page order driving prev/next and the initial page, unlisted-page warning, `validate` error for a missing path)
@@ -67,5 +68,6 @@ Main test targets:
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render (verifies config integration and SVG embedding via fake renderer injection; end-to-end rendering and runtime-not-injected gating are confirmed only in environments with a real Chromium)
 - `build.v04.test.ts` … e2e (`watchSite` rebuild, `serveSite` delivery and live-reload injection, `serveSite` serving HTML even with pdf/both configuration and respecting an explicit `-o`)
 - `build.pdf.test.ts` … PDF output (v0.5. browserless verification of `resolveOutputs` html/pdf/both output path resolution, format branching and configuration (pageSize/margin/printBackground) integration via fake `PdfGenerator` injection, embedImages override, bookmark outline passing. Actual PDF generation = `%PDF-`, `/Outlines`, `/UseOutlines`, internal link annotations for cross-page links, and a cross-file heading anchor landing on the heading rather than the page top, confirmed only in environments with a real Chromium)
+- `pipeline/pdfMetadata.test.ts` … PDF document information (title and monodocs as Creator/Producer replacing the browser and pdf-lib defaults, the DisplayDocTitle viewer preference, pages preserved, no-op when nothing is set. pdf-lib only, browserless)
 - `pipeline/pdfOutline.test.ts` … PDF bookmarks (`sidebarToOutline` tree conversion, `collectDests`/`remapDests`, `addOutline` referencing `/Dests` to build folder→page `/Outlines` and set `/UseOutlines`. Destinations absent / empty tree returns the original PDF. pdf-lib only, browserless)
 - `config.test.ts` … configuration resolution (including content-width, image-lightbox, and branding defaults/toggles, `pdf` schema defaults, completion of missing margins, rejection of unknown keys, rejection of invalid `--format`, and default output paths per format)

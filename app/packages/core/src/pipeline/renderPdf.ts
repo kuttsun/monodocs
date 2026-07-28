@@ -1,6 +1,7 @@
 import type { PdfMargin } from "../config.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
 import { addOutline, collectDests, remapDests, type PdfOutlineNode } from "./pdfOutline.js";
+import { setPdfMetadata } from "./pdfMetadata.js";
 
 /** {@link PdfGenerator.render} のオプション。 */
 export type PdfRenderOptions = {
@@ -21,6 +22,10 @@ export type PdfRenderOptions = {
    * 未指定・空ならしおりを作らない。
    */
   outline?: PdfOutlineNode[];
+  /** 文書タイトル（PDF の Title）。 */
+  title?: string;
+  /** 生成ツール名（PDF の Creator / Producer）。 */
+  generator?: string;
 };
 
 // 各ページ dest（`page-{id}`）位置へ ASCII サロゲート id のアンカーを差し込み、それへの内部
@@ -138,10 +143,12 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
       });
 
       // 生成後に HTML サイドバーと同じ フォルダ→ページ 構造のしおりを付与する。
-      if (options.outline && destIds.length > 0) {
-        return addOutline(pdf, remapDests(options.outline, surrogate));
-      }
-      return pdf;
+      const withOutline =
+        options.outline && destIds.length > 0
+          ? await addOutline(pdf, remapDests(options.outline, surrogate))
+          : pdf;
+      // 文書情報は最後に入れる（しおり付与でも pdf-lib が Producer を書き戻すため）。
+      return setPdfMetadata(withOutline, { title: options.title, generator: options.generator });
     },
     async close() {
       if (browser) {
