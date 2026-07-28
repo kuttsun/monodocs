@@ -16,6 +16,7 @@ Last updated: 2026-07-28
 | PDF output                                        | ✅ Done        | v0.5           |
 | npm / GitHub Actions                              | ✅ Done        | v0.6           |
 | VS Code extension                                 | ⏸️ Frozen      | v0.7           |
+| Advanced features (search, themes, binary)        | 🚧 In progress | v0.8           |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
@@ -97,6 +98,20 @@ undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and
 - [x] Document GitHub Actions and GitLab CI workflows for `validate`, HTML, and PDF on the documentation site
       (a dedicated reusable GitHub Action is not published; see [roadmap.md](roadmap.md))
 
+### v0.8: Advanced Features
+
+- [x] Heading-level cross-file links (`file.md#heading` / `xref:other.adoc#sec`) resolve to the target page's element ID
+- [x] Search accepts multiple keywords (split on whitespace including the ideographic space) and requires every keyword to match
+- [x] Search results are ranked by field weight (title > heading > body) with capped repeat and phrase bonuses; ties keep document order
+- [x] A result that matched a heading links to that heading instead of the page top and shows it under the page title (headings deeper than `toc.maxLevel` are searchable although the in-page table of contents hides them)
+- [x] Keywords are highlighted in the title, heading, and snippet, and the snippet is the body window containing the most distinct keywords
+- [x] Matching folds case and full-width alphanumerics, so `ＰＤＦ` and `pdf` find the same pages
+- [ ] Custom themes can be selected
+- [ ] Custom sidebars (`sidebar.mode: custom`) are fully supported
+- [ ] A standalone binary that runs without Node.js is distributed
+- [ ] Homebrew / Scoop / winget support is decided
+- [ ] HTML / PDF output quality improvements
+
 ## Supported Syntax
 
 The supported syntax for Markdown / AsciiDoc, along with the unsupported items and limitations that come with single-HTML generation, is documented as a specification in [syntax.md](syntax.md) (including footnote ID collision avoidance and in-page anchor handling). Markdown GFM alerts (such as `> [!NOTE]`) and AsciiDoc admonitions are normalized into a common `.admonition` structure for display.
@@ -105,7 +120,7 @@ The supported syntax for Markdown / AsciiDoc, along with the unsupported items a
 
 - Code highlighting (shiki) is supported (can be disabled with `highlight.enabled: false`; dual theme follows dark mode)
 - Heading-level cross-file links (`file.md#heading` / `xref:other.adoc#sec`) are supported (resolved to the target page's prefixed element ID; because the anchor is matched against the ID the target file generates, pointing from Markdown at an AsciiDoc heading needs the ID Asciidoctor produces, such as `_details`, and an anchor that does not exist falls back to the top of that page with a warning)
-- Search is partial-match only (scoring, multiple keywords, and Japanese word segmentation are planned to be improved in v0.8)
+- Search matches substrings, now with multiple keywords (AND), field-weighted scoring, heading-level results, and highlighting (v0.8). Because matching is substring-based, Japanese needs no word segmentation; matching folds case and full-width alphanumerics only, so kana/kanji variants (hiragana vs. katakana, okurigana) are not unified. There is no stemming for English either: `install` finds a page containing `installing`, but `installing` does not find a page that only says `install`
 - `watch` / `serve` monitoring uses `fs.watch` (recursive when possible). If `input` is changed in the configuration, a restart is required
 - PDF output is supported (v0.5; `--format pdf` / `both`). Because it uses headless Chromium, Chromium must be present in the runtime environment, and it is not available in the bundled CLI (single `.cjs` / single executable) (the npm-installed version is required). When Mermaid is set to the `cdn` runtime, a network connection is required during PDF generation (use `inline` or `pre-render` to be reliably offline)
 - **PDF fonts use the system fonts of the runtime environment.** If a font for a character type appearing in the body is missing, it becomes tofu (□ / ☒) in the PDF (e.g., the emoji ✅ requires an emoji font). The development Docker image already bundles `fonts-noto-cjk` (Japanese) plus `fonts-noto-color-emoji` (emoji). When producing PDFs in your own environment, install fonts according to the character types you use (HTML is unaffected because it uses the browser's fonts)

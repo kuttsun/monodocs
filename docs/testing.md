@@ -36,8 +36,8 @@ Inside a devcontainer, or when you are in the container's shell, you can run `pn
 
 | Item           | Result     |
 | -------------- | ---------- |
-| Test Files     | 24 passed  |
-| Tests          | 232 passed |
+| Test Files     | 25 passed  |
+| Tests          | 243 passed |
 | typecheck      | passed     |
 | format:check   | passed     |
 | package:verify | passed     |
@@ -54,8 +54,9 @@ Main test targets:
 - `pipeline/buildPages.test.ts` … duplicate detection of route / page id
 - `pipeline/buildSidebar.test.ts` … folder-structure sidebar
 - `pipeline/postprocess.test.ts` … link conversion (including cross-file anchors: resolution to the target page's prefixed element ID, percent-encoded anchors, rejection of an ID that belongs to another page, page-top fallback with a warning for a missing anchor), image data URI embedding, Mermaid conversion (client / pre-render SVG conversion, globally unique ids, verbatim preservation of complex SVG, per-diagram error source fallback, fail fast on environment errors `BrowserSetupError` (including `MermaidPrerenderSetupError`), renderer-not-injected error), shiki code highlighting, common structuring of admonition / GFM alert
-- `pipeline/renderSingleHtml.test.ts` … href encoding, HTML escaping, optional content-width control and initial state, optional image lightbox markup, branding footer/version escaping, client page data (table of contents/search)
+- `pipeline/renderSingleHtml.test.ts` … href encoding, HTML escaping, optional content-width control and initial state, optional image lightbox markup, branding footer/version escaping, client page data (all h2+ headings and `tocMaxLevel` for the table of contents/search)
 - `themes/default/app.test.ts` … client hash routing (happy-dom)
+- `themes/default/app.search.test.ts` … v0.8 search (AND across multiple keywords, field-weighted ranking, heading-level results linking to the heading and keeping that anchor in the hash on click, keyword highlighting in title/heading/snippet, headings below `toc.maxLevel` searchable but hidden from the table of contents, case and full-width folding, keywords separated by an ideographic space) (happy-dom)
 - `themes/default/app.v04.test.ts` … search, in-page table of contents, prev/next navigation, dark mode, persistent content-width toggle and configured initial state, sidebar collapse, code block copy/wrap toggle, image lightbox mouse/keyboard/focus behavior and linked/decorative-image exclusion (happy-dom)
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e (Markdown / mixed / v0.3 features, validate)
 - `build.anchors.test.ts` … e2e (cross-file heading anchors in both directions between Markdown and AsciiDoc, footnote anchors, `validate` warning for an anchor that does not exist)

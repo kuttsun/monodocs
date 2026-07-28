@@ -175,7 +175,7 @@ describe("renderSingleHtml", () => {
     ).rejects.toThrow(/contentWidth/);
   });
 
-  it("embeds per-page data (h2/h3 headings + text) for TOC and search", async () => {
+  it("embeds per-page data (all h2+ headings + text) for TOC and search", async () => {
     const p = page("/g", "g", "Guide");
     p.text = "searchable body text";
     p.headings = [
@@ -192,14 +192,15 @@ describe("renderSingleHtml", () => {
 
     expect(data.pages).toHaveLength(1);
     expect(data.pages[0].text).toBe("searchable body text");
-    // 目次は h2/h3 のみ（h1 と h4 は除外）。
+    // 検索が深い見出しへも飛べるよう h2 以降はすべて渡す（h1 はページタイトル相当のため除外）。
     expect(data.pages[0].headings.map((h: { id: string }) => h.id)).toEqual([
       "g-install",
       "g-step",
+      "g-deep",
     ]);
   });
 
-  it("respects toc.maxLevel when embedding headings", async () => {
+  it("passes toc.maxLevel to the client instead of filtering headings", async () => {
     const p = page("/g", "g", "Guide");
     p.headings = [
       { level: 2, id: "g-h2", text: "H2" },
@@ -211,12 +212,17 @@ describe("renderSingleHtml", () => {
     const html = await renderSingleHtml({ title: "T", pages: [p], sidebar, tocMaxLevel: 4 });
     const json = html.match(/__MONODOCS_DATA__ = (.*);/)?.[1] ?? "{}";
     const data = JSON.parse(json.replace(/\\u003c/g, "<"));
-    // maxLevel 4 なら h4 まで目次に含む。
+    // 目次の絞り込みはクライアント側。既定（未指定）でも h3 を渡すのはクライアントの責務。
+    expect(data.tocMaxLevel).toBe(4);
     expect(data.pages[0].headings.map((h: { id: string }) => h.id)).toEqual([
       "g-h2",
       "g-h3",
       "g-h4",
     ]);
+
+    const defaults = await renderSingleHtml({ title: "T", pages: [p], sidebar });
+    const defaultJson = defaults.match(/__MONODOCS_DATA__ = (.*);/)?.[1] ?? "{}";
+    expect(JSON.parse(defaultJson.replace(/\\u003c/g, "<")).tocMaxLevel).toBe(3);
   });
 
   it("collapses directories deeper than collapseDepth by default", async () => {

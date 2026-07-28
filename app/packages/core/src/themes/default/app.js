@@ -31,6 +31,8 @@
     useStandardContent: "Use standard content width",
     openImagePreview: "Open image preview",
   };
+  // ページ内目次に出す見出しの最深レベル（設定由来。未指定は h3 まで）。
+  var tocMaxLevel = typeof data.tocMaxLevel === "number" ? data.tocMaxLevel : 3;
   // 同一ルートへの遷移後にスクロールしたい見出し ID（あれば）。
   var pendingHeadingId = null;
   // 目次のスクロール連動ハイライト用の IntersectionObserver。
@@ -64,6 +66,21 @@
     if (el && typeof el.scrollIntoView === "function") {
       el.scrollIntoView();
     }
+  }
+
+  /**
+   * 見出しアンカーへ遷移する。hash を書き換えて履歴に残すため、再読み込み・共有・戻るでも
+   * 同じ見出しに戻れる（リンクの href とアドレスバーも一致する）。ページの切り替えと
+   * スクロールは hashchange 経由の onRouteChange に任せる。すでに同じ hash のときは
+   * hashchange が起きないので直接処理する。
+   */
+  function navigateToAnchor(id) {
+    var target = "#" + encodeURI(id);
+    if (window.location.hash === target) {
+      onRouteChange();
+      return;
+    }
+    window.location.hash = target;
   }
 
   // 見出し ID へ遷移する。ルートが異なれば先にページを切り替えてからスクロールする。
@@ -175,7 +192,11 @@
     }
 
     var page = pageByRoute[route];
-    var headings = page && page.headings ? page.headings : [];
+    // ページデータは検索が見出しへ飛べるよう h2 以降をすべて持つ。目次に出すのは
+    // toc.maxLevel までに絞る。
+    var headings = (page && page.headings ? page.headings : []).filter(function (h) {
+      return h.level >= 2 && h.level <= tocMaxLevel;
+    });
     if (headings.length === 0) {
       nav.innerHTML = "";
       toc.hidden = true;
@@ -311,33 +332,301 @@
   }
 
   // ---- search ----
-  function snippet(text, query) {
-    var lower = text.toLowerCase();
-    var pos = lower.indexOf(query);
-    if (pos === -1) return "";
-    var start = Math.max(0, pos - 30);
-    var end = Math.min(text.length, pos + query.length + 50);
-    var pre = (start > 0 ? "…" : "") + text.slice(start, pos);
-    var hit = text.slice(pos, pos + query.length);
-    var post = text.slice(pos + query.length, end) + (end < text.length ? "…" : "");
-    return escapeHtml(pre) + "<mark>" + escapeHtml(hit) + "</mark>" + escapeHtml(post);
+  var SEARCH_LIMIT = 20;
+  // フィールド別の重み。タイトル > 見出し > 本文の順で上位に出す。
+  var SCORE_TITLE = 100;
+  var SCORE_HEADING = 30;
+  var SCORE_TEXT = 10;
+  // 本文での繰り返し出現による加点（上限付き。本文量だけで見出し一致を逆転させない）。
+  var SCORE_TEXT_REPEAT = 1;
+  var MAX_TEXT_REPEAT = 5;
+  // 複数語をそのままの並びで含む場合の加点（語順どおりの一致を優先する）。
+  var SCORE_PHRASE_TITLE = 40;
+  var SCORE_PHRASE_HEADING = 20;
+  var SCORE_PHRASE_TEXT = 10;
+  // スニペットの窓幅（文字数）と、一致位置の手前に残す文脈。
+  var SNIPPET_WINDOW = 120;
+  var SNIPPET_LEAD = 30;
+  // 1 語あたりに数える出現回数の上限（巨大ページで全走査しないため）。
+  var MAX_OCCURRENCES = 50;
+
+  /**
+   * 小文字化する。文脈依存の変換（ギリシャ語の語末シグマ `ΛΟΓΟΣ` → `λογος` など）を保つため
+   * 文字列全体を変換し、長さが変わる文字（`İ` など）を含むときだけ、長さの変わる文字を
+   * 畳まない文字単位の変換へフォールバックする。
+   */
+  function lowerKeepingLength(s) {
+    var lower = s.toLowerCase();
+    if (lower.length === s.length) return lower;
+    return s.replace(/[A-Z\u00c0-\u1fff\uff21-\uff3a]/g, function (c) {
+      var l = c.toLowerCase();
+      return l.length === 1 ? l : c;
+    });
+  }
+
+  // 全角英数字・記号（U+FF01–U+FF5E）を半角へ写す。1 文字 → 1 文字なので長さは変わらない。
+  function toHalfWidth(s) {
+    return s.replace(/[\uff01-\uff5e]/g, function (c) {
+      return String.fromCharCode(c.charCodeAt(0) - 0xfee0);
+    });
+  }
+
+  /**
+   * 検索用に文字列を畳む（小文字化 + 全角英数字 → 半角）。スニペットとハイライトの
+   * 位置を元文字列と共有するため、必ず同じ長さを保つ。NFKC は長さが変わりうるので使わない。
+   */
+  function fold(s) {
+    return toHalfWidth(lowerKeepingLength(String(s)));
+  }
+
+  // 空白区切りのクエリを語の配列にする（全角空白も \s に含まれる）。重複語は落とす。
+  function tokenize(query) {
+    var terms = [];
+    fold(query)
+      .split(/\s+/)
+      .forEach(function (term) {
+        if (term && terms.indexOf(term) === -1) terms.push(term);
+      });
+    return terms;
+  }
+
+  function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  /**
+   * 語順どおりの一致を判定する正規表現を作る。語の間の空白は種類も個数も問わない
+   * （全角空白・改行・連続空白を挟んでいても同じ並びとみなす）。
+   */
+  function phraseMatcher(terms) {
+    return new RegExp(terms.map(escapeRegExp).join("\\s+"));
+  }
+
+  // 検索対象（畳んだ文字列）を初回検索時に一度だけ構築する。
+  var searchIndex = null;
+  function buildSearchIndex() {
+    if (searchIndex) return searchIndex;
+    searchIndex = navPages.map(function (p) {
+      var title = p.title || "";
+      var text = p.text || "";
+      return {
+        route: p.route,
+        title: title,
+        titleFolded: fold(title),
+        text: text,
+        textFolded: fold(text),
+        headings: (p.headings || []).map(function (h) {
+          var htext = h.text || "";
+          return { id: h.id, text: htext, folded: fold(htext) };
+        }),
+      };
+    });
+    return searchIndex;
+  }
+
+  // 出現位置を先頭から集める（上限まで）。
+  function occurrences(folded, term) {
+    var positions = [];
+    var from = 0;
+    while (positions.length < MAX_OCCURRENCES) {
+      var pos = folded.indexOf(term, from);
+      if (pos === -1) break;
+      positions.push(pos);
+      from = pos + term.length;
+    }
+    return positions;
+  }
+
+  /**
+   * 1 ページ分のスコアを求める。すべての語がいずれかのフィールドに含まれる場合のみ
+   * 結果に残す（AND 検索）。一致しない語があれば null を返す。
+   */
+  function scoreEntry(entry, terms, phrase) {
+    var score = 0;
+    var textHits = [];
+    // 見出し ID → 一致した語数。最も多くの語に一致した見出しへ飛ばす。
+    // キーが Object.prototype のプロパティ名（"constructor" など）でも壊れないよう
+    // プロトタイプ無しのマップを使う。
+    var headingHits = Object.create(null);
+
+    for (var i = 0; i < terms.length; i++) {
+      var term = terms[i];
+      var matched = false;
+
+      if (entry.titleFolded.indexOf(term) !== -1) {
+        score += SCORE_TITLE;
+        matched = true;
+      }
+
+      var headingMatched = false;
+      entry.headings.forEach(function (h) {
+        if (h.folded.indexOf(term) === -1) return;
+        headingHits[h.id] = (headingHits[h.id] || 0) + 1;
+        headingMatched = true;
+      });
+      if (headingMatched) {
+        score += SCORE_HEADING;
+        matched = true;
+      }
+
+      var positions = occurrences(entry.textFolded, term);
+      if (positions.length > 0) {
+        score += SCORE_TEXT + Math.min(positions.length - 1, MAX_TEXT_REPEAT) * SCORE_TEXT_REPEAT;
+        textHits.push({ term: term, positions: positions });
+        matched = true;
+      }
+
+      if (!matched) return null;
+    }
+
+    if (phrase) {
+      if (phrase.test(entry.titleFolded)) score += SCORE_PHRASE_TITLE;
+      else if (
+        entry.headings.some(function (h) {
+          return phrase.test(h.folded);
+        })
+      )
+        score += SCORE_PHRASE_HEADING;
+      else if (phrase.test(entry.textFolded)) score += SCORE_PHRASE_TEXT;
+    }
+
+    return { score: score, textHits: textHits, headingHits: headingHits };
+  }
+
+  // 最も多くの語に一致した見出しを選ぶ（同数なら文書順で先のもの）。
+  function bestHeading(entry, headingHits) {
+    var best = null;
+    var bestCount = 0;
+    entry.headings.forEach(function (h) {
+      var count = headingHits[h.id] || 0;
+      if (count > bestCount) {
+        best = h;
+        bestCount = count;
+      }
+    });
+    return best;
+  }
+
+  // [start, end) の範囲を、語の一致部分だけ <mark> で囲んだエスケープ済み HTML にする。
+  function markRange(text, folded, terms, start, end) {
+    var ranges = [];
+    terms.forEach(function (term) {
+      var from = start;
+      while (true) {
+        var pos = folded.indexOf(term, from);
+        if (pos === -1 || pos >= end) break;
+        ranges.push({ start: pos, end: Math.min(pos + term.length, end) });
+        from = pos + term.length;
+      }
+    });
+    // 語同士が重なる場合（部分文字列を含むクエリ）に <mark> が入れ子にならないよう束ねる。
+    ranges.sort(function (a, b) {
+      return a.start - b.start;
+    });
+    var merged = [];
+    ranges.forEach(function (r) {
+      var last = merged[merged.length - 1];
+      if (last && r.start <= last.end) last.end = Math.max(last.end, r.end);
+      else merged.push({ start: r.start, end: r.end });
+    });
+
+    var html = "";
+    var cursor = start;
+    merged.forEach(function (r) {
+      html += escapeHtml(text.slice(cursor, r.start));
+      html += "<mark>" + escapeHtml(text.slice(r.start, r.end)) + "</mark>";
+      cursor = r.end;
+    });
+    return html + escapeHtml(text.slice(cursor, end));
+  }
+
+  function markMatches(text, folded, terms) {
+    return markRange(text, folded, terms, 0, text.length);
+  }
+
+  /**
+   * 本文から抜粋を作る。最も多くの語が近接して現れる窓を選び、その中の一致語を強調する。
+   * 本文に語が無い（タイトル・見出しだけの一致）場合は本文の先頭を返す。
+   */
+  function snippet(entry, terms, textHits) {
+    var text = entry.text;
+    if (!text) return "";
+
+    var start = 0;
+    if (textHits.length > 0) {
+      var candidates = [];
+      textHits.forEach(function (hit) {
+        hit.positions.forEach(function (pos) {
+          candidates.push({ pos: pos, term: hit.term });
+        });
+      });
+      candidates.sort(function (a, b) {
+        return a.pos - b.pos;
+      });
+
+      // 位置順に並んだ一致を幅 SNIPPET_WINDOW の窓で走査し、含む語の種類が最も多い
+      // 窓の先頭を採用する（同数なら先に現れる窓）。
+      var bestPos = candidates[0].pos;
+      var bestCount = 0;
+      var counts = Object.create(null);
+      var distinct = 0;
+      var windowEnd = 0;
+      for (var i = 0; i < candidates.length; i++) {
+        while (
+          windowEnd < candidates.length &&
+          candidates[windowEnd].pos < candidates[i].pos + SNIPPET_WINDOW
+        ) {
+          var addTerm = candidates[windowEnd].term;
+          if (!counts[addTerm]) distinct++;
+          counts[addTerm] = (counts[addTerm] || 0) + 1;
+          windowEnd++;
+        }
+        if (distinct > bestCount) {
+          bestCount = distinct;
+          bestPos = candidates[i].pos;
+        }
+        var dropTerm = candidates[i].term;
+        counts[dropTerm]--;
+        if (counts[dropTerm] === 0) distinct--;
+      }
+      start = Math.max(0, bestPos - SNIPPET_LEAD);
+    }
+
+    var end = Math.min(text.length, start + SNIPPET_WINDOW + SNIPPET_LEAD);
+    return (
+      (start > 0 ? "…" : "") +
+      markRange(text, entry.textFolded, terms, start, end) +
+      (end < text.length ? "…" : "")
+    );
   }
 
   function search(query) {
-    var q = query.trim().toLowerCase();
-    if (!q) return [];
+    var terms = tokenize(query);
+    if (terms.length === 0) return [];
+    // 語をそのままの並びで含む場合の加点用（単語 1 つのときは通常の一致と同じなので使わない）。
+    var phrase = terms.length > 1 ? phraseMatcher(terms) : null;
+
     var results = [];
-    for (var i = 0; i < navPages.length && results.length < 20; i++) {
-      var p = navPages[i];
-      var hay = (p.title + " " + (p.text || "")).toLowerCase();
-      if (hay.indexOf(q) === -1) continue;
+    buildSearchIndex().forEach(function (entry, index) {
+      var scored = scoreEntry(entry, terms, phrase);
+      if (!scored) return;
+      var heading = bestHeading(entry, scored.headingHits);
       results.push({
-        route: p.route,
-        title: p.title,
-        snippet: snippet(p.text || p.title, q),
+        route: entry.route,
+        title: markMatches(entry.title, entry.titleFolded, terms),
+        headingId: heading ? heading.id : null,
+        heading: heading ? markMatches(heading.text, heading.folded, terms) : "",
+        snippet: snippet(entry, terms, scored.textHits),
+        score: scored.score,
+        index: index,
       });
-    }
-    return results;
+    });
+
+    // スコア降順。同点は閲覧順（文書順）を保つ。
+    results.sort(function (a, b) {
+      return b.score - a.score || a.index - b.index;
+    });
+    return results.slice(0, SEARCH_LIMIT);
   }
 
   function renderSearchResults(query) {
@@ -363,14 +652,20 @@
 
     var html = "";
     results.forEach(function (r) {
+      // 見出しに一致した結果はその見出しへ直接飛ばす（アンカー hash はルータが
+      // 該当要素を含むページへ解決する）。タイトル・本文だけの一致はページ先頭。
+      var target = r.headingId || r.route;
       html +=
         '<li class="search-result"><a data-route="' +
         escapeHtml(r.route) +
-        '" href="#' +
-        escapeHtml(encodeURI(r.route)) +
+        '"' +
+        (r.headingId ? ' data-heading="' + escapeHtml(r.headingId) + '"' : "") +
+        ' href="#' +
+        escapeHtml(encodeURI(target)) +
         '"><span class="search-result-title">' +
-        escapeHtml(r.title) +
+        r.title +
         "</span>" +
+        (r.heading ? '<span class="search-result-heading">' + r.heading + "</span>" : "") +
         (r.snippet ? '<span class="search-result-snippet">' + r.snippet + "</span>" : "") +
         "</a></li>";
     });
@@ -379,7 +674,9 @@
     box.querySelectorAll("a[data-route]").forEach(function (a) {
       a.addEventListener("click", function (e) {
         e.preventDefault();
-        navigateTo(a.getAttribute("data-route"), null);
+        var headingId = a.getAttribute("data-heading");
+        if (headingId) navigateToAnchor(headingId);
+        else navigateTo(a.getAttribute("data-route"), null);
       });
     });
   }
