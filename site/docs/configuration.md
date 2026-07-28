@@ -276,10 +276,15 @@ document would be unusable:
 {{style}}  {{sidebar}}  {{pages}}  {{siteDataJson}}  {{appJs}}  {{bodyScripts}}
 ```
 
-These are optional: `{{title}}`, `{{htmlAttrs}}` (initial color scheme), `{{bodyAttrs}}` and
-`{{contentWidthTogglePressed}}` / `{{contentWidthToggleTitle}}` (content width), `{{generatorVersion}}`,
-and the `{{#contentWidthToggle}}` / `{{#imageLightbox}}` / `{{#branding}}` / `{{#generatorVersion}}`
-blocks. Dropping one just drops that feature from the output.
+The rest are optional, and dropping one just drops the feature it carries:
+
+```text
+{{title}}                                                    document title
+{{htmlAttrs}}                                                initial color scheme
+{{bodyAttrs}} {{contentWidthTogglePressed}} {{contentWidthToggleTitle}}   content-width control
+{{generatorVersion}}                                         version in the branding footer
+{{#contentWidthToggle}} {{#imageLightbox}} {{#branding}} {{#generatorVersion}}   optional blocks
+```
 
 Because the output is a single self-contained file, a theme cannot reference external assets. Inline
 fonts and images as data URIs in `style.css`. `monodocs watch` and `monodocs serve` also watch the

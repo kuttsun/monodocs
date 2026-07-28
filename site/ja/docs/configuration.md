@@ -273,10 +273,15 @@ html:
 {{style}}  {{sidebar}}  {{pages}}  {{siteDataJson}}  {{appJs}}  {{bodyScripts}}
 ```
 
-任意のトークンは `{{title}}`、`{{htmlAttrs}}`（初期配色）、`{{bodyAttrs}}` と
-`{{contentWidthTogglePressed}}` / `{{contentWidthToggleTitle}}`（本文幅）、`{{generatorVersion}}`、
-および `{{#contentWidthToggle}}` / `{{#imageLightbox}}` / `{{#branding}}` / `{{#generatorVersion}}`
-ブロックです。省いた分の機能が出力から消えるだけです。
+残りは任意で、省いた分の機能が出力から消えるだけです。
+
+```text
+{{title}}                                                    ドキュメントタイトル
+{{htmlAttrs}}                                                初期配色
+{{bodyAttrs}} {{contentWidthTogglePressed}} {{contentWidthToggleTitle}}   本文幅の切り替え
+{{generatorVersion}}                                         ブランディングフッターのバージョン
+{{#contentWidthToggle}} {{#imageLightbox}} {{#branding}} {{#generatorVersion}}   任意ブロック
+```
 
 出力は単一の自己完結ファイルなので、テーマから外部アセットを参照できません。フォントや画像は
 `style.css` に data URI で埋め込んでください。`monodocs watch` / `monodocs serve` はテーマ
