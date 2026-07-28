@@ -50,6 +50,15 @@ sources:
     extensions: [.adoc, .asciidoc, .asc]
 
 sidebar:
+  # "folder"（既定）はフォルダ構造から生成、"custom" は下の items をそのまま使う
+  mode: folder
+  # mode: custom のときのサイドバー定義（各項目は path か children のどちらか一方）
+  # items:
+  #   - title: ホーム
+  #     path: index.md
+  #   - title: セットアップ
+  #     children:
+  #       - path: setup/install.adoc
   # 走査から除外する glob（partials/includes、_ で始まるファイル）
   exclude: ['_partials/**', 'partials/**', 'includes/**', '**/_*']
   # この階層より深いディレクトリを既定で折りたたむ。既定は未指定=全展開 / 0=全畳み
@@ -120,11 +129,44 @@ html:
 
 | キー                         | 型                   | 既定値                                                    | 説明 |
 | ---------------------------- | -------------------- | --------------------------------------------------------- | ---- |
+| `sidebar.mode`               | `folder` `custom`    | `folder`                                                  | サイドバーの生成方式。`folder` はフォルダ構造から生成し、`custom` は `sidebar.items` をそのまま使う。下記参照。 |
+| `sidebar.items`              | object[]             | 未指定                                                    | `mode: custom` で使うサイドバー定義。`mode: custom` とセットで指定する（片方だけはエラー）。下記参照。 |
 | `sidebar.exclude`            | string[]             | `['_partials/**', 'partials/**', 'includes/**', '**/_*']` | 走査から除外する glob。`_` で始まるファイルは拡張子を問わず include/partial 扱い。 |
 | `sidebar.collapseDepth`      | integer              | 未指定                                                    | この階層より **深い** ディレクトリを既定で折りたたむ（トップレベル=深さ 1）。`0` で全畳み、未指定で全展開。畳んでも隠さないため到達性は失わず、いつでも開ける。 |
 | `sidebar.titleFrom`          | `heading` `filename` | `heading`                                                 | ナビ用タイトルの取得元。`heading` = 明示タイトル → 見出し → ファイル名。`filename` = 見出しを飛ばしファイル名を使う（明示タイトル / `:sd-title:` はどちらでも常に最優先）。 |
 | `sidebar.flattenSingleChild` | boolean              | `false`                                                   | **ページちょうど 1 つ・サブフォルダ 0** のディレクトリを畳み、唯一のページを親へ繰り上げる。ドキュメント＋画像を 1 フォルダにまとめた場合などに有効（画像はページに数えない）。 |
 | `sidebar.titleTransform`     | object               | `{ page: none, directory: none }`                         | **導出された** 表示タイトル（見出し / ファイル名由来のページタイトル、フォルダ名）への変換。明示タイトル / `:sd-title:` には適用せず、route / page id も不変。下記参照。 |
+
+#### `sidebar.items`（カスタムサイドバー）
+
+`sidebar.mode: custom` では、サイドバーの構造・順序・タイトルを書いたとおりに使います。
+
+```yaml
+sidebar:
+  mode: custom
+  items:
+    - title: ホーム
+      path: index.md
+    - title: セットアップ
+      children:
+        - path: setup/install.adoc
+        - title: 設定 # ページタイトルより優先される
+          path: setup/config.md
+```
+
+各項目は `path`（ページ）か `children`（グループ）のどちらか一方だけを持ちます。
+
+- `path` は `input` からの相対パスで、拡張子まで書きます（`setup/install.adoc`）。先頭の `./` と `\` 区切りも受け付けます。
+- `title` はページでは省略可能（省略時はページ自身のタイトル）、グループでは必須です。
+
+カスタムサイドバーは **閲覧順** も決めます。前後ナビ、PDF のページ順、初期表示ページはこの並びに従います。
+`items` に載せなかったページは hash route では到達でき、`monodocs validate` が警告として報告します
+（閲覧順では掲載ページの後ろに置かれます）。`hidden` なページを書いた場合は警告つきでスキップし、
+ページがすべて消えたグループは出力しません。存在しないパスはエラーです。
+
+構造とタイトルを明示するモードのため、`sidebar.titleTransform.directory` と
+`sidebar.flattenSingleChild` は適用されません。`sidebar.collapseDepth` / `sidebar.exclude` /
+`sidebar.titleFrom` / `sidebar.titleTransform.page` はこれまでどおり有効です。
 
 #### `sidebar.titleTransform`
 

@@ -123,6 +123,17 @@ export type SidebarNode =
       pageId: string;
     };
 
+/**
+ * `sidebar.mode: "custom"` の 1 項目（設定ファイル由来）。
+ * `path` はページ（入力ディレクトリからの相対パス）、`children` はグループを表し、
+ * どちらか一方だけを持つ。ページの `title` 省略時はページ自身のタイトルを使う。
+ */
+export type SidebarItem = {
+  title?: string;
+  path?: string;
+  children?: SidebarItem[];
+};
+
 /** renderer に渡すレンダリングコンテキスト。 */
 export type RenderContext = {
   /** レンダリング対象ページの識別情報。 */

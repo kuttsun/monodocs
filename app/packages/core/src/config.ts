@@ -3,7 +3,13 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import type { BuildOptions, OutputFormat, SidebarTitleTransforms, TitleFrom } from "./types.js";
+import type {
+  BuildOptions,
+  OutputFormat,
+  SidebarItem,
+  SidebarTitleTransforms,
+  TitleFrom,
+} from "./types.js";
 
 const DEFAULT_INPUT = "./docs";
 const DEFAULT_TITLE = "Documentation";
@@ -52,6 +58,11 @@ export type ColorScheme = "light" | "dark" | "auto";
  * A reader's localStorage choice takes precedence after they use the toggle.
  */
 export type ContentWidthDefault = "standard" | "wide";
+/**
+ * サイドバーの生成方式。`"folder"`（既定）はフォルダ構造から自動生成し、
+ * `"custom"` は `sidebar.items` に書いた構造と順序をそのまま使う。
+ */
+export type SidebarMode = "folder" | "custom";
 
 const regexTitleTransformSchema = z
   .object({
@@ -85,6 +96,43 @@ const sidebarTitleTransformSchema = z
   })
   .strict();
 
+/**
+ * `sidebar.mode: "custom"` の 1 項目。`path`（ページ）か `children`（グループ）の
+ * どちらか一方を持つ。ページは省略時にページ自身のタイトルを使うため `title` を省略でき、
+ * グループは導出元が無いため `title` が必須。
+ */
+const sidebarItemSchema: z.ZodType<SidebarItem> = z.lazy(() =>
+  z
+    .object({
+      title: z.string().min(1).optional(),
+      path: z.string().min(1).optional(),
+      children: z.array(sidebarItemSchema).min(1).optional(),
+    })
+    .strict()
+    .superRefine((value, ctx) => {
+      const hasPath = value.path !== undefined;
+      const hasChildren = value.children !== undefined;
+      if (hasPath && hasChildren) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "sidebar.items entry must not have both path and children",
+        });
+      }
+      if (!hasPath && !hasChildren) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "sidebar.items entry needs either path or children",
+        });
+      }
+      if (hasChildren && value.title === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "sidebar.items entry with children needs a title",
+        });
+      }
+    }),
+);
+
 /** `monodocs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
 const configFileSchema = z.object({
   title: z.string().optional(),
@@ -103,6 +151,10 @@ const configFileSchema = z.object({
     .optional(),
   sidebar: z
     .object({
+      // "folder"（既定）= フォルダ構造からサイドバーを生成する。
+      // "custom" = items に書いた構造と順序をそのまま使う。
+      mode: z.enum(["folder", "custom"]).optional(),
+      items: z.array(sidebarItemSchema).min(1).optional(),
       exclude: z.array(z.string()).optional(),
       // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
       // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
@@ -118,6 +170,21 @@ const configFileSchema = z.object({
       flattenSingleChild: z.boolean().optional(),
     })
     .strict()
+    .superRefine((value, ctx) => {
+      // 片方だけの指定は「書いたのに効かない」事故になるため、両方そろっていることを求める。
+      if (value.mode === "custom" && value.items === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'sidebar.mode: "custom" needs sidebar.items',
+        });
+      }
+      if (value.mode !== "custom" && value.items !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'sidebar.items needs sidebar.mode: "custom"',
+        });
+      }
+    })
     .optional(),
   toc: z
     .object({
@@ -196,6 +263,10 @@ export type ResolvedConfig = {
   markdownExtensions: string[];
   asciidocExtensions: string[];
   exclude: string[];
+  /** サイドバーの生成方式（"folder" = フォルダ構造 / "custom" = sidebarItems）。 */
+  sidebarMode: SidebarMode;
+  /** `sidebarMode: "custom"` のときに使うサイドバー定義。folder のときは空配列。 */
+  sidebarItems: SidebarItem[];
   /** この階層より深いディレクトリを既定で折りたたむ。undefined は折りたたみなし。 */
   sidebarCollapseDepth?: number;
   /** 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。 */
@@ -365,6 +436,8 @@ export async function loadConfig(
     markdownExtensions: fileConfig.sources?.markdown?.extensions ?? DEFAULT_MARKDOWN_EXTENSIONS,
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
+    sidebarMode: fileConfig.sidebar?.mode ?? "folder",
+    sidebarItems: fileConfig.sidebar?.items ?? [],
     sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,
     sidebarTitleTransform: {
       page: fileConfig.sidebar?.titleTransform?.page ?? { type: "none" },

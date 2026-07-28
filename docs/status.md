@@ -107,7 +107,8 @@ undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and
 - [x] Keywords are highlighted in the title, heading, and snippet, and the snippet is the body window containing the most distinct keywords
 - [x] Matching folds case and full-width alphanumerics, so `ＰＤＦ` and `pdf` find the same pages
 - [ ] Custom themes can be selected
-- [ ] Custom sidebars (`sidebar.mode: custom`) are fully supported
+- [x] Custom sidebars (`sidebar.mode: custom`) define the sidebar structure, order, and titles, and the same order drives prev/next navigation, PDF page order, and the initially shown page
+- [x] A custom sidebar reports a missing path as an error, and unlisted, hidden, or duplicated pages as warnings that `validate` surfaces
 - [ ] A standalone binary that runs without Node.js is distributed
 - [ ] Homebrew / Scoop / winget support is decided
 - [ ] HTML / PDF output quality improvements

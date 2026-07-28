@@ -862,7 +862,8 @@ guide
 
 ### 14.2 Customization
 
-Allow explicit specification via the configuration file.
+Already supported (v0.8). The structure, order, and titles are taken from the configuration file
+exactly as written.
 
 ```yaml
 sidebar:
@@ -875,6 +876,24 @@ sidebar:
         - path: "setup/install.adoc"
         - path: "setup/config.md"
 ```
+
+Each entry holds either `path` (a page, given as the path relative to `input` including the
+extension) or `children` (a group), never both. `title` is optional for a page — the page's own title
+is used when omitted — and required for a group, which has nothing to derive it from. `mode: custom`
+and `items` must be given together; either one alone is a configuration error, because a setting that
+is silently ignored is worse than a rejected one.
+
+The custom sidebar also defines the reading order, so previous/next navigation, the page order in a
+PDF, and the initially shown page follow it. Pages that are not listed keep their routes and are
+placed after the listed ones; the omission is reported as a warning rather than an error, because
+leaving a draft out of navigation is a legitimate choice and the page stays reachable. A listed page
+that is `hidden` is skipped with a warning so that `hidden` remains the single source of truth for
+navigation, and a group whose pages all disappear is dropped instead of leaving an empty heading.
+A path that does not exist is an error (chapter 27.1).
+
+Because the structure and the titles are explicit in this mode, the folder-derived
+`sidebar.titleTransform.directory` and `sidebar.flattenSingleChild` are not applied.
+`collapseDepth`, `exclude`, `titleFrom`, and `titleTransform.page` are unaffected.
 
 ### 14.3 Exclusion
 

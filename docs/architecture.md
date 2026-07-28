@@ -123,6 +123,11 @@ Preserve these display and reachability invariants:
   but never overrides an explicit frontmatter or `:sd-title:` title.
 - `sidebar.flattenSingleChild` flattens only a directory with exactly one page and no subdirectories. It is a
   display-only transformation and must not reduce reachability.
+- `sidebar.mode: "custom"` builds the sidebar from `sidebar.items` instead of the directory structure, and the
+  same order becomes the reading order (previous/next navigation, PDF page order, and the initially shown
+  page). A path that does not resolve to a page is an error; an unlisted, `hidden`, or repeated page is a
+  warning and never removes the page itself, which stays reachable by its route. Folder-derived
+  `sidebar.titleTransform.directory` and `sidebar.flattenSingleChild` do not apply in this mode.
 - `html.colorScheme` controls the initial light, dark, or automatic scheme. A reader's stored
   `monodocs:theme` preference takes precedence.
 - The content-width toggle switches between the readable default maximum width and the full available width.

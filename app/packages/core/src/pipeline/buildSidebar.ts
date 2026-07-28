@@ -1,4 +1,4 @@
-import type { Page, SidebarNode, TitleTransform } from "../types.js";
+import type { Page, SidebarItem, SidebarNode, TitleTransform } from "../types.js";
 import { applyTitleTransform, DEFAULT_TITLE_TRANSFORM } from "./titleTransform.js";
 
 type DirNode = Extract<SidebarNode, { type: "dir" }>;
@@ -51,6 +51,97 @@ export function buildSidebar(pages: Page[], options: BuildSidebarOptions = {}): 
   }
 
   return options.flattenSingleChild ? flattenSingleChildDirs(root) : root;
+}
+
+/** {@link buildCustomSidebar} の結果。警告は validate / build のログへ流す。 */
+export type CustomSidebarResult = {
+  sidebar: SidebarNode[];
+  warnings: string[];
+  /** items に現れた順のページ（重複は最初の 1 回のみ）。閲覧順の並べ替えに使う。 */
+  orderedPages: Page[];
+};
+
+/** 設定に書かれた path を relativePath と比較できる形に正規化する。 */
+function normalizeItemPath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/^\.\//, "").replace(/^\//, "");
+}
+
+/**
+ * 設定ファイルの `sidebar.items` からサイドバーのツリーを生成する（`sidebar.mode: "custom"`）。
+ *
+ * 構造も順序も著者が書いたとおりにする。したがってフォルダ構造由来の
+ * `titleTransform.directory` / `flattenSingleChild` は適用しない。
+ * ページの `title` 省略時はページ自身のタイトル（frontmatter → 見出し → ファイル名）を使う。
+ *
+ * 存在しない path はエラー（roadmap 27.1）。`hidden` なページの指定と、items に現れない
+ * ページ、同じページの重複指定は警告にとどめる（いずれも route では到達できるため）。
+ */
+export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomSidebarResult {
+  const byPath = new Map<string, Page>();
+  for (const page of pages) byPath.set(page.relativePath, page);
+
+  const warnings: string[] = [];
+  const orderedPages: Page[] = [];
+  const seen = new Set<string>();
+
+  function convert(item: SidebarItem): SidebarNode | undefined {
+    if (item.children) {
+      const children = item.children.map(convert).filter((node) => node !== undefined);
+      // 子がすべて落ちた（hidden のみ等）グループは見出しだけが残るため出さない。
+      if (children.length === 0) {
+        warnings.push(`Sidebar group has no visible pages: ${item.title ?? ""}`);
+        return undefined;
+      }
+      // path はフォルダ構造由来の識別子。custom では対応するフォルダが無いので空にする。
+      return { type: "dir", title: item.title ?? "", path: "", children };
+    }
+
+    const relativePath = normalizeItemPath(item.path ?? "");
+    const page = byPath.get(relativePath);
+    if (!page) {
+      // ファイル自体はあっても sidebar.exclude や対象拡張子の設定でページ化されていない
+      // ことがあるため、探す場所を示す。
+      throw new Error(
+        `Sidebar item not found: ${item.path}` +
+          ` (paths are relative to input and must resolve to a generated page;` +
+          ` check sidebar.exclude and sources.*.extensions)`,
+      );
+    }
+    if (page.hidden) {
+      warnings.push(`Sidebar item is hidden and was skipped: ${item.path}`);
+      return undefined;
+    }
+    if (seen.has(page.id)) {
+      warnings.push(`Sidebar item appears more than once: ${item.path}`);
+      return undefined;
+    }
+    seen.add(page.id);
+    orderedPages.push(page);
+    return { type: "page", title: item.title ?? page.title, route: page.route, pageId: page.id };
+  }
+
+  const sidebar = items.map(convert).filter((node) => node !== undefined);
+
+  const missing = pages.filter((page) => !page.hidden && !seen.has(page.id));
+  if (missing.length > 0) {
+    warnings.push(
+      `Not listed in the custom sidebar (reachable only by route): ${missing
+        .map((page) => page.relativePath)
+        .join(", ")}`,
+    );
+  }
+
+  return { sidebar, warnings, orderedPages };
+}
+
+/**
+ * ページを custom サイドバーの並び順に揃える。サイドバーが閲覧順（前後ナビ・PDF の
+ * ページ順・初期表示ページ）を決めるようにするため。items に無いページは元の順序のまま
+ * 末尾に残す（route では到達できるので落とさない）。
+ */
+export function orderPagesBySidebar(pages: Page[], orderedPages: Page[]): Page[] {
+  const listed = new Set(orderedPages.map((page) => page.id));
+  return [...orderedPages, ...pages.filter((page) => !listed.has(page.id))];
 }
 
 /**
