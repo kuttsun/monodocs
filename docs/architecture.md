@@ -138,6 +138,12 @@ Preserve these display and reachability invariants:
   default.
   Images inside links or buttons retain the parent interaction, and the dialog must not appear in print or PDF
   output. Images with an explicit empty `alt` retain their decorative semantics.
+- `html.theme` selects a built-in theme by name or a custom theme by directory path (resolved against the
+  configuration file). A custom theme may supply any subset of `template.html`, `style.css`, and `app.js`;
+  the default theme supplies the rest, so a theme never has to vendor the client script to restyle output.
+  A template that lacks `{{style}}`, `{{sidebar}}`, `{{pages}}`, `{{siteDataJson}}`, `{{appJs}}`, or
+  `{{bodyScripts}}` must fail the build rather than produce a broken document. Themes are read from the
+  filesystem so that every distribution form supports them, and they must not reference external assets.
 - `html.branding` shows a footer at the end of HTML and PDF output by default.
   The CLI supplies its package version at runtime; the renderer escapes that value and omits only the version
   when no value is available. `html.branding: false` omits the complete footer.

@@ -179,6 +179,20 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     expect(config.sidebarTitleFrom).toBe("filename");
   });
 
+  it("keeps a built-in theme name as-is and resolves a theme path", async () => {
+    expect((await loadConfig({}, dir)).theme).toBe("default");
+
+    await writeConfig('html:\n  theme: "default"\n');
+    expect((await loadConfig({}, dir)).theme).toBe("default");
+
+    // パス表記は設定ファイル基準で解決する（実行時のカレントディレクトリ基準ではない）。
+    await writeConfig('html:\n  theme: "./themes/mine"\n');
+    expect((await loadConfig({}, dir)).theme).toBe(join(dir, "themes", "mine"));
+
+    await writeConfig('html:\n  theme: "themes/mine"\n');
+    expect((await loadConfig({}, dir)).theme).toBe(join(dir, "themes", "mine"));
+  });
+
   it("defaults to the folder sidebar with no items", async () => {
     const config = await loadConfig({}, dir);
     expect(config.sidebarMode).toBe("folder");

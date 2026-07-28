@@ -225,6 +225,28 @@ describe("renderSingleHtml", () => {
     expect(JSON.parse(defaultJson.replace(/\\u003c/g, "<")).tocMaxLevel).toBe(3);
   });
 
+  it("does not re-substitute token-like text coming from pages or the theme", async () => {
+    // トークンの書き方を説明するドキュメントページなど、本文に `{{...}}` が現れうる。
+    const p = page("/tokens", "tokens", "Tokens");
+    p.html = "<p>Write {{appJs}} and {{bodyScripts}} in the template.</p>";
+    const sidebar: SidebarNode[] = [
+      { type: "page", title: "Tokens", route: "/tokens", pageId: "tokens" },
+    ];
+
+    const html = await renderSingleHtml({
+      title: "T",
+      pages: [p],
+      sidebar,
+      bodyScripts: "<script>/* mermaid */</script>",
+    });
+
+    // 本文の記述はそのまま残り、クライアント JS や bodyScripts に置き換わらない。
+    expect(html).toContain("Write {{appJs}} and {{bodyScripts}} in the template.");
+    // 本来のトークン位置には実際の内容が入っている。
+    expect(html).toContain("<script>/* mermaid */</script>");
+    expect(html).toContain("__MONODOCS_DATA__");
+  });
+
   it("collapses directories deeper than collapseDepth by default", async () => {
     const pages: Page[] = [page("/a/b/c", "a-b-c", "Deep")];
     // a (depth 1) > b (depth 2) > page。collapseDepth=1 なら depth 2 以降を畳む。

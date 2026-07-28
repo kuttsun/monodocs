@@ -1,7 +1,7 @@
 import type { Page, SidebarNode } from "../types.js";
 import { parseContentWidth, type ColorScheme, type ContentWidthDefault } from "../config.js";
 import { loadTheme } from "../themes/index.js";
-import { escapeAttr, escapeHtml, injectToken } from "../util/html.js";
+import { escapeAttr, escapeHtml, renderTemplate } from "../util/html.js";
 
 export type RenderHtmlInput = {
   title: string;
@@ -198,21 +198,20 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     "generatorVersion",
     generatorVersion !== undefined && generatorVersion !== "",
   );
-  html = injectToken(html, "{{htmlAttrs}}", rootThemeAttr(colorScheme));
-  html = injectToken(
-    html,
-    "{{bodyAttrs}}",
-    bodyContentWidthAttr(input.contentWidthToggle, contentWidthDefault),
-  );
-  html = injectToken(html, "{{contentWidthTogglePressed}}", contentWidthState.pressed);
-  html = injectToken(html, "{{contentWidthToggleTitle}}", contentWidthState.title);
-  html = injectToken(html, "{{generatorVersion}}", escapeHtml(generatorVersion ?? ""));
-  html = injectToken(html, "{{title}}", escapeHtml(input.title));
-  html = injectToken(html, "{{style}}", styleWithOverrides(theme.style, input));
-  html = injectToken(html, "{{sidebar}}", sidebarHtml);
-  html = injectToken(html, "{{pages}}", pagesHtml);
-  html = injectToken(html, "{{siteDataJson}}", siteData);
-  html = injectToken(html, "{{appJs}}", theme.appJs);
-  html = injectToken(html, "{{bodyScripts}}", input.bodyScripts ?? "");
-  return html;
+  // 1 回の走査でまとめて置換する。順番に置換すると、先に入れた本文 HTML やテーマの
+  // CSS / JS に含まれる `{{...}}` が後続の置換で書き換えられてしまう。
+  return renderTemplate(html, {
+    htmlAttrs: rootThemeAttr(colorScheme),
+    bodyAttrs: bodyContentWidthAttr(input.contentWidthToggle, contentWidthDefault),
+    contentWidthTogglePressed: contentWidthState.pressed,
+    contentWidthToggleTitle: contentWidthState.title,
+    generatorVersion: escapeHtml(generatorVersion ?? ""),
+    title: escapeHtml(input.title),
+    style: styleWithOverrides(theme.style, input),
+    sidebar: sidebarHtml,
+    pages: pagesHtml,
+    siteDataJson: siteData,
+    appJs: theme.appJs,
+    bodyScripts: input.bodyScripts ?? "",
+  });
 }
