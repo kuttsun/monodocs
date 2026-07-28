@@ -179,6 +179,62 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     expect(config.sidebarTitleFrom).toBe("filename");
   });
 
+  it("defaults to the folder sidebar with no items", async () => {
+    const config = await loadConfig({}, dir);
+    expect(config.sidebarMode).toBe("folder");
+    expect(config.sidebarItems).toEqual([]);
+  });
+
+  it("reads a nested sidebar.items tree", async () => {
+    await writeConfig(
+      'sidebar:\n  mode: custom\n  items:\n    - title: "Home"\n      path: "index.md"\n' +
+        '    - title: "Setup"\n      children:\n        - path: "setup/install.adoc"\n',
+    );
+    const config = await loadConfig({}, dir);
+    expect(config.sidebarMode).toBe("custom");
+    expect(config.sidebarItems).toEqual([
+      { title: "Home", path: "index.md" },
+      { title: "Setup", children: [{ path: "setup/install.adoc" }] },
+    ]);
+  });
+
+  it("rejects sidebar.mode custom without items, and items without custom", async () => {
+    await writeConfig("sidebar:\n  mode: custom\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow(/sidebar\.items/);
+
+    await writeConfig('sidebar:\n  items:\n    - path: "index.md"\n');
+    await expect(loadConfig({}, dir)).rejects.toThrow(/sidebar\.mode/);
+  });
+
+  it("rejects a sidebar item that is neither a page nor a group", async () => {
+    await writeConfig('sidebar:\n  mode: custom\n  items:\n    - title: "Orphan"\n');
+    await expect(loadConfig({}, dir)).rejects.toThrow(/path or children/);
+
+    await writeConfig(
+      'sidebar:\n  mode: custom\n  items:\n    - title: "Both"\n      path: "index.md"\n' +
+        '      children:\n        - path: "faq.md"\n',
+    );
+    await expect(loadConfig({}, dir)).rejects.toThrow(/both path and children/);
+  });
+
+  it("rejects a sidebar group without a title", async () => {
+    await writeConfig(
+      'sidebar:\n  mode: custom\n  items:\n    - children:\n        - path: "index.md"\n',
+    );
+    await expect(loadConfig({}, dir)).rejects.toThrow(/children needs a title/);
+  });
+
+  it("rejects unknown keys and empty values inside sidebar.items", async () => {
+    await writeConfig('sidebar:\n  mode: custom\n  items:\n    - route: "/index"\n');
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+
+    await writeConfig('sidebar:\n  mode: custom\n  items:\n    - path: ""\n');
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+
+    await writeConfig("sidebar:\n  mode: custom\n  items: []\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow();
+  });
+
   it("rejects an invalid sidebar.titleFrom", async () => {
     await writeConfig("sidebar:\n  titleFrom: nope\n");
     await expect(loadConfig({}, dir)).rejects.toThrow();

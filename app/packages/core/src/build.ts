@@ -7,7 +7,7 @@ import { scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
 import { asciidocRenderer } from "./sources/asciidoc/renderer.js";
 import { buildPages } from "./pipeline/buildPages.js";
-import { buildSidebar } from "./pipeline/buildSidebar.js";
+import { buildCustomSidebar, buildSidebar, orderPagesBySidebar } from "./pipeline/buildSidebar.js";
 import { postprocessPages } from "./pipeline/postprocess.js";
 import {
   createPuppeteerPrerenderer,
@@ -81,6 +81,18 @@ export async function preparePages(
     mermaidPrerenderer: opts.mermaidPrerenderer,
     codeHighlight: config.codeHighlight,
   });
+  // custom はサイドバーが閲覧順そのものになるため、ページの並びもそれに合わせる
+  // （前後ナビ・PDF のページ順・初期表示ページが一致する）。
+  if (config.sidebarMode === "custom") {
+    const custom = buildCustomSidebar(pages, config.sidebarItems);
+    return {
+      pages: orderPagesBySidebar(pages, custom.orderedPages),
+      sidebar: custom.sidebar,
+      warnings: [...warnings, ...post.warnings, ...custom.warnings],
+      hasMermaid: post.hasMermaid,
+    };
+  }
+
   const sidebar = buildSidebar(pages, {
     titleTransform: config.sidebarTitleTransform.directory,
     flattenSingleChild: config.sidebarFlattenSingleChild,

@@ -89,6 +89,7 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
 - `sidebar.titleTransform.page` と `.directory` は表示ラベルだけに適用し、ルート、ページ ID、本文見出しは変更しません。
 - `sidebar.titleFrom: "heading"` は明示タイトル、見出し、ファイル名の順です。`"filename"` は見出しを飛ばしますが明示タイトルを上書きしません。
 - `sidebar.flattenSingleChild` は、ページが一つでサブディレクトリがない場合だけ表示上フラット化し、到達可能性を失わせません。
+- `sidebar.mode: "custom"` はフォルダ構造ではなく `sidebar.items` からサイドバーを組み立て、その並びが閲覧順（前後ナビ、PDF のページ順、初期表示ページ）になります。ページに解決できないパスはエラー、未掲載・`hidden`・重複は警告で、いずれもページ自体は削除せず route で到達できます。フォルダ由来の `sidebar.titleTransform.directory` と `sidebar.flattenSingleChild` はこのモードでは適用しません。
 - `html.colorScheme` は初期テーマを制御し、保存済みの `monodocs:theme` を優先します。
 - 本文幅トグルは、読みやすい既定の最大幅と利用可能な横幅いっぱいの表示を切り替えます。
   読者の選択は `monodocs:content-width` に保存し、印刷・PDF レイアウトには影響させません。

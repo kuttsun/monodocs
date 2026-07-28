@@ -50,6 +50,15 @@ sources:
     extensions: [.adoc, .asciidoc, .asc]
 
 sidebar:
+  # "folder" (default) builds the sidebar from the directory structure; "custom" uses the items below
+  mode: folder
+  # Sidebar definition for mode: custom (each entry has either path or children)
+  # items:
+  #   - title: Home
+  #     path: index.md
+  #   - title: Setup
+  #     children:
+  #       - path: setup/install.adoc
   # Glob patterns excluded from scanning (partials/includes, files starting with _)
   exclude: ['_partials/**', 'partials/**', 'includes/**', '**/_*']
   # Collapse directories deeper than this level by default. Unset by default = all expanded; 0 = collapse all
@@ -120,11 +129,46 @@ Unknown keys under `sidebar` are rejected (this section is validated strictly).
 
 | Key                          | Type      | Default                                            | Description |
 | ---------------------------- | --------- | -------------------------------------------------- | ----------- |
+| `sidebar.mode`               | `folder` `custom` | `folder`                                   | How the sidebar is built. `folder` derives it from the directory structure. `custom` uses `sidebar.items` exactly as written. See below. |
+| `sidebar.items`             | object[]  | unset                                              | The sidebar definition for `mode: custom`. Requires `mode: custom`, and `mode: custom` requires it. See below. |
 | `sidebar.exclude`            | string[]  | `['_partials/**', 'partials/**', 'includes/**', '**/_*']` | Glob patterns excluded from scanning. Files starting with `_` are treated as include/partial files regardless of extension. |
 | `sidebar.collapseDepth`      | integer   | unset                                              | Collapse directories **deeper** than this level by default (top level = depth 1). `0` collapses everything, unset keeps all expanded. Pages stay reachable — collapsing hides nothing, it can always be re-opened. |
 | `sidebar.titleFrom`          | `heading` `filename` | `heading`                               | Where the navigation title comes from. `heading` = explicit title → heading → filename. `filename` = skip the heading and use the filename (the explicit frontmatter / `:sd-title:` title always wins either way). |
 | `sidebar.flattenSingleChild` | boolean   | `false`                                            | Flatten a directory that holds **exactly one page and no subfolders**, pulling that page up to its parent. Useful when each document lives in its own folder with its images (images are not counted as pages). |
 | `sidebar.titleTransform`     | object    | `{ page: none, directory: none }`                  | Transform **derived** display titles (heading- or filename-based page titles, and directory names). The explicit frontmatter / `:sd-title:` title is never transformed, and routes / page IDs never change. See below. |
+
+#### `sidebar.items` (custom sidebar)
+
+With `sidebar.mode: custom` you write the sidebar yourself, and the structure, order, and titles are
+used exactly as written:
+
+```yaml
+sidebar:
+  mode: custom
+  items:
+    - title: Home
+      path: index.md
+    - title: Setup
+      children:
+        - path: setup/install.adoc
+        - title: Configuration # overrides the page title
+          path: setup/config.md
+```
+
+Each entry has either `path` (a page) or `children` (a group), never both:
+
+- `path` is the file path relative to `input`, extension included (`setup/install.adoc`). `./` and `\` are accepted.
+- `title` is optional for a page — the page's own title is used when omitted — and required for a group.
+
+The custom sidebar also defines the **reading order**: previous/next navigation, the order of pages in a
+PDF, and the initially shown page all follow it. Pages you do not list stay reachable by their hash route
+and are reported as a warning by `monodocs validate`; they are placed after the listed pages in reading
+order. A `hidden` page listed here is skipped with a warning, and a group whose pages all disappear is
+dropped. A path that does not exist is an error.
+
+Because the structure and titles are explicit, `sidebar.titleTransform.directory` and
+`sidebar.flattenSingleChild` do not apply in this mode. `sidebar.collapseDepth`, `sidebar.exclude`,
+`sidebar.titleFrom`, and `sidebar.titleTransform.page` still work as usual.
 
 #### `sidebar.titleTransform`
 
