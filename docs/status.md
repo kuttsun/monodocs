@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-07-27
+Last updated: 2026-07-28
 
 ## Support Status
 
@@ -104,7 +104,7 @@ The supported syntax for Markdown / AsciiDoc, along with the unsupported items a
 ## Known Unsupported Items / Limitations (to be addressed in future versions)
 
 - Code highlighting (shiki) is supported (can be disabled with `highlight.enabled: false`; dual theme follows dark mode)
-- Heading-level cross-file links (`file.md#heading` / `xref:other.adoc#sec`) are resolved only down to the file level (heading anchors in other files are unsupported; anchors and footnotes within the same page work)
+- Heading-level cross-file links (`file.md#heading` / `xref:other.adoc#sec`) are supported (resolved to the target page's prefixed element ID; because the anchor is matched against the ID the target file generates, pointing from Markdown at an AsciiDoc heading needs the ID Asciidoctor produces, such as `_details`, and an anchor that does not exist falls back to the top of that page with a warning)
 - Search is partial-match only (scoring, multiple keywords, and Japanese word segmentation are planned to be improved in v0.8)
 - `watch` / `serve` monitoring uses `fs.watch` (recursive when possible). If `input` is changed in the configuration, a restart is required
 - PDF output is supported (v0.5; `--format pdf` / `both`). Because it uses headless Chromium, Chromium must be present in the runtime environment, and it is not available in the bundled CLI (single `.cjs` / single executable) (the npm-installed version is required). When Mermaid is set to the `cdn` runtime, a network connection is required during PDF generation (use `inline` or `pre-render` to be reliably offline)

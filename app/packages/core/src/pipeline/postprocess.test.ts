@@ -12,9 +12,13 @@ function page(p: {
   html: string;
   sourcePath?: string;
   rawSource?: string;
+  /** 未指定なら route から導出する（要素 ID の prefix になる）。 */
+  id?: string;
+  /** そのページに実在する要素 ID（アンカー解決の検証対象）。 */
+  anchors?: string[];
 }): Page {
   return {
-    id: p.route.replace(/\W+/g, "-"),
+    id: p.id ?? p.route.replace(/\W+/g, "-"),
     route: p.route,
     sourcePath: p.sourcePath ?? `/docs/${p.relativePath}`,
     relativePath: p.relativePath,
@@ -24,6 +28,7 @@ function page(p: {
     html: p.html,
     text: "",
     headings: [],
+    anchors: p.anchors ?? [],
     links: [],
     assets: [],
   };
@@ -116,7 +121,98 @@ describe("postprocessPages - link rewriting", () => {
     expect(pages[0]!.html).toContain('href="#/b"');
   });
 
-  it("drops heading anchors with a warning", async () => {
+  it("resolves cross-file heading anchors to the target element id", async () => {
+    const pages: Page[] = [
+      page({ relativePath: "index.md", route: "/", html: '<a href="g.md#sec">g</a>' }),
+      page({
+        relativePath: "g.md",
+        route: "/g",
+        id: "g",
+        html: '<h2 id="g-sec">S</h2>',
+        anchors: ["g", "g-sec"],
+      }),
+    ];
+    const result = await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('href="#g-sec"');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("resolves anchors on AsciiDoc-style .html cross links", async () => {
+    const pages: Page[] = [
+      page({ relativePath: "a.adoc", route: "/a", html: '<a href="b.html#_sec">b</a>' }),
+      page({
+        relativePath: "b.adoc",
+        route: "/b",
+        id: "b",
+        html: '<h2 id="b-_sec">S</h2>',
+        anchors: ["b-_sec"],
+      }),
+    ];
+    const result = await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('href="#b-_sec"');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("decodes percent-encoded anchors before resolving", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "index.md",
+        route: "/",
+        html: '<a href="g.md#%E6%A6%82%E8%A6%81">g</a>',
+      }),
+      page({
+        relativePath: "g.md",
+        route: "/g",
+        id: "g",
+        html: '<h2 id="g-概要">概要</h2>',
+        anchors: ["g-概要"],
+      }),
+    ];
+    const result = await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('href="#g-概要"');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("resolves an anchor pointing back into the linking page itself", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "index.md",
+        route: "/",
+        id: "index",
+        html: '<a href="index.md#sec">self</a><h2 id="index-sec">S</h2>',
+        anchors: ["index-sec"],
+      }),
+    ];
+    const result = await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('href="#index-sec"');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("does not resolve an anchor that belongs to a different page", async () => {
+    // 「a」への `#b-sec` は、別ページ「a-b」の実在 ID `a-b-sec` と文字列は一致するが、
+    // リンク先ページのアンカーではないため解決してはならない。
+    const pages: Page[] = [
+      page({
+        relativePath: "index.md",
+        route: "/",
+        html: '<a href="a.md#b-sec">a</a>',
+        rawSource: "# Home\n\n[a](a.md#b-sec)\n",
+      }),
+      page({ relativePath: "a.md", route: "/a", id: "a", html: "<p>a</p>", anchors: ["a"] }),
+      page({
+        relativePath: "a-b.md",
+        route: "/a-b",
+        id: "a-b",
+        html: '<h2 id="a-b-sec">S</h2>',
+        anchors: ["a-b-sec"],
+      }),
+    ];
+    const result = await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('href="#/a"');
+    expect(result.warnings.some((w) => w.includes('Unresolved anchor "#b-sec"'))).toBe(true);
+  });
+
+  it("falls back to the page top with a warning when the anchor does not exist", async () => {
     const pages: Page[] = [
       page({
         relativePath: "index.md",
@@ -124,12 +220,22 @@ describe("postprocessPages - link rewriting", () => {
         html: '<a href="g.md#sec">g</a>',
         rawSource: "# Home\n\n[g](g.md#sec)\n",
       }),
-      page({ relativePath: "g.md", route: "/g", html: "<p>g</p>" }),
+      page({ relativePath: "g.md", route: "/g", id: "g", html: "<p>g</p>", anchors: ["g"] }),
     ];
     const result = await postprocessPages(pages, baseOptions);
     expect(pages[0]!.html).toContain('href="#/g"');
-    expect(result.warnings.some((w) => w.includes("Heading anchor"))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('Unresolved anchor "#sec"'))).toBe(true);
     expect(result.warnings.some((w) => w.includes('"index.md:3"'))).toBe(true);
+  });
+
+  it("treats an empty fragment as a plain page link", async () => {
+    const pages: Page[] = [
+      page({ relativePath: "index.md", route: "/", html: '<a href="g.md#">g</a>' }),
+      page({ relativePath: "g.md", route: "/g", id: "g", html: "<p>g</p>", anchors: ["g"] }),
+    ];
+    const result = await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('href="#/g"');
+    expect(result.warnings).toEqual([]);
   });
 });
 

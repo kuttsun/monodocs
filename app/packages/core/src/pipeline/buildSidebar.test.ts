@@ -21,6 +21,7 @@ function page(p: {
     html: "",
     text: "",
     headings: [],
+    anchors: [],
     links: [],
     assets: [],
   };

@@ -276,4 +276,42 @@ describe.skipIf(!chromium)("buildSite - PDF（実 Chromium）", () => {
     expect(internal).toBeGreaterThanOrEqual(1);
     await rm(ldir, { recursive: true, force: true });
   }, 60_000);
+
+  it("points a cross-file heading anchor at the heading, not the page top", async () => {
+    const ldir = await mkdtemp(join(tmpdir(), "monodocs-pdf-anchor-"));
+    const ldocs = join(ldir, "docs");
+    await mkdir(ldocs, { recursive: true });
+    await writeFile(
+      ldocs + "/index.md",
+      "# Top\n\n[page](./guide.md)\n\n[section](./guide.md#section)\n",
+    );
+    // 見出しがページ先頭から十分離れるよう本文を挟み、飛び先の差が座標に出るようにする。
+    const filler = Array.from({ length: 40 }, (_, i) => `本文 ${i}。`).join("\n\n");
+    await writeFile(ldocs + "/guide.md", `# Guide\n\n${filler}\n\n## Section\n\n続き。\n`);
+    // しおり用サロゲートを除き、本文リンク由来の内部リンクだけを見る。
+    await writeFile(ldocs + "/monodocs.config.yml", "pdf:\n  bookmarks: false\n");
+    const out = join(ldir, "manual.pdf");
+    await buildSite({ inputDir: ldocs, outputFile: out, format: "pdf" });
+
+    const { PDFDocument, PDFName, PDFDict, PDFArray } = await import("pdf-lib");
+    const doc = await PDFDocument.load(await readFile(out));
+    const dests: string[] = [];
+    for (const page of doc.getPages()) {
+      const annots = page.node.lookup(PDFName.of("Annots"));
+      if (!(annots instanceof PDFArray)) continue;
+      for (let i = 0; i < annots.size(); i++) {
+        const a = annots.lookup(i);
+        if (!(a instanceof PDFDict)) continue;
+        const st = a.lookup(PDFName.of("Subtype"));
+        if (!(st instanceof PDFName) || st.asString() !== "/Link") continue;
+        const dest = a.lookup(PDFName.of("Dest"));
+        if (dest) dests.push(String(dest));
+      }
+    }
+    // ページ先頭リンクと見出しアンカーリンクの 2 本が、それぞれ別の位置を指している
+    // （アンカーが落ちてページ先頭になっていれば同一の飛び先になる）。
+    expect(dests).toHaveLength(2);
+    expect(dests[0]).not.toBe(dests[1]);
+    await rm(ldir, { recursive: true, force: true });
+  }, 60_000);
 });

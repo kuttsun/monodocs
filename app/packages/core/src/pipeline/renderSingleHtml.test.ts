@@ -14,6 +14,7 @@ function page(route: string, id: string, title: string): Page {
     html: `<p>${title}</p>`,
     text: title,
     headings: [],
+    anchors: [],
     links: [],
     assets: [],
   };

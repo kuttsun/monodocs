@@ -1091,19 +1091,8 @@ Output:
 
 ### 18.4 Heading Links
 
-Heading links are highly difficult, so they will be supported in stages.
-
-Initial support:
-
-```text
-Prioritize file-level links
-```
-
-Future support:
-
-```text
-Accurately convert file + heading ID
-```
+Already supported. Heading links were resolved to the file level at first, and now resolve down to
+the anchor.
 
 Example:
 
@@ -1111,19 +1100,23 @@ Example:
 [Authentication Settings](./config.md#authentication-settings)
 ```
 
-Output candidate:
-
-```html
-<a href="#/setup/config?heading=setup-config-authentication-settings"
-  >Authentication Settings</a
->
-```
-
-Or:
+Output:
 
 ```html
 <a href="#setup-config-authentication-settings">Authentication Settings</a>
 ```
+
+Of the two candidates originally listed, the element ID (the second one) was adopted over
+`#/route?heading=…`. Element IDs are already unified as `{page-id}-{original-ID}` (Chapter 19), the
+theme's router already routes a hash that does not start with `/` to the page containing that element,
+and Chromium turns the same href into a working internal link in the PDF, where all pages are expanded.
+The `?heading=` form would have required extending the route syntax and the router for no added
+capability.
+
+Because the anchor is matched against the ID the target file generates, a Markdown link to an AsciiDoc
+heading has to use the ID Asciidoctor produces (for example `_details`). An anchor that does not exist
+in the target page falls back to the top of that page and is reported as a warning
+(`validate` surfaces it).
 
 ---
 

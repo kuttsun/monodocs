@@ -8,12 +8,14 @@ const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
 export type PrefixResult = {
   headings: Heading[];
   text: string;
+  /** prefix 後の全要素 ID（文書順）。他ページからのアンカーリンク解決に使う。 */
+  anchors: string[];
 };
 
 /**
  * 単一 HTML 内での ID 衝突を避けるため、HAST 上のすべての要素 ID を
  * `{prefix}-{元のID}` に書き換え、同一文書内アンカー（`href="#id"`）も追従させる。
- * あわせて見出し一覧とプレーンテキストを収集して返す。
+ * あわせて見出し一覧・プレーンテキスト・付与後の ID 一覧を収集して返す。
  *
  * Markdown / AsciiDoc 双方の renderer が共有する。これにより見出しだけでなく
  * 脚注（remark-gfm / Asciidoctor）や任意の `[[id]]` 付き要素も衝突しなくなる。
@@ -23,6 +25,8 @@ export type PrefixResult = {
 export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResult {
   const idMap = new Map<string, string>();
   const headings: Heading[] = [];
+  // ページ内に同名 ID が複数あっても解決先は 1 つなので Set で重複を潰す。
+  const anchors = new Set<string>();
   let anonHeadingIndex = 0;
 
   // 1) 全要素 ID を prefix し、旧 ID → 新 ID の対応と見出し一覧を収集する。
@@ -34,6 +38,7 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
       const newId = `${prefix}-${id}`;
       idMap.set(id, newId);
       element.properties.id = newId;
+      anchors.add(newId);
     }
     if (HEADING_TAGS.has(element.tagName)) {
       // ID 無し見出し（AsciiDoc の doctitle h1 など）にも一意な ID を付与し、
@@ -45,6 +50,7 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
         headingId = anonHeadingIndex === 0 ? prefix : `${prefix}-h${anonHeadingIndex}`;
         anonHeadingIndex++;
         element.properties.id = headingId;
+        anchors.add(headingId);
       }
       headings.push({
         level: Number(element.tagName.slice(1)),
@@ -66,5 +72,5 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
     }
   });
 
-  return { headings, text: toText(tree) };
+  return { headings, text: toText(tree), anchors: [...anchors] };
 }
