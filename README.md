@@ -24,13 +24,14 @@ npm install -g monodocs
 
 PDF output and Mermaid pre-rendering require a system-installed Chromium or Google Chrome; `monodocs` does not download a browser automatically. On Linux and Windows it is discovered automatically (Windows also falls back to Chromium-based Microsoft Edge). Set `PUPPETEER_EXECUTABLE_PATH` to point at the browser when it is installed in a non-standard location, or on platforms without built-in detection such as macOS.
 
-| Item                            | Support                     |
-| ------------------------------- | --------------------------- |
-| Distribution                    | npm (`npm install` / `npx`) |
-| Node.js                         | 22.12.0 or later            |
-| HTML / validate / watch / serve | Linux x64, Windows x64      |
-| PDF / pre-render                | Requires system Chromium    |
-| Standalone SEA binary           | Outside the v0.6 scope      |
+A standalone binary that runs without Node.js is attached to every [release](https://github.com/kuttsun/monodocs/releases) for Linux x64 and Windows x64. It cannot produce PDFs or pre-render Mermaid, because both drive a headless browser that is deliberately left out of the bundle.
+
+| Item                            | Support                                     |
+| ------------------------------- | ------------------------------------------- |
+| Distribution                    | npm (`npm install` / `npx`), release binary |
+| Node.js                         | 22.12.0 or later (not needed by the binary) |
+| HTML / validate / watch / serve | Linux x64, Windows x64                      |
+| PDF / pre-render                | Requires system Chromium; npm package only  |
 
 ## Quick start
 

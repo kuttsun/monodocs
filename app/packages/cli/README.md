@@ -13,22 +13,25 @@ Markdown and AsciiDoc files.
   system path.
 
 The npm package supports HTML and PDF output as well as Mermaid client and
-pre-render modes. The standalone SEA binary is a separate future distribution.
+pre-render modes. A standalone binary that needs no Node.js is attached to every
+[GitHub Release](https://github.com/kuttsun/monodocs/releases) for Linux x64 and
+Windows x64; it cannot produce PDFs or pre-render Mermaid, because both drive a
+headless browser that is deliberately left out of the bundle.
 
 ## Installation
 
 ```bash
-npm install -g monodocs@next
+npm install -g monodocs
 ```
 
 Or run it without a global installation:
 
 ```bash
-npx monodocs@next build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/manual.html
 ```
 
-The `next` tag is used during the v0.6 prerelease. After the stable release,
-installing `monodocs` without a tag will select the stable version.
+Untagged `monodocs` is the latest stable version. Prereleases are published
+under the `next` tag (`npm install -g monodocs@next`).
 
 ## Usage
 
