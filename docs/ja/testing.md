@@ -36,8 +36,8 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 
 | 項目           | 結果       |
 | -------------- | ---------- |
-| Test Files     | 29 passed  |
-| Tests          | 276 passed |
+| Test Files     | 31 passed  |
+| Tests          | 287 passed |
 | typecheck      | 通過       |
 | format:check   | 通過       |
 | package:verify | 通過       |
@@ -59,6 +59,7 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `themes/index.test.ts` … テーマ読み込み（組み込みテーマ名、未知の名前を組み込み一覧付きで拒否、カスタムディレクトリ、ファイル単位の既定テーマフォールバック、テーマファイルが 1 つも無いディレクトリ、必須トークンが欠けたテンプレート）
 - `themes/default/app.test.ts` … クライアント hash routing（happy-dom）
 - `themes/default/app.search.test.ts` … v0.8 の検索（複数キーワードの AND・フィールド別の順位付け・見出しへリンクし、クリック時に hash へアンカーを残す見出し単位の結果・タイトル/見出し/抜粋の強調・`toc.maxLevel` より深い見出しは目次に出ないが検索できること・大文字小文字と全角の畳み込み・全角空白区切りのキーワード）（happy-dom）
+- `themes/default/app.mobile.test.ts` … 狭い画面のサイドバードロワー（トグルで開く、リンク追従後に閉じる、Escape と外側クリックで閉じる、広い画面では常設のまま）（happy-dom）
 - `themes/default/app.v04.test.ts` … 検索・ページ内目次・前後ナビ・ダークモード・保存される本文幅トグルと設定由来の初期状態・サイドバー折りたたみ・コードブロックのコピー/折り返しトグル・画像 lightbox のマウス/キーボード/フォーカス操作とリンク付き/装飾画像の除外（happy-dom）
 - `build.test.ts` / `build.mixed.test.ts` / `build.v03.test.ts` … e2e（Markdown / 混在 / v0.3 機能・validate）
 - `build.sidebar-custom.test.ts` … e2e（カスタムサイドバーの描画と順序、前後ナビ・初期表示ページに効くページ順、未掲載ページの警告、存在しないパスに対する `validate` のエラー）
@@ -67,5 +68,6 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render（偽レンダラ注入で config 連携・SVG 埋め込みを検証。実 Chromium がある環境でだけ end-to-end 描画とランタイム未注入ゲートを確認）
 - `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入・`serveSite` が pdf/both 設定でも HTML を配信し明示 `-o` を尊重すること）
 - `build.pdf.test.ts` … PDF 出力（v0.5。`resolveOutputs` の html/pdf/both 出力パス解決・偽 `PdfGenerator` 注入で format 分岐と設定（pageSize/margin/printBackground）連携・embedImages 上書き・しおり outline の受け渡しを browserless 検証。実 Chromium がある環境でだけ実際の PDF 生成＝`%PDF-`・`/Outlines`・`/UseOutlines`・ページ間リンクの内部リンク注釈・ファイル跨ぎ見出しアンカーがページ先頭ではなく見出し位置を指すことを確認）
+- `pipeline/pdfMetadata.test.ts` … PDF の文書情報（タイトルと monodocs を Creator/Producer に設定してブラウザ・pdf-lib の既定値を置き換える、ビューア設定の DisplayDocTitle、ページを壊さない、設定が無ければ何もしない。pdf-lib のみ・browserless）
 - `pipeline/pdfOutline.test.ts` … PDF しおり（`sidebarToOutline` のツリー変換・`collectDests`/`remapDests`・`addOutline` が `/Dests` を参照して フォルダ→ページ の `/Outlines` を構築し `/UseOutlines` を設定。宛先が無い/空ツリーは元 PDF を返す。pdf-lib のみで browserless）
 - `config.test.ts` … 設定解決（本文幅、画像 lightbox、ブランディングの既定値と切替・`pdf` スキーマの既定値・欠落余白の補完・未知キー拒否・不正 `--format` の拒否・format 別の既定出力パスを含む）

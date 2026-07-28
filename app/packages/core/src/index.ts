@@ -40,6 +40,7 @@ export {
   type PdfRenderOptions,
 } from "./pipeline/renderPdf.js";
 export { sidebarToOutline, addOutline, type PdfOutlineNode } from "./pipeline/pdfOutline.js";
+export { setPdfMetadata, type PdfMetadata } from "./pipeline/pdfMetadata.js";
 export { BrowserSetupError } from "./pipeline/browser.js";
 export {
   createPuppeteerPrerenderer,

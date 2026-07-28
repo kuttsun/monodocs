@@ -244,6 +244,13 @@ body.sidebar-collapsed #sidebar {
   padding: 0;
 }
 
+/* 階層が深い項目や長いタイトルでもサイドバー幅を超えないよう折り返す
+   （超えると文書全体に横スクロールが出る）。 */
+#sidebar-nav a,
+#sidebar-nav .sidebar-dir-title {
+  overflow-wrap: anywhere;
+}
+
 /* 階層インデントは行の padding-left で表す（ネストした ul は字下げしない）。こうすると
    各行の背景（ホバー/選択の帯）の左端が全階層で --sidebar-pad-x に揃い、帯の幅が階層で
    変わらない。行の直近祖先 .sidebar-list の数＝階層で、深い規則ほどセレクタが具体的
@@ -424,6 +431,9 @@ body.sidebar-collapsed #sidebar {
   margin: 0 auto;
   padding: 2.5rem 3rem 5rem;
   overflow-x: hidden;
+  /* 長い URL やパスで本文の最小幅が広がり、狭い画面で文書全体に横スクロールが
+     出る（印刷では紙幅を超えて切り捨てられる）のを防ぐ。 */
+  overflow-wrap: break-word;
 }
 
 /* 読者がワイド表示を選んだときは、サイドバーと目次の間にある横幅を本文で使い切る。 */
@@ -513,6 +523,9 @@ body.content-wide #content {
 /* app.js が各コードブロックを .code-block でラップしてツールバーを差し込む。 */
 #content .code-block {
   position: relative;
+  /* pre の横スクロールを活かすため、ラッパー自身は縮められるようにする
+     （そうしないと長い行が本文の最小幅を押し広げ、文書全体が横スクロールする）。 */
+  min-width: 0;
 }
 
 #content .code-toolbar {
@@ -996,19 +1009,62 @@ body.content-wide #content {
 }
 
 @media (max-width: 768px) {
+  /* サイドバーをドロワー（position: fixed）にするとフローから外れるため、
+     ここでは flex を解く。flex のままだと本文が縮まず（列方向 flex ライン の
+     交差サイズが本文の最大内容幅になる）、文書全体に横スクロールが出る。 */
   #app {
-    flex-direction: column;
+    display: block;
   }
+  /* 狭い画面では、サイドバーを縦に積むと本文がナビ一覧の下へ押し出されて
+     読み始められない。ドロワーとして重ね、既定では閉じておく。 */
   #sidebar {
-    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 30;
+    width: min(85%, var(--sidebar-width));
     flex-basis: auto;
-    height: auto;
-    position: static;
-    border-right: none;
-    border-bottom: 1px solid var(--color-border);
+    height: 100%;
+    border-right: 1px solid var(--color-border);
+    box-shadow: 0 0 1.5rem rgb(0 0 0 / 25%);
+    transform: translateX(-100%);
+    /* 閉じている間はタブ順序と支援技術のツリーからも外す（transform は見た目を
+       ずらすだけで、検索欄やリンクはフォーカスできてしまう）。visibility は
+       スライドし終えてから切り替える。 */
+    visibility: hidden;
+    transition:
+      transform 0.2s ease,
+      visibility 0s linear 0.2s;
+  }
+  body.sidebar-open #sidebar {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform 0.2s ease,
+      visibility 0s;
+  }
+  /* 開閉ボタンは折りたたみ状態に関わらず常に出す（ドロワーを開く唯一の手段）。 */
+  #sidebar-show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body.sidebar-open #sidebar-show {
+    display: none;
+  }
+  /* ドロワーの外側をタップして閉じられるようにする。 */
+  body.sidebar-open::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: rgb(0 0 0 / 35%);
   }
   #content {
     padding: 1.5rem;
+    /* 固定表示の ☰ ボタンと本文先頭が重ならないようにする。 */
+    padding-top: 3.4rem;
   }
 }
 
@@ -1059,5 +1115,36 @@ body.content-wide #content {
   #content h5,
   #content h6 {
     break-after: avoid;
+  }
+  /* 紙にはスクロールが無いため、画面では横スクロールで見られる幅の広い要素が
+     そのままだと切り捨てられる（PDF から内容が消える）。印刷時は折り返す。 */
+  #content pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+  }
+  /* 画面では `display: block` + 横スクロールで表を見せているが、印刷では
+     切り捨てになるうえ thead の繰り返しも効かない。表として組み直す。 */
+  #content table {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    overflow-x: visible;
+  }
+  #content th,
+  #content td {
+    overflow-wrap: anywhere;
+  }
+  /* ページをまたぐ表では、各ページの先頭に見出し行を繰り返す。 */
+  #content thead {
+    display: table-header-group;
+  }
+  #content tr {
+    break-inside: avoid;
+  }
+  /* 図（Mermaid の SVG など）が紙幅を超えないようにする。 */
+  #content svg {
+    max-width: 100%;
+    height: auto;
   }
 }

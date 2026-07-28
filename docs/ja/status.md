@@ -112,7 +112,9 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] Node.js 無しで動くスタンドアロンバイナリを Linux x64 / Windows x64 向けに GitHub Release へ `.sha256` と、同梱依存・Node.js ランタイムのライセンスをまとめた `-NOTICES.txt` を添えて添付する（macOS 版は公開しない。[roadmap.md](roadmap.md) 8.5 を参照）
 - [x] Pull Request CI が Linux x64 / Windows x64 でスタンドアロンバイナリをビルドし、PDF 出力が想定どおり失敗することも含めて smoke test する
 - [x] Homebrew / Scoop / winget 対応を決定：行わない（npm とリリースバイナリで対象利用者をカバーできており、リリースごとのマニフェスト同期と審査プロセスに見合わないため。[roadmap.md](roadmap.md) 8.5）
-- [ ] HTML / PDF の出力品質を改善する
+- [x] 幅の広い内容が PDF から消えないようにする（コードブロックの折り返し、URL など分割できない文字列の折り返し、表をスクロール枠ではなく表として組み各ページで見出し行を繰り返す、図を紙幅に収める）
+- [x] 狭い画面ではサイドバーを既定で閉じたドロワーにして本文から読み始められるようにし、横スクロールを解消する
+- [x] 生成した PDF に文書タイトルと `monodocs v<version>`（Creator / Producer）を記録する
 
 ## 対応記法
 

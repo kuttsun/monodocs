@@ -112,7 +112,9 @@ undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and
 - [x] A standalone binary that runs without Node.js is attached to every GitHub Release for Linux x64 and Windows x64, with a `.sha256` file and a `-NOTICES.txt` carrying the licenses of the embedded dependencies and Node.js runtime (macOS is not published; see [roadmap.md](roadmap.md) 8.5)
 - [x] Pull request CI builds the standalone binary on Linux x64 and Windows x64 and smoke-tests it, including the expected failure of PDF output
 - [x] Homebrew / Scoop / winget support is decided: not provided, because npm and the release binary already cover the audience without a per-release manifest and review process ([roadmap.md](roadmap.md) 8.5)
-- [ ] HTML / PDF output quality improvements
+- [x] Wide content no longer disappears from the PDF: code blocks wrap, long unbreakable strings such as URLs break, tables are laid out as tables (not a scroll box) with the header row repeated on every page, and diagrams are capped at the page width
+- [x] On narrow screens the sidebar is an overlay drawer that starts closed, so the document opens on its content, and the page no longer scrolls horizontally
+- [x] Generated PDFs record the document title and `monodocs v<version>` as the creating and producing tool
 
 ## Supported Syntax
 

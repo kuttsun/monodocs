@@ -221,6 +221,8 @@ export async function buildSite(
         waitForMermaid: clientMermaid,
         // HTML サイドバーと同じ フォルダ→ページ 構造をしおりとして付与する。
         outline: config.pdfBookmarks ? sidebarToOutline(sidebar) : undefined,
+        title: config.title,
+        generator: options.generatorVersion ? `monodocs v${options.generatorVersion}` : "monodocs",
       });
       await mkdir(dirname(outputs.pdf), { recursive: true });
       await writeFile(outputs.pdf, pdf);
