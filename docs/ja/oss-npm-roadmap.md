@@ -163,7 +163,11 @@ SEA 単体バイナリは M5 の npm 安定版公開後に着手を判断する�
 - [x] Pull Request template を追加する。
 - [x] 脆弱性の非公開報告経路を有効化する。
 - [x] デフォルトブランチを保護する。
-- [x] CI 成功とレビューをマージ条件にする。
+- [x] CI 成功をマージ条件にする。`main` への Pull Request 必須、force push とブランチ削除の禁止は維持
+      するが、単独メンテナンス体制のあいだ承認必須数は 0 とする。GitHub は自分の Pull Request を自分で
+      承認できないため、1 以上にすると毎回のマージが管理者権限による迂回になり、その迂回は必須
+      ステータスチェックまで飛び越えてしまう（この体制で実効性があるのはそちらの方である）。write 権限を
+      持つ 2 人目を迎えた時点で承認必須を戻す。
 - [x] Renovate ではなく Dependabot を採用し、`.github/dependabot.yml` で設定する。Dependabot alerts と
       security updates はリポジトリで有効化済みのため、新しいサービスを増やさずに済む。定期更新は
       GitHub Actions、`app/` workspace、`site/` パッケージを対象に毎月実行し、minor と patch はセット

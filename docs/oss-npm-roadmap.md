@@ -156,7 +156,12 @@ The SEA standalone binary is a future item whose start will be decided after the
 - [x] Add a Pull Request template.
 - [x] Enable a private reporting path for vulnerabilities.
 - [x] Protect the default branch.
-- [x] Make CI success and review merge conditions.
+- [x] Make CI success a merge condition. Pull requests stay mandatory on `main`, and force pushes and
+      branch deletion stay blocked, but the required approval count is 0 while the project has a single
+      maintainer. GitHub does not allow approving your own pull request, so a non-zero count made every
+      merge an administrator bypass — and that bypass skips the required status checks as well, which is
+      the protection that actually matters here. Restore an approval requirement when a second person
+      gains write access.
 - [x] Adopt Dependabot rather than Renovate, configured in `.github/dependabot.yml`. Dependabot alerts and
       security updates are already enabled on the repository, so no additional service is introduced. Scheduled
       updates run monthly for GitHub Actions, the `app/` workspace, and the `site/` package, with minor and
