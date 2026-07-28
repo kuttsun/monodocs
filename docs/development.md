@@ -145,6 +145,12 @@ app/dist/monodocs build ~/any-docs -o ~/manual.html
 ```
 
 > - The output is about 130 MiB (because the node runtime is bundled). `app/dist/` is already in `.gitignore`.
+> - On Windows the output is `app/dist/monodocs.exe` (Windows decides executability by extension).
+>   Published releases carry the same binary as `monodocs-linux-x64` / `monodocs-windows-x64.exe`,
+>   built by the release workflow and smoke-tested on every pull request.
+> - `pnpm build:bin` also writes `app/dist/monodocs-NOTICES.txt` (monodocs, Node.js runtime, and
+>   third-party licenses). Releases publish it next to each binary, because a redistributed binary
+>   cannot carry those notices by itself.
 > - Theme assets (`template.html` / `style.css` / `app.js`) and the mermaid inline runtime are
 >   embedded into `globalThis.__MONODOCS_ASSETS__` at bundle time (`scripts/bundle.mjs`).
 >   `loadTheme` / `mermaidRuntimeScript` prefer this embedded data and fall back to reading from files as before if it is absent.

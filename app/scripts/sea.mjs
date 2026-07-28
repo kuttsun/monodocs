@@ -16,7 +16,8 @@ const distDir = resolve(here, "..", "dist");
 const bundle = resolve(distDir, "monodocs.cjs");
 const blob = resolve(distDir, "monodocs.blob");
 const seaConfig = resolve(distDir, "sea-config.json");
-const binOut = resolve(distDir, "monodocs");
+// Windows は拡張子で実行可否を判断するため `.exe` を付ける（他 OS は拡張子なし）。
+const binOut = resolve(distDir, process.platform === "win32" ? "monodocs.exe" : "monodocs");
 
 // SEA 設定。main はバンドル済み CJS。useSnapshot/useCodeCache は実行 node 依存があるため無効化。
 writeFileSync(

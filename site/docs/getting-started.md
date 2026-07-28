@@ -32,6 +32,26 @@ npm install -D monodocs
 
 PDF output and Mermaid pre-rendering require a system-installed Chromium or Google Chrome; monodocs never downloads a browser. On Linux and Windows it is discovered automatically (Windows also falls back to Chromium-based Microsoft Edge). Set `PUPPETEER_EXECUTABLE_PATH` when the browser is installed in a non-standard location, or on platforms without built-in detection such as macOS.
 
+### Standalone binary (no Node.js)
+
+Every release also ships a single executable that bundles the Node runtime, so it runs on a machine
+without Node.js installed. Download it from the
+[Releases page](https://github.com/kuttsun/monodocs/releases) — `monodocs-linux-x64` or
+`monodocs-windows-x64.exe` — together with the matching `.sha256` file. Each binary also ships a
+`-NOTICES.txt` file with the licenses of everything it embeds (monodocs, its npm dependencies, and the
+Node.js runtime); keep it alongside the binary when you redistribute it inside your organization.
+
+```bash
+sha256sum -c monodocs-linux-x64.sha256   # verify the download
+chmod +x monodocs-linux-x64
+./monodocs-linux-x64 build ./docs -o ./dist/manual.html
+```
+
+The binary covers `build` (HTML), `validate`, `watch`, and `serve`. **PDF output and Mermaid
+`pre-render` are not available** in it: both drive a headless browser through `puppeteer-core`, which
+is deliberately left out of the bundle, and the command fails with a message saying so. Use the npm
+package when you need them. The binaries are unsigned, so Windows SmartScreen may warn on first run.
+
 ## First build
 
 ```bash

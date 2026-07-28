@@ -81,6 +81,28 @@ jobs:
           node packages/cli/dist/index.js build ../examples/en --format pdf -o dist/ci-smoke.pdf
           node -e "const magic = require('node:fs').readFileSync('dist/ci-smoke.pdf').subarray(0, 5).toString('latin1'); if (magic !== '%PDF-') throw new Error('Invalid PDF header');"
 
+      # リリースで配布する単一実行ファイルを PR 時点で検証する
+      # （リリース時にしか動かさないと、失敗が公開作業中にしか分からないため）。
+      - name: Build and smoke test the standalone binary
+        shell: bash
+        run: |
+          pnpm build:bin
+          bin="./dist/monodocs"
+          if [ "$RUNNER_OS" = "Windows" ]; then bin="./dist/monodocs.exe"; fi
+          "$bin" --version
+          "$bin" --help
+          "$bin" validate ../examples/en
+          "$bin" build ../examples/en -o dist/bin-smoke.html
+          node -e "const html = require('node:fs').readFileSync('dist/bin-smoke.html', 'utf8'); if (!html.includes('__MONODOCS_DATA__')) throw new Error('Binary produced no document');"
+          # 再配布に必要なライセンス通知（monodocs / Node.js / npm 依存）が揃っているか。
+          node -e "const notices = require('node:fs').readFileSync('dist/monodocs-NOTICES.txt', 'utf8'); for (const needle of ['MIT License', 'Node.js runtime', 'Components:']) { if (!notices.includes(needle)) throw new Error('Binary notices missing: ' + needle); }"
+          # PDF / Mermaid pre-render はブラウザ依存のためバンドル版では使えない。
+          # 黙って壊れるのではなく、はっきり失敗することを確認する。
+          if "$bin" build ../examples/en --format pdf -o dist/bin-smoke.pdf; then
+            echo "Expected the standalone binary to reject PDF output" >&2
+            exit 1
+          fi
+
       - name: Generate site demos
         if: matrix.name == 'Linux'
         run: |

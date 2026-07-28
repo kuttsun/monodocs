@@ -1,4 +1,5 @@
-name: Release npm package
+# npm パッケージの公開と、Release への単一実行ファイル添付を行う。
+name: Release
 
 on:
   release:
@@ -79,3 +80,82 @@ jobs:
 
       - name: Publish package
         run: npm publish dist/npm/monodocs --access public --tag "${{ steps.release.outputs.npm_tag }}" --provenance
+
+  binaries:
+    name: Standalone binary (${{ matrix.name }})
+    # npm 公開が通ったリリースにだけ添付する（tag/version の検証も publish 側で済ませている）。
+    needs: publish
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            os: ubuntu-latest
+            asset: monodocs-linux-x64
+            notices: monodocs-linux-x64-NOTICES.txt
+            built: dist/monodocs
+          - name: Windows x64
+            os: windows-latest
+            asset: monodocs-windows-x64.exe
+            notices: monodocs-windows-x64-NOTICES.txt
+            built: dist/monodocs.exe
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.14.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the standalone binary
+        run: pnpm build:bin
+
+      - name: Smoke test the binary
+        shell: bash
+        run: |
+          bin="./${{ matrix.built }}"
+          "$bin" --version
+          "$bin" validate ../examples/en
+          "$bin" build ../examples/en -o dist/release-smoke.html
+          node -e "const html = require('node:fs').readFileSync('dist/release-smoke.html', 'utf8'); if (!html.includes('__MONODOCS_DATA__')) throw new Error('Binary produced no document');"
+
+      - name: Package the release asset
+        shell: bash
+        run: |
+          cp "${{ matrix.built }}" "dist/${{ matrix.asset }}"
+          # バイナリは monodocs 本体・npm 依存・Node.js ランタイムを内包した再配布物なので、
+          # ライセンス通知を必ず同じリリースへ添える（build:bin が生成する）。
+          cp dist/monodocs-NOTICES.txt "dist/${{ matrix.notices }}"
+          cd dist
+          # 配布物の改ざん検知用。ダウンロード側で `sha256sum -c` できる形式にする。
+          sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          cat "${{ matrix.asset }}.sha256"
+
+      - name: Upload the binary to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "dist/${{ matrix.asset }}" \
+            "dist/${{ matrix.asset }}.sha256" \
+            "dist/${{ matrix.notices }}" \
+            --clobber --repo "$GITHUB_REPOSITORY"

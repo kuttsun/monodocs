@@ -132,6 +132,12 @@ app/dist/monodocs build ~/任意のドキュメント -o ~/manual.html
 ```
 
 > - 出力は約 130 MiB（node ランタイム同梱のため）。`app/dist/` は `.gitignore` 済み。
+> - Windows では `app/dist/monodocs.exe` を出力する（Windows は拡張子で実行可否を判断するため）。
+>   公開リリースには同じバイナリを `monodocs-linux-x64` / `monodocs-windows-x64.exe` として添付し、
+>   リリースワークフローで生成、Pull Request CI で毎回 smoke test している。
+> - `pnpm build:bin` は `app/dist/monodocs-NOTICES.txt`（monodocs・Node.js ランタイム・第三者
+>   ライセンス）も出力する。バイナリ単体では通知を持ち歩けないため、リリースでは各バイナリの
+>   隣に公開する。
 > - テーマアセット（`template.html` / `style.css` / `app.js`）と mermaid inline ランタイムは
 >   バンドル時に `globalThis.__MONODOCS_ASSETS__` へ埋め込む（`scripts/bundle.mjs`）。
 >   `loadTheme` / `mermaidRuntimeScript` はこの埋め込みを優先し、無ければ従来どおりファイルから読む。
