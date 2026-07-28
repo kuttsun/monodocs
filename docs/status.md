@@ -111,7 +111,7 @@ undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and
 - [x] A custom sidebar reports a missing path as an error, and unlisted, hidden, or duplicated pages as warnings that `validate` surfaces
 - [x] A standalone binary that runs without Node.js is attached to every GitHub Release for Linux x64 and Windows x64, with a `.sha256` file and a `-NOTICES.txt` carrying the licenses of the embedded dependencies and Node.js runtime (macOS is not published; see [roadmap.md](roadmap.md) 8.5)
 - [x] Pull request CI builds the standalone binary on Linux x64 and Windows x64 and smoke-tests it, including the expected failure of PDF output
-- [ ] Homebrew / Scoop / winget support is decided
+- [x] Homebrew / Scoop / winget support is decided: not provided, because npm and the release binary already cover the audience without a per-release manifest and review process ([roadmap.md](roadmap.md) 8.5)
 - [ ] HTML / PDF output quality improvements
 
 ## Supported Syntax
