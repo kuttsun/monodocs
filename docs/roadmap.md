@@ -350,6 +350,13 @@ The binaries are unsigned. Code signing needs a certificate and a key-handling p
 maintainer cannot run safely yet, so the documentation warns about the Windows SmartScreen prompt
 instead.
 
+Homebrew, Scoop, and winget packaging is **not** provided. Each one adds a manifest to keep in sync
+with every release, its own review or submission process, and a support channel where problems are
+reported outside this repository — a recurring cost per release that a single maintainer pays for
+every version. The two ways to install monodocs already cover its audience without any of that: `npm
+install -g monodocs` for anyone who has Node.js, and a release binary that needs nothing installed.
+Revisit only if users report that the current two are genuinely insufficient.
+
 ### 8.6 VS Code Extension
 
 Frozen; see v0.7 in the roadmap section.
@@ -1971,7 +1978,7 @@ Implementation scope:
 - Custom themes
 - Full support for custom sidebars
 - Standalone binary distribution
-- Consider Homebrew / Scoop / winget support
+- Homebrew / Scoop / winget support (decided against; see 8.5)
 - HTML / PDF output quality improvements
 
 Completion criteria:
