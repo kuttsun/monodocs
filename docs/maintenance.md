@@ -48,9 +48,12 @@ a quarter and record the outcome in the same place the item points at.
 
 ## When an audit or an alert fires
 
-1. Decide whether the finding reaches a user. `site/` never ships, and part of `app/` is dev-only
+1. Separate a finding from a broken run. The scheduled audit's issue is opened by any job failure,
+   including checkout, tool setup, and registry errors, and only the run log says which happened. An
+   infrastructure failure tells you nothing about the dependencies — re-run it.
+2. Decide whether the finding reaches a user. `site/` never ships, and part of `app/` is dev-only
    and excluded from the published bundle. Record that reasoning; do not silently close.
-2. Fix Critical and High before other work, per [SECURITY.md](../SECURITY.md).
-3. If no patched version exists yet, prefer a scoped `overrides` entry with a comment naming its
+3. Fix Critical and High before other work, per [SECURITY.md](../SECURITY.md).
+4. If no patched version exists yet, prefer a scoped `overrides` entry with a comment naming its
    removal condition, and add it to the quarterly re-check above.
-4. Release the fix as a patch. Do not rebuild an already-published version.
+5. Release the fix as a patch. Do not rebuild an already-published version.
