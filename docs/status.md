@@ -6,21 +6,22 @@ Last updated: 2026-07-29
 
 ## Support Status
 
-| Feature                                           | State          | Target Version |
-| ------------------------------------------------- | -------------- | -------------- |
-| Development environment (devcontainer / monorepo) | ✅ Done        | -              |
-| Markdown → single HTML (MVP)                      | ✅ Done        | v0.1           |
-| AsciiDoc support / mixed-format support           | ✅ Done        | v0.2           |
-| Link conversion / image embedding / Mermaid       | ✅ Done        | v0.3           |
-| Search / table of contents / watch / serve        | ✅ Done        | v0.4           |
-| PDF output                                        | ✅ Done        | v0.5           |
-| npm / GitHub Actions                              | ✅ Done        | v0.6           |
-| VS Code extension                                 | ⏸️ Frozen      | v0.7           |
-| Advanced features (search, themes, binary)        | 🚧 In progress | v0.8           |
+| Feature                                           | State     | Target Version |
+| ------------------------------------------------- | --------- | -------------- |
+| Development environment (devcontainer / monorepo) | ✅ Done   | -              |
+| Markdown → single HTML (MVP)                      | ✅ Done   | v0.1           |
+| AsciiDoc support / mixed-format support           | ✅ Done   | v0.2           |
+| Link conversion / image embedding / Mermaid       | ✅ Done   | v0.3           |
+| Search / table of contents / watch / serve        | ✅ Done   | v0.4           |
+| PDF output                                        | ✅ Done   | v0.5           |
+| npm / GitHub Actions                              | ✅ Done   | v0.6           |
+| VS Code extension                                 | ⏸️ Frozen | v0.7           |
+| Advanced features (search, themes, binary)        | ✅ Done   | v0.8           |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
-undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and v0.8 is the next milestone.
+undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place
+and is released; no milestone is scheduled after it yet.
 
 ## Completion Criteria Status
 
@@ -120,7 +121,7 @@ undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and
 - [x] Verify the published beta npm package on Linux x64 and Windows x64 through `verify-published.yml` (install, HTML, PDF, browser auto-detection with no `PUPPETEER_EXECUTABLE_PATH`, `--format both`, Mermaid pre-render)
 - [x] Verify the Linux x64 release binary against its `.sha256` and run it on a host without Node.js (validate, self-contained HTML, custom sidebar, style-only custom theme, and the expected PDF failure)
 - [x] Verify the Windows x64 release binary, plus `serve` / `watch`, by hand (`verify-published.yml` deliberately leaves long-running commands out of scope). SmartScreen did not appear, but the download used `curl.exe`, which attaches no Mark of the Web, so this does not test the warning the documentation hedges about — a browser download from the Releases page still can trigger it
-- [ ] Publish and verify the stable `0.8.0` release, and pin the CI guide on the documentation site to it
+- [x] Publish and verify the stable `0.8.0` release, and pin the CI guide on the documentation site to it (npm `latest` is `0.8.0` with provenance, re-verified on Linux x64 and Windows x64 through `verify-published.yml`; both binaries, their `.sha256`, and their `-NOTICES.txt` are attached to the release, and the released Linux binary carries the corrected failure message)
 
 ## Supported Syntax
 

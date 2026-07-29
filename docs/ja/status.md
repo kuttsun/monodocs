@@ -16,11 +16,12 @@
 | PDF 出力                            | ✅ 完了   | v0.5           |
 | npm / GitHub Actions                | ✅ 完了   | v0.6           |
 | VS Code 拡張                        | ⏸️ 凍結   | v0.7           |
-| 高度な機能（検索・テーマ・バイナリ）| 🚧 進行中 | v0.8           |
+| 高度な機能（検索・テーマ・バイナリ）| ✅ 完了   | v0.8           |
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
 メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
-[roadmap.md](roadmap.md) の v0.7 に記録しており、次のマイルストーンは v0.8 とする。
+[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 はリリース済みで、その次の
+マイルストーンはまだ設定していない。
 
 ## 完了条件の達成状況
 
@@ -120,7 +121,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] 公開した beta の npm パッケージを `verify-published.yml` で Linux x64 / Windows x64 検証する（install、HTML、PDF、`PUPPETEER_EXECUTABLE_PATH` 無しのブラウザ自動検出、`--format both`、Mermaid pre-render）
 - [x] Linux x64 のリリースバイナリを `.sha256` で照合し、Node.js の無いホストで実行する（validate、自己完結 HTML、カスタムサイドバー、style.css だけのカスタムテーマ、想定どおりの PDF 失敗）
 - [x] Windows x64 のリリースバイナリと `serve` / `watch` を手動で確認する（`verify-published.yml` は長時間動作するコマンドを意図的に対象外にしている）。SmartScreen は出なかったが、ダウンロードに `curl.exe` を使ったため Mark of the Web が付いておらず、ドキュメントが留保している警告を試したことにはならない（ブラウザで Releases ページから取得した場合は依然として出得る）
-- [ ] stable `0.8.0` を公開・検証し、ドキュメントサイトの CI ガイドのピン留めを更新する
+- [x] stable `0.8.0` を公開・検証し、ドキュメントサイトの CI ガイドのピン留めを更新する（npm の `latest` は provenance 付きの `0.8.0` で、`verify-published.yml` により Linux x64 / Windows x64 で再検証済み。両プラットフォームのバイナリと `.sha256` / `-NOTICES.txt` を Release に添付し、公開された Linux バイナリが修正後のメッセージを出すことも確認した）
 
 ## 対応記法
 
