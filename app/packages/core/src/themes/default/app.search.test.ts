@@ -240,3 +240,53 @@ describe("v0.8 search (app.js)", () => {
     expect(resultRoutes()).toEqual(["/b", "/a"]);
   });
 });
+
+/** 仮名・記号の書き分けを畳む（v0.9）。伸ばす記号は `―`（U+2015）と `ー`（U+30FC）を混ぜてある。 */
+const KANA: ClientPage[] = [
+  page("/katakana", "インストール", { text: "サーバー の設定手順。" }),
+  page("/hiragana", "いんすとーる", { text: "せってい の手順。" }),
+  page("/dash", "サーバ―の設定", { text: "ダッシュを書き分けたページ。" }),
+];
+
+describe("v0.9 search folding (app.js)", () => {
+  beforeEach(() => {
+    window.location.hash = "";
+    document.body.innerHTML = "";
+  });
+
+  it("matches hiragana and katakana forms of the same term", async () => {
+    await mountClient(KANA);
+
+    typeQuery("インストール");
+    expect(resultRoutes()).toEqual(["/katakana", "/hiragana"]);
+    // ひらがなで入力しても同じ結果になる（同点はいずれも文書順）。
+    typeQuery("いんすとーる");
+    expect(resultRoutes()).toEqual(["/katakana", "/hiragana"]);
+  });
+
+  it("highlights the original katakana when the query is hiragana", async () => {
+    await mountClient(KANA);
+
+    // 畳んだ文字列は原文と長さが等しいので、ハイライト位置が原文のままずれない。
+    typeQuery("いんすとーる");
+    const link = document.querySelector("#search-results a[data-route='/katakana']")!;
+    expect(link.querySelector(".search-result-title mark")!.textContent).toBe("インストール");
+  });
+
+  it("treats prolonged-sound and dash variants as the same character", async () => {
+    await mountClient(KANA);
+
+    // `サーバ―`（U+2015）のページも `サーバー`（U+30FC）で引ける。タイトル一致が本文一致より上。
+    typeQuery("サーバー");
+    expect(resultRoutes()).toEqual(["/dash", "/katakana"]);
+  });
+
+  it("leaves half-width katakana unmatched, the documented boundary of folding", async () => {
+    await mountClient(KANA);
+
+    // 濁点付き半角カナ（ｶ + ﾞ）は 2 文字 → 1 文字で長さが変わり、位置を共有する
+    // ハイライトが成立しないため畳まない。roadmap 22.3 に記録した制限。
+    typeQuery("ｲﾝｽﾄｰﾙ");
+    expect(document.querySelector("#search-results .search-empty")).not.toBeNull();
+  });
+});
