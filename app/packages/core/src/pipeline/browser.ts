@@ -87,16 +87,48 @@ export function resolveChromiumPath(): string {
   );
 }
 
+/**
+ * 単一実行ファイル（SEA）として動作しているか。`node:sea` は非 SEA でも読み込めるが、
+ * 判定に失敗しても案内自体は出せるよう false に倒す（誤って npm 版向けの案内になるだけで、
+ * どちらの案内も「PDF は使えない」という結論は変わらない）。
+ */
+export async function isStandaloneBinary(): Promise<boolean> {
+  try {
+    const sea = await import("node:sea");
+    return sea.isSea();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `puppeteer-core` を読み込めないときの案内。単一実行ファイルには同梱していないため、
+ * 利用者が何かを install して直せる問題ではなく、npm 版へ誘導するしかない
+ * （バイナリの利用者はそもそも Node.js を持たない前提なので、パッケージマネージャの
+ * コマンドを案内しても宛先が違う）。それ以外は追加インストールで直せる。
+ */
+export function puppeteerMissingMessage(standalone: boolean): string {
+  if (standalone) {
+    return (
+      "PDF 出力と Mermaid pre-render は単一実行ファイル版では利用できません" +
+      "（ヘッドレスブラウザを操作する puppeteer-core を同梱していないため）。" +
+      "npm 版（`npm install -g monodocs`）を使ってください。"
+    );
+  }
+  return (
+    "ヘッドレスブラウザには puppeteer-core が必要です。npm 版では optionalDependency として " +
+    "install されるため、`--omit=optional` を付けたか optional の install に失敗した可能性が" +
+    "あります。`npm install -g monodocs` で入れ直すか、開発 workspace では " +
+    "`pnpm add puppeteer-core` を実行してください。"
+  );
+}
+
 async function importPuppeteer(): Promise<PuppeteerLike> {
   let mod: unknown;
   try {
     mod = await import("puppeteer-core");
   } catch {
-    throw new BrowserSetupError(
-      "ヘッドレスブラウザには puppeteer-core が必要です。`pnpm add puppeteer-core` で追加して" +
-        "ください（node_modules を同梱しないバンドル版 CLI＝単一 .cjs / 単一実行ファイルでは" +
-        "利用できません。パッケージインストール版を使ってください）。",
-    );
+    throw new BrowserSetupError(puppeteerMissingMessage(await isStandaloneBinary()));
   }
   return ((mod as { default?: PuppeteerLike }).default ?? (mod as PuppeteerLike)) as PuppeteerLike;
 }
