@@ -42,7 +42,7 @@ monodocs/
 
 ### アプリ依存関係のセキュリティ override
 
-`app/` ワークスペースは `postcss` を patched release（`^8.5.18`）へ pnpm `overrides`（`pnpm-workspace.yaml`）で固定しています（pnpm 11 系は `package.json` の `pnpm` フィールドを読まないため）。`postcss <= 8.5.17` は高深刻度の path traversal advisory（GHSA-r28c-9q8g-f849）を持ち、`vitest -> vite` 経由で transitive に入ります（dev/test 専用で、公開バンドルには含まれません）。この override により `pnpm audit` を green に保ちます。`vite` が自前で patched な `postcss` を解決するようになったら削除を再検討してください。
+`app/` ワークスペースは `postcss` を patched release（`^8.5.18`）へ pnpm `overrides`（`pnpm-workspace.yaml`）で固定しています（pnpm 11 系は `package.json` の `pnpm` フィールドを読まないため）。`postcss <= 8.5.17` は高深刻度の path traversal advisory（GHSA-r28c-9q8g-f849）を持ち、`vitest -> vite` 経由で transitive に入ります（dev/test 専用で、公開バンドルには含まれません）。この override により `pnpm audit` を green に保ちます。`vite` が自前で patched な `postcss` を解決するようになったら削除を再検討してください。2026-07-29 時点の再点検では、`vite` 8.1.5 も依然として `postcss: ^8.5.17` を宣言しており、下限が脆弱なバージョンのままなので override は維持します。
 
 ### 依存関係の公開後経過時間ポリシー
 
@@ -54,7 +54,7 @@ Dependabot は独自のスケジュールでバージョンを解決するため
 
 ### サイト依存関係のセキュリティ override
 
-`site/` の standalone package は Vite を一時的に `~6.4.3` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を継続して通してください。安全な Vite の範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。
+`site/` の standalone package は Vite を一時的に `~6.4.3` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を継続して通してください。安全な Vite の範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。2026-07-29 時点の再点検では、安定版は依然として VitePress 1.6.4（`vite ^5.4.14`）で、VitePress 2 は alpha しかなく、Vite 6.4 系の最新 patch も `6.4.3` のままなので、override は現状のまま維持します。
 
 ### 必要なもの
 

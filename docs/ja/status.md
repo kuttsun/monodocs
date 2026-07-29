@@ -120,7 +120,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] `next` tag で `0.8.0-beta.1` を npm へ公開する（0.7.0 は飛ばす。凍結中の VS Code 拡張マイルストーン用に番号を予約したままにするため）
 - [x] 公開した beta の npm パッケージを `verify-published.yml` で Linux x64 / Windows x64 検証する（install、HTML、PDF、`PUPPETEER_EXECUTABLE_PATH` 無しのブラウザ自動検出、`--format both`、Mermaid pre-render）
 - [x] Linux x64 のリリースバイナリを `.sha256` で照合し、Node.js の無いホストで実行する（validate、自己完結 HTML、カスタムサイドバー、style.css だけのカスタムテーマ、想定どおりの PDF 失敗）
-- [x] Windows x64 のリリースバイナリと `serve` / `watch` を手動で確認する（`verify-published.yml` は長時間動作するコマンドを意図的に対象外にしている）。SmartScreen は出なかったが、ダウンロードに `curl.exe` を使ったため Mark of the Web が付いておらず、ドキュメントが留保している警告を試したことにはならない（ブラウザで Releases ページから取得した場合は依然として出得る）
+- [x] Windows x64 のリリースバイナリと `serve` / `watch` を手動で確認する（`verify-published.yml` は長時間動作するコマンドを意図的に対象外にしている）。SmartScreen は出なかったが、ダウンロードに `curl.exe` を使ったため Mark of the Web が付いておらず、ドキュメントが留保している警告を試したことにはならない（ブラウザで Releases ページから取得した場合は依然として出得る）。このブラウザ経由の検証は意図的に行わない。バイナリは方針として署名していない（[roadmap.md](roadmap.md) 8.5）ため警告が出ること自体が想定内であり、サイトのドキュメントでも既に注意喚起している。留保は留保のまま残し、コード署名が可能になった時点で再検討する
 - [x] stable `0.8.0` を公開・検証し、ドキュメントサイトの CI ガイドのピン留めを更新する（npm の `latest` は provenance 付きの `0.8.0` で、`verify-published.yml` により Linux x64 / Windows x64 で再検証済み。両プラットフォームのバイナリと `.sha256` / `-NOTICES.txt` を Release に添付し、公開された Linux バイナリが修正後のメッセージを出すことも確認した）
 
 ## 対応記法
