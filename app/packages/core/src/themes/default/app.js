@@ -22,6 +22,7 @@
     prev: "← Prev",
     next: "Next →",
     noResults: "No results",
+    searchResults: "Search results",
     wrapToggle: "Toggle word wrap",
     copyCode: "Copy code",
     copy: "Copy",
@@ -650,15 +651,73 @@
     return results.slice(0, SEARCH_LIMIT);
   }
 
+  // 結果一覧の option id 接頭辞。本文の見出し ID と衝突しないよう独自の名前空間にする。
+  var SEARCH_OPTION_ID = "monodocs-search-option-";
+  // キーボードで選択中の結果の位置（-1 は未選択）。
+  var searchActive = -1;
+
+  function searchOptions() {
+    var box = document.getElementById("search-results");
+    if (!box) return [];
+    return Array.prototype.slice.call(box.querySelectorAll("a[data-route]"));
+  }
+
+  /**
+   * 選択位置を設定する。フォーカスは検索欄に残したまま `aria-activedescendant` で
+   * 読み上げ位置だけを移すため、選択後もそのまま入力を続けられる。
+   */
+  function setSearchActive(index) {
+    var input = document.getElementById("search-input");
+    var options = searchOptions();
+    searchActive = index;
+    options.forEach(function (a, i) {
+      var selected = i === index;
+      a.setAttribute("aria-selected", selected ? "true" : "false");
+      // 長い結果一覧でも選択位置が画面外に出ないようにする。
+      if (selected && typeof a.scrollIntoView === "function")
+        a.scrollIntoView({ block: "nearest" });
+    });
+    if (!input) return;
+    if (index >= 0 && options[index]) {
+      input.setAttribute("aria-activedescendant", options[index].id);
+    } else {
+      input.removeAttribute("aria-activedescendant");
+    }
+  }
+
+  // 選択位置を上下に動かす。端では反対側へ回り込む。
+  function moveSearchActive(delta) {
+    var options = searchOptions();
+    if (options.length === 0) return;
+    var next = searchActive + delta;
+    if (next < 0) next = options.length - 1;
+    if (next >= options.length) next = 0;
+    setSearchActive(next);
+  }
+
+  // 結果を開く。クリックとキーボードで同じ経路を通す。
+  function activateSearchResult(a) {
+    if (!a) return;
+    var headingId = a.getAttribute("data-heading");
+    if (headingId) navigateToAnchor(headingId);
+    else navigateTo(a.getAttribute("data-route"), null);
+  }
+
   function renderSearchResults(query) {
     var box = document.getElementById("search-results");
     var nav = document.getElementById("sidebar-nav");
+    var input = document.getElementById("search-input");
     if (!box) return;
+
+    // 一覧を作り直すたびに選択は解除する（結果が変われば選択位置の意味も変わる）。
+    searchActive = -1;
+    if (input) input.removeAttribute("aria-activedescendant");
 
     if (!query.trim()) {
       box.hidden = true;
       box.innerHTML = "";
       if (nav) nav.hidden = false;
+      if (input) input.setAttribute("aria-expanded", "false");
       return;
     }
 
@@ -668,16 +727,23 @@
 
     if (results.length === 0) {
       box.innerHTML = '<li class="search-empty">' + escapeHtml(LABELS.noResults) + "</li>";
+      if (input) input.setAttribute("aria-expanded", "false");
       return;
     }
+    if (input) input.setAttribute("aria-expanded", "true");
 
     var html = "";
-    results.forEach(function (r) {
+    results.forEach(function (r, i) {
       // 見出しに一致した結果はその見出しへ直接飛ばす（アンカー hash はルータが
       // 該当要素を含むページへ解決する）。タイトル・本文だけの一致はページ先頭。
       var target = r.headingId || r.route;
+      // listbox の子は option として扱われる必要があるため、li は presentation にして
+      // リンク自身を option にする。リンクは Tab 順から外し、上下キーで辿る。
       html +=
-        '<li class="search-result"><a data-route="' +
+        '<li class="search-result" role="presentation"><a id="' +
+        SEARCH_OPTION_ID +
+        i +
+        '" role="option" aria-selected="false" tabindex="-1" data-route="' +
         escapeHtml(r.route) +
         '"' +
         (r.headingId ? ' data-heading="' + escapeHtml(r.headingId) + '"' : "") +
@@ -692,19 +758,32 @@
     });
     box.innerHTML = html;
 
-    box.querySelectorAll("a[data-route]").forEach(function (a) {
+    box.querySelectorAll("a[data-route]").forEach(function (a, i) {
       a.addEventListener("click", function (e) {
         e.preventDefault();
-        var headingId = a.getAttribute("data-heading");
-        if (headingId) navigateToAnchor(headingId);
-        else navigateTo(a.getAttribute("data-route"), null);
+        activateSearchResult(a);
+      });
+      // ポインタで指した項目をキーボードの選択位置に合わせ、両操作の現在地を一致させる。
+      a.addEventListener("mousemove", function () {
+        if (searchActive !== i) setSearchActive(i);
       });
     });
   }
 
   function setupSearch() {
     var input = document.getElementById("search-input");
+    var box = document.getElementById("search-results");
     if (!input) return;
+    // combobox として関連付ける。テンプレートを差し替えたテーマでも属性が付くよう、
+    // マークアップではなくここで設定する。
+    if (box) {
+      box.setAttribute("role", "listbox");
+      if (!box.getAttribute("aria-label")) box.setAttribute("aria-label", LABELS.searchResults);
+      input.setAttribute("role", "combobox");
+      input.setAttribute("aria-controls", box.id);
+      input.setAttribute("aria-autocomplete", "list");
+      input.setAttribute("aria-expanded", "false");
+    }
     input.addEventListener("input", function () {
       renderSearchResults(input.value);
     });
@@ -713,6 +792,23 @@
         input.value = "";
         renderSearchResults("");
         input.blur();
+        return;
+      }
+      // Home / End はテキスト入力のキャレット移動に残す（結果一覧には割り当てない）。
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        moveSearchActive(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        moveSearchActive(-1);
+      } else if (e.key === "Enter") {
+        // 未選択のまま Enter を押したときは先頭の結果を開く（入力直後の既定の意図）。
+        var options = searchOptions();
+        var target = searchActive >= 0 ? options[searchActive] : options[0];
+        if (target) {
+          e.preventDefault();
+          activateSearchResult(target);
+        }
       }
     });
   }

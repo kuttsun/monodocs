@@ -17,7 +17,7 @@ Last updated: 2026-07-29
 | npm / GitHub Actions                              | ✅ Done   | v0.6           |
 | VS Code extension                                 | ⏸️ Frozen | v0.7           |
 | Advanced features (search, themes, binary)        | ✅ Done   | v0.8           |
-| Japanese search folding (kana / symbols)          | ✅ Done   | v0.9           |
+| Search finishing (kana folding, keyboard)         | ✅ Done   | v0.9           |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
@@ -124,12 +124,15 @@ and is released, and v0.9 follows it.
 - [x] Verify the Windows x64 release binary, plus `serve` / `watch`, by hand (`verify-published.yml` deliberately leaves long-running commands out of scope). SmartScreen did not appear, but the download used `curl.exe`, which attaches no Mark of the Web, so this does not test the warning the documentation hedges about — a browser download from the Releases page still can trigger it. That browser download is deliberately left unverified: the binaries are unsigned by decision ([roadmap.md](roadmap.md) 8.5), so the prompt is expected rather than a defect, and the site documentation already warns readers about it. The hedge stays a hedge; revisit only if code signing becomes possible
 - [x] Publish and verify the stable `0.8.0` release, and pin the CI guide on the documentation site to it (npm `latest` is `0.8.0` with provenance, re-verified on Linux x64 and Windows x64 through `verify-published.yml`; both binaries, their `.sha256`, and their `-NOTICES.txt` are attached to the release, and the released Linux binary carries the corrected failure message)
 
-### v0.9: Japanese Search Folding
+### v0.9: Search Finishing
 
 - [x] Search folds katakana to hiragana (U+30A1–U+30F6 ↔ U+3041–U+3096, so voiced forms and `ヴ` / `ヵ` / `ヶ` are covered), so `インストール` and `いんすとーる` find each other
 - [x] The prolonged sound mark `ー`, the dash family (U+2010–U+2015, U+2212), and the full-width hyphen fold to `-`, and the wave dash `〜` and full-width tilde `～` fold to `~`, so a spelling difference in those characters no longer splits results
 - [x] Folding stays one character to one character, so highlighting still marks the original spelling (a hiragana query marks `インストール` in the result list)
 - [x] Half-width katakana, okurigana variants, and English stemming are recorded as out of scope with their reason: each changes token length and would require replacing the fold-in-place model with a token-to-source position map ([roadmap.md](roadmap.md) 22.3)
+- [x] The result list is navigated with `↓` / `↑` (wrapping at both ends) and opened with `Enter`, which opens the top result when nothing is selected yet; `Escape` still clears the query
+- [x] Focus stays in the search box while selecting, so the query can be narrowed without tabbing back. The selection is published through `aria-activedescendant` on an ARIA combobox / listbox pair, and the selected row carries its own outline because the focus ring stays on the input
+- [x] Mouse and keyboard cannot disagree: pointing at a row moves the selection to it, and both ways of opening a result run the same code path. The roles are attached from `app.js`, so a custom theme that replaces `template.html` still gets them
 
 ## Supported Syntax
 

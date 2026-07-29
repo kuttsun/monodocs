@@ -387,6 +387,14 @@ body.sidebar-collapsed #sidebar {
   background: var(--color-nav-hover-bg);
 }
 
+/* 上下キーで選択中の結果。フォーカスは検索欄にあるため、選択位置は色だけでなく
+   罫線でも示す（ホバーとの区別が背景色の濃さだけにならないようにする）。 */
+.search-result a[aria-selected="true"] {
+  background: var(--color-nav-active-bg);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
 .search-result-title {
   display: block;
   font-size: 0.9rem;

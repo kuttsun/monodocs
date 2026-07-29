@@ -14,6 +14,8 @@ The output is a single HTML with no external runtime: in-page search, a table of
 
 Type in the sidebar search box to search titles, headings, and body text. Separate keywords with spaces to narrow the results — a page is listed only when it contains every keyword. Results are ranked by where the keywords appear (title, then heading, then body), and a result that matched a heading jumps straight to that heading. Matching is case-insensitive, treats full-width alphanumerics (`ＰＤＦ`) as their half-width form, treats katakana and hiragana as the same (`インストール` finds `いんすとーる`), ignores the difference between the prolonged sound mark and dashes (`ー` / `―`) and between the wave dash and full-width tilde (`〜` / `～`), and works on substrings, so Japanese needs no spaces inside a keyword. Half-width katakana and okurigana differences (`引き渡し` / `引渡し`) are not unified.
 
+The results can be used without a mouse: `↓` / `↑` move through them (wrapping at both ends), `Enter` opens the selected one — or the top one when you have not moved yet — and `Escape` clears the box. The cursor stays in the search box the whole time, so you can keep typing to narrow the list.
+
 ## Install
 
 monodocs is published on npm and requires Node.js 22.12.0 or later. Linux x64 and Windows x64 are the supported platforms.
