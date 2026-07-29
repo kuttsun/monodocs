@@ -372,11 +372,32 @@
   }
 
   /**
-   * 検索用に文字列を畳む（小文字化 + 全角英数字 → 半角）。スニペットとハイライトの
-   * 位置を元文字列と共有するため、必ず同じ長さを保つ。NFKC は長さが変わりうるので使わない。
+   * カタカナをひらがなへ写す。U+30A1–U+30F6 はひらがな U+3041–U+3096 と 1 対 1 に対応し、
+   * 濁点付き（ガ → が）や ヴ・ヵ・ヶ もこの範囲に収まる。長音記号 ー（U+30FC）と、
+   * 対応するひらがなを持たない ヷ–ヺ（U+30F7–U+30FA）は範囲外なのでそのまま残る。
+   */
+  function katakanaToHiragana(s) {
+    return s.replace(/[\u30a1-\u30f6]/g, function (c) {
+      return String.fromCharCode(c.charCodeAt(0) - 0x60);
+    });
+  }
+
+  /**
+   * 伸ばす記号と波線の書き分けを 1 文字へ寄せる。長音記号（ー）・ダッシュ類・全角ハイフン
+   * （toHalfWidth で `-` になる）は同じ位置で書き分けられ、波ダッシュ（〜）と全角チルダ
+   * （～。同じく `~` になる）は環境によって入れ替わるため、検索では区別しない。
+   */
+  function foldDashes(s) {
+    return s.replace(/[\u2010-\u2015\u2212\u30fc]/g, "-").replace(/\u301c/g, "~");
+  }
+
+  /**
+   * 検索用に文字列を畳む（小文字化 + 全角英数字 → 半角 + カタカナ → ひらがな + 記号の書き分け）。
+   * スニペットとハイライトの位置を元文字列と共有するため、必ず同じ長さを保つ。NFKC や
+   * 半角カタカナの合成（ｶ + ﾞ → ガ）は長さが変わりうるので使わない。
    */
   function fold(s) {
-    return toHalfWidth(lowerKeepingLength(String(s)));
+    return foldDashes(katakanaToHiragana(toHalfWidth(lowerKeepingLength(String(s)))));
   }
 
   // 空白区切りのクエリを語の配列にする（全角空白も \s に含まれる）。重複語は落とす。

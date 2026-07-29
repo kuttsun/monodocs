@@ -1392,6 +1392,35 @@ Remaining candidates:
 - In-body highlighting after navigating to a result
 - Keyboard navigation of the result list
 
+### 22.3 Kana and Symbol Folding
+
+Already supported (v0.9). `fold` additionally maps katakana to hiragana and collapses the characters
+that Japanese text writes interchangeably, so a reader who types one spelling finds the other:
+
+- Katakana → hiragana. U+30A1–U+30F6 correspond one to one with U+3041–U+3096, which covers the
+  voiced forms (`ガ` → `が`) as well as `ヴ` / `ヵ` / `ヶ`. `ヷ`–`ヺ` have no hiragana counterpart and
+  are left alone.
+- The prolonged sound mark `ー`, the dash family (U+2010–U+2015, U+2212), and the full-width hyphen
+  all fold to `-`; the wave dash `〜` and the full-width tilde `～` both fold to `~`. These are written
+  interchangeably in the same position, and the wave dash pair in particular swaps depending on the
+  authoring platform.
+
+Every mapping is one character to one character, which preserves the length invariant that the
+highlight and snippet offsets depend on (22.2).
+
+Three related variations stay out of scope, because each one breaks that invariant:
+
+- **Half-width katakana** (`ｶﾞ` → `ガ`) composes two characters into one, so the folded string would
+  stop sharing offsets with the original.
+- **Okurigana variants** (`引き渡し` / `引渡し`) cannot be derived from the characters at all. They
+  need a morphological analyzer whose dictionary runs to several megabytes — inside every generated
+  document, for a tool whose purpose is one self-contained file.
+- **English stemming** (`installing` → `install`) is small to implement, but it changes token length
+  and needs the same position map as half-width katakana.
+
+Supporting any of them means replacing the fold-in-place model with a token-to-source position map.
+Revisit the three together if that rewrite ever becomes worthwhile; none of them justifies it alone.
+
 ---
 
 ## 23. HTML Template
@@ -2012,6 +2041,29 @@ Completion criteria:
 - Search is practical even for large-scale documents
 - There is a distributable that can run without Node.js
 - Themes can be switched
+
+---
+
+## v0.9: Japanese Search Folding
+
+Purpose:
+
+Make Japanese search find what the reader means when the document and the query spell the same word
+differently — without adding a dictionary or a search runtime to the generated file.
+
+Implementation scope:
+
+- Fold katakana to hiragana when matching
+- Fold the prolonged sound mark, the dash family, and the wave dash / full-width tilde
+- Settle half-width katakana, okurigana, and English stemming as out of scope, with the reason
+  recorded in chapter 22.3
+
+Completion criteria:
+
+- A hiragana query finds katakana text and the reverse
+- Dash and tilde spelling differences no longer split results
+- Highlighting still marks the original spelling in the result list
+- The variations that remain unsupported are recorded as decisions, not as open work
 
 ---
 

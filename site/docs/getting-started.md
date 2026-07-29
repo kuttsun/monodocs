@@ -12,7 +12,7 @@ The output is a single HTML with no external runtime: in-page search, a table of
 
 ### Searching the output
 
-Type in the sidebar search box to search titles, headings, and body text. Separate keywords with spaces to narrow the results — a page is listed only when it contains every keyword. Results are ranked by where the keywords appear (title, then heading, then body), and a result that matched a heading jumps straight to that heading. Matching is case-insensitive, treats full-width alphanumerics (`ＰＤＦ`) as their half-width form, and works on substrings, so Japanese needs no spaces inside a keyword.
+Type in the sidebar search box to search titles, headings, and body text. Separate keywords with spaces to narrow the results — a page is listed only when it contains every keyword. Results are ranked by where the keywords appear (title, then heading, then body), and a result that matched a heading jumps straight to that heading. Matching is case-insensitive, treats full-width alphanumerics (`ＰＤＦ`) as their half-width form, treats katakana and hiragana as the same (`インストール` finds `いんすとーる`), ignores the difference between the prolonged sound mark and dashes (`ー` / `―`) and between the wave dash and full-width tilde (`〜` / `～`), and works on substrings, so Japanese needs no spaces inside a keyword. Half-width katakana and okurigana differences (`引き渡し` / `引渡し`) are not unified.
 
 ## Install
 

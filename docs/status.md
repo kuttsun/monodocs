@@ -17,11 +17,12 @@ Last updated: 2026-07-29
 | npm / GitHub Actions                              | ✅ Done   | v0.6           |
 | VS Code extension                                 | ⏸️ Frozen | v0.7           |
 | Advanced features (search, themes, binary)        | ✅ Done   | v0.8           |
+| Japanese search folding (kana / symbols)          | ✅ Done   | v0.9           |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place
-and is released; no milestone is scheduled after it yet.
+and is released, and v0.9 follows it.
 
 ## Completion Criteria Status
 
@@ -123,6 +124,13 @@ and is released; no milestone is scheduled after it yet.
 - [x] Verify the Windows x64 release binary, plus `serve` / `watch`, by hand (`verify-published.yml` deliberately leaves long-running commands out of scope). SmartScreen did not appear, but the download used `curl.exe`, which attaches no Mark of the Web, so this does not test the warning the documentation hedges about — a browser download from the Releases page still can trigger it. That browser download is deliberately left unverified: the binaries are unsigned by decision ([roadmap.md](roadmap.md) 8.5), so the prompt is expected rather than a defect, and the site documentation already warns readers about it. The hedge stays a hedge; revisit only if code signing becomes possible
 - [x] Publish and verify the stable `0.8.0` release, and pin the CI guide on the documentation site to it (npm `latest` is `0.8.0` with provenance, re-verified on Linux x64 and Windows x64 through `verify-published.yml`; both binaries, their `.sha256`, and their `-NOTICES.txt` are attached to the release, and the released Linux binary carries the corrected failure message)
 
+### v0.9: Japanese Search Folding
+
+- [x] Search folds katakana to hiragana (U+30A1–U+30F6 ↔ U+3041–U+3096, so voiced forms and `ヴ` / `ヵ` / `ヶ` are covered), so `インストール` and `いんすとーる` find each other
+- [x] The prolonged sound mark `ー`, the dash family (U+2010–U+2015, U+2212), and the full-width hyphen fold to `-`, and the wave dash `〜` and full-width tilde `～` fold to `~`, so a spelling difference in those characters no longer splits results
+- [x] Folding stays one character to one character, so highlighting still marks the original spelling (a hiragana query marks `インストール` in the result list)
+- [x] Half-width katakana, okurigana variants, and English stemming are recorded as out of scope with their reason: each changes token length and would require replacing the fold-in-place model with a token-to-source position map ([roadmap.md](roadmap.md) 22.3)
+
 ## Supported Syntax
 
 The supported syntax for Markdown / AsciiDoc, along with the unsupported items and limitations that come with single-HTML generation, is documented as a specification in [syntax.md](syntax.md) (including footnote ID collision avoidance and in-page anchor handling). Markdown GFM alerts (such as `> [!NOTE]`) and AsciiDoc admonitions are normalized into a common `.admonition` structure for display.
@@ -131,7 +139,7 @@ The supported syntax for Markdown / AsciiDoc, along with the unsupported items a
 
 - Code highlighting (shiki) is supported (can be disabled with `highlight.enabled: false`; dual theme follows dark mode)
 - Heading-level cross-file links (`file.md#heading` / `xref:other.adoc#sec`) are supported (resolved to the target page's prefixed element ID; because the anchor is matched against the ID the target file generates, pointing from Markdown at an AsciiDoc heading needs the ID Asciidoctor produces, such as `_details`, and an anchor that does not exist falls back to the top of that page with a warning)
-- Search matches substrings, now with multiple keywords (AND), field-weighted scoring, heading-level results, and highlighting (v0.8). Because matching is substring-based, Japanese needs no word segmentation; matching folds case and full-width alphanumerics only, so kana/kanji variants (hiragana vs. katakana, okurigana) are not unified. There is no stemming for English either: `install` finds a page containing `installing`, but `installing` does not find a page that only says `install`
+- Search matches substrings, now with multiple keywords (AND), field-weighted scoring, heading-level results, and highlighting (v0.8). Because matching is substring-based, Japanese needs no word segmentation. Matching folds case, full-width alphanumerics, katakana against hiragana, and the dash / tilde spellings (v0.9). What it deliberately does not fold is anything that would change string length, because highlight and snippet offsets are shared with the original text: half-width katakana (`ｶﾞ`), okurigana variants (`引き渡し` / `引渡し`, which need a multi-megabyte dictionary), and English stemming — `install` finds a page containing `installing`, but `installing` does not find a page that only says `install` ([roadmap.md](roadmap.md) 22.3)
 - `watch` / `serve` monitoring uses `fs.watch` (recursive when possible). If `input` is changed in the configuration, a restart is required. A custom theme directory is watched and follows a theme switch made in the configuration, but it must already exist: a theme directory created (or deleted and recreated) while watching is picked up only on the next source or configuration change. Watching an ancestor directory instead was rejected because it would react to unrelated churn — including the build's own output — and can spin into a rebuild loop
 - PDF output is supported (v0.5; `--format pdf` / `both`). Because it uses headless Chromium, Chromium must be present in the runtime environment, and it is not available in the bundled CLI (single `.cjs` / single executable) (the npm-installed version is required). When Mermaid is set to the `cdn` runtime, a network connection is required during PDF generation (use `inline` or `pre-render` to be reliably offline)
 - **PDF fonts use the system fonts of the runtime environment.** If a font for a character type appearing in the body is missing, it becomes tofu (□ / ☒) in the PDF (e.g., the emoji ✅ requires an emoji font). The development Docker image already bundles `fonts-noto-cjk` (Japanese) plus `fonts-noto-color-emoji` (emoji). When producing PDFs in your own environment, install fonts according to the character types you use (HTML is unaffected because it uses the browser's fonts)
