@@ -115,8 +115,11 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] 幅の広い内容が PDF から消えないようにする（コードブロックの折り返し、URL など分割できない文字列の折り返し、表をスクロール枠ではなく表として組み各ページで見出し行を繰り返す、図を紙幅に収める）
 - [x] 狭い画面ではサイドバーを既定で閉じたドロワーにして本文から読み始められるようにし、横スクロールを解消する
 - [x] 生成した PDF に文書タイトルと `monodocs v<version>`（Creator / Producer）を記録する
-- [ ] `next` tag で `0.8.0-beta.1` を npm へ公開する（0.7.0 は飛ばす。凍結中の VS Code 拡張マイルストーン用に番号を予約したままにするため）
-- [ ] 公開した beta を Linux x64 / Windows x64 で検証する（install、HTML / PDF / both / Mermaid pre-render、カスタムテーマ、カスタムサイドバー、リリースバイナリと `.sha256` / `-NOTICES.txt`）
+- [x] バイナリで PDF / pre-render が使えないときのメッセージが、Node.js を持たない利用者には実行できないパッケージマネージャのコマンドではなく、npm 版への切り替えを案内する
+- [x] `next` tag で `0.8.0-beta.1` を npm へ公開する（0.7.0 は飛ばす。凍結中の VS Code 拡張マイルストーン用に番号を予約したままにするため）
+- [x] 公開した beta の npm パッケージを `verify-published.yml` で Linux x64 / Windows x64 検証する（install、HTML、PDF、`PUPPETEER_EXECUTABLE_PATH` 無しのブラウザ自動検出、`--format both`、Mermaid pre-render）
+- [x] Linux x64 のリリースバイナリを `.sha256` で照合し、Node.js の無いホストで実行する（validate、自己完結 HTML、カスタムサイドバー、style.css だけのカスタムテーマ、想定どおりの PDF 失敗）
+- [ ] Windows x64 のリリースバイナリと `serve` / `watch` を手動で確認する（`verify-published.yml` は長時間動作するコマンドを意図的に対象外にしている）
 - [ ] stable `0.8.0` を公開・検証し、ドキュメントサイトの CI ガイドのピン留めを更新する
 
 ## 対応記法

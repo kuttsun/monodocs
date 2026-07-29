@@ -115,8 +115,11 @@ undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md), and
 - [x] Wide content no longer disappears from the PDF: code blocks wrap, long unbreakable strings such as URLs break, tables are laid out as tables (not a scroll box) with the header row repeated on every page, and diagrams are capped at the page width
 - [x] On narrow screens the sidebar is an overlay drawer that starts closed, so the document opens on its content, and the page no longer scrolls horizontally
 - [x] Generated PDFs record the document title and `monodocs v<version>` as the creating and producing tool
-- [ ] Publish `0.8.0-beta.1` to npm under the `next` tag (0.7.0 is skipped: the version number stays reserved for the frozen VS Code extension milestone)
-- [ ] Verify the published beta on Linux x64 and Windows x64 (install, HTML / PDF / both / Mermaid pre-render, custom theme, custom sidebar, plus the release binary and its `.sha256` / `-NOTICES.txt`)
+- [x] The binary's PDF / pre-render failure tells the reader to use the npm package instead of naming a package-manager command that its audience — people without Node.js — cannot run
+- [x] Publish `0.8.0-beta.1` to npm under the `next` tag (0.7.0 is skipped: the version number stays reserved for the frozen VS Code extension milestone)
+- [x] Verify the published beta npm package on Linux x64 and Windows x64 through `verify-published.yml` (install, HTML, PDF, browser auto-detection with no `PUPPETEER_EXECUTABLE_PATH`, `--format both`, Mermaid pre-render)
+- [x] Verify the Linux x64 release binary against its `.sha256` and run it on a host without Node.js (validate, self-contained HTML, custom sidebar, style-only custom theme, and the expected PDF failure)
+- [ ] Verify the Windows x64 release binary, plus `serve` / `watch`, by hand (`verify-published.yml` deliberately leaves long-running commands out of scope)
 - [ ] Publish and verify the stable `0.8.0` release, and pin the CI guide on the documentation site to it
 
 ## Supported Syntax
