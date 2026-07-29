@@ -18,3 +18,4 @@ Update both versions when shared facts, instructions, or behavior change.
 | [status.md](status.md)                   | Implementation status and completion criteria                                    |
 | [testing.md](testing.md)                 | Testing policy, execution methods, and coverage                                  |
 | [oss-npm-roadmap.md](oss-npm-roadmap.md) | OSS and npm release preparation roadmap                                          |
+| [maintenance.md](maintenance.md)         | What runs on its own after a release, and the quarterly review                   |

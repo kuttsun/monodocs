@@ -401,21 +401,32 @@ During the 0.x period, treat the latest minor as the normal support target, and 
 
 ### 11.2 Security Handling
 
-- [ ] Address Critical / High vulnerabilities with priority over regular releases.
-- [ ] Coordinate privately via Security Advisory or similar before disclosure.
-- [ ] Announce the scope of impact and mitigation after publishing the fixed version.
-- [ ] Deprecate the problematic npm version if needed.
-- [ ] Do not carelessly unpublish already-published versions.
+These were policy statements with no procedure attached, so they now exist as the numbered handling
+steps in [SECURITY.md](../SECURITY.md), where a reporter can also read them.
+
+- [x] Address Critical / High vulnerabilities with priority over regular releases.
+- [x] Coordinate privately via Security Advisory or similar before disclosure.
+- [x] Announce the scope of impact and mitigation after publishing the fixed version.
+- [x] Deprecate the problematic npm version if needed.
+- [x] Do not carelessly unpublish already-published versions.
 
 ### 11.3 Recurring Tasks
 
-- [ ] Update dependencies regularly.
-- [ ] Check vulnerability alerts.
-- [ ] Periodically review npm maintainer permissions.
-- [ ] Audit the Trusted Publisher settings.
-- [ ] Review the supported ranges of Node.js and Chromium.
-- [ ] Announce EOL versions.
-- [ ] Review priority issues based on Issues and download status.
+Each of these is either automated or scheduled; [maintenance.md](maintenance.md) records which, and
+carries the quarterly checklist for the ones a person has to do.
+
+- [x] Update dependencies regularly. (Dependabot, monthly, across the three dependency sets.)
+- [x] Check vulnerability alerts. (Dependabot alerts and automated security fixes, plus a weekly
+      `scheduled-audit.yml` that opens an issue on failure — PR CI's audit only runs when a pull
+      request is open, and `pnpm audit` sees the tree that this repository's `overrides` resolve to,
+      which the alert graph does not.)
+- [x] Periodically review npm maintainer permissions. (Quarterly checklist.)
+- [x] Audit the Trusted Publisher settings. (Quarterly checklist. Renaming the repository, the
+      workflow file, or the environment breaks publishing silently.)
+- [x] Review the supported ranges of Node.js and Chromium. (Quarterly checklist, with the Node 22
+      LTS end in April 2027 as the next forcing date.)
+- [x] Announce EOL versions. (Quarterly checklist, against the support policy in SECURITY.md.)
+- [x] Review priority issues based on Issues and download status. (Quarterly checklist.)
 
 ## 12. Future: SEA Standalone Binary
 

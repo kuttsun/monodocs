@@ -1,0 +1,100 @@
+name: Scheduled Audit
+
+# PR CI も依存の audit を実行するが、そちらは pull_request 起動なので、PR が無い期間は
+# 走らない。新しい advisory がその期間に出ても、次に誰かが PR を作るまで気づけないため、
+# 定期的に同じ audit を回す。
+#
+# Dependabot alert とは対象が異なる。alert は GitHub の advisory database と依存グラフを
+# 突き合わせるのに対し、こちらは pnpm の overrides を効かせた実際の解決結果を見る。
+# 本リポジトリは overrides を持つので、両者の判定はずれ得る。
+#
+# 注意: 60 日間 activity が無いリポジトリでは GitHub が schedule を自動停止する。
+# 停止していないことは四半期の棚卸し（docs/maintenance.md）で確認する。
+on:
+  schedule:
+    - cron: '15 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit ${{ matrix.name }} dependencies
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: app
+            directory: app
+            command: pnpm audit
+          - name: site
+            directory: site
+            command: npm audit
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        if: matrix.name == 'app'
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # 依存はインストールしない。どちらの audit も lockfile だけで判定でき、install を
+      # 挟むと pnpm の release-age ポリシー等による失敗が audit の失敗と紛らわしくなる。
+      - name: Audit
+        run: ${{ matrix.command }}
+        working-directory: ${{ matrix.directory }}
+
+  report:
+    name: Report audit failure
+    needs: audit
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      # 定期実行の失敗は Actions タブを見ない限り気づけないため、Issue に残す。
+      # 未対応の Issue が既にあれば、重ねて作らずコメントを足す。
+      - name: Open an issue unless one is already open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title='Scheduled dependency audit failed'
+          existing=$(gh issue list --repo "$REPO" --state open --label dependencies \
+            --search "\"$title\" in:title" --json number --jq '.[0].number // empty')
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" \
+              --body "The scheduled audit failed again: $RUN_URL"
+            exit 0
+          fi
+
+          # 本文はヒアドキュメントで組み立てる（YAML のブロックスカラーが共通の字下げを
+          # 取り除くため、ここでの各行は先頭が列 0 になる）。
+          cat > body.md <<EOF
+          The weekly dependency audit failed. Open the run to see which workspace and which advisory: $RUN_URL
+
+          The audit runs \`pnpm audit\` in \`app/\` and \`npm audit\` in \`site/\` against the committed lockfiles. A failure means an advisory now covers a version a lockfile resolves to. That does not by itself mean the published package is affected: \`site/\` never ships to users, and some \`app/\` dependencies are dev-only.
+
+          Triage per [SECURITY.md]($SERVER_URL/$REPO/blob/main/SECURITY.md): Critical / High come before other work. Record the outcome here before closing.
+
+          While this issue stays open it is not created again — later failures are added as comments.
+          EOF
+
+          gh issue create --repo "$REPO" --title "$title" --label dependencies --body-file body.md
