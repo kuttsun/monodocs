@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { chromiumCandidates } from "./browser";
+import { chromiumCandidates, isStandaloneBinary, puppeteerMissingMessage } from "./browser";
 
 describe("chromiumCandidates", () => {
   it("returns Windows Chrome, Chromium and Edge paths on win32", () => {
@@ -44,5 +44,35 @@ describe("chromiumCandidates", () => {
     expect(candidates).toContain("/usr/bin/google-chrome");
     expect(candidates).toContain("/usr/bin/chromium");
     expect(candidates.every((p) => p.startsWith("/usr/bin/"))).toBe(true);
+  });
+});
+
+describe("puppeteerMissingMessage", () => {
+  // 単一実行ファイルの利用者は Node.js もパッケージマネージャも持たない前提なので、
+  // `pnpm add` / `npm install puppeteer-core` を案内しても直せない。npm 版へ誘導する。
+  it("tells a standalone-binary user to switch to the npm package, not to install anything", () => {
+    const message = puppeteerMissingMessage(true);
+
+    expect(message).toContain("単一実行ファイル");
+    expect(message).toContain("npm install -g monodocs");
+    expect(message).not.toContain("pnpm add");
+    expect(message).not.toContain("npm install puppeteer-core");
+  });
+
+  it("tells everyone else how to install the missing optional dependency", () => {
+    const message = puppeteerMissingMessage(false);
+
+    expect(message).toContain("puppeteer-core");
+    expect(message).toContain("optionalDependency");
+    expect(message).toContain("pnpm add puppeteer-core");
+    expect(message).not.toContain("単一実行ファイル");
+  });
+});
+
+describe("isStandaloneBinary", () => {
+  // テストは通常の Node.js で走るため SEA ではない。判定に失敗しても throw せず
+  // false を返すこと（案内自体は必ず出せること）を確かめる。
+  it("reports false when running under a normal Node.js process", async () => {
+    await expect(isStandaloneBinary()).resolves.toBe(false);
   });
 });
