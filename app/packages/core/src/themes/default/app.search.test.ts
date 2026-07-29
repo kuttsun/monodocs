@@ -291,11 +291,16 @@ describe("v0.9 search folding (app.js)", () => {
   });
 });
 
-function pressKey(key: string): boolean {
+function pressKey(key: string, init: KeyboardEventInit = {}): boolean {
   const input = document.getElementById("search-input") as HTMLInputElement;
-  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
   input.dispatchEvent(event);
   return event.defaultPrevented;
+}
+
+/** IME 変換中の keydown。ブラウザは変換中も keydown を送り、`isComposing` を立てる。 */
+function pressComposingKey(key: string): boolean {
+  return pressKey(key, { isComposing: true });
 }
 
 function selectedRoute(): string | null {
@@ -405,5 +410,46 @@ describe("v0.9 search keyboard navigation (app.js)", () => {
     // 既定動作を止めない（フォーム送信等の妨げにならない）。
     expect(pressKey("Enter")).toBe(false);
     expect(window.location.hash).toBe("");
+  });
+
+  it("leaves the keys alone while an IME is composing", async () => {
+    await mountClient(SAMPLE);
+
+    typeQuery("install");
+    // 変換中の上下キーは候補選択、Enter は確定。横取りすると日本語入力が壊れる。
+    expect(pressComposingKey("ArrowDown")).toBe(false);
+    expect(selectedRoute()).toBeNull();
+    expect(pressComposingKey("Enter")).toBe(false);
+    expect(window.location.hash).toBe("");
+
+    // isComposing を出さない環境向けの keyCode 229 も同じ扱い。
+    expect(pressKey("ArrowDown", { keyCode: 229 })).toBe(false);
+    expect(selectedRoute()).toBeNull();
+
+    // 変換が終われば通常どおり動く。
+    expect(pressKey("ArrowDown")).toBe(true);
+    expect(selectedRoute()).toBe("/install");
+  });
+
+  it("keeps option ids clear of ids the document already uses", async () => {
+    // ページ ID と見出しの組み合わせ次第で、既定の接頭辞と同じ ID は実際に生成されうる。
+    await mountClient([
+      page("/monodocs-search", "monodocs search", {
+        text: "install notes",
+        headings: [{ id: "monodocs-search-option-0", text: "Option 0", level: 2 }],
+      }),
+      page("/install", "Install", { text: "install" }),
+    ]);
+
+    typeQuery("install");
+    const ids = Array.from(document.querySelectorAll("#search-results a[role='option']")).map(
+      (a) => a.id,
+    );
+    expect(ids.length).toBeGreaterThan(0);
+    // 生成した option の ID が本文側の ID と重ならない（重なると、その ID を指す
+    // アンカー遷移が結果一覧側の要素を拾ってページを切り替えられなくなる）。
+    for (const id of ids) {
+      expect(document.querySelectorAll(`[id='${id}']`).length).toBe(1);
+    }
   });
 });

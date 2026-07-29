@@ -1433,6 +1433,17 @@ the input, not on the row being read out.
 `Enter` with nothing selected opens the top result, which is what a reader who has just typed a query
 means. `Home` / `End` are deliberately left to the text field for caret movement.
 
+The handler returns immediately while an IME is composing (`isComposing`, with `keyCode === 229` as
+the fallback for engines that do not set it). During composition the same keys belong to the IME —
+the arrows move through conversion candidates and `Enter` commits one — so intercepting them breaks
+Japanese input in the search box and can open a result for a half-composed query.
+
+The option IDs are allocated against the IDs the document already contains, rather than assuming a
+prefix is reserved. A page ID and a heading can combine into the same string (`monodocs-search.md`
+with a heading `Option 0` produces `monodocs-search-option-0`), and a duplicate ID would send
+`getElementById` to the result row instead of the heading, because the sidebar comes first in
+document order. The page would then fail to switch when that anchor is followed.
+
 Because the result list is a listbox, each `li` is `role="presentation"` and the link inside carries
 `role="option"`; the links are taken out of the tab order (`tabindex="-1"`) so `Tab` still leaves the
 search box in one step. Keyboard activation and mouse clicks run the same code path, and moving the
