@@ -431,6 +431,16 @@ body.sidebar-collapsed #sidebar {
   color: var(--color-muted);
 }
 
+/* Marks the keywords in the body of the page a result opened, in the colour the result list uses,
+   so what the list highlighted is what the body highlights. The class keeps it apart from a <mark>
+   the document carries of its own (AsciiDoc `#text#`), and only the background changes: altering
+   the metrics would move the line breaks and the scroll position with them. */
+#content mark.search-hit {
+  background: var(--color-mark-bg);
+  color: inherit;
+  border-radius: 2px;
+}
+
 /* ---- content ---- */
 #content {
   flex: 1 1 auto;

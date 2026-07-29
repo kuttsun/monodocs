@@ -1385,11 +1385,8 @@ Because search reaches any heading, the client receives every `h2`+ heading and 
 table of contents to `toc.maxLevel` itself.
 
 Keywords are highlighted with `<mark>` in the title, the heading, and the snippet. The snippet is the
-window of the body that contains the most distinct keywords.
-
-Remaining candidates:
-
-- In-body highlighting after navigating to a result
+window of the body that contains the most distinct keywords. The same keywords are highlighted in the
+body of the page a result opens (22.5).
 
 ### 22.3 Kana and Symbol Folding
 
@@ -1451,6 +1448,49 @@ pointer over a row takes the selection with it, so the two ways of choosing a re
 
 The roles and ARIA attributes are attached from `app.js` rather than written into `template.html`, so
 a custom theme that replaces the markup but keeps the default script still gets them.
+
+### 22.5 In-Body Highlighting
+
+Already supported (v0.9). Opening a result also marks its keywords in the page it opens, so what the
+result list promised is visible where the reader lands, without a second search in the browser's own
+find bar.
+
+The highlight belongs to the search that opened the page. `app.js` remembers the keywords when a
+result is activated and marks them in the article on display, and it marks them again whenever the
+displayed page changes, so following prev/next or a link inside the body keeps the matches visible.
+Editing the query drops the highlight, because the keywords being typed are no longer the ones the
+open page was chosen for, and `Escape` clears the query and the highlight with it.
+
+Where the result opens is unchanged: a heading match still opens at its heading, and a title or body
+match still opens at the top of the page. The highlight only marks; it does not move the viewport.
+Marks are `<mark class="search-hit">`, and only the background is styled, so no line breaks and no
+scroll position shift when they appear. The class is for the colour only — what a mark is removed by
+is a DOM property set on the elements the script creates. A document carries `<mark>` of its own
+(AsciiDoc `#text#`) and can carry any class in raw HTML, and, as with the option IDs in 22.4, the
+name is not assumed to be reserved: a property cannot be authored into the document, so content that
+happens to use the class is left alone, and a keyword inside the document's own `<mark>` is marked
+inside it rather than replacing it. Removing the highlight puts the text back and calls `normalize()`
+on the parent, which restores the structure and the node count — not the identity of the original
+text nodes — so marking and unmarking repeatedly does not shred the body into ever smaller nodes.
+
+Matching reuses the folding and the merged match ranges of the result list (22.2, 22.3): a hiragana
+query marks the katakana spelling in the body exactly as it does in the snippet. It runs per text
+node, so a keyword that inline markup splits (`**inst**all`) still ranks the page — the index is
+built from the whole page text — but is not marked in the body. Marking across element boundaries
+needs the same source position map as the folding variants ruled out in 22.3, and it is left out for
+the same reason.
+
+Three kinds of subtree are left alone. A Mermaid block is source that the runtime reads and replaces
+with a diagram, so marking it would break the diagram; `svg` is what that runtime leaves behind; and
+the code-block toolbar and its copy toast are UI text the theme injects into the content rather than
+the document's own words. The number of marks per page is capped (500) so that a keyword occurring
+everywhere cannot turn one navigation into thousands of new elements. The cap also bounds the
+matching: a single text node can be a whole paragraph or code block, so the match positions are
+collected up to the cap instead of collecting every occurrence and discarding the surplus.
+
+The CSS Custom Highlight API would avoid touching the DOM at all, but it is not used: it still needs
+a fallback for the browsers a self-contained document is opened in, and that fallback is the `<mark>`
+implementation anyway.
 
 ---
 
@@ -2090,6 +2130,7 @@ Implementation scope:
 - Settle half-width katakana, okurigana, and English stemming as out of scope, with the reason
   recorded in chapter 22.3
 - Move through the results with `↓` / `↑` and open one with `Enter`, as an ARIA combobox
+- Mark the keywords in the body of the page a result opens
 
 Completion criteria:
 
@@ -2099,6 +2140,8 @@ Completion criteria:
 - The variations that remain unsupported are recorded as decisions, not as open work
 - The result list can be navigated and opened from the keyboard without leaving the search box, and
   screen readers are told which result is selected
+- Opening a result shows where the keywords are in the body, and clearing the query puts the body
+  back as it was
 
 ---
 

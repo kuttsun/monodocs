@@ -16,6 +16,8 @@ Type in the sidebar search box to search titles, headings, and body text. Separa
 
 The results can be used without a mouse: `↓` / `↑` move through them (wrapping at both ends), `Enter` opens the selected one — or the top one when you have not moved yet — and `Escape` clears the box. The cursor stays in the search box the whole time, so you can keep typing to narrow the list.
 
+Opening a result also highlights the keywords in the page you land on, and they stay highlighted as you move on to other pages, so you can see where the match is without searching again in the browser. Changing or clearing the query removes the highlight.
+
 ## Install
 
 monodocs is published on npm and requires Node.js 22.12.0 or later. Linux x64 and Windows x64 are the supported platforms.

@@ -9,6 +9,8 @@ type ClientPage = {
   hidden: boolean;
   headings: ClientHeading[];
   text: string;
+  /** Body HTML placed in the article after the headings (for the in-body highlight; not client data). */
+  html?: string;
 };
 
 /**
@@ -34,6 +36,7 @@ async function mountClient(
       (p, i) =>
         `<article class="page" data-route="${p.route}"${i === 0 ? "" : " hidden"}>` +
         p.headings.map((h) => `<h${h.level} id="${h.id}">${h.text}</h${h.level}>`).join("") +
+        (p.html ?? "") +
         `</article>`,
     )
     .join("");
@@ -52,7 +55,14 @@ async function mountClient(
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
     initialRoute: pages[0]?.route,
     tocMaxLevel: options.tocMaxLevel,
-    pages,
+    // html is a DOM-side concern, so it stays out of the client data, as in a generated document.
+    pages: pages.map((p) => ({
+      route: p.route,
+      title: p.title,
+      hidden: p.hidden,
+      headings: p.headings,
+      text: p.text,
+    })),
   };
 
   new Function(theme.appJs)();
@@ -77,6 +87,7 @@ function page(route: string, title: string, extra: Partial<ClientPage> = {}): Cl
     hidden: extra.hidden ?? false,
     headings: extra.headings ?? [],
     text: extra.text ?? title,
+    html: extra.html,
   };
 }
 
@@ -451,5 +462,186 @@ describe("v0.9 search keyboard navigation (app.js)", () => {
     for (const id of ids) {
       expect(document.querySelectorAll(`[id='${id}']`).length).toBe(1);
     }
+  });
+});
+
+/** In-body highlight of the page a result opens (v0.9). The first page is where the reader starts. */
+const BODY: ClientPage[] = [
+  page("/", "Home", {
+    text: "Install from the top page.",
+    html: "<p>Install from the top page.</p>",
+  }),
+  page("/guide", "Guide", {
+    text: "Install the CLI, then install the theme. Note the order.",
+    headings: [{ id: "guide-install", text: "Install the CLI", level: 2 }],
+    html:
+      "<p>Install the CLI, then <strong>install</strong> the theme. " +
+      "<mark>Note</mark> the order.</p>" +
+      '<pre class="mermaid">graph TD; install --&gt; done;</pre>',
+  }),
+];
+
+function openResult(route: string): void {
+  const link = document.querySelector(`#search-results a[data-route='${route}']`) as HTMLElement;
+  link.click();
+  // Navigation across pages goes through the hash; the test dispatches hashchange itself.
+  window.dispatchEvent(new Event("hashchange"));
+}
+
+function highlighted(route: string): (string | null)[] {
+  return Array.from(
+    document.querySelectorAll(`#content article[data-route='${route}'] mark.search-hit`),
+  ).map((m) => m.textContent);
+}
+
+describe("v0.9 in-body highlight (app.js)", () => {
+  beforeEach(() => {
+    window.location.hash = "";
+    document.body.innerHTML = "";
+  });
+
+  it("marks nothing until a result is opened", async () => {
+    await mountClient(BODY);
+
+    // Typing only changes the result list; the page being read is left alone.
+    typeQuery("install");
+    expect(document.querySelectorAll("#content mark.search-hit").length).toBe(0);
+  });
+
+  it("marks every keyword occurrence in the page the result opens", async () => {
+    await mountClient(BODY);
+
+    typeQuery("install");
+    openResult("/guide");
+
+    // Every match is marked: in the heading, in the body, and inside inline markup.
+    expect(highlighted("/guide")).toEqual(["Install", "Install", "install"]);
+    // Only the page that was opened (a page not on display is untouched).
+    expect(highlighted("/")).toEqual([]);
+  });
+
+  it("leaves Mermaid source, injected UI text, and the page's own mark alone", async () => {
+    await mountClient(BODY);
+
+    typeQuery("install");
+    openResult("/guide");
+
+    // A Mermaid block is source the runtime reads; marking it would break the diagram.
+    const mermaid = document.querySelector("#content pre.mermaid")!;
+    expect(mermaid.querySelectorAll("mark").length).toBe(0);
+    expect(mermaid.childNodes.length).toBe(1);
+    // Outside the body (prev/next navigation) is out of scope.
+    expect(document.querySelectorAll("#page-nav mark").length).toBe(0);
+    // The <mark> the page carries of its own stays, without the highlight class.
+    const own = document.querySelector(
+      "#content article[data-route='/guide'] mark:not(.search-hit)",
+    )!;
+    expect(own.textContent).toBe("Note");
+  });
+
+  it("keeps the highlight while the search is open, following the page the reader moves to", async () => {
+    await mountClient(BODY);
+
+    typeQuery("install");
+    openResult("/guide");
+    expect(highlighted("/guide").length).toBe(3);
+
+    // Following a link or prev/next keeps the highlight while the search stays open.
+    window.location.hash = "#/";
+    window.dispatchEvent(new Event("hashchange"));
+    expect(highlighted("/")).toEqual(["Install"]);
+    expect(highlighted("/guide")).toEqual([]);
+  });
+
+  it("restores the body when the query changes or Escape clears the box", async () => {
+    await mountClient(BODY);
+    const paragraph = document.querySelector("#content article[data-route='/guide'] p")!;
+    const nodeCount = paragraph.childNodes.length;
+    const html = paragraph.innerHTML;
+
+    typeQuery("install");
+    openResult("/guide");
+    expect(highlighted("/guide").length).toBe(3);
+
+    // Once the query changes, the highlight on the open page belongs to the previous search.
+    typeQuery("note");
+    expect(document.querySelectorAll("#content mark.search-hit").length).toBe(0);
+    // The body comes back, split text nodes merged, so repeating this does not add nodes.
+    expect(paragraph.innerHTML).toBe(html);
+    expect(paragraph.childNodes.length).toBe(nodeCount);
+
+    openResult("/guide");
+    expect(document.querySelectorAll("#content mark.search-hit").length).toBeGreaterThan(0);
+    pressKey("Escape");
+    expect(document.querySelectorAll("#content mark.search-hit").length).toBe(0);
+    expect(paragraph.innerHTML).toBe(html);
+    expect(paragraph.childNodes.length).toBe(nodeCount);
+  });
+
+  it("caps the number of marks so one navigation cannot fill the page with elements", async () => {
+    // 3 per paragraph x 200 paragraphs = 600 matches; it stops at 500, mid-paragraph if need be.
+    const paragraphs = "<p>install install install</p>".repeat(200);
+    await mountClient([
+      page("/", "Home", { text: "top", html: "<p>top</p>" }),
+      page("/long", "Long", { text: "install".repeat(600), html: paragraphs }),
+    ]);
+
+    typeQuery("install");
+    openResult("/long");
+    expect(highlighted("/long").length).toBe(500);
+  });
+
+  it("caps a single huge text node at the same limit", async () => {
+    // A huge paragraph or code block can be one text node. Collecting every match and discarding
+    // the surplus would scan and sort tens of thousands of them per navigation, so it stops early.
+    await mountClient([
+      page("/", "Home", { text: "top", html: "<p>top</p>" }),
+      page("/big", "Big", {
+        text: "install",
+        html: `<pre><code>${"install ".repeat(5000)}</code></pre>`,
+      }),
+    ]);
+
+    typeQuery("install");
+    openResult("/big");
+    expect(highlighted("/big").length).toBe(500);
+    // Code blocks are marked too, because they are part of the search index.
+    expect(document.querySelectorAll("#content pre code mark.search-hit").length).toBe(500);
+  });
+
+  it("leaves content that carries the same class, and its own mark, intact", async () => {
+    // Authored HTML using the same class survives; the class is only there for the colour.
+    const own = '<p>install <mark class="search-hit"><em>note</em></mark> here</p>';
+    await mountClient([page("/own", "Own", { text: "install note here", html: own })]);
+    const paragraph = document.querySelector("#content article[data-route='/own'] p")!;
+
+    typeQuery("install");
+    openResult("/own");
+    // Exactly one <mark> was added; the other one is the page's own.
+    expect(paragraph.querySelectorAll("mark").length).toBe(2);
+    expect(paragraph.querySelector("mark.search-hit")!.textContent).toBe("install");
+
+    typeQuery("note");
+    // Only the marks the script created are removed; the page's own one keeps its children.
+    expect(paragraph.innerHTML).toBe(own.replace("<p>", "").replace("</p>", ""));
+    expect(paragraph.querySelector("mark.search-hit em")!.textContent).toBe("note");
+
+    // A match inside the page's own <mark> is marked within it, leaving that element in place.
+    openResult("/own");
+    expect(paragraph.querySelectorAll("mark").length).toBe(2);
+    expect(paragraph.querySelector("em mark")!.textContent).toBe("note");
+    pressKey("Escape");
+    expect(paragraph.innerHTML).toBe(own.replace("<p>", "").replace("</p>", ""));
+  });
+
+  it("marks the spelling the page uses, folded the same way as the result list", async () => {
+    await mountClient([
+      page("/ja", "案内", { text: "サーバーの設定。", html: "<p>サーバーの設定。</p>" }),
+    ]);
+
+    // Searched in hiragana with a prolonged sound mark, the body still marks its own spelling.
+    typeQuery("さーばー");
+    openResult("/ja");
+    expect(highlighted("/ja")).toEqual(["サーバー"]);
   });
 });

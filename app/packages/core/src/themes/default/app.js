@@ -133,6 +133,9 @@
     // 表示中ページの Mermaid を描画する（非表示時は描画できないため切替時に実行）。
     if (typeof window.__sdRenderMermaid === "function") window.__sdRenderMermaid();
 
+    // Keep marking the keywords in the body while the search that opened a result stays open.
+    applyBodyHighlight();
+
     // 検索・目次から見出し指定で遷移してきた場合はその位置へスクロールする。
     if (pendingHeadingId) {
       scrollToHeading(pendingHeadingId);
@@ -529,16 +532,27 @@
     return best;
   }
 
-  // [start, end) の範囲を、語の一致部分だけ <mark> で囲んだエスケープ済み HTML にする。
-  function markRange(text, folded, terms, start, end) {
+  /**
+   * Return the ranges of [start, end) where a term matches, in document order. Folding preserves
+   * length, so the ranges apply to the original string as well: the result list HTML and the
+   * in-body highlight share the same positions. `limit` caps how many matches are collected per
+   * term (unlimited when omitted); a single text node can hold a whole paragraph or code block, so
+   * the in-body highlight stops collecting once it has enough instead of gathering every occurrence
+   * and discarding the surplus. Merging only ever reduces the count, so a limit yields the same
+   * ranges from the start of the range.
+   */
+  function matchRanges(folded, terms, start, end, limit) {
+    var max = typeof limit === "number" ? limit : Infinity;
     var ranges = [];
     terms.forEach(function (term) {
       var from = start;
-      while (true) {
+      var found = 0;
+      while (found < max) {
         var pos = folded.indexOf(term, from);
         if (pos === -1 || pos >= end) break;
         ranges.push({ start: pos, end: Math.min(pos + term.length, end) });
         from = pos + term.length;
+        found++;
       }
     });
     // 語同士が重なる場合（部分文字列を含むクエリ）に <mark> が入れ子にならないよう束ねる。
@@ -551,10 +565,14 @@
       if (last && r.start <= last.end) last.end = Math.max(last.end, r.end);
       else merged.push({ start: r.start, end: r.end });
     });
+    return merged;
+  }
 
+  // [start, end) の範囲を、語の一致部分だけ <mark> で囲んだエスケープ済み HTML にする。
+  function markRange(text, folded, terms, start, end) {
     var html = "";
     var cursor = start;
-    merged.forEach(function (r) {
+    matchRanges(folded, terms, start, end).forEach(function (r) {
       html += escapeHtml(text.slice(cursor, r.start));
       html += "<mark>" + escapeHtml(text.slice(r.start, r.end)) + "</mark>";
       cursor = r.end;
@@ -651,6 +669,113 @@
     return results.slice(0, SEARCH_LIMIT);
   }
 
+  // ---- in-body highlight ----
+  // Keywords to mark in the body of the page a result opened. Valid until the query changes.
+  var bodyHighlightTerms = [];
+  // The class of a highlight (colour only) and the mark of one this script created. What a mark is
+  // removed by is the DOM property, not the class: a document carries <mark> of its own (AsciiDoc
+  // `#text#`) and can carry any class in raw HTML, and, as with the option IDs, the name is not
+  // assumed to be reserved. A property cannot be authored into the document, so the two cannot be
+  // confused.
+  var BODY_HIGHLIGHT_CLASS = "search-hit";
+  var BODY_HIGHLIGHT_FLAG = "__monodocsSearchHit";
+  // Upper bound on the marks per page, so a keyword that occurs everywhere cannot flood the DOM.
+  var MAX_BODY_HIGHLIGHTS = 500;
+  // Subtrees left alone. A Mermaid block is source the runtime reads and replaces with a diagram
+  // (an svg), and the code-block toolbar and its copy toast are UI text the theme injects.
+  var BODY_HIGHLIGHT_SKIP_TAGS = ["SVG", "SCRIPT", "STYLE", "TEXTAREA", "CANVAS"];
+  var BODY_HIGHLIGHT_SKIP_CLASSES = ["mermaid", "code-toolbar", "code-copied-toast"];
+
+  function skipsBodyHighlight(el) {
+    // An SVG element keeps its lower-case tagName, so compare in one case.
+    if (BODY_HIGHLIGHT_SKIP_TAGS.indexOf(String(el.tagName).toUpperCase()) !== -1) return true;
+    for (var i = 0; i < BODY_HIGHLIGHT_SKIP_CLASSES.length; i++) {
+      if (el.classList && el.classList.contains(BODY_HIGHLIGHT_SKIP_CLASSES[i])) return true;
+    }
+    return false;
+  }
+
+  /** The article of the page on display (null when there is none). */
+  function visibleArticle() {
+    var articles = document.querySelectorAll("#content article[data-route]");
+    for (var i = 0; i < articles.length; i++) {
+      if (!articles[i].hidden) return articles[i];
+    }
+    return null;
+  }
+
+  /**
+   * Remove the highlight and put the text back. normalize() merges the text nodes the marking split
+   * apart, so marking and unmarking repeatedly does not shred the body into ever smaller nodes; it
+   * restores the structure and the node count, not the identity of the original nodes.
+   */
+  function clearBodyHighlight() {
+    document
+      .querySelectorAll("#content mark." + BODY_HIGHLIGHT_CLASS)
+      .forEach(function (highlight) {
+        // Content that happens to use the class stays; only marks this script created are removed.
+        if (!highlight[BODY_HIGHLIGHT_FLAG]) return;
+        var parent = highlight.parentNode;
+        if (!parent) return;
+        parent.replaceChild(document.createTextNode(highlight.textContent || ""), highlight);
+        if (typeof parent.normalize === "function") parent.normalize();
+      });
+  }
+
+  /** Wrap the matches in a text node with <mark>. Returns how many were wrapped. */
+  function highlightTextNode(node, terms, budget) {
+    var text = node.nodeValue;
+    if (!text || !text.trim()) return 0;
+    // Anything past the budget would be discarded, so stop collecting at budget matches per term.
+    var ranges = matchRanges(fold(text), terms, 0, text.length, budget);
+    if (ranges.length === 0) return 0;
+    if (ranges.length > budget) ranges = ranges.slice(0, budget);
+    var parent = node.parentNode;
+    if (!parent) return 0;
+
+    var frag = document.createDocumentFragment();
+    var cursor = 0;
+    ranges.forEach(function (r) {
+      if (r.start > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, r.start)));
+      var highlight = document.createElement("mark");
+      highlight.className = BODY_HIGHLIGHT_CLASS;
+      highlight[BODY_HIGHLIGHT_FLAG] = true;
+      highlight.textContent = text.slice(r.start, r.end);
+      frag.appendChild(highlight);
+      cursor = r.end;
+    });
+    if (cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
+    parent.replaceChild(frag, node);
+    return ranges.length;
+  }
+
+  /** Mark the text below an element. Returns the remaining budget. */
+  function highlightElement(el, terms, budget) {
+    var child = el.firstChild;
+    while (child && budget > 0) {
+      // A text node is replaced, so keep where to continue before touching it.
+      var next = child.nextSibling;
+      if (child.nodeType === 3) budget -= highlightTextNode(child, terms, budget);
+      else if (child.nodeType === 1 && !skipsBodyHighlight(child))
+        budget = highlightElement(child, terms, budget);
+      child = next;
+    }
+    return budget;
+  }
+
+  /**
+   * Mark the keywords of the opened result in the body of the page on display. The keywords and the
+   * folding are the result list's, so what the list highlighted is what the body highlights. Only
+   * the background changes, so neither the line breaks nor the scroll position that follows move.
+   */
+  function applyBodyHighlight() {
+    clearBodyHighlight();
+    if (bodyHighlightTerms.length === 0) return;
+    var article = visibleArticle();
+    if (article) highlightElement(article, bodyHighlightTerms, MAX_BODY_HIGHLIGHTS);
+  }
+
+  // ---- search UI ----
   // 結果一覧の option id 接頭辞。setupSearch で本文の ID と重ならないものに確定する。
   var searchOptionIdPrefix = "monodocs-search-option-";
   // キーボードで選択中の結果の位置（-1 は未選択）。
@@ -721,9 +846,18 @@
   // 結果を開く。クリックとキーボードで同じ経路を通す。
   function activateSearchResult(a) {
     if (!a) return;
+    // Mark the same keywords in the body of the page this opens. Valid until the query changes
+    // (renderSearchResults drops it).
+    var input = document.getElementById("search-input");
+    bodyHighlightTerms = input ? tokenize(input.value) : [];
+    var route = a.getAttribute("data-route");
+    var current = visibleArticle();
     var headingId = a.getAttribute("data-heading");
     if (headingId) navigateToAnchor(headingId);
-    else navigateTo(a.getAttribute("data-route"), null);
+    else navigateTo(route, null);
+    // When the page changes, the showPage that follows marks it. Jumping inside the page already on
+    // display may not go through showPage at all, so mark it here.
+    if (current && current.getAttribute("data-route") === route) applyBodyHighlight();
   }
 
   function renderSearchResults(query) {
@@ -735,6 +869,9 @@
     // 一覧を作り直すたびに選択は解除する（結果が変われば選択位置の意味も変わる）。
     searchActive = -1;
     if (input) input.removeAttribute("aria-activedescendant");
+    // Once the query changes, the highlight on the open page belongs to the previous search. Drop it.
+    bodyHighlightTerms = [];
+    clearBodyHighlight();
 
     if (!query.trim()) {
       box.hidden = true;
