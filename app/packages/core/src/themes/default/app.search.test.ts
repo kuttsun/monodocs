@@ -290,3 +290,120 @@ describe("v0.9 search folding (app.js)", () => {
     expect(document.querySelector("#search-results .search-empty")).not.toBeNull();
   });
 });
+
+function pressKey(key: string): boolean {
+  const input = document.getElementById("search-input") as HTMLInputElement;
+  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+  input.dispatchEvent(event);
+  return event.defaultPrevented;
+}
+
+function selectedRoute(): string | null {
+  const selected = document.querySelector("#search-results a[aria-selected='true']");
+  return selected ? selected.getAttribute("data-route") : null;
+}
+
+describe("v0.9 search keyboard navigation (app.js)", () => {
+  beforeEach(() => {
+    window.location.hash = "";
+    document.body.innerHTML = "";
+  });
+
+  it("exposes the input and result list as a combobox and its listbox", async () => {
+    await mountClient(SAMPLE);
+    const input = document.getElementById("search-input")!;
+    const box = document.getElementById("search-results")!;
+
+    expect(input.getAttribute("role")).toBe("combobox");
+    expect(input.getAttribute("aria-controls")).toBe("search-results");
+    expect(box.getAttribute("role")).toBe("listbox");
+    // 結果が出るまでは閉じた状態。
+    expect(input.getAttribute("aria-expanded")).toBe("false");
+
+    typeQuery("install");
+    expect(input.getAttribute("aria-expanded")).toBe("true");
+    expect(document.querySelectorAll("#search-results a[role='option']").length).toBe(3);
+
+    // 一致が無いときは開いたままにしない。
+    typeQuery("nonexistent");
+    expect(input.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("moves the selection with the arrow keys and wraps at both ends", async () => {
+    await mountClient(SAMPLE);
+    const input = document.getElementById("search-input")!;
+
+    (input as HTMLInputElement).focus();
+    typeQuery("install");
+    expect(selectedRoute()).toBeNull();
+
+    // 下キーは既定のキャレット移動を止めて選択を進める。
+    expect(pressKey("ArrowDown")).toBe(true);
+    expect(selectedRoute()).toBe("/install");
+    // フォーカスは検索欄に残り、読み上げ位置だけが動く。
+    expect(document.activeElement).toBe(input);
+    expect(input.getAttribute("aria-activedescendant")).toBe(
+      document.querySelector("#search-results a[aria-selected='true']")!.id,
+    );
+
+    pressKey("ArrowDown");
+    pressKey("ArrowDown");
+    expect(selectedRoute()).toBe("/");
+    // 末尾からさらに下へ進むと先頭へ回り込む。
+    pressKey("ArrowDown");
+    expect(selectedRoute()).toBe("/install");
+    // 先頭から上へ戻ると末尾へ回り込む。
+    expect(pressKey("ArrowUp")).toBe(true);
+    expect(selectedRoute()).toBe("/");
+  });
+
+  it("clears the selection when the query changes", async () => {
+    await mountClient(SAMPLE);
+    const input = document.getElementById("search-input")!;
+
+    typeQuery("install");
+    pressKey("ArrowDown");
+    expect(selectedRoute()).toBe("/install");
+
+    typeQuery("configure");
+    expect(selectedRoute()).toBeNull();
+    expect(input.getAttribute("aria-activedescendant")).toBeNull();
+  });
+
+  it("opens the selected result with Enter, jumping to the matched heading", async () => {
+    await mountClient(SAMPLE);
+
+    typeQuery("install");
+    pressKey("ArrowDown");
+    pressKey("ArrowDown");
+    expect(selectedRoute()).toBe("/guide");
+
+    expect(pressKey("Enter")).toBe(true);
+    // 見出し一致の結果なので、クリックと同じくその見出しのアンカーへ遷移する。
+    expect(window.location.hash).toBe("#guide-install");
+    window.dispatchEvent(new Event("hashchange"));
+    const shown = Array.from(
+      document.querySelectorAll<HTMLElement>("#content article[data-route]"),
+    ).filter((el) => !el.hidden);
+    expect(shown.map((el) => el.getAttribute("data-route"))).toEqual(["/guide"]);
+  });
+
+  it("opens the first result with Enter when nothing is selected yet", async () => {
+    await mountClient(SAMPLE);
+
+    typeQuery("install");
+    expect(selectedRoute()).toBeNull();
+    // 先頭は最上位スコアの /install（タイトル一致）。
+    pressKey("Enter");
+    expect(window.location.hash).toBe("#/install");
+  });
+
+  it("does nothing on Enter when there is no result", async () => {
+    await mountClient(SAMPLE);
+
+    typeQuery("nonexistent");
+    // 既定動作を止めない（フォーム送信等の妨げにならない）。
+    expect(pressKey("Enter")).toBe(false);
+    expect(window.location.hash).toBe("");
+  });
+});

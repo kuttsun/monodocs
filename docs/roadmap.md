@@ -1390,7 +1390,6 @@ window of the body that contains the most distinct keywords.
 Remaining candidates:
 
 - In-body highlighting after navigating to a result
-- Keyboard navigation of the result list
 
 ### 22.3 Kana and Symbol Folding
 
@@ -1420,6 +1419,27 @@ Three related variations stay out of scope, because each one breaks that invaria
 
 Supporting any of them means replacing the fold-in-place model with a token-to-source position map.
 Revisit the three together if that rewrite ever becomes worthwhile; none of them justifies it alone.
+
+### 22.4 Keyboard Navigation of the Results
+
+Already supported (v0.9). The search box and its result list form an ARIA combobox: `↓` / `↑` move
+the selection (wrapping at both ends), `Enter` opens it, and `Escape` clears the query as before.
+
+Focus stays in the search box the whole time, and the selection is published through
+`aria-activedescendant` instead. That is what lets a reader keep typing to narrow the results without
+tabbing back, and it is why the selected result needs its own outline: the browser's focus ring is on
+the input, not on the row being read out.
+
+`Enter` with nothing selected opens the top result, which is what a reader who has just typed a query
+means. `Home` / `End` are deliberately left to the text field for caret movement.
+
+Because the result list is a listbox, each `li` is `role="presentation"` and the link inside carries
+`role="option"`; the links are taken out of the tab order (`tabindex="-1"`) so `Tab` still leaves the
+search box in one step. Keyboard activation and mouse clicks run the same code path, and moving the
+pointer over a row takes the selection with it, so the two ways of choosing a result cannot disagree.
+
+The roles and ARIA attributes are attached from `app.js` rather than written into `template.html`, so
+a custom theme that replaces the markup but keeps the default script still gets them.
 
 ---
 
@@ -2044,12 +2064,13 @@ Completion criteria:
 
 ---
 
-## v0.9: Japanese Search Folding
+## v0.9: Search Finishing
 
 Purpose:
 
-Make Japanese search find what the reader means when the document and the query spell the same word
-differently — without adding a dictionary or a search runtime to the generated file.
+Finish the search. Make it find what the reader means when the document and the query spell the same
+word differently — without adding a dictionary or a search runtime to the generated file — and make
+the results usable without a mouse.
 
 Implementation scope:
 
@@ -2057,6 +2078,7 @@ Implementation scope:
 - Fold the prolonged sound mark, the dash family, and the wave dash / full-width tilde
 - Settle half-width katakana, okurigana, and English stemming as out of scope, with the reason
   recorded in chapter 22.3
+- Move through the results with `↓` / `↑` and open one with `Enter`, as an ARIA combobox
 
 Completion criteria:
 
@@ -2064,6 +2086,8 @@ Completion criteria:
 - Dash and tilde spelling differences no longer split results
 - Highlighting still marks the original spelling in the result list
 - The variations that remain unsupported are recorded as decisions, not as open work
+- The result list can be navigated and opened from the keyboard without leaving the search box, and
+  screen readers are told which result is selected
 
 ---
 
