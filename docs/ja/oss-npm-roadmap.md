@@ -390,21 +390,32 @@ monodocs build ./docs -o ./dist/manual.html
 
 ### 11.2 セキュリティ対応
 
-- [ ] Critical / High の脆弱性を通常リリースより優先して対応する。
-- [ ] 公開前は Security Advisory などで非公開に調整する。
-- [ ] 修正版公開後に影響範囲と対処方法を案内する。
-- [ ] 必要に応じて npm の問題バージョンを deprecate する。
-- [ ] 公開済みバージョンを安易に unpublish しない。
+いずれも手順の伴わない方針の列挙だったため、報告者からも読める形として
+[SECURITY.md](../../SECURITY.ja.md) に対応手順として記載した。
+
+- [x] Critical / High の脆弱性を通常リリースより優先して対応する。
+- [x] 公開前は Security Advisory などで非公開に調整する。
+- [x] 修正版公開後に影響範囲と対処方法を案内する。
+- [x] 必要に応じて npm の問題バージョンを deprecate する。
+- [x] 公開済みバージョンを安易に unpublish しない。
 
 ### 11.3 定期作業
 
-- [ ] 依存関係を定期更新する。
-- [ ] 脆弱性アラートを確認する。
-- [ ] npm maintainer 権限を定期的に棚卸しする。
-- [ ] Trusted Publisher 設定を監査する。
-- [ ] Node.js と Chromium の対応範囲を見直す。
-- [ ] EOL バージョンを告知する。
-- [ ] Issue とダウンロード状況から優先課題を見直す。
+いずれも自動化するか、実施時期を決めた。どちらであるかは [maintenance.md](maintenance.md) に記録し、
+人が行うものは同じ文書の四半期チェックリストに置いた。
+
+- [x] 依存関係を定期更新する。（Dependabot。月次、3 つの依存セット）
+- [x] 脆弱性アラートを確認する。（Dependabot alerts と automated security fixes に加え、失敗時に
+      Issue を作る週次の `scheduled-audit.yml`。PR CI の audit は PR があるときしか走らず、また
+      `pnpm audit` はこのリポジトリの `overrides` を効かせた解決結果を見るため、alert の依存グラフ
+      とは対象が異なる）
+- [x] npm maintainer 権限を定期的に棚卸しする。（四半期チェックリスト）
+- [x] Trusted Publisher 設定を監査する。（四半期チェックリスト。リポジトリ名・ワークフローファイル・
+      environment のいずれかを改名すると publish が黙って壊れる）
+- [x] Node.js と Chromium の対応範囲を見直す。（四半期チェックリスト。直近の期限は 2027 年 4 月の
+      Node 22 LTS 終了）
+- [x] EOL バージョンを告知する。（四半期チェックリスト。SECURITY.md のサポート方針と突き合わせる）
+- [x] Issue とダウンロード状況から優先課題を見直す。（四半期チェックリスト）
 
 ## 12. 将来: SEA 単体バイナリ
 

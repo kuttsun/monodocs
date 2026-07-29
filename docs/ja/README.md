@@ -17,3 +17,4 @@
 | [status.md](status.md)                   | 実装状況（対応機能・各バージョンの完了条件）        |
 | [testing.md](testing.md)                 | テスト方針・実行方法・カバレッジ                    |
 | [oss-npm-roadmap.md](oss-npm-roadmap.md) | OSS・npm 公開準備のロードマップ                     |
+| [maintenance.md](maintenance.md)         | リリース後に自動で回るものと四半期ごとの棚卸し      |

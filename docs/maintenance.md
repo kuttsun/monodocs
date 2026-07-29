@@ -1,0 +1,59 @@
+# Maintenance
+
+[日本語](ja/maintenance.md)
+
+What keeps running after a release, and what a person has to check. This is the operational half of
+[oss-npm-roadmap.md](oss-npm-roadmap.md) M6; the policy behind it lives there.
+
+## What runs on its own
+
+| Concern                | Mechanism                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| Routine version bumps  | Dependabot, monthly, for `github-actions`, `app/` (pnpm), and `site/` (npm)         |
+| Vulnerable versions    | Dependabot alerts and automated security fixes, enabled in the repository settings  |
+| Advisories on the tree | `.github/workflows/scheduled-audit.yml`, weekly, opening an issue when it fails     |
+| Pull request checks    | `.github/workflows/pr-ci.yml`, which also audits both dependency sets               |
+| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version |
+
+The scheduled audit exists because the PR CI audit only runs when a pull request is open. It reads
+the committed lockfiles without installing, so a failure means an advisory, not an install problem.
+It is not redundant with Dependabot alerts: alerts compare the dependency graph against GitHub's
+advisory database, while `pnpm audit` sees the tree that this repository's `overrides` actually
+resolve to.
+
+## Quarterly review
+
+Nothing below can be automated, so it needs a date rather than good intentions. Work through it once
+a quarter and record the outcome in the same place the item points at.
+
+- [ ] **Scheduled workflows still enabled.** GitHub disables cron in a repository with no activity
+      for 60 days. Check that `Scheduled Audit` has recent runs; re-enable it if it stopped.
+- [ ] **Dependabot pull requests.** None open longer than a cycle; none silently failing CI.
+- [ ] **Open alerts.** Dependabot alerts triaged, with anything left open explained.
+- [ ] **Security overrides.** Re-check the two documented overrides in
+      [development.md](development.md) against their removal conditions and update the "Last checked"
+      line, whether or not the answer changed.
+- [ ] **npm maintainers.** Only intended accounts can publish `monodocs`, and each has 2FA enabled.
+- [ ] **Trusted Publisher.** The npm setting still names this repository, `release.yml`, and the
+      release environment. Renaming any of the three breaks publishing silently — the failure shows
+      up only at the next release.
+- [ ] **Node.js and Chromium support range.** The floor is Node 22.12. Node 22 leaves LTS in April
+      2027, so decide before then whether to raise it. Confirm the Chromium detection paths in
+      [ci.md](../site/docs/ci.md) still match what the supported platforms install.
+- [ ] **dist-tags and EOL.** `latest` and `next` point where they should, stale prereleases are not
+      left as `next`, and any minor that has fallen out of support per [SECURITY.md](../SECURITY.md)
+      has been announced as such in the release notes.
+- [ ] **Priorities.** Review open issues and npm download numbers, and let them, rather than the
+      roadmap alone, decide what comes next.
+
+## When an audit or an alert fires
+
+1. Separate a finding from a broken run. The scheduled audit's issue is opened by any job failure,
+   including checkout, tool setup, and registry errors, and only the run log says which happened. An
+   infrastructure failure tells you nothing about the dependencies — re-run it.
+2. Decide whether the finding reaches a user. `site/` never ships, and part of `app/` is dev-only
+   and excluded from the published bundle. Record that reasoning; do not silently close.
+3. Fix Critical and High before other work, per [SECURITY.md](../SECURITY.md).
+4. If no patched version exists yet, prefer a scoped `overrides` entry with a comment naming its
+   removal condition, and add it to the quarterly re-check above.
+5. Release the fix as a patch. Do not rebuild an already-published version.
