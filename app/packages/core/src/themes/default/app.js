@@ -651,10 +651,33 @@
     return results.slice(0, SEARCH_LIMIT);
   }
 
-  // 結果一覧の option id 接頭辞。本文の見出し ID と衝突しないよう独自の名前空間にする。
-  var SEARCH_OPTION_ID = "monodocs-search-option-";
+  // 結果一覧の option id 接頭辞。setupSearch で本文の ID と重ならないものに確定する。
+  var searchOptionIdPrefix = "monodocs-search-option-";
   // キーボードで選択中の結果の位置（-1 は未選択）。
   var searchActive = -1;
+
+  /**
+   * 本文のどの ID とも先頭が一致しない接頭辞を選ぶ。ページの ID と見出しの組み合わせ次第で
+   * `monodocs-search-option-0` のような ID は実際に生成されうる（`monodocs-search.md` の
+   * 見出し `Option 0` など）。重複すると、その ID を指すアンカー遷移で `getElementById` が
+   * 文書順で先にある結果一覧側の要素を拾い、対象ページへ切り替わらなくなる。
+   */
+  function resolveSearchOptionIdPrefix() {
+    var ids = document.querySelectorAll("[id]");
+    var prefix = searchOptionIdPrefix;
+    var collides = true;
+    while (collides) {
+      collides = false;
+      for (var i = 0; i < ids.length; i++) {
+        if (ids[i].id.indexOf(prefix) === 0) {
+          collides = true;
+          break;
+        }
+      }
+      if (collides) prefix += "x-";
+    }
+    return prefix;
+  }
 
   function searchOptions() {
     var box = document.getElementById("search-results");
@@ -741,7 +764,7 @@
       // リンク自身を option にする。リンクは Tab 順から外し、上下キーで辿る。
       html +=
         '<li class="search-result" role="presentation"><a id="' +
-        SEARCH_OPTION_ID +
+        searchOptionIdPrefix +
         i +
         '" role="option" aria-selected="false" tabindex="-1" data-route="' +
         escapeHtml(r.route) +
@@ -784,10 +807,17 @@
       input.setAttribute("aria-autocomplete", "list");
       input.setAttribute("aria-expanded", "false");
     }
+    // 結果を描画する前に、本文の ID と衝突しない接頭辞を決めておく。
+    searchOptionIdPrefix = resolveSearchOptionIdPrefix();
     input.addEventListener("input", function () {
       renderSearchResults(input.value);
     });
     input.addEventListener("keydown", function (e) {
+      // IME の変換中は上下キーが候補選択、Enter が確定に割り当てられている。keydown は
+      // 変換中も届くため、ここで横取りすると日本語入力そのものが壊れ、未確定の文字列で
+      // 結果を開いてしまう。keyCode 229 は isComposing を出さない環境向けの保険。
+      if (e.isComposing || e.keyCode === 229) return;
+
       if (e.key === "Escape") {
         input.value = "";
         renderSearchResults("");

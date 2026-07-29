@@ -133,6 +133,8 @@ and is released, and v0.9 follows it.
 - [x] The result list is navigated with `↓` / `↑` (wrapping at both ends) and opened with `Enter`, which opens the top result when nothing is selected yet; `Escape` still clears the query
 - [x] Focus stays in the search box while selecting, so the query can be narrowed without tabbing back. The selection is published through `aria-activedescendant` on an ARIA combobox / listbox pair, and the selected row carries its own outline because the focus ring stays on the input
 - [x] Mouse and keyboard cannot disagree: pointing at a row moves the selection to it, and both ways of opening a result run the same code path. The roles are attached from `app.js`, so a custom theme that replaces `template.html` still gets them
+- [x] The keys are left to the IME while it is composing, so the arrows still move through conversion candidates and `Enter` still commits one instead of opening a result for a half-composed query
+- [x] Option IDs are allocated against the IDs the document already contains, so a heading that would produce the same string does not shadow the result row and break anchor navigation
 
 ## Supported Syntax
 
