@@ -31,9 +31,12 @@ monodocs serve examples/en            # http://127.0.0.1:4173/
 For **PDF output** via the single HTML (bookmarks, in-content links, font requirements,
 and more), see [PDF output](pdf.md).
 
+[Search](search.md) collects queries you can type against this sample to see how matching, keyboard
+navigation, and body highlighting behave.
+
 ## Features you can check on this site
 
-- Full-text search / in-page table of contents (scroll-synced) / prev–next navigation
+- [Full-text search](search.md) / in-page table of contents (scroll-synced) / prev–next navigation
 - Dark mode / sidebar collapse & auto-expand
 - Code highlighting (shiki) / Mermaid diagrams
 - Image data URI embedding / cross-file links & AsciiDoc xref / footnotes
