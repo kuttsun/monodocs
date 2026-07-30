@@ -156,6 +156,16 @@ Preserve these display and reachability invariants:
   The CLI supplies its package version at runtime; the renderer escapes that value and omits only the version
   when no value is available. `html.branding: false` omits the complete footer.
 
+The default theme is deliberately neutral, and it is not aligned with the design of the documentation site
+under [`site/`](../site/). The two answer different briefs: the site argues that somebody should adopt monodocs
+and carries an identity of its own for that purpose, while the output is a copy of somebody else's document.
+Giving every generated file a vendor's palette and typography would stamp monodocs onto an artifact that
+represents whoever wrote the documents, not the tool that bundled them. Neutrality is also the better starting
+point for `html.theme`, which replaces this directory. For the same reason the theme embeds no webfont and uses
+system font stacks: the single file may not reference anything external, so a face would have to be inlined
+into every artifact, against the size the format exists for. Treat the difference from the site as a decision,
+not as an inconsistency to be fixed.
+
 Theme UI labels are standardized in English and are independent of document body language. Dynamic labels are
 centralized in `LABELS` in `app.js`; static labels live in `template.html`.
 
