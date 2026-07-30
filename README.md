@@ -4,7 +4,7 @@
 
 `monodocs` is a **lightweight documentation generator focused on single-file distribution**. It is a CLI tool that turns a directory of Markdown and AsciiDoc files into a **single HTML or PDF document** — keep your documentation as multiple source files, and distribute it as one self-contained file.
 
-**📖 Full documentation → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference. Try the [single-file sample](https://kuttsun.github.io/monodocs/manual.html).
+**📖 Full documentation → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference. Try the [single-file sample](https://kuttsun.github.io/monodocs/sample.html).
 
 ## Features
 

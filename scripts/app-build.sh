@@ -8,7 +8,7 @@
 # 例:
 #   scripts/app-build.sh
 #   app/dist/monodocs serve ~/任意のドキュメント --host 127.0.0.1   # 任意ディレクトリを配信
-#   app/dist/monodocs build ~/任意のドキュメント -o ~/manual.html
+#   app/dist/monodocs build ~/任意のドキュメント -o ~/docs.html
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -49,7 +49,7 @@ In `monodocs`, the management of input files remains split, and only the output 
 The first goal is to build a CLI tool that satisfies the following.
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 Input example:
@@ -69,7 +69,7 @@ Output example:
 
 ```text
 dist/
-  manual.html
+  docs.html
 ```
 
 ### 3.2 Mid-term Goals
@@ -209,13 +209,13 @@ docs/
 The first output format to be supported.
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 Or:
 
 ```bash
-monodocs build ./docs --format html -o ./dist/manual.html
+monodocs build ./docs --format html -o ./dist/docs.html
 ```
 
 The HTML is made into a file that is as self-contained as possible.
@@ -236,7 +236,7 @@ What is included:
 After HTML is generated, convert it to PDF using Playwright or Puppeteer.
 
 ```bash
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 ```
 
 Or:
@@ -268,7 +268,7 @@ PDF output will be supported after HTML output stabilizes.
 The first to be implemented.
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 ### 8.2 npm Package
@@ -282,7 +282,7 @@ npm install -g monodocs
 One-off execution:
 
 ```bash
-npx monodocs build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/docs.html
 ```
 
 Project-local introduction:
@@ -308,7 +308,7 @@ For CI and in-house environments.
 ```bash
 docker run --rm \
   -v "$PWD:/work" \
-  monodocs/monodocs build /work/docs -o /work/dist/manual.html
+  monodocs/monodocs build /work/docs -o /work/dist/docs.html
 ```
 
 ### 8.4 GitHub Actions
@@ -319,7 +319,7 @@ No dedicated action is published; a workflow calls the npm CLI directly.
 - uses: actions/setup-node@v4
   with:
     node-version: 22
-- run: npx --yes monodocs build ./docs -o ./dist/manual.html
+- run: npx --yes monodocs build ./docs -o ./dist/docs.html
 ```
 
 ### 8.5 Standalone Binary
@@ -700,7 +700,7 @@ input: "./docs"
 
 output:
   format: "html"
-  path: "./dist/manual.html"
+  path: "./dist/docs.html"
 
 sources:
   markdown:
@@ -955,9 +955,9 @@ The extension is not included in the route.
 For the single HTML, hash routes are used.
 
 ```text
-manual.html#/
-manual.html#/setup/install
-manual.html#/setup/config
+docs.html#/
+docs.html#/setup/install
+docs.html#/setup/config
 ```
 
 ### 15.3 HTML Structure
@@ -1594,7 +1594,7 @@ PDF
 ### 24.2 Command Example
 
 ```bash
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 ```
 
 When outputting both HTML and PDF:
@@ -1679,14 +1679,14 @@ monodocs build
 Input/output specification:
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 Format specification:
 
 ```bash
-monodocs build ./docs --format html -o ./dist/manual.html
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format html -o ./dist/docs.html
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs build ./docs --format both -o ./dist/
 ```
 
@@ -1746,7 +1746,7 @@ Monodocs: Validate Links
 ```json
 {
   "monodocs.configFile": "monodocs.config.yml",
-  "monodocs.outputFile": "dist/manual.html",
+  "monodocs.outputFile": "dist/docs.html",
   "monodocs.preview.autoRefresh": true
 }
 ```
@@ -1829,7 +1829,7 @@ For each fixture, run the CLI and validate the output HTML.
 ### 28.3 E2E Tests
 
 ```bash
-monodocs build tests/fixtures/mixed-basic/docs -o tmp/manual.html
+monodocs build tests/fixtures/mixed-basic/docs -o tmp/docs.html
 ```
 
 Check items:
@@ -1883,7 +1883,7 @@ Implementation scope:
 
 Completion criteria:
 
-- `monodocs build ./docs -o ./dist/manual.html` works
+- `monodocs build ./docs -o ./dist/docs.html` works
 - Multiple Markdown files are included in a single HTML
 - Pages can be switched from the sidebar
 - H1 is used as the title
@@ -1988,7 +1988,7 @@ Enable PDF output based on the single HTML.
 
 Implementation: Open the single HTML with Puppeteer (`puppeteer-core` + system Chromium. Mermaid pre-render and startup processing
 are shared in `pipeline/browser.ts`), and convert it to PDF with `page.pdf()` using the theme's `@media print` (all pages expanded vertically)
-(`pipeline/renderPdf.ts`). `--format both` treats `-o` as a directory and outputs `manual.html` / `manual.pdf`. For client mode Mermaid,
+(`pipeline/renderPdf.ts`). `--format both` treats `-o` as a directory and outputs `docs.html` / `docs.pdf`. For client mode Mermaid,
 it waits for rendering completion after all pages are expanded. Instead of the originally proposed Playwright, the policy was changed to reuse the existing puppeteer-core foundation.
 
 Implementation scope:
@@ -2009,7 +2009,7 @@ Implementation scope:
 
 Completion criteria:
 
-- `monodocs build ./docs --format pdf -o ./dist/manual.pdf` works
+- `monodocs build ./docs --format pdf -o ./dist/docs.pdf` works
 - Mixed Markdown / AsciiDoc documents can be converted to PDF
 - Mermaid and images are included in the PDF
 - Can be output as an A4 PDF
@@ -2131,6 +2131,9 @@ Implementation scope:
   recorded in chapter 22.3
 - Move through the results with `↓` / `↑` and open one with `Enter`, as an ARIA combobox
 - Mark the keywords in the body of the page a result opens
+- Rename the default output from `manual.html` / `manual.pdf` to `docs.html` / `docs.pdf`: monodocs
+  bundles whatever set of pages it is given, and that is not necessarily a manual. A breaking change
+  for anyone who relies on the default, taken before 1.0 rather than after
 
 Completion criteria:
 
@@ -2142,6 +2145,8 @@ Completion criteria:
   screen readers are told which result is selected
 - Opening a result shows where the keywords are in the body, and clearing the query puts the body
   back as it was
+- Omitting `-o` writes `./dist/docs.html`, `--format pdf` writes `./dist/docs.pdf`, and `--format both`
+  writes `docs.html` / `docs.pdf` into the directory it is given
 
 ---
 
@@ -2209,7 +2214,7 @@ writeOutput()
 ### 30.7 The First CLI
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 ---
@@ -2368,8 +2373,8 @@ proceed in this order.
 Ultimately, the goal is to be able to use it as follows.
 
 ```bash
-monodocs build ./docs --format html -o ./dist/manual.html
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format html -o ./dist/docs.html
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs serve
 monodocs validate
 ```
@@ -2391,8 +2396,8 @@ The output is a single HTML or PDF.
 
 ```text
 dist/
-  manual.html
-  manual.pdf
+  docs.html
+  docs.pdf
 ```
 
 `monodocs` is a tool for converting documentation managed across multiple files into a single, easy-to-distribute file.

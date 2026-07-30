@@ -48,7 +48,7 @@ program
   .argument("[input]", "入力ディレクトリ（既定: ./docs）")
   .option(
     "-o, --output <path>",
-    "出力先（html: ファイル / pdf: ファイル / both: ディレクトリ。既定: ./dist/manual.html）",
+    "出力先（html: ファイル / pdf: ファイル / both: ディレクトリ。既定: ./dist/docs.html）",
   )
   .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .option("-f, --format <format>", "出力形式 html | pdf | both（既定: html）")
@@ -77,7 +77,7 @@ program
   .command("watch")
   .description("入力・設定ファイルの変更を監視して再ビルドする")
   .argument("[input]", "入力ディレクトリ（既定: ./docs）")
-  .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
+  .option("-o, --output <file>", "出力ファイル（既定: ./dist/docs.html）")
   .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .action(async (input: string | undefined, options: { output?: string; config?: string }) => {
     const opts = {
@@ -102,7 +102,7 @@ program
   .command("serve")
   .description("ローカルサーバーで配信し、変更を監視してライブリロードする")
   .argument("[input]", "入力ディレクトリ（既定: ./docs）")
-  .option("-o, --output <file>", "出力ファイル（既定: ./dist/manual.html）")
+  .option("-o, --output <file>", "出力ファイル（既定: ./dist/docs.html）")
   .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
   .option("-p, --port <port>", "ポート番号（既定: 4173）", (v) => Number(v))
   .option("-H, --host <host>", "ホスト（既定: 127.0.0.1）")

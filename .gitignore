@@ -12,8 +12,8 @@ coverage/
 
 # site (VitePress) — cache と生成デモ。dist/ は上の build output で除外済み
 site/.vitepress/cache/
-site/public/manual.html
-site/public/ja/manual.html
+site/public/sample.html
+site/public/ja/sample.html
 
 # misc
 tmp/

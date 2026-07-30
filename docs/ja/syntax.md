@@ -62,7 +62,7 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
   リンクを `#/route`（hash route）へ変換する。アンカー付きリンク（`other.md#sec`）は route ではなく
   リンク先ページの prefix 済み要素 ID（`#{page-id}-sec`）へ変換し、HTML でも PDF でもアンカー位置に着地する。
 - **ページ内アンカー**: `#id`（`/` で始まらない hash）はページ内アンカーとして扱い、該当要素を含む
-  ページを表示してスクロールする。脚注・内部参照・直接 URL（`manual.html#id`）で機能する。
+  ページを表示してスクロールする。脚注・内部参照・直接 URL（`docs.html#id`）で機能する。
 - **Admonition / alert の共通化**: Markdown の GFM alerts（`> [!NOTE]` など）と AsciiDoc の admonition
   （Asciidoctor 出力の `.admonitionblock`）を、postprocess で共通の `<div class="admonition admonition-TYPE">`
   構造へ正規化する。5 種（NOTE / TIP / IMPORTANT / WARNING / CAUTION）は両形式で一致するため、

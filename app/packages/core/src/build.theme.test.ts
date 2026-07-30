@@ -15,7 +15,7 @@ beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "monodocs-theme-e2e-"));
   docs = join(dir, "docs");
   theme = join(dir, "my-theme");
-  out = join(dir, "dist", "manual.html");
+  out = join(dir, "dist", "docs.html");
   await mkdir(docs, { recursive: true });
   await mkdir(theme, { recursive: true });
   await writeFile(join(docs, "index.md"), "# Home\n\nBody text.\n");

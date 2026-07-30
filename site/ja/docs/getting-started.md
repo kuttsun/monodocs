@@ -5,7 +5,7 @@ monodocs は Markdown / AsciiDoc のディレクトリを **単一の自己完�
 ## 何ができるか
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 出力は外部ランタイム不要の単一 HTML です。ページ内検索、目次、前後ナビ、ダークモード、印刷用レイアウトがすべて埋め込まれます。ナビの **「単一ファイルサンプル」** は、このプロジェクト同梱の examples から monodocs 自身で生成したものです。
@@ -25,7 +25,7 @@ monodocs は npm で公開しています。Node.js 22.12.0 以上が必要で�
 ```bash
 npm install -g monodocs
 # グローバルインストールせずに実行する場合
-npx monodocs build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/docs.html
 ```
 
 バージョンをリポジトリに固定したい場合は、プロジェクトに追加します。
@@ -48,7 +48,7 @@ PDF 出力と Mermaid pre-render には、システムにインストールさ�
 ```bash
 sha256sum -c monodocs-linux-x64.sha256   # ダウンロードの検証
 chmod +x monodocs-linux-x64
-./monodocs-linux-x64 build ./docs -o ./dist/manual.html
+./monodocs-linux-x64 build ./docs -o ./dist/docs.html
 ```
 
 バイナリで使えるのは `build`（HTML）・`validate`・`watch`・`serve` です。**PDF 出力と Mermaid の
@@ -61,10 +61,10 @@ chmod +x monodocs-linux-x64
 
 ```bash
 # 単一の自己完結 HTML
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 
 # PDF（Chromium が必要）
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 
 # リンク切れ、画像の欠落、タイトルの欠落を検出する
 monodocs validate ./docs
@@ -91,7 +91,7 @@ scripts/app.sh pnpm install
 scripts/app.sh pnpm build
 
 # 同梱 examples から単一 HTML を生成
-scripts/app.sh node packages/cli/dist/index.js build examples/ja -o dist/manual.html
+scripts/app.sh node packages/cli/dist/index.js build examples/ja -o dist/docs.html
 ```
 
 ## 次のステップ

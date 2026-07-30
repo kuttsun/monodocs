@@ -7,12 +7,12 @@ import { defineConfig } from 'vitepress'
 //   /docs/*            英語ドキュメント
 //   /ja/               日本語ランディング (Hero)
 //   /ja/docs/*         日本語ドキュメント
-//   /manual.html       monodocs 自身で生成した単一 HTML デモ（VitePress 管轄外・public/）
+//   /sample.html       monodocs 自身で生成した単一 HTML デモ（VitePress 管轄外・public/）
 //
 // 言語方針: 英語をルート(既定)ロケールにすることで、`/ja/` 以外のパスはすべて
 // 英語で配信される（= 日本語以外は英語にフォールバック）。
 //
-// /manual.html は VitePress のルーティング外の静的アセット。同一オリジンの絶対パス
+// /sample.html は VitePress のルーティング外の静的アセット。同一オリジンの絶対パス
 // リンクは VitePress が SPA 内部遷移として横取りし 404 を描くため、ナビからのリンクには
 // 必ず target: '_blank' を付けてネイティブ遷移させ、dead link チェックからも除外する。
 
@@ -33,10 +33,14 @@ export default defineConfig({
   // 開発用 README はページ化しない（/README.html を出力させない）。
   srcExclude: ['**/README.md', '**/README.ja.md'],
 
-  // /manual.html・/ja/manual.html は VitePress 管轄外（public/ の静的アセット）なので dead link 対象外。
-  ignoreDeadLinks: [/^\/manual\.html$/, /^\/ja\/manual\.html$/],
+  // /sample.html・/ja/sample.html は VitePress 管轄外（public/ の静的アセット）なので dead link 対象外。
+  ignoreDeadLinks: [/^\/sample\.html$/, /^\/ja\/sample\.html$/],
 
-  head: [['meta', { name: 'theme-color', content: '#3451b2' }]],
+  // theme-color は site/.vitepress/theme/style.css の paper / ink と揃える。
+  head: [
+    ['meta', { name: 'theme-color', content: '#f8f8f5', media: '(prefers-color-scheme: light)' }],
+    ['meta', { name: 'theme-color', content: '#15171a', media: '(prefers-color-scheme: dark)' }]
+  ],
 
   locales: {
     // root = English (default)
@@ -52,7 +56,7 @@ export default defineConfig({
           { text: 'Home', link: '/' },
           { text: 'Guide', link: '/docs/getting-started' },
           { text: 'License', link: '/docs/license' },
-          { text: 'Single-file sample', link: '/manual.html', target: '_blank', rel: 'noopener' }
+          { text: 'Single-file sample', link: '/sample.html', target: '_blank', rel: 'noopener' }
         ],
 
         sidebar: {
@@ -108,7 +112,7 @@ export default defineConfig({
           { text: 'ホーム', link: '/ja/' },
           { text: 'ガイド', link: '/ja/docs/getting-started' },
           { text: 'ライセンス', link: '/ja/docs/license' },
-          { text: '単一ファイルサンプル', link: '/ja/manual.html', target: '_blank', rel: 'noopener' }
+          { text: '単一ファイルサンプル', link: '/ja/sample.html', target: '_blank', rel: 'noopener' }
         ],
 
         sidebar: {

@@ -11,7 +11,7 @@ let out: string;
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "monodocs-v03-"));
   docs = join(dir, "docs");
-  out = join(dir, "dist", "manual.html");
+  out = join(dir, "dist", "docs.html");
   await mkdir(join(docs, "images"), { recursive: true });
   await writeFile(
     join(docs, "index.md"),

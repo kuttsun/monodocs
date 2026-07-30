@@ -105,7 +105,7 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     const config = await loadConfig({ inputDir: docs }, join(dir, "elsewhere"));
     expect(config.configFilePath).toBeUndefined();
     expect(config.title).toBe("Documentation");
-    expect(config.outputFile).toBe(join(dir, "elsewhere", "dist", "manual.html"));
+    expect(config.outputFile).toBe(join(dir, "elsewhere", "dist", "docs.html"));
   });
 
   it("reads sidebar.titleTransform.page from the config file", async () => {
@@ -396,12 +396,12 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
 
   it("uses a format-appropriate default output path", async () => {
     expect((await loadConfig({ format: "html" }, dir)).outputFile).toBe(
-      join(dir, "dist", "manual.html"),
+      join(dir, "dist", "docs.html"),
     );
     expect((await loadConfig({ format: "pdf" }, dir)).outputFile).toBe(
-      join(dir, "dist", "manual.pdf"),
+      join(dir, "dist", "docs.pdf"),
     );
-    // both はディレクトリ扱いの既定（build 側で manual.html / manual.pdf を生成）。
+    // both はディレクトリ扱いの既定（build 側で docs.html / docs.pdf を生成）。
     expect((await loadConfig({ format: "both" }, dir)).outputFile).toBe(join(dir, "dist"));
   });
 });

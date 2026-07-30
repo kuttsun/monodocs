@@ -27,6 +27,7 @@ monodocs/
   examples/ja/              # 全記法・全機能のサンプル（日本語。markdown / asciidoc / mixed）
   examples/en/              # 同上の英語版
   site/                     # アプリ紹介の静的 Web サイト（VitePress）
+    .vitepress/theme/       # カスタムテーマ（デザイントークン / 書体 / トップの hero）
   docs/                     # 開発ドキュメント（本フォルダ）
   scripts/app.sh            # 専用イメージ内でコマンドを実行するヘルパー
   Dockerfile.dev            # 開発・ビルド・テスト用イメージ（pnpm 焼き込み）
@@ -55,6 +56,15 @@ Dependabot は独自のスケジュールでバージョンを解決するため
 ### サイト依存関係のセキュリティ override
 
 `site/` の standalone package は Vite を一時的に `~6.4.3` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を継続して通してください。安全な Vite の範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。2026-07-29 時点の再点検では、安定版は依然として VitePress 1.6.4（`vite ^5.4.14`）で、VitePress 2 は alpha しかなく、Vite 6.4 系の最新 patch も `6.4.3` のままなので、override は現状のまま維持します。
+
+### サイトのテーマ
+
+`site/.vitepress/theme/` は VitePress 既定テーマの上に重ねたカスタムテーマです。次の 4 点は装飾ではなく、壊すと動作や意味が変わります。
+
+- `index.ts` は `vitepress/theme-without-fonts` を継承します（`vitepress/theme` ではありません）。これにより既定テーマが同梱する Inter を配信対象から外します。実際に使う書体は `fonts.css` で宣言し、npm（`@fontsource-variable/archivo`、`@fontsource/ibm-plex-mono`）から取得するので、フォント CDN へのリクエストは発生しません。日本語はシステムフォントにフォールバックし、ダウンロードは発生しません。
+- 等幅は「実在する機械文字列」＝パス・コマンド・パッケージ名にだけ使います。同じ理由で `style.css` はインラインコードからアクセント色を外しています。色付きのリンクと色付きのコードが同じ段落に並ぶと、読み手はどちらが押せるのか判断できません。
+- `BundleDiagram.vue` と `HeroCommand.vue` は入力ディレクトリと出力ファイル名を共有します。「このコマンドを実行するとこのファイルが得られる」という一つの主張として読ませるためです。出力名は文書の種類ではなく入力ディレクトリに由来させています（`docs.html`）。monodocs は渡されたページ群を何であれまとめるので、マニュアルとは限らないからです。どちらかを変えるときは両方を揃えてください。なお出力カードのリンク先は公開サンプル（`site/public/sample.html`）で、これは別のファイルです。
+- `style.css` の上書きは、セレクタにクラスや要素をひとつ余分に含めています。既定テーマのコンポーネントは scoped style で属性セレクタ分の詳細度を持つため、同じ詳細度で書くと結果がスタイルシートの読み込み順に依存します。
 
 ### 必要なもの
 
@@ -107,7 +117,7 @@ scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0
 単一 HTML（配布物）をファイルに出力する:
 
 ```bash
-scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/manual.html
+scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/docs.html
 ```
 
 ### 単一実行ファイル（ネイティブバイナリ）をビルドする
@@ -128,7 +138,7 @@ scripts/app-build.sh                              # → app/dist/monodocs を生
 
 # 以降はホストで直接実行（Docker 不要・任意ディレクトリを指せる）
 app/dist/monodocs serve ~/任意のドキュメント       # ローカルプレビュー（--host 0.0.0.0 不要）
-app/dist/monodocs build ~/任意のドキュメント -o ~/manual.html
+app/dist/monodocs build ~/任意のドキュメント -o ~/docs.html
 ```
 
 > - 出力は約 130 MiB（node ランタイム同梱のため）。`app/dist/` は `.gitignore` 済み。

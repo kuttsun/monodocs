@@ -11,7 +11,7 @@ let out: string;
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "monodocs-mixed-"));
   docs = join(dir, "docs");
-  out = join(dir, "dist", "manual.html");
+  out = join(dir, "dist", "docs.html");
   await mkdir(docs, { recursive: true });
   await writeFile(join(docs, "index.md"), "# ホーム\n\nようこそ。\n");
   await writeFile(join(docs, "overview.adoc"), "= Overview\n\n== Intro\n\nhello from asciidoc\n");

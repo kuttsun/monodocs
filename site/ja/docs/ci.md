@@ -71,13 +71,13 @@ jobs:
           path: dist/
 ```
 
-`--format both` では `-o` をディレクトリとして扱い、`manual.html` と `manual.pdf` を出力します。
+`--format both` では `-o` をディレクトリとして扱い、`docs.html` と `docs.pdf` を出力します（0.8.0 以前は `manual.html` と `manual.pdf`）。
 
-ビルド成果物ではなくリリースに添付する場合は、ワークフローを `release: types: [published]` で起動し、ジョブに `permissions: contents: write` を与えて、upload ステップを次に置き換えます。
+ビルド成果物ではなくリリースに添付する場合は、ワークフローを `release: types: [published]` で起動し、ジョブに `permissions: contents: write` を与えて、upload ステップを次に置き換えます。ファイル名ではなく拡張子で選べば、どのバージョンを固定していてもこのステップは動きます。
 
 ```yaml
       - name: Attach to the release
-        run: gh release upload "$GITHUB_REF_NAME" dist/manual.html dist/manual.pdf
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.html dist/*.pdf
         env:
           GH_TOKEN: ${{ github.token }}
 ```
@@ -93,7 +93,7 @@ docs:
   image: node:22-bookworm-slim
   script:
     - npx --yes monodocs@0.8.0 validate ./docs
-    - npx --yes monodocs@0.8.0 build ./docs -o ./dist/manual.html
+    - npx --yes monodocs@0.8.0 build ./docs -o ./dist/docs.html
   artifacts:
     paths: [dist/]
 ```

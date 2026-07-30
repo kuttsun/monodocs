@@ -132,8 +132,8 @@ try {
   const outputDir = join(temporaryRoot, "output");
   const markdownFixtureDir = join(temporaryRoot, "markdown");
   const markdownOutput = join(outputDir, "markdown.html");
-  const htmlOutput = join(outputDir, "manual.html");
-  const pdfOutput = join(outputDir, "manual.pdf");
+  const htmlOutput = join(outputDir, "docs.html");
+  const pdfOutput = join(outputDir, "docs.pdf");
   const prerenderOutput = join(outputDir, "pre-render.html");
   const prerenderConfig = join(temporaryRoot, "pre-render.yml");
   await writeFile(prerenderConfig, "mermaid:\n  mode: pre-render\n");

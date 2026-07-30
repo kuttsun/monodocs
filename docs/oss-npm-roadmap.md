@@ -10,13 +10,13 @@ Publish monodocs as OSS under the MIT License, aiming for a state where it can b
 
 ```bash
 npm install -g monodocs
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 Alternatively, make it usable via a temporary install.
 
 ```bash
-npx monodocs build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/docs.html
 ```
 
 The initial release will be the npm package only. The SEA standalone binary is deferred to the future, after publishing and operating the npm version has stabilized, and is not included in the completion criteria for v0.6. No Docker image will be provided for users; the existing Docker environment for development and testing will be maintained.
@@ -270,8 +270,8 @@ Before publishing, generate the npm tarball, install it into a clean environment
 npm pack
 npm install -g ./monodocs-0.6.0-beta.1.tgz
 monodocs --version
-monodocs build ./docs -o ./dist/manual.html
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs -o ./dist/docs.html
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 ```
 
 - [x] Verify the tarball's file list with an allowlist.
@@ -370,7 +370,7 @@ npm install -g monodocs@next
 ```bash
 npm install -g monodocs
 monodocs --version
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 - [x] The Git tag, GitHub Release, and npm version match.

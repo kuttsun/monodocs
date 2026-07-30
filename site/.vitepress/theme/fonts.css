@@ -1,0 +1,16 @@
+/* Self-hosted webfonts, installed from npm so no request leaves the reader's
+   machine — the same constraint monodocs puts on its own output.
+
+   Archivo is a variable font with a width axis (font-stretch 62%–125%), which
+   the display type uses; one file per subset covers every weight and width.
+   IBM Plex Mono is loaded at 400/600 only, because monospace is reserved for
+   literal machine strings (paths, commands, the package name).
+
+   Each file declares unicode-range per subset, so a reader of the English or
+   Japanese site downloads the Latin subsets only. Japanese text is set in the
+   system font stack (see --vp-font-family-base) and downloads nothing. */
+
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource-variable/archivo/wdth-italic.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/600.css';

@@ -10,13 +10,13 @@ monodocs を MIT License の OSS として公開し、次の方法で安定し�
 
 ```bash
 npm install -g monodocs
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 または、一時的なインストールで利用できるようにする。
 
 ```bash
-npx monodocs build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/docs.html
 ```
 
 初期リリースは npm パッケージのみとする。SEA 単体バイナリは npm 版の公開・運用が安定した後の
@@ -278,8 +278,8 @@ package/
 npm pack
 npm install -g ./monodocs-0.6.0-beta.1.tgz
 monodocs --version
-monodocs build ./docs -o ./dist/manual.html
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs -o ./dist/docs.html
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 ```
 
 - [x] tarball のファイル一覧をスナップショットまたは許可リストで検証する。
@@ -359,7 +359,7 @@ npm install -g monodocs@next
 ```bash
 npm install -g monodocs
 monodocs --version
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 - [x] Git タグ、GitHub Release、npm version が一致している。
