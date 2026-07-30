@@ -15,7 +15,7 @@ site/
   ja/index.md            日本語ランディング
   docs/                  英語ドキュメント
   ja/docs/               日本語ドキュメント
-  public/manual.html     monodocs 自身で生成する単一 HTML デモ（生成物・git 管理外）
+  public/sample.html     monodocs 自身で生成する単一 HTML デモ（生成物・git 管理外）
 ```
 
 ## 言語
@@ -39,10 +39,10 @@ scripts/site.sh npm run docs:build       # 本番ビルド -> site/.vitepress/di
 scripts/site.sh npm run docs:preview     # ビルド結果をプレビュー http://localhost:4173/
 ```
 
-単一 HTML デモ（`public/manual.html`）も含めてまとめてビルドする:
+単一 HTML デモ（`public/sample.html`）も含めてまとめてビルドする:
 
 ```bash
-scripts/site-build.sh                    # CLI ビルド -> manual.html 生成 -> VitePress ビルド
+scripts/site-build.sh                    # CLI ビルド -> sample.html 生成 -> VitePress ビルド
 scripts/site-build.sh preview            # ↑ + プレビュー起動
 ```
 

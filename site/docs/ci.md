@@ -71,13 +71,13 @@ jobs:
           path: dist/
 ```
 
-With `--format both`, `-o` is treated as a directory and produces `manual.html` and `manual.pdf`.
+With `--format both`, `-o` is treated as a directory and produces `docs.html` and `docs.pdf` — `manual.html` and `manual.pdf` in 0.8.0 and earlier.
 
-To attach the result to a release instead of a build artifact, trigger the workflow on `release: types: [published]`, give the job `permissions: contents: write`, and replace the upload step:
+To attach the result to a release instead of a build artifact, trigger the workflow on `release: types: [published]`, give the job `permissions: contents: write`, and replace the upload step. Selecting the files by extension rather than by name keeps the step working whichever version you pin:
 
 ```yaml
       - name: Attach to the release
-        run: gh release upload "$GITHUB_REF_NAME" dist/manual.html dist/manual.pdf
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.html dist/*.pdf
         env:
           GH_TOKEN: ${{ github.token }}
 ```
@@ -93,7 +93,7 @@ docs:
   image: node:22-bookworm-slim
   script:
     - npx --yes monodocs@0.8.0 validate ./docs
-    - npx --yes monodocs@0.8.0 build ./docs -o ./dist/manual.html
+    - npx --yes monodocs@0.8.0 build ./docs -o ./dist/docs.html
   artifacts:
     paths: [dist/]
 ```

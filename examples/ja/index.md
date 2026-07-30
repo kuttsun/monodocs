@@ -5,7 +5,7 @@ order: 1
 
 # monodocs サンプル
 
-🌐 [English](https://kuttsun.github.io/monodocs/manual.html) · **日本語**
+🌐 [English](https://kuttsun.github.io/monodocs/sample.html) · **日本語**
 
 `monodocs` の対応記法と機能を **1 つのサイト**でまとめて確認できるサンプルです。
 左サイドバーのフォルダから各カテゴリを開けます。

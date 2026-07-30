@@ -19,7 +19,7 @@ let out: string;
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "monodocs-mmd-"));
   docs = join(dir, "docs");
-  out = join(dir, "dist", "manual.html");
+  out = join(dir, "dist", "docs.html");
   await mkdir(docs, { recursive: true });
   await writeFile(join(docs, "index.md"), "# 図\n\n```mermaid\ngraph TD\n  A --> B\n```\n");
   await writeFile(join(docs, "monodocs.config.yml"), "mermaid:\n  mode: pre-render\n");

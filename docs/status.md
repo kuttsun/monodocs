@@ -28,7 +28,7 @@ and is released, and v0.9 follows it.
 
 ### v0.1: Markdown Single-HTML MVP
 
-- [x] `monodocs build ./docs -o ./dist/manual.html` works
+- [x] `monodocs build ./docs -o ./dist/docs.html` works
 - [x] Multiple Markdown files are included in a single HTML
 - [x] Pages can be switched from the sidebar (hash route)
 - [x] H1 is used as the title (falls back to the file name with a warning if absent)
@@ -69,8 +69,8 @@ and is released, and v0.9 follows it.
 
 ### v0.5: PDF Output
 
-- [x] `monodocs build --format pdf -o ./dist/manual.pdf` can generate a PDF via a single HTML (headless Chromium; all pages expanded vertically in the print layout)
-- [x] `--format both` can output HTML and PDF simultaneously (`-o` is treated as a directory, outputting `manual.html` / `manual.pdf`)
+- [x] `monodocs build --format pdf -o ./dist/docs.pdf` can generate a PDF via a single HTML (headless Chromium; all pages expanded vertically in the print layout)
+- [x] `--format both` can output HTML and PDF simultaneously (`-o` is treated as a directory, outputting `docs.html` / `docs.pdf`)
 - [x] When client-mode Mermaid is included, all pages are expanded and rendering of each diagram is awaited before generating the PDF (pre-rendered SVGs are embedded as-is)
 - [x] `pdf.pageSize` / `pdf.margin` / `pdf.printBackground` can be controlled via configuration (defaults: A4, 20/15/20/15mm, background printing on)
 - [x] Images are embedded as data URIs on PDF output (because a distributed PDF cannot reference external relative images, they are embedded even when `assets.embedImages: false`—overriding it—with a warning. Large images externalized via `onLargeImage: external` are not included in the PDF)
@@ -137,6 +137,7 @@ and is released, and v0.9 follows it.
 - [x] Option IDs are allocated against the IDs the document already contains, so a heading that would produce the same string does not shadow the result row and break anchor navigation
 - [x] Opening a result marks its keywords in the body of the page it opens, with the same folding as the result list, and keeps marking them while the search stays open, so prev/next or a link inside the body does not lose the matches. Where the result opens is unchanged
 - [x] Editing or clearing the query removes the marks and puts the body back as it was, in the same structure and node count. Only the marks the script created are removed — identified by a DOM property, not by their class — so a document's own `<mark>` (AsciiDoc `#text#`) and any content that happens to use the same class survive. Mermaid source, rendered diagrams, and the code-block toolbar are left untouched, and both the number of marks per page and the match collection behind it are capped ([roadmap.md](roadmap.md) 22.5)
+- [x] The default output is `./dist/docs.html` (`--format pdf`: `./dist/docs.pdf`; `--format both`: `docs.html` / `docs.pdf` inside the directory given to `-o`). Renamed from `manual.html` / `manual.pdf` because monodocs bundles whatever set of pages it is given, which is not necessarily a manual — a breaking change for anyone who relied on the default, taken before 1.0
 
 ## Supported Syntax
 

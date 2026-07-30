@@ -1,0 +1,386 @@
+/* Design tokens and overrides for the monodocs site.
+ *
+ * The look is ink on paper: monodocs exists to turn a directory of sources into
+ * one file somebody can keep, so the site is built out of hairlines, a single
+ * accent, and nothing else. That accent — a binding red — is spent on links and
+ * on the artifact in the hero, and on nothing decorative.
+ *
+ * Typography carries one rule: monospace means a literal machine string (a path,
+ * a command, the package name). Prose is set in Archivo, whose width axis the
+ * display sizes use. Japanese text falls back to the system stack, so its
+ * personality comes from weight and spacing rather than a downloaded face.
+ *
+ * Overrides use an extra class or element in the selector on purpose: the
+ * default theme's component styles are scoped, which adds an attribute selector
+ * to their specificity, so matching it exactly would leave the result to
+ * stylesheet order. Two things here cannot avoid that and do depend on order —
+ * the variables in `:root` / `.dark`, and the `.has-image .container` /
+ * `.has-image .actions` overrides, where the default theme already uses every
+ * class this markup offers. Both work because index.ts imports the default
+ * theme before this file; keep that import order.
+ */
+
+:root {
+  --md-paper: #f8f8f5;
+  --md-paper-2: #f1f1ec;
+  --md-ink: #16191c;
+  --md-ink-2: #4d545b;
+  --md-ink-3: #666d74;
+  --md-rule: #dedcd4;
+  --md-bind: #9e2a1f;
+  --md-bind-2: #b3392c;
+  --md-bind-soft: rgba(158, 42, 31, 0.09);
+
+  --vp-font-family-base: 'Archivo Variable', 'Hiragino Kaku Gothic ProN',
+    'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic Medium', 'Yu Gothic', Meiryo,
+    system-ui, sans-serif;
+  --vp-font-family-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+}
+
+/* ── Palette mapped onto the default theme's variables ─────────────────── */
+
+:root {
+  --vp-c-bg: var(--md-paper);
+  --vp-c-bg-alt: var(--md-paper-2);
+  --vp-c-bg-soft: var(--md-paper-2);
+  --vp-c-bg-elv: #ffffff;
+
+  --vp-c-text-1: var(--md-ink);
+  --vp-c-text-2: var(--md-ink-2);
+  --vp-c-text-3: var(--md-ink-3);
+
+  --vp-c-border: var(--md-rule);
+  --vp-c-divider: var(--md-rule);
+  --vp-c-gutter: var(--md-rule);
+
+  --vp-c-brand-1: var(--md-bind);
+  --vp-c-brand-2: var(--md-bind-2);
+  --vp-c-brand-3: var(--md-bind-2);
+  --vp-c-brand-soft: var(--md-bind-soft);
+
+  /* Tips stay green: with a red brand, a red tip would read as a warning. */
+  --vp-c-tip-1: #2f6f4e;
+  --vp-c-tip-2: #37805a;
+  --vp-c-tip-3: #4a9770;
+  --vp-c-tip-soft: rgba(47, 111, 78, 0.1);
+
+  /* Inline code is ink, not the accent: monospace already marks it as a machine
+     string, and colouring it like a link would make the two indistinguishable
+     in body text. Code inside a link keeps the link colour. */
+  --vp-code-color: var(--md-ink);
+
+  /* The hero name is set as a label above the thesis. It has to stay readable
+     as the product's own name, so it is full ink — .clip fills the text from
+     this variable, which overrides any `color` set on the element. */
+  --vp-home-hero-name-color: var(--md-ink);
+  --vp-home-hero-name-background: transparent;
+
+  /* Primary action is ink, not the accent — the accent belongs to the output. */
+  --vp-button-brand-bg: var(--md-ink);
+  --vp-button-brand-text: var(--md-paper);
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-hover-bg: #2c3237;
+  --vp-button-brand-hover-text: var(--md-paper);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-active-bg: #000000;
+  --vp-button-brand-active-text: var(--md-paper);
+  --vp-button-brand-active-border: transparent;
+
+  --vp-button-alt-bg: transparent;
+  --vp-button-alt-text: var(--md-ink);
+  --vp-button-alt-border: var(--md-rule);
+  --vp-button-alt-hover-bg: transparent;
+  --vp-button-alt-hover-text: var(--md-ink);
+  --vp-button-alt-hover-border: var(--md-ink);
+  --vp-button-alt-active-bg: transparent;
+  --vp-button-alt-active-text: var(--md-ink);
+  --vp-button-alt-active-border: var(--md-ink);
+}
+
+.dark {
+  --md-paper: #15171a;
+  --md-paper-2: #1b1e21;
+  --md-ink: #e6e6e0;
+  --md-ink-2: #a8aeb4;
+  --md-ink-3: #838a91;
+  --md-rule: #2d3135;
+  --md-bind: #e0705c;
+  --md-bind-2: #ea8571;
+  --md-bind-soft: rgba(224, 112, 92, 0.14);
+
+  --vp-c-bg-elv: #1c1f23;
+
+  --vp-c-tip-1: #6fbf92;
+  --vp-c-tip-2: #82ccA1;
+  --vp-c-tip-3: #93d6ae;
+  --vp-c-tip-soft: rgba(111, 191, 146, 0.14);
+
+  --vp-button-brand-bg: var(--md-ink);
+  --vp-button-brand-text: #15171a;
+  --vp-button-brand-hover-bg: #ffffff;
+  --vp-button-brand-hover-text: #15171a;
+  --vp-button-brand-active-bg: #cfcfc8;
+  --vp-button-brand-active-text: #15171a;
+}
+
+::selection {
+  background-color: var(--md-bind-soft);
+}
+
+/* The element selectors are needed: the default theme sets its own ring through
+   `button:focus-visible`, which outranks a bare `:focus-visible`. */
+:focus-visible,
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--md-bind);
+  outline-offset: 2px;
+}
+
+/* ── Navigation ────────────────────────────────────────────────────────── */
+
+/* The product name is a package name, so it is set as one. */
+.VPNavBar .VPNavBarTitle .title {
+  font-family: var(--vp-font-family-mono);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.VPNavBar .VPNavBarMenuLink,
+.VPNavBar .VPNavBarMenuGroup .button {
+  letter-spacing: -0.005em;
+}
+
+/* ── Home hero ─────────────────────────────────────────────────────────── */
+
+/* The default theme centres hero text once an image slot is filled; this design
+   keeps the same left edge at every width. */
+.VPHome .VPHero.has-image .container {
+  text-align: left;
+}
+
+/* Set larger than the same name in the nav bar: on its own landing page the
+   product should not read smaller than it does in the chrome around it. Sized
+   per breakpoint like the thesis below it, so the two keep their proportion
+   instead of the label crowding the headline on a phone. */
+.VPHome .VPHero.has-image .heading .name {
+  margin: 0;
+  max-width: none;
+  padding-bottom: 18px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.015em;
+}
+
+@media (min-width: 640px) {
+  .VPHome .VPHero.has-image .heading .name {
+    padding-bottom: 20px;
+    font-size: 19px;
+  }
+}
+
+@media (min-width: 960px) {
+  .VPHome .VPHero.has-image .heading .name {
+    padding-bottom: 22px;
+    font-size: 21px;
+  }
+}
+
+/* The thesis, not the product name, is the loudest thing on the page. */
+.VPHome .VPHero.has-image .heading .text {
+  margin: 0;
+  max-width: 15ch;
+  font-size: clamp(2.35rem, 4.9vw, 4rem);
+  font-weight: 640;
+  font-stretch: 112%;
+  line-height: 1.03;
+  letter-spacing: -0.028em;
+  color: var(--md-ink);
+}
+
+/* Japanese is set in a system face with no width axis, and needs looser
+   leading and near-neutral tracking at display sizes. */
+:lang(ja) .VPHome .VPHero.has-image .heading .text {
+  max-width: 12em;
+  font-size: clamp(1.95rem, 3.9vw, 3.05rem);
+  font-weight: 700;
+  font-stretch: normal;
+  line-height: 1.3;
+  letter-spacing: -0.004em;
+}
+
+.VPHome .VPHero.has-image p.tagline {
+  margin: 0;
+  max-width: 46ch;
+  padding-top: 20px;
+  font-size: 1.0625rem;
+  font-weight: 400;
+  line-height: 1.72;
+  color: var(--md-ink-2);
+}
+
+:lang(ja) .VPHome .VPHero.has-image p.tagline {
+  max-width: 34em;
+  font-size: 1rem;
+  line-height: 1.85;
+}
+
+.VPHome .VPHero.has-image .actions {
+  justify-content: flex-start;
+  padding-top: 30px;
+}
+
+/* The size class carries the default pill radius, so it has to be matched. */
+.VPHome a.VPButton.medium,
+.VPHome a.VPButton.big,
+.VPHome a.VPButton.small {
+  border-radius: 2px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+/* The diagram replaces the default floating image: full width of its column,
+   no circular backdrop, and below the text until the hero splits into columns. */
+.VPHome .VPHero .image {
+  order: 3;
+  margin: 38px 0 0;
+}
+
+.VPHome .VPHero .image-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin: 0;
+  width: 100%;
+  height: auto;
+  transform: none;
+}
+
+.VPHome .VPHero .image-bg {
+  display: none;
+}
+
+/* The default theme splits the hero into two columns at 960px. That is far too
+   early here: the text column grows to 592px, and beside it the diagram needs
+   about 430px — its longest path, the fan, and the artifact at their own widths.
+   The layout only affords that from roughly 1150px, so the split waits until
+   1200px. Below it, keep the stacked layout the narrower widths already use;
+   measured at 960–1140px, splitting there runs the source paths over the fan
+   curves and wraps the artifact's link onto three lines. */
+@media (min-width: 960px) and (max-width: 1199px) {
+  .VPHome .VPHero .container {
+    flex-direction: column;
+  }
+
+  .VPHome .VPHero .main {
+    order: 1;
+    width: 100%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .VPHome .VPHero .image {
+    order: 2;
+    margin: 0;
+  }
+
+  .VPHome .VPHero .image-container {
+    justify-content: center;
+    height: 100%;
+  }
+}
+
+/* ── Home features ─────────────────────────────────────────────────────── */
+
+/* Rules instead of cards: four claims read as one row of a table, and nothing
+   competes with the diagram above them. */
+.VPHome .VPFeatures .VPFeature {
+  border: 0;
+  border-top: 1px solid var(--md-rule);
+  border-radius: 0;
+  background-color: transparent;
+}
+
+.VPHome .VPFeatures .VPFeature .box {
+  padding: 20px 22px 0 0;
+}
+
+.VPHome .VPFeatures .VPFeature .title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.012em;
+}
+
+.VPHome .VPFeatures .VPFeature .details {
+  padding-top: 9px;
+  font-size: 0.9375rem;
+  line-height: 1.72;
+  color: var(--md-ink-2);
+}
+
+:lang(ja) .VPHome .VPFeatures .VPFeature .details {
+  line-height: 1.85;
+}
+
+/* ── Documentation pages ───────────────────────────────────────────────── */
+
+.VPDoc .vp-doc h1 {
+  font-size: clamp(1.9rem, 3.2vw, 2.35rem);
+  font-weight: 640;
+  font-stretch: 106%;
+  line-height: 1.16;
+  letter-spacing: -0.024em;
+}
+
+.VPDoc .vp-doc h2 {
+  margin-top: 46px;
+  padding-top: 22px;
+  font-size: 1.4rem;
+  font-weight: 620;
+  font-stretch: 104%;
+  letter-spacing: -0.016em;
+}
+
+.VPDoc .vp-doc h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+}
+
+:lang(ja) .VPDoc .vp-doc h1,
+:lang(ja) .VPDoc .vp-doc h2,
+:lang(ja) .VPDoc .vp-doc h3 {
+  font-stretch: normal;
+  letter-spacing: -0.004em;
+}
+
+.VPDoc .vp-doc p,
+.VPDoc .vp-doc li {
+  line-height: 1.75;
+}
+
+:lang(ja) .VPDoc .vp-doc p,
+:lang(ja) .VPDoc .vp-doc li {
+  line-height: 1.9;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────────────── */
+
+/* The `.has-active` variant has to be listed as well: the default theme styles
+   the group holding the current page through a selector one class heavier. */
+.VPSidebar .VPSidebarItem.level-0 > .item > .text,
+.VPSidebar .VPSidebarItem.level-0.has-active > .item > .text {
+  font-family: var(--vp-font-family-base);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--md-ink-3);
+}

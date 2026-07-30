@@ -28,6 +28,7 @@ monodocs/
   examples/ja/              # Sample of all notations and all features (Japanese. markdown / asciidoc / mixed)
   examples/en/              # English version of the above
   site/                     # Static web site introducing the app (VitePress)
+    .vitepress/theme/       # Custom theme (design tokens / type / home hero)
   docs/                     # Development documentation (this folder)
   scripts/app.sh            # Helper that runs commands inside the dedicated image
   Dockerfile.dev            # Image for development / build / test (with pnpm baked in)
@@ -76,6 +77,27 @@ and must continue to pass `npm ci`, `npm audit`, and the VitePress production bu
 it when upgrading to a stable VitePress release whose declared Vite range includes a secure version.
 Last checked 2026-07-29: the stable line is still VitePress 1.6.4 with `vite ^5.4.14` (VitePress 2 exists
 only as an alpha), and `6.4.3` is still the newest Vite 6.4 patch, so the override stays as it is.
+
+### Site Theme
+
+`site/.vitepress/theme/` layers a custom theme over the VitePress default theme. Four things in it are
+load-bearing rather than cosmetic:
+
+- `index.ts` extends `vitepress/theme-without-fonts` instead of `vitepress/theme`, so the Inter files the
+  default theme bundles are never shipped. The faces the site does use are declared in `fonts.css` and come
+  from npm (`@fontsource-variable/archivo`, `@fontsource/ibm-plex-mono`), which keeps the site free of
+  requests to a font CDN. Japanese text falls back to the system stack and downloads nothing.
+- Monospace means a literal machine string — a path, a command, or the package name — and nothing else.
+  For the same reason `style.css` takes inline code off the accent colour: with a coloured link and coloured
+  code in the same paragraph, a reader cannot tell which one is clickable.
+- `BundleDiagram.vue` and `HeroCommand.vue` share one input directory and one artifact name, so the hero
+  reads as a single statement: run this command, get that file. The artifact is named after the directory it
+  came from (`docs.html`) rather than after a kind of document, because monodocs bundles whatever set of
+  pages it is pointed at. Keep the two components in step when either changes. The link on the artifact
+  opens the published sample, which is a separate file (`site/public/sample.html`).
+- Overrides in `style.css` carry an extra class or element in the selector on purpose. The default theme's
+  component styles are scoped, which adds an attribute selector to their specificity; matching it exactly
+  would leave these rules depending on stylesheet order.
 
 ### What You Need
 
@@ -128,7 +150,7 @@ scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0
 To output a single HTML (distributable) to a file:
 
 ```bash
-scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/manual.html
+scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/docs.html
 ```
 
 ### Building a Single Executable File (Native Binary)
@@ -145,7 +167,7 @@ scripts/app-build.sh                              # → Generates app/dist/monod
 
 # From here on, run directly on the host (no Docker needed; can point to any directory)
 app/dist/monodocs serve ~/any-docs                # Local preview (--host 0.0.0.0 not needed)
-app/dist/monodocs build ~/any-docs -o ~/manual.html
+app/dist/monodocs build ~/any-docs -o ~/docs.html
 ```
 
 > - The output is about 130 MiB (because the node runtime is bundled). `app/dist/` is already in `.gitignore`.

@@ -10,7 +10,7 @@ describe("watchSite", () => {
   it("builds once initially and rebuilds on source change", async () => {
     const dir = await mkdtemp(join(tmpdir(), "monodocs-watch-"));
     const docs = join(dir, "docs");
-    const out = join(dir, "dist", "manual.html");
+    const out = join(dir, "dist", "docs.html");
     await mkdir(docs, { recursive: true });
     await writeFile(join(docs, "index.md"), "# First\n");
 
@@ -59,7 +59,7 @@ describe("watchSite", () => {
     const dir = await mkdtemp(join(tmpdir(), "monodocs-watch-loop-"));
     const docs = join(dir, "docs");
     // 出力を入力ディレクトリ配下に置く（再ビルドのたびに書き込まれる）。
-    const out = join(docs, "manual.html");
+    const out = join(docs, "docs.html");
     await mkdir(docs, { recursive: true });
     await writeFile(join(docs, "index.md"), "# Loop\n");
 
@@ -100,7 +100,7 @@ describe("serveSite", () => {
   it("serves the built HTML with the live-reload script injected", async () => {
     const dir = await mkdtemp(join(tmpdir(), "monodocs-serve-"));
     const docs = join(dir, "docs");
-    const out = join(dir, "dist", "manual.html");
+    const out = join(dir, "dist", "docs.html");
     await mkdir(docs, { recursive: true });
     await writeFile(join(docs, "index.md"), "# Served Page\n");
 
@@ -136,15 +136,15 @@ describe("serveSite", () => {
       expect(html).toContain("__monodocs-livereload");
       // 設定ファイルは docs/ 配下なので dist もその配下に解決される。
       // HTML が書かれ、PDF は生成されない（Chromium 不使用）。
-      expect(existsSync(join(docs, "dist", "manual.html"))).toBe(true);
-      expect(existsSync(join(docs, "dist", "manual.pdf"))).toBe(false);
+      expect(existsSync(join(docs, "dist", "docs.html"))).toBe(true);
+      expect(existsSync(join(docs, "dist", "docs.pdf"))).toBe(false);
     } finally {
       await handle.close();
       await rm(dir, { recursive: true, force: true });
     }
   }, 15000);
 
-  it("serves manual.html for both-mode with an explicit existing directory path", async () => {
+  it("serves docs.html for both-mode with an explicit existing directory path", async () => {
     const dir = await mkdtemp(join(tmpdir(), "monodocs-serve-bothdir-"));
     const docs = join(dir, "docs");
     await mkdir(docs, { recursive: true });
@@ -159,9 +159,9 @@ describe("serveSite", () => {
       const html = await res.text();
       expect(res.status).toBe(200);
       expect(html).toContain("Dir Both");
-      // ディレクトリ path はそのまま HTML ファイルにされず、中の manual.html に解決される。
-      expect(existsSync(join(docs, "out", "manual.html"))).toBe(true);
-      expect(existsSync(join(docs, "out", "manual.pdf"))).toBe(false);
+      // ディレクトリ path はそのまま HTML ファイルにされず、中の docs.html に解決される。
+      expect(existsSync(join(docs, "out", "docs.html"))).toBe(true);
+      expect(existsSync(join(docs, "out", "docs.pdf"))).toBe(false);
     } finally {
       await handle.close();
       await rm(dir, { recursive: true, force: true });
@@ -182,9 +182,9 @@ describe("serveSite", () => {
       const html = await res.text();
       expect(res.status).toBe(200);
       expect(html).toContain("Explicit Out");
-      // 明示 -o がそのまま HTML 出力先になる（manual.html へ流されない）。
+      // 明示 -o がそのまま HTML 出力先になる（docs.html へ流されない）。
       expect(existsSync(explicit)).toBe(true);
-      expect(existsSync(join(dir, "manual.html"))).toBe(false);
+      expect(existsSync(join(dir, "docs.html"))).toBe(false);
     } finally {
       await handle.close();
       await rm(dir, { recursive: true, force: true });

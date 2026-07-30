@@ -40,23 +40,23 @@ function fakePdfGenerator() {
 
 describe("resolveOutputs", () => {
   it("html は outputFile をそのまま HTML に使う", async () => {
-    const output = join(dir, "abs", "manual.html");
+    const output = join(dir, "abs", "docs.html");
     const c = await loadConfig({ outputFile: output, format: "html" }, dir);
     expect(resolveOutputs(c, dir)).toEqual({ html: output });
   });
 
   it("pdf は outputFile をそのまま PDF に使う", async () => {
-    const output = join(dir, "abs", "manual.pdf");
+    const output = join(dir, "abs", "docs.pdf");
     const c = await loadConfig({ outputFile: output, format: "pdf" }, dir);
     expect(resolveOutputs(c, dir)).toEqual({ pdf: output });
   });
 
-  it("both はディレクトリ -o の中へ manual.html / manual.pdf を出す", async () => {
+  it("both はディレクトリ -o の中へ docs.html / docs.pdf を出す", async () => {
     const output = join(dir, "abs", "out");
     const c = await loadConfig({ outputFile: output, format: "both" }, dir);
     expect(resolveOutputs(c, dir)).toEqual({
-      html: join(output, "manual.html"),
-      pdf: join(output, "manual.pdf"),
+      html: join(output, "docs.html"),
+      pdf: join(output, "docs.pdf"),
     });
   });
 
@@ -64,28 +64,28 @@ describe("resolveOutputs", () => {
     const output = join(dir, "abs", "dist", "v1.0");
     const c = await loadConfig({ outputFile: output, format: "both" }, dir);
     expect(resolveOutputs(c, dir)).toEqual({
-      html: join(output, "manual.html"),
-      pdf: join(output, "manual.pdf"),
+      html: join(output, "docs.html"),
+      pdf: join(output, "docs.pdf"),
     });
   });
 
   it("既定出力は format ごとに拡張子／形が変わる", async () => {
     const base = join(dir, "base");
     const html = await loadConfig({ format: "html" }, base);
-    expect(resolveOutputs(html, base)).toEqual({ html: join(base, "dist", "manual.html") });
+    expect(resolveOutputs(html, base)).toEqual({ html: join(base, "dist", "docs.html") });
     const pdf = await loadConfig({ format: "pdf" }, base);
-    expect(resolveOutputs(pdf, base)).toEqual({ pdf: join(base, "dist", "manual.pdf") });
+    expect(resolveOutputs(pdf, base)).toEqual({ pdf: join(base, "dist", "docs.pdf") });
     const both = await loadConfig({ format: "both" }, base);
     expect(resolveOutputs(both, base)).toEqual({
-      html: join(base, "dist", "manual.html"),
-      pdf: join(base, "dist", "manual.pdf"),
+      html: join(base, "dist", "docs.html"),
+      pdf: join(base, "dist", "docs.pdf"),
     });
   });
 });
 
 describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () => {
   it("format: pdf は PDF のみを書き出し、設定を options へ渡す", async () => {
-    const out = join(dir, "pdf-only", "manual.pdf");
+    const out = join(dir, "pdf-only", "docs.pdf");
     const { gen, calls, state } = fakePdfGenerator();
     const result = await buildSite(
       { inputDir: docs, outputFile: out, format: "pdf", generatorVersion: "1.2.3" },
@@ -93,7 +93,7 @@ describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () 
     );
     expect(result.outputs).toEqual([out]);
     expect(existsSync(out)).toBe(true);
-    expect(existsSync(join(dir, "pdf-only", "manual.html"))).toBe(false);
+    expect(existsSync(join(dir, "pdf-only", "docs.html"))).toBe(false);
     expect(calls).toHaveLength(1);
     expect(calls[0]!.html).toContain(">monodocs v1.2.3</a>");
     expect(calls[0]!.html.match(/class="document-footer"/g)).toHaveLength(1);
@@ -118,10 +118,10 @@ describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () 
       { inputDir: docs, outputFile: outDir, format: "both" },
       { pdfGenerator: gen },
     );
-    expect(result.outputs).toEqual([join(outDir, "manual.html"), join(outDir, "manual.pdf")]);
-    expect(existsSync(join(outDir, "manual.html"))).toBe(true);
-    expect(existsSync(join(outDir, "manual.pdf"))).toBe(true);
-    const writtenHtml = await readFile(join(outDir, "manual.html"), "utf8");
+    expect(result.outputs).toEqual([join(outDir, "docs.html"), join(outDir, "docs.pdf")]);
+    expect(existsSync(join(outDir, "docs.html"))).toBe(true);
+    expect(existsSync(join(outDir, "docs.pdf"))).toBe(true);
+    const writtenHtml = await readFile(join(outDir, "docs.html"), "utf8");
     expect(calls[0]!.html).toBe(writtenHtml);
   });
 
@@ -132,7 +132,7 @@ describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () 
     );
     const { gen, calls } = fakePdfGenerator();
     await buildSite(
-      { inputDir: docs, outputFile: join(dir, "cfg", "manual.pdf"), format: "pdf" },
+      { inputDir: docs, outputFile: join(dir, "cfg", "docs.pdf"), format: "pdf" },
       { pdfGenerator: gen },
     );
     expect(calls[0]!.options.pageSize).toBe("Letter");
@@ -201,7 +201,7 @@ describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () 
   it("passes a sidebar-structured outline to the generator (bookmarks on by default)", async () => {
     const { gen, calls } = fakePdfGenerator();
     await buildSite(
-      { inputDir: docs, outputFile: join(dir, "bm", "manual.pdf"), format: "pdf" },
+      { inputDir: docs, outputFile: join(dir, "bm", "docs.pdf"), format: "pdf" },
       { pdfGenerator: gen },
     );
     const outline = calls[0]!.options.outline;
@@ -214,7 +214,7 @@ describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () 
     await writeFile(join(docs, "monodocs.config.yml"), "pdf:\n  bookmarks: false\n");
     const { gen, calls } = fakePdfGenerator();
     await buildSite(
-      { inputDir: docs, outputFile: join(dir, "nobm", "manual.pdf"), format: "pdf" },
+      { inputDir: docs, outputFile: join(dir, "nobm", "docs.pdf"), format: "pdf" },
       { pdfGenerator: gen },
     );
     expect(calls[0]!.options.outline).toBeUndefined();
@@ -231,7 +231,7 @@ const chromium =
 
 describe.skipIf(!chromium)("buildSite - PDF（実 Chromium）", () => {
   it("空でない PDF ファイルを生成する", async () => {
-    const out = join(dir, "real", "manual.pdf");
+    const out = join(dir, "real", "docs.pdf");
     const result = await buildSite({ inputDir: docs, outputFile: out, format: "pdf" });
     expect(result.outputs).toEqual([out]);
     const buf = await readFile(out);
@@ -247,7 +247,7 @@ describe.skipIf(!chromium)("buildSite - PDF（実 Chromium）", () => {
   }, 60_000);
 
   it("records the document title and monodocs as the generating tool", async () => {
-    const out = join(dir, "real-meta", "manual.pdf");
+    const out = join(dir, "real-meta", "docs.pdf");
     await buildSite({
       inputDir: docs,
       outputFile: out,
@@ -271,7 +271,7 @@ describe.skipIf(!chromium)("buildSite - PDF（実 Chromium）", () => {
     await writeFile(ldocs + "/guide.md", "# Guide\n\n本文。\n");
     // しおり用サロゲートを除き、本文リンク由来の内部リンクだけを数えるため bookmarks を切る。
     await writeFile(ldocs + "/monodocs.config.yml", "pdf:\n  bookmarks: false\n");
-    const out = join(ldir, "manual.pdf");
+    const out = join(ldir, "docs.pdf");
     await buildSite({ inputDir: ldocs, outputFile: out, format: "pdf" });
 
     const { PDFDocument, PDFName, PDFDict, PDFArray } = await import("pdf-lib");
@@ -307,7 +307,7 @@ describe.skipIf(!chromium)("buildSite - PDF（実 Chromium）", () => {
     await writeFile(ldocs + "/guide.md", `# Guide\n\n${filler}\n\n## Section\n\n続き。\n`);
     // しおり用サロゲートを除き、本文リンク由来の内部リンクだけを見る。
     await writeFile(ldocs + "/monodocs.config.yml", "pdf:\n  bookmarks: false\n");
-    const out = join(ldir, "manual.pdf");
+    const out = join(ldir, "docs.pdf");
     await buildSite({ inputDir: ldocs, outputFile: out, format: "pdf" });
 
     const { PDFDocument, PDFName, PDFDict, PDFArray } = await import("pdf-lib");

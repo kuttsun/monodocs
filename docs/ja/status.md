@@ -28,7 +28,7 @@ v0.9 に着手している。
 
 ### v0.1: Markdown 単一 HTML MVP
 
-- [x] `monodocs build ./docs -o ./dist/manual.html` が動作する
+- [x] `monodocs build ./docs -o ./dist/docs.html` が動作する
 - [x] 複数 Markdown ファイルが 1 つの HTML に含まれる
 - [x] サイドバーからページ切り替えできる（hash route）
 - [x] H1 がタイトルとして使われる（無ければファイル名にフォールバック＋警告）
@@ -69,8 +69,8 @@ v0.9 に着手している。
 
 ### v0.5: PDF 出力
 
-- [x] `monodocs build --format pdf -o ./dist/manual.pdf` で単一 HTML を経由して PDF を生成できる（ヘッドレス Chromium。print 用レイアウトで全ページを縦展開）
-- [x] `--format both` で HTML と PDF を同時出力できる（`-o` はディレクトリ扱いで `manual.html` / `manual.pdf` を出力）
+- [x] `monodocs build --format pdf -o ./dist/docs.pdf` で単一 HTML を経由して PDF を生成できる（ヘッドレス Chromium。print 用レイアウトで全ページを縦展開）
+- [x] `--format both` で HTML と PDF を同時出力できる（`-o` はディレクトリ扱いで `docs.html` / `docs.pdf` を出力）
 - [x] client mode の Mermaid を含む場合、全ページを展開して各図の描画完了を待ってから PDF 化する（pre-render 済み SVG はそのまま埋め込み）
 - [x] `pdf.pageSize` / `pdf.margin` / `pdf.printBackground` を設定で制御できる（既定 A4・20/15/20/15mm・背景印刷 on）
 - [x] PDF 出力時は画像を data URI として埋め込む（配布 PDF は外部の相対画像を参照できないため、`assets.embedImages: false` でも上書きして埋め込み、警告を出す。`onLargeImage: external` で外部化した大きい画像は PDF に含まれない）
@@ -137,6 +137,7 @@ v0.9 に着手している。
 - [x] option の ID は文書が既に持つ ID と突き合わせて決めるため、同じ文字列になる見出しがあっても結果の行がそれを覆い隠してアンカー遷移を壊すことがない
 - [x] 結果を開くと、その語を開いた先のページの本文でも（結果一覧と同じ畳み込みで）強調する。検索を開いている間は強調し続けるため、前後ナビや本文中のリンクで移っても一致を見失わない。開く位置は変えない
 - [x] クエリを打ち替えるか消せば強調は外れ、本文は同じ構造・同じノード数に戻る。外すのはスクリプトが付けた `<mark>` だけで、判定は class ではなく DOM プロパティで行うため、本文自身の `<mark>`（AsciiDoc の `#強調#`）も、たまたま同じ class を持つ本文も残る。Mermaid のソース・描画済みの図・コードブロックのツールバーには触れず、1 ページあたりの強調数と、その裏の一致収集の両方に上限を置く（[roadmap.md](roadmap.md) 22.5 章）
+- [x] 既定出力は `./dist/docs.html`（`--format pdf` は `./dist/docs.pdf`、`--format both` は `-o` に渡したディレクトリの中へ `docs.html` / `docs.pdf`）。monodocs は渡されたページ群を何であれまとめ、それはマニュアルとは限らないため `manual.html` / `manual.pdf` から改名した。既定に依存していた利用者には破壊的変更であり、1.0 より前に行った
 
 ## 対応記法
 

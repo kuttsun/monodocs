@@ -3,8 +3,12 @@ layout: home
 
 hero:
   name: monodocs
-  text: 分割管理、配布は1ファイル
-  tagline: 分割した Markdown / AsciiDoc を単一の自己完結 HTML にまとめる軽量 CLI。Pandoc 代替ではなく「単一ファイル配布特化」を目指します。
+  # 見出しは読点で改行する。日本語見出しは折り返し位置を委ねると「ル」だけが
+  # 次行に残るため、句切りを明示する（hero.text は pre-wrap で描画される）。
+  text: |-
+    分割管理、
+    配布は1ファイル
+  tagline: 分割した Markdown / AsciiDoc を単一の自己完結 HTML にまとめる軽量 CLI。汎用の形式変換ではなく「単一ファイル配布特化」を目指します。
   actions:
     - theme: brand
       text: はじめる

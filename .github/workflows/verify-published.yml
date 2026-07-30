@@ -63,18 +63,18 @@ jobs:
       - name: Build HTML
         run: |
           mkdir -p out
-          monodocs build examples/en -o out/manual.html
+          monodocs build examples/en -o out/docs.html
 
       - name: Assert self-contained HTML
         run: |
-          node -e "const h=require('node:fs').readFileSync('out/manual.html','utf8'); if(!h.includes('data-route')) throw new Error('no pages rendered'); if(/src=\"https?:\/\//.test(h)) throw new Error('external asset reference found');"
+          node -e "const h=require('node:fs').readFileSync('out/docs.html','utf8'); if(!h.includes('data-route')) throw new Error('no pages rendered'); if(/src=\"https?:\/\//.test(h)) throw new Error('external asset reference found');"
 
       - name: Build PDF
-        run: monodocs build examples/en --format pdf -o out/manual.pdf
+        run: monodocs build examples/en --format pdf -o out/docs.pdf
 
       - name: Assert PDF header
         run: |
-          node -e "const m=require('node:fs').readFileSync('out/manual.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('invalid PDF header: '+m);"
+          node -e "const m=require('node:fs').readFileSync('out/docs.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('invalid PDF header: '+m);"
 
       # End-to-end proof that the browser is discovered automatically (no
       # PUPPETEER_EXECUTABLE_PATH): the runner has Google Chrome at a standard
@@ -86,10 +86,14 @@ jobs:
           monodocs build examples/en --format pdf -o out/auto-detect.pdf
           node -e "const m=require('node:fs').readFileSync('out/auto-detect.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('auto-detection produced an invalid PDF header: '+m);"
 
+      # Asserts the contract of `--format both` (one HTML and one PDF inside the
+      # directory given to `-o`) rather than the file names, because this workflow
+      # accepts any published version as input and the default output name changed
+      # from `manual.*` to `docs.*` in 0.9.0.
       - name: Build both (HTML + PDF)
         run: |
           monodocs build examples/en --format both -o out/both
-          node -e "const fs=require('node:fs'); for (const f of ['out/both/manual.html','out/both/manual.pdf']) if(!fs.existsSync(f)) throw new Error('--format both did not create '+f); const m=fs.readFileSync('out/both/manual.pdf').subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('invalid PDF header in both output: '+m);"
+          node -e "const fs=require('node:fs'); const files=fs.readdirSync('out/both'); const html=files.filter(f=>f.endsWith('.html')); const pdf=files.filter(f=>f.endsWith('.pdf')); if(html.length!==1||pdf.length!==1) throw new Error('--format both did not create one HTML and one PDF, found: '+files.join(', ')); const m=fs.readFileSync('out/both/'+pdf[0]).subarray(0,5).toString('latin1'); if(m!=='%PDF-') throw new Error('invalid PDF header in both output: '+m);"
 
       - name: Mermaid pre-render
         run: |

@@ -28,11 +28,11 @@ const DEFAULT_PDF_MARGIN = { top: "20mm", right: "15mm", bottom: "20mm", left: "
 
 /** `-o` / 設定の output.path が未指定のときの既定出力パス（format 別）。 */
 function defaultOutputFor(format: OutputFormat): string {
-  if (format === "pdf") return "./dist/manual.pdf";
+  if (format === "pdf") return "./dist/docs.pdf";
   // both は `-o` をディレクトリ扱いにするため、既定はディレクトリ（./dist）。
-  // build 側の resolveOutputs が manual.html / manual.pdf を生成する。
+  // build 側の resolveOutputs が docs.html / docs.pdf を生成する。
   if (format === "both") return "./dist";
-  return "./dist/manual.html";
+  return "./dist/docs.html";
 }
 
 /** 画像の最大インラインサイズ超過時の挙動。 */

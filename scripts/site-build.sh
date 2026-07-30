@@ -4,8 +4,8 @@
 #
 #   1) monodocs CLI 本体をビルド（app/）
 #   2) その CLI で英日それぞれの examples を単一 HTML 化（ドッグフーディング）
-#      英: examples/en -> site/public/manual.html      (/manual.html)
-#      日: examples/ja -> site/public/ja/manual.html   (/ja/manual.html)
+#      英: examples/en -> site/public/sample.html      (/sample.html)
+#      日: examples/ja -> site/public/ja/sample.html   (/ja/sample.html)
 #   3) VitePress でサイトをビルド（site/.vitepress/dist/）
 #
 # 使い方:
@@ -21,11 +21,11 @@ SITE="$ROOT/scripts/site.sh"
 echo "[site-build] 1/3 monodocs CLI をビルド"
 "$APP" pnpm build
 
-echo "[site-build] 2/3 単一 HTML マニュアルを生成（英 -> manual.html / 日 -> ja/manual.html）"
+echo "[site-build] 2/3 単一 HTML サンプルを生成（英 -> sample.html / 日 -> ja/sample.html）"
 mkdir -p "$ROOT/site/public/ja"
 # app.sh は /work/app 基準で動くため、examples も site もルート直下＝../ を付けて渡す。
-"$APP" node packages/cli/dist/index.js build ../examples/en -o ../site/public/manual.html
-"$APP" node packages/cli/dist/index.js build ../examples/ja -o ../site/public/ja/manual.html
+"$APP" node packages/cli/dist/index.js build ../examples/en -o ../site/public/sample.html
+"$APP" node packages/cli/dist/index.js build ../examples/ja -o ../site/public/ja/sample.html
 
 echo "[site-build] 3/3 VitePress でサイトをビルド"
 "$SITE" npm install
@@ -43,7 +43,7 @@ cat <<'EOF'
 
 [site-build] 完了。
   サイト生成物: site/.vitepress/dist/
-  併載デモ    : site/public/manual.html（英）/ site/public/ja/manual.html（日）
+  併載デモ    : site/public/sample.html（英）/ site/public/ja/sample.html（日）
 
   ローカル確認 : scripts/site.sh npm run docs:preview   (http://localhost:4173/)
   サブパス配信 : SITE_BASE=/monodocs/ scripts/site-build.sh

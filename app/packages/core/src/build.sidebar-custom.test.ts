@@ -24,7 +24,7 @@ const CONFIG = [
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "monodocs-sidebar-custom-"));
   docs = join(dir, "docs");
-  out = join(dir, "dist", "manual.html");
+  out = join(dir, "dist", "docs.html");
   await mkdir(join(docs, "setup"), { recursive: true });
   await mkdir(join(docs, "guide"), { recursive: true });
   await writeFile(join(docs, "index.md"), "# Home\n");

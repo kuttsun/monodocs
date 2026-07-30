@@ -13,7 +13,7 @@ monodocs build examples/en --format pdf  -o dist/sample.pdf   # PDF only
 monodocs build examples/en --format both -o dist/sample       # both HTML and PDF
 ```
 
-- `--format both` treats `-o` as a **directory** and writes `manual.html` and `manual.pdf`
+- `--format both` treats `-o` as a **directory** and writes `docs.html` and `docs.pdf`
   inside it.
 - Internally a headless Chromium opens the single HTML and renders it with the print
   layout (all pages expanded vertically). **This page itself can be part of the PDF.**

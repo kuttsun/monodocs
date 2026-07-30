@@ -49,7 +49,7 @@ Pandoc の `chunkedhtml` は、文書を複数 HTML に分割できるが、以�
 最初の目標は、以下を満たす CLI ツールを作ること。
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 入力例：
@@ -69,7 +69,7 @@ docs/
 
 ```text
 dist/
-  manual.html
+  docs.html
 ```
 
 ### 3.2 中期目標
@@ -209,13 +209,13 @@ docs/
 最初に対応する出力形式。
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 または：
 
 ```bash
-monodocs build ./docs --format html -o ./dist/manual.html
+monodocs build ./docs --format html -o ./dist/docs.html
 ```
 
 HTML は、可能な限り自己完結したファイルにする。
@@ -236,7 +236,7 @@ HTML は、可能な限り自己完結したファイルにする。
 HTML 生成後、Playwright または Puppeteer を用いて PDF 化する。
 
 ```bash
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 ```
 
 または：
@@ -268,7 +268,7 @@ PDF 出力は、HTML 出力が安定してから対応する。
 最初に実装する。
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 ### 8.2 npm パッケージ
@@ -282,7 +282,7 @@ npm install -g monodocs
 一時実行：
 
 ```bash
-npx monodocs build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/docs.html
 ```
 
 プロジェクトローカル導入：
@@ -308,7 +308,7 @@ CI や社内環境向け。
 ```bash
 docker run --rm \
   -v "$PWD:/work" \
-  monodocs/monodocs build /work/docs -o /work/dist/manual.html
+  monodocs/monodocs build /work/docs -o /work/dist/docs.html
 ```
 
 ### 8.4 GitHub Actions
@@ -319,7 +319,7 @@ docker run --rm \
 - uses: actions/setup-node@v4
   with:
     node-version: 22
-- run: npx --yes monodocs build ./docs -o ./dist/manual.html
+- run: npx --yes monodocs build ./docs -o ./dist/docs.html
 ```
 
 ### 8.5 単体バイナリ
@@ -698,7 +698,7 @@ input: "./docs"
 
 output:
   format: "html"
-  path: "./dist/manual.html"
+  path: "./dist/docs.html"
 
 sources:
   markdown:
@@ -949,9 +949,9 @@ docs/guide/usage.adoc      -> /guide/usage
 単一 HTML では hash route を使う。
 
 ```text
-manual.html#/
-manual.html#/setup/install
-manual.html#/setup/config
+docs.html#/
+docs.html#/setup/install
+docs.html#/setup/config
 ```
 
 ### 15.3 HTML 構造
@@ -1573,7 +1573,7 @@ PDF
 ### 24.2 コマンド例
 
 ```bash
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 ```
 
 HTML と PDF の両方を出力する場合：
@@ -1656,14 +1656,14 @@ monodocs build
 入力・出力指定：
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 形式指定：
 
 ```bash
-monodocs build ./docs --format html -o ./dist/manual.html
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format html -o ./dist/docs.html
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs build ./docs --format both -o ./dist/
 ```
 
@@ -1723,7 +1723,7 @@ Monodocs: Validate Links
 ```json
 {
   "monodocs.configFile": "monodocs.config.yml",
-  "monodocs.outputFile": "dist/manual.html",
+  "monodocs.outputFile": "dist/docs.html",
   "monodocs.preview.autoRefresh": true
 }
 ```
@@ -1806,7 +1806,7 @@ tests/fixtures/
 ### 28.3 E2E テスト
 
 ```bash
-monodocs build tests/fixtures/mixed-basic/docs -o tmp/manual.html
+monodocs build tests/fixtures/mixed-basic/docs -o tmp/docs.html
 ```
 
 確認項目：
@@ -1860,7 +1860,7 @@ Markdown ファイル群から単一 HTML を生成できる最小構成を作�
 
 完了条件：
 
-- `monodocs build ./docs -o ./dist/manual.html` が動作する
+- `monodocs build ./docs -o ./dist/docs.html` が動作する
 - 複数 Markdown ファイルが 1 つの HTML に含まれる
 - サイドバーからページ切り替えできる
 - H1 がタイトルとして使われる
@@ -1966,7 +1966,7 @@ Markdown / AsciiDoc の混在ドキュメントを単一 HTML に出力できる
 実装：Puppeteer（`puppeteer-core` + システム Chromium。Mermaid pre-render と起動処理を
 `pipeline/browser.ts` に共通化）で単一 HTML を開き、テーマの `@media print`（全ページ縦展開）を
 使って `page.pdf()` で PDF 化する（`pipeline/renderPdf.ts`）。`--format both` は `-o` をディレクトリ
-扱いし `manual.html` / `manual.pdf` を出力する。client mode の Mermaid は全ページ展開後に描画完了を
+扱いし `docs.html` / `docs.pdf` を出力する。client mode の Mermaid は全ページ展開後に描画完了を
 待つ。当初案の Playwright ではなく、既存の puppeteer-core 基盤を再利用する方針に変更。
 
 実装範囲：
@@ -1987,7 +1987,7 @@ Markdown / AsciiDoc の混在ドキュメントを単一 HTML に出力できる
 
 完了条件：
 
-- `monodocs build ./docs --format pdf -o ./dist/manual.pdf` が動作する
+- `monodocs build ./docs --format pdf -o ./dist/docs.pdf` が動作する
 - Markdown / AsciiDoc 混在文書を PDF 化できる
 - Mermaid と画像が PDF に含まれる
 - A4 PDF として出力できる
@@ -2107,6 +2107,9 @@ VS Code からプレビュー・出力できるようにする。
 - 半角カタカナ・送り仮名・英語の stemming を対象外として確定し、理由を 22.3 章に記録する
 - ARIA の combobox として、`↓` / `↑` で結果を辿り `Enter` で開けるようにする
 - 結果から開いたページの本文でも、一致語を強調する
+- 既定出力名を `manual.html` / `manual.pdf` から `docs.html` / `docs.pdf` へ改名する。monodocs は
+  渡されたページ群を何であれまとめるので、それはマニュアルとは限らない。既定に依存している利用者
+  にとっては破壊的変更であり、1.0 より後ではなく前に行う
 
 完了条件：
 
@@ -2116,6 +2119,8 @@ VS Code からプレビュー・出力できるようにする。
 - 未対応のまま残る表記ゆれが、未着手の宿題ではなく決定として記録されている
 - 検索欄から離れずにキーボードだけで結果を辿って開け、選択位置がスクリーンリーダーに伝わる
 - 結果を開けば本文のどこに語があるか分かり、クエリを消せば本文は元どおりに戻る
+- `-o` を省略すると `./dist/docs.html`、`--format pdf` は `./dist/docs.pdf`、`--format both` は
+  渡したディレクトリの中へ `docs.html` / `docs.pdf` を出力する
 
 ---
 
@@ -2183,7 +2188,7 @@ writeOutput()
 ### 30.7 最初の CLI
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 ```
 
 ---
@@ -2342,8 +2347,8 @@ v0.1 MVP:
 最終的には、以下のように使えることを目指す。
 
 ```bash
-monodocs build ./docs --format html -o ./dist/manual.html
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs --format html -o ./dist/docs.html
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs serve
 monodocs validate
 ```
@@ -2365,8 +2370,8 @@ docs/
 
 ```text
 dist/
-  manual.html
-  manual.pdf
+  docs.html
+  docs.pdf
 ```
 
 `monodocs` は、複数ファイルで管理されたドキュメントを、配布しやすい単一ファイルに変換するためのツールである。

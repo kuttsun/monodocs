@@ -106,8 +106,8 @@ jobs:
       - name: Generate site demos
         if: matrix.name == 'Linux'
         run: |
-          node dist/monodocs.cjs build ../examples/en -o ../site/public/manual.html
-          node dist/monodocs.cjs build ../examples/ja -o ../site/public/ja/manual.html
+          node dist/monodocs.cjs build ../examples/en -o ../site/public/sample.html
+          node dist/monodocs.cjs build ../examples/ja -o ../site/public/ja/sample.html
 
       - name: Upload site demos
         if: matrix.name == 'Linux'
@@ -115,8 +115,8 @@ jobs:
         with:
           name: site-demos
           path: |
-            site/public/manual.html
-            site/public/ja/manual.html
+            site/public/sample.html
+            site/public/ja/sample.html
           if-no-files-found: error
           retention-days: 1
 

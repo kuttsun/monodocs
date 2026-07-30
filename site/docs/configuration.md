@@ -41,7 +41,7 @@ input: ./docs
 
 output:
   format: html # html | pdf | both
-  path: ./dist/manual.html
+  path: ./dist/docs.html
 
 sources:
   markdown:
@@ -112,7 +112,7 @@ html:
 | Key             | Type                  | Default               | Description                                                  |
 | --------------- | --------------------- | --------------------- | ------------------------------------------------------------ |
 | `output.format` | `html` `pdf` `both`   | `html`                | Output format. Overridden by `-f, --format`.                 |
-| `output.path`   | string                | `./dist/manual.html`  | Output file path. Overridden by `-o, --output`. Relative to the config file. |
+| `output.path`   | string                | `./dist/docs.html`  | Output file path. Overridden by `-o, --output`. Relative to the config file. |
 
 ### `sources`
 

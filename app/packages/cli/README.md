@@ -27,7 +27,7 @@ npm install -g monodocs
 Or run it without a global installation:
 
 ```bash
-npx monodocs build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/docs.html
 ```
 
 Untagged `monodocs` is the latest stable version. Prereleases are published
@@ -36,8 +36,8 @@ under the `next` tag (`npm install -g monodocs@next`).
 ## Usage
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs -o ./dist/docs.html
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs build ./docs --format both -o ./dist/
 monodocs validate ./docs
 monodocs serve ./docs

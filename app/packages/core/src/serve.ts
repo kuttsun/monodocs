@@ -68,10 +68,10 @@ export async function serveSite(
       : resolve(cwd, options.outputFile);
   } else {
     // -o 未指定なら設定どおりに解決し、出力パスの意味（both のディレクトリ扱い等）を保つ。
-    // both は resolved.html（例: dist/manual.html）、pdf は PDF と同じ場所の manual.html を使う。
+    // both は resolved.html（例: dist/docs.html）、pdf は PDF と同じ場所の docs.html を使う。
     const baseConfig = await loadConfig(options, cwd);
     const resolved = resolveOutputs(baseConfig, cwd);
-    outputFile = resolved.html ?? join(resolved.pdf ? dirname(resolved.pdf) : cwd, "manual.html");
+    outputFile = resolved.html ?? join(resolved.pdf ? dirname(resolved.pdf) : cwd, "docs.html");
   }
   // 実ビルドは HTML に固定し、上で決めた場所へ出力させる（pdf / both でも Chromium 不使用）。
   const serveOptions: ServeOptions = { ...options, format: "html", outputFile };

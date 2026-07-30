@@ -33,16 +33,16 @@ monodocs build [input] [options]
 | Argument / Option       | Default                | Description                                                  |
 | ----------------------- | ---------------------- | ------------------------------------------------------------ |
 | `[input]`               | `./docs`               | Input directory to scan.                                     |
-| `-o, --output <file>`   | `./dist/manual.html`   | Output file path. Overrides `output.path`.                   |
+| `-o, --output <file>`   | `./dist/docs.html`   | Output file path. Overrides `output.path`.                   |
 | `-c, --config <file>`   | auto-detected          | Config file. Uses `monodocs.config.yml` if present.          |
 | `-f, --format <format>` | `html`                 | Output format: `html` \| `pdf` \| `both`. Overrides `output.format`. |
 
 ```bash
-# Build ./docs into ./dist/manual.html
+# Build ./docs into ./dist/docs.html
 monodocs build
 
 # Explicit input and output
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 
 # Use a specific config file
 monodocs build ./docs -c ./monodocs.config.yml
@@ -61,7 +61,7 @@ monodocs watch [input] [options]
 | Argument / Option     | Default              | Description                                         |
 | --------------------- | -------------------- | --------------------------------------------------- |
 | `[input]`             | `./docs`             | Input directory to watch.                           |
-| `-o, --output <file>` | `./dist/manual.html` | Output file path. Overrides `output.path`.          |
+| `-o, --output <file>` | `./dist/docs.html` | Output file path. Overrides `output.path`.          |
 | `-c, --config <file>` | auto-detected        | Config file. Uses `monodocs.config.yml` if present. |
 
 Writes to the output file are ignored, so a rebuild never re-triggers itself. Press `Ctrl+C` to stop.
@@ -77,7 +77,7 @@ monodocs serve [input] [options]
 | Argument / Option     | Default              | Description                                         |
 | --------------------- | -------------------- | --------------------------------------------------- |
 | `[input]`             | `./docs`             | Input directory to serve.                           |
-| `-o, --output <file>` | `./dist/manual.html` | Output file path. Overrides `output.path`.          |
+| `-o, --output <file>` | `./dist/docs.html` | Output file path. Overrides `output.path`.          |
 | `-c, --config <file>` | auto-detected        | Config file. Uses `monodocs.config.yml` if present. |
 | `-p, --port <port>`   | `4173`               | Port to listen on.                                  |
 | `-H, --host <host>`   | `127.0.0.1`          | Host to bind. Use `0.0.0.0` to accept connections from outside the machine (e.g. from a Docker host). |

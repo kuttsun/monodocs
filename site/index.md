@@ -4,7 +4,7 @@ layout: home
 hero:
   name: monodocs
   text: Many files in, one HTML out
-  tagline: A lightweight CLI that bundles split Markdown / AsciiDoc into a single, self-contained HTML file — built for distribution, not for replacing Pandoc.
+  tagline: A lightweight CLI that bundles split Markdown / AsciiDoc into a single, self-contained HTML file — built for distribution, not for general-purpose format conversion.
   actions:
     - theme: brand
       text: Get Started

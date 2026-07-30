@@ -113,14 +113,14 @@ type ResolvedOutputs = { html?: string; pdf?: string };
  * format と outputFile から実際の出力パスを決める。
  * - `html`: outputFile をそのまま HTML に使う。
  * - `pdf`: outputFile をそのまま PDF に使う。
- * - `both`: outputFile を **常にディレクトリ扱い**し、その中へ `manual.html` / `manual.pdf`
+ * - `both`: outputFile を **常にディレクトリ扱い**し、その中へ `docs.html` / `docs.pdf`
  *   を出力する（`dist/v1.0` のようにドットを含むディレクトリ名でもファイルと誤判定しない）。
  */
 export function resolveOutputs(config: ResolvedConfig, cwd: string): ResolvedOutputs {
   const out = isAbsolute(config.outputFile) ? config.outputFile : resolve(cwd, config.outputFile);
   if (config.format === "html") return { html: out };
   if (config.format === "pdf") return { pdf: out };
-  return { html: join(out, "manual.html"), pdf: join(out, "manual.pdf") };
+  return { html: join(out, "docs.html"), pdf: join(out, "docs.pdf") };
 }
 
 /**

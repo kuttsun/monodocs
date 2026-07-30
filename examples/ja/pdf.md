@@ -13,8 +13,8 @@ monodocs build examples/ja --format pdf  -o dist/sample.pdf   # PDF のみ
 monodocs build examples/ja --format both -o dist/sample       # HTML と PDF の両方
 ```
 
-- `--format both` は `-o` を **ディレクトリ**として扱い、その中に `manual.html` と
-  `manual.pdf` を出力します。
+- `--format both` は `-o` を **ディレクトリ**として扱い、その中に `docs.html` と
+  `docs.pdf` を出力します。
 - 内部ではヘッドレス Chromium で単一 HTML を開き、印刷用レイアウト（全ページを縦に展開）で
   PDF 化します。**このページ自体も PDF に含められます。**
 

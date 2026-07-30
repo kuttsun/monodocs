@@ -11,7 +11,7 @@ let out: string;
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "monodocs-"));
   docs = join(dir, "docs");
-  out = join(dir, "dist", "manual.html");
+  out = join(dir, "dist", "docs.html");
   await mkdir(join(docs, "setup"), { recursive: true });
   await writeFile(join(docs, "index.md"), "# トップ\n\nようこそ。\n");
   await writeFile(join(docs, "setup", "install.md"), "# インストール\n\n## Steps\n\n本文。\n");
@@ -64,7 +64,7 @@ describe("buildSite (e2e)", () => {
   it("applies page and directory title transforms separately from the config file", async () => {
     const tdir = await mkdtemp(join(tmpdir(), "monodocs-title-transform-"));
     const tdocs = join(tdir, "docs");
-    const tout = join(tdir, "dist", "manual.html");
+    const tout = join(tdir, "dist", "docs.html");
     const configFile = join(tdir, "monodocs.config.yml");
     await mkdir(join(tdocs, "01_section"), { recursive: true });
     await writeFile(join(tdocs, "01_section", "req.md"), "# REQ-001: Intro\n");
@@ -103,7 +103,7 @@ describe("buildSite (e2e)", () => {
   it("applies configured content width to the generated HTML", async () => {
     const tdir = await mkdtemp(join(tmpdir(), "monodocs-content-width-"));
     const tdocs = join(tdir, "docs");
-    const tout = join(tdir, "dist", "manual.html");
+    const tout = join(tdir, "dist", "docs.html");
     const configFile = join(tdir, "monodocs.config.yml");
     await mkdir(tdocs, { recursive: true });
     await writeFile(join(tdocs, "index.md"), "# Top\n");

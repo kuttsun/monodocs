@@ -33,16 +33,16 @@ monodocs build [input] [options]
 | 引数 / オプション       | 既定値                 | 説明                                                       |
 | ----------------------- | ---------------------- | ---------------------------------------------------------- |
 | `[input]`               | `./docs`               | 走査する入力ディレクトリ。                                 |
-| `-o, --output <file>`   | `./dist/manual.html`   | 出力ファイルパス。`output.path` を上書き。                 |
+| `-o, --output <file>`   | `./dist/docs.html`   | 出力ファイルパス。`output.path` を上書き。                 |
 | `-c, --config <file>`   | 自動検出               | 設定ファイル。`monodocs.config.yml` があれば使用。         |
 | `-f, --format <format>` | `html`                 | 出力形式: `html` \| `pdf` \| `both`。`output.format` を上書き。 |
 
 ```bash
-# ./docs を ./dist/manual.html にビルド
+# ./docs を ./dist/docs.html にビルド
 monodocs build
 
 # 入力と出力を明示
-monodocs build ./docs -o ./dist/manual.html
+monodocs build ./docs -o ./dist/docs.html
 
 # 設定ファイルを明示
 monodocs build ./docs -c ./monodocs.config.yml
@@ -61,7 +61,7 @@ monodocs watch [input] [options]
 | 引数 / オプション     | 既定値               | 説明                                               |
 | --------------------- | -------------------- | -------------------------------------------------- |
 | `[input]`             | `./docs`             | 監視する入力ディレクトリ。                         |
-| `-o, --output <file>` | `./dist/manual.html` | 出力ファイルパス。`output.path` を上書き。         |
+| `-o, --output <file>` | `./dist/docs.html` | 出力ファイルパス。`output.path` を上書き。         |
 | `-c, --config <file>` | 自動検出             | 設定ファイル。`monodocs.config.yml` があれば使用。 |
 
 出力ファイルへの書き込みイベントは無視するため、再ビルドが自分自身を再トリガすることはありません。`Ctrl+C` で停止します。
@@ -77,7 +77,7 @@ monodocs serve [input] [options]
 | 引数 / オプション     | 既定値               | 説明                                               |
 | --------------------- | -------------------- | -------------------------------------------------- |
 | `[input]`             | `./docs`             | 配信する入力ディレクトリ。                         |
-| `-o, --output <file>` | `./dist/manual.html` | 出力ファイルパス。`output.path` を上書き。         |
+| `-o, --output <file>` | `./dist/docs.html` | 出力ファイルパス。`output.path` を上書き。         |
 | `-c, --config <file>` | 自動検出             | 設定ファイル。`monodocs.config.yml` があれば使用。 |
 | `-p, --port <port>`   | `4173`               | 待ち受けポート番号。                               |
 | `-H, --host <host>`   | `127.0.0.1`          | バインドするホスト。マシン外（例: Docker ホスト）から接続を受けるには `0.0.0.0` を指定。 |

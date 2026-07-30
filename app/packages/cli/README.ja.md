@@ -20,7 +20,7 @@ npm install -g monodocs
 グローバルインストールせず実行する場合:
 
 ```bash
-npx monodocs build ./docs -o ./dist/manual.html
+npx monodocs build ./docs -o ./dist/docs.html
 ```
 
 tag なしの `monodocs` が安定版です。prerelease は `next` tag で公開します（`npm install -g monodocs@next`）。
@@ -28,8 +28,8 @@ tag なしの `monodocs` が安定版です。prerelease は `next` tag で公�
 ## 使い方
 
 ```bash
-monodocs build ./docs -o ./dist/manual.html
-monodocs build ./docs --format pdf -o ./dist/manual.pdf
+monodocs build ./docs -o ./dist/docs.html
+monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs build ./docs --format both -o ./dist/
 monodocs validate ./docs
 monodocs serve ./docs
