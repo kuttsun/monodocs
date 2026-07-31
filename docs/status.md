@@ -139,8 +139,10 @@ and is released, and v0.9 follows it.
 - [x] Editing or clearing the query removes the marks and puts the body back as it was, in the same structure and node count. Only the marks the script created are removed — identified by a DOM property, not by their class — so a document's own `<mark>` (AsciiDoc `#text#`) and any content that happens to use the same class survive. Mermaid source, rendered diagrams, and the code-block toolbar are left untouched, and both the number of marks per page and the match collection behind it are capped ([roadmap.md](roadmap.md) 22.5)
 - [x] The default output is `./dist/docs.html` (`--format pdf`: `./dist/docs.pdf`; `--format both`: `docs.html` / `docs.pdf` inside the directory given to `-o`). Renamed from `manual.html` / `manual.pdf` because monodocs bundles whatever set of pages it is given, which is not necessarily a manual — a breaking change for anyone who relied on the default, taken before 1.0
 - [x] The published sample demonstrates the search work: a Search page in `examples/` collects queries a reader can type against the sample itself, and states which spelling differences are deliberately not folded
-- [ ] Publish `0.9.0-beta.1` to npm under the `next` tag
-- [ ] Verify the published beta on Linux x64 and Windows x64, including that the renamed default output lands as `docs.html` / `docs.pdf`
+- [x] Publish `0.9.0-beta.1` to npm under the `next` tag
+- [x] Verify the published beta npm package on Linux x64 and Windows x64 through `verify-published.yml` (install, HTML, PDF, browser auto-detection with no `PUPPETEER_EXECUTABLE_PATH`, `--format both`, Mermaid pre-render), confirming the renamed default output lands as `docs.html` / `docs.pdf`
+- [x] Verify the Linux x64 release binary against its `.sha256` and run it: `validate`, a build with `-o` omitted writing `dist/docs.html`, no external asset references in the output, and the expected PDF failure pointing at the npm package
+- [ ] Verify the Windows x64 release binary by hand, plus `serve` / `watch` (`verify-published.yml` deliberately leaves long-running commands and the release binaries out of its scope)
 - [ ] Publish and verify the stable `0.9.0` release, and pin the CI guide on the documentation site to it
 
 ## Supported Syntax
