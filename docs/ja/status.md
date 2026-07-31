@@ -139,8 +139,10 @@ v0.9 に着手している。
 - [x] クエリを打ち替えるか消せば強調は外れ、本文は同じ構造・同じノード数に戻る。外すのはスクリプトが付けた `<mark>` だけで、判定は class ではなく DOM プロパティで行うため、本文自身の `<mark>`（AsciiDoc の `#強調#`）も、たまたま同じ class を持つ本文も残る。Mermaid のソース・描画済みの図・コードブロックのツールバーには触れず、1 ページあたりの強調数と、その裏の一致収集の両方に上限を置く（[roadmap.md](roadmap.md) 22.5 章）
 - [x] 既定出力は `./dist/docs.html`（`--format pdf` は `./dist/docs.pdf`、`--format both` は `-o` に渡したディレクトリの中へ `docs.html` / `docs.pdf`）。monodocs は渡されたページ群を何であれまとめ、それはマニュアルとは限らないため `manual.html` / `manual.pdf` から改名した。既定に依存していた利用者には破壊的変更であり、1.0 より前に行った
 - [x] 公開サンプルで検索の成果を試せるようにする（`examples/` の検索ページに、サンプル自身へ入力できるクエリをまとめ、意図的に畳み込まない表記の違いも明示する）
-- [ ] `next` tag で `0.9.0-beta.1` を npm へ公開する
-- [ ] 公開した beta を Linux x64 / Windows x64 で検証する（改名した既定出力が `docs.html` / `docs.pdf` になることを含む）
+- [x] `next` tag で `0.9.0-beta.1` を npm へ公開する
+- [x] 公開した beta の npm パッケージを `verify-published.yml` により Linux x64 / Windows x64 で検証する（install、HTML、PDF、`PUPPETEER_EXECUTABLE_PATH` なしのブラウザ自動検出、`--format both`、Mermaid pre-render）。改名した既定出力が `docs.html` / `docs.pdf` になることを確認した
+- [x] Linux x64 のリリースバイナリを `.sha256` で照合して実行する（`validate`、`-o` を省略したビルドが `dist/docs.html` を書くこと、出力に外部アセット参照が無いこと、PDF が想定どおり失敗して npm 版を案内すること）
+- [ ] Windows x64 のリリースバイナリと、`serve` / `watch` を手で検証する（`verify-published.yml` は長時間動作するコマンドとリリースバイナリを意図的に対象外にしている）
 - [ ] stable `0.9.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる
 
 ## 対応記法
