@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-07-29
+Last updated: 2026-07-31
 
 ## Support Status
 
@@ -138,6 +138,10 @@ and is released, and v0.9 follows it.
 - [x] Opening a result marks its keywords in the body of the page it opens, with the same folding as the result list, and keeps marking them while the search stays open, so prev/next or a link inside the body does not lose the matches. Where the result opens is unchanged
 - [x] Editing or clearing the query removes the marks and puts the body back as it was, in the same structure and node count. Only the marks the script created are removed — identified by a DOM property, not by their class — so a document's own `<mark>` (AsciiDoc `#text#`) and any content that happens to use the same class survive. Mermaid source, rendered diagrams, and the code-block toolbar are left untouched, and both the number of marks per page and the match collection behind it are capped ([roadmap.md](roadmap.md) 22.5)
 - [x] The default output is `./dist/docs.html` (`--format pdf`: `./dist/docs.pdf`; `--format both`: `docs.html` / `docs.pdf` inside the directory given to `-o`). Renamed from `manual.html` / `manual.pdf` because monodocs bundles whatever set of pages it is given, which is not necessarily a manual — a breaking change for anyone who relied on the default, taken before 1.0
+- [x] The published sample demonstrates the search work: a Search page in `examples/` collects queries a reader can type against the sample itself, and states which spelling differences are deliberately not folded
+- [ ] Publish `0.9.0-beta.1` to npm under the `next` tag
+- [ ] Verify the published beta on Linux x64 and Windows x64, including that the renamed default output lands as `docs.html` / `docs.pdf`
+- [ ] Publish and verify the stable `0.9.0` release, and pin the CI guide on the documentation site to it
 
 ## Supported Syntax
 
