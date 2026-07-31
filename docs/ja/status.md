@@ -21,8 +21,8 @@
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
 メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
-[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 はリリース済みで、その次は
-v0.9 に着手している。
+[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9 は
+いずれもリリース済みである。
 
 ## 完了条件の達成状況
 
@@ -143,7 +143,7 @@ v0.9 に着手している。
 - [x] 公開した beta の npm パッケージを `verify-published.yml` により Linux x64 / Windows x64 で検証する（install、HTML、PDF、`PUPPETEER_EXECUTABLE_PATH` なしのブラウザ自動検出、`--format both`、Mermaid pre-render）。改名した既定出力が `docs.html` / `docs.pdf` になることを確認した
 - [x] Linux x64 のリリースバイナリを `.sha256` で照合して実行する（`validate`、`-o` を省略したビルドが `dist/docs.html` を書くこと、出力に外部アセット参照が無いこと、PDF が想定どおり失敗して npm 版を案内すること）
 - [ ] Windows x64 のリリースバイナリと、`serve` / `watch` を手で検証する（`verify-published.yml` は長時間動作するコマンドとリリースバイナリを意図的に対象外にしている）
-- [ ] stable `0.9.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる
+- [x] stable `0.9.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる
 
 ## 対応記法
 

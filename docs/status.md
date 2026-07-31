@@ -21,8 +21,8 @@ Last updated: 2026-07-31
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
-undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place
-and is released, and v0.9 follows it.
+undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
+and both it and v0.9 are released.
 
 ## Completion Criteria Status
 
@@ -143,7 +143,7 @@ and is released, and v0.9 follows it.
 - [x] Verify the published beta npm package on Linux x64 and Windows x64 through `verify-published.yml` (install, HTML, PDF, browser auto-detection with no `PUPPETEER_EXECUTABLE_PATH`, `--format both`, Mermaid pre-render), confirming the renamed default output lands as `docs.html` / `docs.pdf`
 - [x] Verify the Linux x64 release binary against its `.sha256` and run it: `validate`, a build with `-o` omitted writing `dist/docs.html`, no external asset references in the output, and the expected PDF failure pointing at the npm package
 - [ ] Verify the Windows x64 release binary by hand, plus `serve` / `watch` (`verify-published.yml` deliberately leaves long-running commands and the release binaries out of its scope)
-- [ ] Publish and verify the stable `0.9.0` release, and pin the CI guide on the documentation site to it
+- [x] Publish and verify the stable `0.9.0` release, and pin the CI guide on the documentation site to it
 
 ## Supported Syntax
 
