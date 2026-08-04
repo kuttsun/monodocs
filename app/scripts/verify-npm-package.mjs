@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { bundleExternals } from "./externals.mjs";
+
 const appRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const stageDir = resolve(appRoot, "dist/npm/monodocs");
 const fixtureDir = resolve(appRoot, "../examples/en");
@@ -113,20 +115,23 @@ try {
     throw new Error("Published package contains workspace:* dependencies");
   const installedPackage = JSON.parse(packageJson);
 
-  // puppeteer-core is external in the bundle, so users resolve it from the publish manifest rather
-  // than from the workspace. The two ranges are maintained by hand in different files and can drift,
-  // which would leave users on a version nothing in CI exercises. Compare them here, where the
-  // published manifest is the one being smoke-tested.
+  // The bundle externals are absent from the tarball, so users resolve them from the published
+  // manifest rather than from the workspace. pack.mjs generates those entries from
+  // packages/core, and this is the only check that reads them back off an installed package, so
+  // it still catches a regression that would leave users on a version nothing in CI exercises.
   const workspaceCore = JSON.parse(
     await readFile(resolve(appRoot, "packages/core/package.json"), "utf8"),
   );
-  const workspaceRange = workspaceCore.optionalDependencies?.["puppeteer-core"];
-  const publishedRange = installedPackage.optionalDependencies?.["puppeteer-core"];
-  if (workspaceRange !== publishedRange) {
-    throw new Error(
-      `puppeteer-core range mismatch: packages/core declares ${workspaceRange}, ` +
-        `the published package declares ${publishedRange}. Update package.publish.json as well.`,
-    );
+  for (const name of bundleExternals) {
+    const workspaceRange = workspaceCore.optionalDependencies?.[name];
+    const publishedRange = installedPackage.optionalDependencies?.[name];
+    if (workspaceRange !== publishedRange) {
+      throw new Error(
+        `${name} range mismatch: packages/core declares ${workspaceRange}, the published ` +
+          `package declares ${publishedRange}. scripts/pack.mjs copies the range from ` +
+          "packages/core, so this is a packaging bug rather than a manifest to edit.",
+      );
+    }
   }
 
   const outputDir = join(temporaryRoot, "output");

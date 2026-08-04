@@ -9,8 +9,5 @@
   "publishConfig": {
     "access": "public",
     "tag": "next"
-  },
-  "optionalDependencies": {
-    "puppeteer-core": "^25.4.0"
   }
 }
