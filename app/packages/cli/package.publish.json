@@ -11,6 +11,6 @@
     "tag": "next"
   },
   "optionalDependencies": {
-    "puppeteer-core": "^25.0.0"
+    "puppeteer-core": "^25.4.0"
   }
 }
