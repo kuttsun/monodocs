@@ -7,15 +7,42 @@ import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { bundleExternals } from "./externals.mjs";
+
 const here = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const appRoot = resolve(here, "..");
 const cliDir = resolve(appRoot, "packages/cli");
 const stageDir = resolve(appRoot, "dist/npm/monodocs");
 
-const [developmentPackage, publishOverrides] = await Promise.all([
+const [developmentPackage, publishOverrides, corePackage] = await Promise.all([
   readFile(resolve(cliDir, "package.json"), "utf8").then(JSON.parse),
   readFile(resolve(cliDir, "package.publish.json"), "utf8").then(JSON.parse),
+  readFile(resolve(appRoot, "packages/core/package.json"), "utf8").then(JSON.parse),
 ]);
+
+// The externals are absent from the bundle, so users resolve them from the manifest published
+// here rather than from the workspace. Take each range from packages/core, which is where the
+// dependency is actually declared and where CI resolves the version it exercises. Writing the
+// range out by hand here as well used to be the norm, and the two copies drifted apart every
+// time a dependency bump touched only one of them.
+if (publishOverrides.optionalDependencies) {
+  throw new Error(
+    "package.publish.json must not declare optionalDependencies: they are generated from " +
+      "packages/core/package.json. Remove the entry and bump the range there instead.",
+  );
+}
+
+const optionalDependencies = {};
+for (const name of bundleExternals) {
+  const range = corePackage.optionalDependencies?.[name];
+  if (!range) {
+    throw new Error(
+      `packages/core must declare ${name} in optionalDependencies because the bundle keeps it ` +
+        "external; otherwise the published package never installs it.",
+    );
+  }
+  optionalDependencies[name] = range;
+}
 
 const publishPackage = {
   name: developmentPackage.name,
@@ -28,6 +55,7 @@ const publishPackage = {
   bugs: developmentPackage.bugs,
   keywords: developmentPackage.keywords,
   ...publishOverrides,
+  optionalDependencies,
 };
 
 const requiredArtifacts = [
