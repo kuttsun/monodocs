@@ -47,8 +47,9 @@ The `app/` workspace pins `postcss` to a patched release (`^8.5.18`) through pnp
 carries a high-severity path-traversal advisory (GHSA-r28c-9q8g-f849) and reaches the tree transitively
 via `vitest -> vite` — a dev/test-only dependency that is not shipped in the published bundle. The override
 keeps `pnpm audit` green; revisit and remove it once `vite` resolves a patched `postcss` on its own.
-Last checked 2026-07-29: `vite` 8.1.5 still declares `postcss: ^8.5.17`, so its floor remains the vulnerable
-release and the override stays.
+Last checked 2026-08-05: `vite` 8.2.0 declares `postcss: ^8.5.23`, so upstream now resolves a patched release
+on its own — but the committed lockfile is still on `vite` 8.1.0, whose floor is `^8.5.15`. The override stays
+until the Dependabot bump to 8.2.0 lands, and is removed with it.
 
 ### Release-Age Policy for Dependencies
 
@@ -75,8 +76,9 @@ declares Vite `^5.4.14`, but that line resolves to versions covered by the Vite 
 advisories detected by Dependabot. The override is intentionally limited to Vite 6.4 patch releases
 and must continue to pass `npm ci`, `npm audit`, and the VitePress production build. Revisit and remove
 it when upgrading to a stable VitePress release whose declared Vite range includes a secure version.
-Last checked 2026-07-29: the stable line is still VitePress 1.6.4 with `vite ^5.4.14` (VitePress 2 exists
-only as an alpha), and `6.4.3` is still the newest Vite 6.4 patch, so the override stays as it is.
+Last checked 2026-08-05: the stable line is still VitePress 1.6.4 with `vite ^5.4.14` (VitePress 2 is still
+published only as an alpha, `2.0.0-alpha.19` on `next`), and `6.4.3` is still the newest Vite 6.4 patch, so
+the override stays as it is.
 
 ### Site Theme
 
