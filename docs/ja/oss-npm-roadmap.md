@@ -352,7 +352,22 @@ npm install -g monodocs@next
 8. CI で GitHub Release を生成する。
 9. CI から npm へ公開する。
 10. npm から公開版を再インストールして検証する。
-11. README、公式サイト、ステータス文書を更新する。
+11. `next` dist-tag を公開した安定版へ移す。
+12. README、公式サイト、ステータス文書を更新する。
+
+手順 11 は maintainer アカウントから手作業で行う。
+
+```bash
+npm dist-tag add monodocs@0.9.0 next
+```
+
+`release.yml` は prerelease を `next`、安定版を `latest` に対応させる（9.1）ため、安定版を公開しても
+`next` は直前のベータを指したまま残る。CLI の README は prerelease の入手方法として
+`monodocs@next` を案内しており、`latest` より古い `next` は読者に古いビルドを渡すことになる。
+これをワークフローで行わないのは、Trusted Publishing が許可するのが `npm publish` だけであり
+（9.1 の表の allowed action）、CI から dist-tag を動かすには M4 で意図的に持たないと決めた
+長期有効な npm write token が必要になるためである。[maintenance.md](maintenance.md) の四半期棚卸しは
+この手順の代わりではなく、抜けたときに気づくための網である。
 
 ### 10.2 公開後の確認
 
@@ -402,7 +417,8 @@ monodocs build ./docs -o ./dist/docs.html
 ### 11.3 定期作業
 
 いずれも自動化するか、実施時期を決めた。どちらであるかは [maintenance.md](maintenance.md) に記録し、
-人が行うものは同じ文書の四半期チェックリストに置いた。
+人が行うものは同じ文書の四半期チェックリストに置いた。そのチェックリストは `quarterly-review.yml` が
+四半期ごとに Issue として起票するので、人が行うものにも文書だけでなく日付が付いている。
 
 - [x] 依存関係を定期更新する。（Dependabot。月次、3 つの依存セット）
 - [x] 脆弱性アラートを確認する。（Dependabot alerts と automated security fixes に加え、失敗時に

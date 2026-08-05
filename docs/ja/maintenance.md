@@ -9,11 +9,12 @@ M6 の運用面にあたる。方針そのものはそちらに置く。
 
 | 対象                     | 仕組み                                                                                |
 | ------------------------ | ------------------------------------------------------------------------------------- |
-| 通常のバージョン更新     | Dependabot（月次。`github-actions` / `app/`（pnpm）/ `site/`（npm））                  |
-| 脆弱なバージョンの検知   | Dependabot alerts と automated security fixes（リポジトリ設定で有効）                  |
-| 依存ツリーへの advisory  | `.github/workflows/scheduled-audit.yml`（週次。失敗時に Issue を作成）                 |
-| プルリクエストの検査     | `.github/workflows/pr-ci.yml`（両方の依存セットの audit も実行）                       |
-| 公開済みパッケージの検証 | `.github/workflows/verify-published.yml`（dist-tag / バージョンを指定して手動実行）    |
+| 通常のバージョン更新     | Dependabot（月次。`github-actions` / `app/`（pnpm）/ `site/`（npm））                 |
+| 脆弱なバージョンの検知   | Dependabot alerts と automated security fixes（リポジトリ設定で有効）                 |
+| 依存ツリーへの advisory  | `.github/workflows/scheduled-audit.yml`（週次。失敗時に Issue を作成）                |
+| プルリクエストの検査     | `.github/workflows/pr-ci.yml`（両方の依存セットの audit も実行）                      |
+| 公開済みパッケージの検証 | `.github/workflows/verify-published.yml`（dist-tag / バージョンを指定して手動実行）   |
+| 棚卸しのリマインダ       | `.github/workflows/quarterly-review.yml`（四半期のチェックリストを Issue として作成） |
 
 定期 audit を別に持つのは、PR CI の audit が PR のあるときしか走らないためである。インストールせずに
 コミット済み lockfile を読むので、失敗はインストールの問題ではなく advisory を意味する。Dependabot
@@ -22,8 +23,16 @@ alert とは重複しない。alert が依存グラフと GitHub の advisory da
 
 ## 四半期ごとの棚卸し
 
-以下はいずれも自動化できないため、心がけではなく日付を持たせる。四半期に一度通しで実施し、結果は
-各項目が指す場所に記録する。
+以下はいずれも自動化できないため、心がけではなく日付を持たせる。`quarterly-review.yml` が 1 月・
+4 月・7 月・10 月の初日に、この一覧を写した Issue を作る。実施はその Issue 上で行い、結果が変わら
+なかった項目も含めてすべて記録し、一覧を終えたら閉じる。その場で片付かないものは Issue を分け、
+棚卸しの Issue を開いたままにしない。
+
+一覧の原本はこの文書であり、Issue はある四半期のための写しである。作業内容が変わったときはここを
+書き換える。次の Issue はそれを写す。
+
+このリマインダは 1 項目目と同じ GitHub の cron で動くため、同じ理由で止まり得る。それは穴ではない。
+四半期が過ぎても Issue が現れないことは、1 項目目が探している兆候そのものである。
 
 - [ ] **定期ワークフローが止まっていないこと。** GitHub は 60 日 activity の無いリポジトリの cron を
       停止する。`Scheduled Audit` に直近の実行があるか確認し、止まっていれば再度有効にする。
@@ -40,9 +49,11 @@ alert とは重複しない。alert が依存グラフと GitHub の advisory da
 - [ ] **Node.js / Chromium のサポート範囲。** 下限は Node 22.12。Node 22 は 2027 年 4 月に LTS を
       終えるため、それまでに引き上げるかを決める。[ci.md](../../site/ja/docs/ci.md) に書いた Chromium の
       検出パスが、サポート対象プラットフォームの実際のインストール先と合っているかも確認する。
-- [ ] **dist-tag と EOL。** `latest` / `next` が意図した先を指し、古い prerelease が `next` に
-      残っていないこと。[SECURITY.md](../../SECURITY.ja.md) の方針でサポート外になった minor は、
-      リリースノートでその旨を告知済みであること。
+- [ ] **dist-tag と EOL。** `latest` / `next` が意図した先を指し、`next` が `latest` より古くない
+      こと。安定版を公開すると `next` は直前の prerelease を指したまま残るため、これを移すことは
+      リリース手順の一部であり（[oss-npm-roadmap.md](oss-npm-roadmap.md) 10.1）、ここはその網である。
+      [SECURITY.md](../../SECURITY.ja.md) の方針でサポート外になった minor は、リリースノートで
+      その旨を告知済みであること。
 - [ ] **優先順位。** open な Issue と npm のダウンロード数を見て、ロードマップだけでなくそれらに
       次の作業を決めさせる。
 

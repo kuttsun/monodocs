@@ -7,13 +7,14 @@ What keeps running after a release, and what a person has to check. This is the 
 
 ## What runs on its own
 
-| Concern                | Mechanism                                                                          |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| Routine version bumps  | Dependabot, monthly, for `github-actions`, `app/` (pnpm), and `site/` (npm)         |
-| Vulnerable versions    | Dependabot alerts and automated security fixes, enabled in the repository settings  |
-| Advisories on the tree | `.github/workflows/scheduled-audit.yml`, weekly, opening an issue when it fails     |
-| Pull request checks    | `.github/workflows/pr-ci.yml`, which also audits both dependency sets               |
-| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version |
+| Concern                | Mechanism                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| Routine version bumps  | Dependabot, monthly, for `github-actions`, `app/` (pnpm), and `site/` (npm)           |
+| Vulnerable versions    | Dependabot alerts and automated security fixes, enabled in the repository settings    |
+| Advisories on the tree | `.github/workflows/scheduled-audit.yml`, weekly, opening an issue when it fails       |
+| Pull request checks    | `.github/workflows/pr-ci.yml`, which also audits both dependency sets                 |
+| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version   |
+| Review reminder        | `.github/workflows/quarterly-review.yml`, opening the quarterly checklist as an issue |
 
 The scheduled audit exists because the PR CI audit only runs when a pull request is open. It reads
 the committed lockfiles without installing, so a failure means an advisory, not an install problem.
@@ -23,8 +24,18 @@ resolve to.
 
 ## Quarterly review
 
-Nothing below can be automated, so it needs a date rather than good intentions. Work through it once
-a quarter and record the outcome in the same place the item points at.
+Nothing below can be automated, so it needs a date rather than good intentions.
+`quarterly-review.yml` opens an issue carrying a copy of this list on the first day of January,
+April, July, and October. Work through it there, record the outcome of every item — including the
+ones where nothing changed — and close the issue when the list is done. Anything that cannot be
+settled becomes its own issue instead of keeping the review open.
+
+This list is the source; the issue is a copy for a single quarter. Change the list here when the work
+changes, and the next issue carries it.
+
+The reminder runs on the same GitHub cron as the first item below, so it can stop for the same
+reason. That is not a hole: a quarter passing with no issue appearing is exactly the signal the first
+item is looking for.
 
 - [ ] **Scheduled workflows still enabled.** GitHub disables cron in a repository with no activity
       for 60 days. Check that `Scheduled Audit` has recent runs; re-enable it if it stopped.
@@ -40,9 +51,11 @@ a quarter and record the outcome in the same place the item points at.
 - [ ] **Node.js and Chromium support range.** The floor is Node 22.12. Node 22 leaves LTS in April
       2027, so decide before then whether to raise it. Confirm the Chromium detection paths in
       [ci.md](../site/docs/ci.md) still match what the supported platforms install.
-- [ ] **dist-tags and EOL.** `latest` and `next` point where they should, stale prereleases are not
-      left as `next`, and any minor that has fallen out of support per [SECURITY.md](../SECURITY.md)
-      has been announced as such in the release notes.
+- [ ] **dist-tags and EOL.** `latest` and `next` point where they should, and `next` is never older
+      than `latest` — publishing a stable version leaves `next` on the prerelease before it, so
+      moving it is a step in the release procedure ([oss-npm-roadmap.md](oss-npm-roadmap.md) 10.1)
+      and this is the backstop. Any minor that has fallen out of support per
+      [SECURITY.md](../SECURITY.md) has been announced as such in the release notes.
 - [ ] **Priorities.** Review open issues and npm download numbers, and let them, rather than the
       roadmap alone, decide what comes next.
 
