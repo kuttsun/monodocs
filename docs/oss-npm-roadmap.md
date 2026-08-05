@@ -363,7 +363,22 @@ npm install -g monodocs@next
 8. Generate the GitHub Release in CI.
 9. Publish to npm from CI.
 10. Reinstall the published version from npm and verify.
-11. Update the README, official site, and status documents.
+11. Move the `next` dist-tag onto the published stable version.
+12. Update the README, official site, and status documents.
+
+Step 11 is done by hand, from a maintainer account:
+
+```bash
+npm dist-tag add monodocs@0.9.0 next
+```
+
+`release.yml` maps a prerelease to `next` and a stable version to `latest` (9.1), so publishing a
+stable version leaves `next` pointing at the beta that preceded it. The CLI README tells readers to
+install `monodocs@next` for prereleases, and a `next` older than `latest` hands them an outdated
+build instead. The workflow does not do it: Trusted Publishing authorizes `npm publish` and only
+that (the allowed action in the table in 9.1), so moving a dist-tag from CI would mean storing a
+long-lived npm write token — which M4 deliberately does not do. The quarterly checklist in
+[maintenance.md](maintenance.md) catches a missed step rather than replacing it.
 
 ### 10.2 Post-Publish Verification
 
@@ -413,7 +428,9 @@ steps in [SECURITY.md](../SECURITY.md), where a reporter can also read them.
 ### 11.3 Recurring Tasks
 
 Each of these is either automated or scheduled; [maintenance.md](maintenance.md) records which, and
-carries the quarterly checklist for the ones a person has to do.
+carries the quarterly checklist for the ones a person has to do. `quarterly-review.yml` files that
+checklist as an issue every quarter, so the ones a person has to do also have a date rather than
+only a document.
 
 - [x] Update dependencies regularly. (Dependabot, monthly, across the three dependency sets.)
 - [x] Check vulnerability alerts. (Dependabot alerts and automated security fixes, plus a weekly

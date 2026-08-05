@@ -1,0 +1,65 @@
+name: Quarterly Review
+
+# docs/maintenance.md の四半期棚卸しは自動化できない項目の集まりだが、「思い出すこと」だけは
+# 自動化できる。四半期の初日にチェックリストを本文に持つ Issue を作り、実施と記録の場所にする。
+#
+# 注意: scheduled-audit.yml と同じく、60 日間 activity の無いリポジトリでは GitHub が schedule を
+# 自動停止する。このリマインダ自身も同じ理由で止まり得るが、それは棚卸しの 1 項目目
+# （定期ワークフローが止まっていないこと）が探している兆候そのものなので、四半期が過ぎても
+# Issue が現れないこと自体を信号として扱う。
+on:
+  schedule:
+    - cron: '0 1 1 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  open-issue:
+    name: Open the quarterly review issue
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      # 前回の棚卸しが終わっていなければ、重ねて作らない。四半期を跨いで open なままなら
+      # それ自体が滞留の記録になる。
+      - name: Open an issue unless one is already open
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          set -euo pipefail
+          quarter=$(date -u '+%Y-Q')$(( ($(date -u '+%-m') + 2) / 3 ))
+          title="Quarterly maintenance review $quarter"
+          existing=$(gh issue list --repo "$REPO" --state open --label maintenance \
+            --search "\"Quarterly maintenance review\" in:title" --json number --jq '.[0].number // empty')
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$REPO" \
+              --body "$quarter has started and this review is still open."
+            exit 0
+          fi
+
+          # 本文はヒアドキュメントで組み立てる（YAML のブロックスカラーが共通の字下げを
+          # 取り除くため、ここでの各行は先頭が列 0 になる）。
+          cat > body.md <<EOF
+          The quarterly review for $quarter. The list below is a copy of [docs/maintenance.md]($SERVER_URL/$REPO/blob/main/docs/maintenance.md); that document is the source, so read it there when an item needs its reasoning.
+
+          Record the outcome of each item here — including the ones where nothing changed — and close the issue when the list is done. An item that cannot be settled becomes its own issue rather than keeping this one open.
+
+          - [ ] **Scheduled workflows still enabled.** \`Scheduled Audit\` has recent runs.
+          - [ ] **Dependabot pull requests.** None open longer than a cycle; none silently failing CI.
+          - [ ] **Open alerts.** Dependabot alerts triaged, with anything left open explained.
+          - [ ] **Security overrides.** The two overrides in \`docs/development.md\` re-checked against their removal conditions, with the "Last checked" line updated either way.
+          - [ ] **npm maintainers.** Only intended accounts can publish \`monodocs\`, and each has 2FA enabled.
+          - [ ] **Trusted Publisher.** The npm setting still names this repository, \`release.yml\`, and the release environment.
+          - [ ] **Node.js and Chromium support range.** Floor is Node 22.12; Node 22 leaves LTS in April 2027. Chromium detection paths in \`site/docs/ci.md\` still match the supported platforms.
+          - [ ] **dist-tags and EOL.** \`latest\` and \`next\` point where they should, \`next\` is not older than \`latest\`, and unsupported minors have been announced.
+          - [ ] **Priorities.** Open issues and npm download numbers, rather than the roadmap alone, decide what comes next.
+          EOF
+
+          gh issue create --repo "$REPO" --title "$title" --label maintenance --body-file body.md
