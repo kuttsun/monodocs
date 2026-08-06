@@ -22,6 +22,30 @@ It is not redundant with Dependabot alerts: alerts compare the dependency graph 
 advisory database, while `pnpm audit` sees the tree that this repository's `overrides` actually
 resolve to.
 
+## Release binary verification
+
+`verify-published.yml` covers the published npm package, but not the release binaries and not the
+long-running commands. Those are verified per release on a real Windows x64 host, where the point is
+the published asset itself running without Node.js — something no CI job in this repository does.
+
+[`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) automates that pass. It
+downloads `monodocs-windows-x64.exe`, checks it against the published `.sha256`, and runs the CLI
+checks plus `serve` and `watch` — the live-reload check reads the SSE endpoint directly, so a browser
+is not needed to prove that an edit reaches a rebuild. Every check is reported and the script exits
+non-zero if any failed.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-windows-binary.ps1 -Version v0.9.0
+```
+
+Three things stay manual because a script cannot settle them:
+
+- Browser rendering: sidebar, search interaction, dark mode, and the narrow-width drawer.
+- SmartScreen and Mark of the Web. Downloads made by the script do not attach a Mark of the Web, so
+  the warning is not exercised. The binary is unsigned by policy
+  ([roadmap.md](roadmap.md) 8.5) and the site documents the warning; see [status.md](status.md).
+- `serve --open`, which launches the default browser.
+
 ## Quarterly review
 
 Nothing below can be automated, so it needs a date rather than good intentions.
