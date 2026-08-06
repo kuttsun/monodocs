@@ -37,9 +37,11 @@ jobs:
           - name: Linux x64
             os: ubuntu-latest
             asset: monodocs-linux-x64
+            notices: monodocs-linux-x64-NOTICES.txt
           - name: Windows x64
             os: windows-latest
             asset: monodocs-windows-x64.exe
+            notices: monodocs-windows-x64-NOTICES.txt
 
     steps:
       - name: Check out repository
@@ -60,25 +62,36 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       # release.yml attaches the binaries from a job that starts from this same event, so this
-      # workflow can begin before the asset exists. Waiting here keeps the failure honest: a
+      # workflow can begin before the assets exist. Waiting here keeps the failure honest: a
       # missing asset after the release workflow has had its time is a real problem, not a race.
-      - name: Wait for the release asset
+      #
+      # All three assets are waited for, not just the binary. `gh release upload` is given the
+      # three files in one command but does not attach them atomically, and the scripts download
+      # the checksum and the notices without retrying, so seeing only the binary is not enough.
+      - name: Wait for the release assets
         if: github.event_name == 'release'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
           ASSET: ${{ matrix.asset }}
+          NOTICES: ${{ matrix.notices }}
         run: |
+          missing=""
           for attempt in $(seq 1 60); do
-            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$ASSET"; then
-              echo "$ASSET is attached to $TAG"
+            attached="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
+            missing=""
+            for required in "$ASSET" "$ASSET.sha256" "$NOTICES"; do
+              printf '%s\n' "$attached" | grep -qx -- "$required" || missing="$missing $required"
+            done
+            if [ -z "$missing" ]; then
+              echo "Every asset for ${{ matrix.name }} is attached to $TAG"
               exit 0
             fi
-            echo "Attempt $attempt: $ASSET is not attached yet"
+            echo "Attempt $attempt: still waiting for$missing"
             sleep 30
           done
-          echo "Timed out waiting for $ASSET on $TAG" >&2
+          echo "Timed out waiting for$missing on $TAG" >&2
           exit 1
 
       # The scripts download the asset, its .sha256, its NOTICES file, and the tagged source archive
