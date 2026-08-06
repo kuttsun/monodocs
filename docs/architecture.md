@@ -147,6 +147,11 @@ Preserve these display and reachability invariants:
 - Print and PDF have no scrollbars: anything the screen makes scrollable (code blocks, tables) must wrap or
   be laid out to fit in print, and a table crossing a page break repeats its header row. Content must never be
   silently cut off at the page edge.
+- The sidebar title and its tool row — search, content width, dark mode — hold their place while only the
+  navigation tree (or the search results that replace it) scrolls. A tree taller than the viewport must never
+  carry the search box out of sight, because that is precisely when a reader reaches for it. Reachability
+  outranks this: on a viewport too short to hold the column, the sidebar scrolls as a whole again rather than
+  clipping the tree to nothing.
 - Below 768 px the sidebar becomes an overlay drawer that starts closed, so the document opens on its content.
   The drawer never leaves the page scrolling horizontally, and on wider viewports the sidebar stays permanent —
   clicks outside it and `Escape` must not close it there.
