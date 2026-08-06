@@ -363,10 +363,19 @@ npm install -g monodocs@next
 8. Generate the GitHub Release in CI.
 9. Publish to npm from CI.
 10. Reinstall the published version from npm and verify.
-11. Move the `next` dist-tag onto the published stable version.
-12. Update the README, official site, and status documents.
+11. Verify the release binaries on the supported platforms.
+12. Move the `next` dist-tag onto the published stable version.
+13. Update the README, official site, and status documents.
 
-Step 11 is done by hand, from a maintainer account:
+Step 10 is `verify-published.yml`. No workflow does step 11: that one leaves the release binaries
+and the long-running commands out of its scope, and CI never runs the published asset on a host
+without Node.js — the very environment a binary release makes a claim about. On Windows x64, run
+[`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the release and
+finish the manual checks it prints at the end; on Linux x64, check the binary against its `.sha256`
+and run it by hand. [maintenance.md](maintenance.md) records what the script covers and what it
+deliberately leaves to a person.
+
+Step 12 is done by hand, from a maintainer account:
 
 ```bash
 npm dist-tag add monodocs@0.9.0 next
