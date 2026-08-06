@@ -232,8 +232,11 @@ roadmap version, update [status.md](status.md) and [testing.md](testing.md).
 
 ### Language of the UI (chrome)
 
-The theme's UI text (copy/wrap, prev/next navigation, search, table of contents, etc.) is **standardized in English**.
-Given the design of bundling user-provided Markdown / AsciiDoc into a single HTML, runtime i18n that follows the reader's language has little meaning in a single file, so it is not done. We treat UI labels as independent of the body language and settle on internationally readable English as the default. Client-side dynamic text is consolidated in `LABELS` in `themes/default/app.js`, and static text is placed in `template.html` (this consolidation leaves room to swap languages/labels at build time via config in the future).
+The theme's UI text (copy/wrap, prev/next navigation, search, table of contents, etc.) **follows the document's `lang`**, which defaults to `en` (v0.10). This is the build-time language swap the earlier arrangement was left open for: there is still no runtime i18n following the reader, because a single file has one audience at a time, but the language it is built in is now the author's to choose.
+
+Core resolves the table for `lang`, applies `html.labels` over it, and publishes the result in `siteDataJson`; `themes/default/app.js` consumes that rather than holding its own copy, and static text comes from tokens in `template.html`. Tables ship for `en` and `ja`. When adding a label, add it to both tables and to the enumerated key set — a key missing from one table is a build failure, not a silent fallback.
+
+Until v0.10 the labels were standardized in English and independent of the body language. That left a Japanese document declaring `lang="ja"` and displaying `On this page`, which serves neither audience, and no configuration could correct either half. See [roadmap.md](roadmap.md) 23.4.
 
 ### PDF Fonts
 

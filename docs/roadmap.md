@@ -303,13 +303,20 @@ npm install -D monodocs
 
 ### 8.3 Docker
 
-For CI and in-house environments.
+An official image was listed here as a delivery form for CI and in-house environments. It is **not**
+provided. The argument that settled Homebrew / Scoop / winget (8.5) applies unchanged: an image is a
+Dockerfile to keep in sync with every release, a registry account and its credentials, a base image
+whose own security advisories arrive on someone else's schedule, and a support channel where problems
+are reported outside this repository. The cost recurs per release and per base-image advisory, and a
+single maintainer pays it.
 
-```bash
-docker run --rm \
-  -v "$PWD:/work" \
-  monodocs/monodocs build /work/docs -o /work/dist/docs.html
-```
+What the image would have supplied is already reachable. CI runners get monodocs through `npx` (8.4),
+and the one step an image would have saved — installing Chromium and the fonts that PDF output
+needs — is a two-line block in the documentation site's CI guide. Anyone who wants monodocs inside a
+container adds those lines to an image they already control and already rebuild. Revisit only if
+users report that npm and the release binary are genuinely insufficient.
+
+This says nothing about `Dockerfile.dev`, which builds this repository's development image and stays.
 
 ### 8.4 GitHub Actions
 
@@ -696,6 +703,15 @@ monodocs.config.yml
 ```yaml
 title: "Internal Documentation"
 
+# Language of the generated document: fills <html lang> and selects the UI label table (v0.10).
+# Any BCP 47 tag; label tables ship for "en" (default) and "ja", and anything else falls back to the
+# "en" labels with a warning. This is not the language of the CLI's own messages (25.6).
+lang: "en"
+
+# What to do when the machine running the build lacks a font the document needs (v0.10):
+# warn / error / off. Top-level because it covers PDF output and mermaid pre-render alike (24.3.3).
+fontCheck: "warn"
+
 input: "./docs"
 
 output:
@@ -778,6 +794,10 @@ html:
   # Show the generator name and version at the end of HTML and PDF output
   branding: true
   darkMode: true
+  # Replaces individual UI labels on top of the table chosen by lang (v0.10).
+  # An unknown key is rejected; the key set is part of the frozen configuration surface.
+  labels:
+    tocTitle: "On this page"
 
 pdf:
   enabled: false
@@ -788,6 +808,11 @@ pdf:
     bottom: "20mm"
     left: "15mm"
   printBackground: true
+  # Page numbers, on by default (v0.10). false removes the band; an HTML fragment replaces it, using
+  # Chromium's own pageNumber / totalPages / title / date / url classes (24.5). There is no {{token}}
+  # syntax: the fragment is handed to Chromium as written.
+  footer: '<span class="pageNumber"></span> / <span class="totalPages"></span>'
+  header: false
 
 search:
   enabled: true
@@ -1500,7 +1525,7 @@ implementation anyway.
 
 ```text
 <!doctype html>
-<html lang="ja">
+<html lang="{{lang}}">
   <head>
     <meta charset="utf-8" />
     <title>{{title}}</title>
@@ -1573,6 +1598,84 @@ Because the output is one self-contained file, a theme cannot reference external
 images belong in `style.css` as data URIs. A theme is executable code inside the document and carries
 the same trust as the documentation sources (chapter 33 and the security notes in development.md).
 
+### 23.4 Document Language and UI Labels (v0.10)
+
+A generated document carries two languages that have no reason to agree: the language its pages are
+written in, and the language of the chrome monodocs wraps around them — the sidebar search box, `On
+this page`, `No results`, `Copy`, the lightbox controls, prev/next.
+
+Until v0.10 neither was settled. `template.html` hardcoded `<html lang="ja">` while every label was
+English, so the output was wrong for both audiences at once: a Japanese reader met `On this page`, and
+a screen reader was told to pronounce English labels with a Japanese voice. Nothing in the
+configuration could correct either half.
+
+**This reverses a recorded decision.** architecture.md stated that theme UI labels are standardized in
+English and independent of the body language. That was defensible while the labels were a fixed part
+of the theme, but it was a description of the implementation rather than a choice made for the reader:
+it leaves a Japanese document declaring `lang="ja"` and displaying English, which is the one
+combination that serves nobody. The reversal is recorded in architecture.md rather than left as a
+contradiction between two documents.
+
+The top-level `lang` key fills `<html lang>` and selects the label table, and defaults to `en` —
+matching the README, the documentation site, and the CLI messages (25.6) that this repository
+publishes in English first. A Japanese document sets `lang: ja` and gets, for the first time, a
+document whose declared language and whose labels are both Japanese. Anyone who relied on the old
+hardcoded `ja` sees the attribute change; that is a breaking change, taken before 1.0 for the same
+reason the `manual.html` rename was.
+
+`lang` accepts any syntactically valid BCP 47 tag, because it is the document's language and
+`<html lang>` must be able to say so; a string that is not one is rejected rather than written into the
+attribute. Label tables ship for `en` and `ja` only. Tags are matched case-insensitively on the primary
+language subtag, so `en-GB`, `ja-JP`, and `JA` all find one. A tag that has no primary language subtag
+to match — a wholly private-use `x-…` tag, or a grandfathered tag — falls back to the `en` labels
+alongside every other tag with no shipped table, and the fallback warns once per build, naming the tag.
+Rejecting unknown tags instead would force a French document to misdeclare itself as English to build
+at all, which is worse for its readers than English labels they can override.
+
+`html.labels` replaces individual entries on top of the chosen table. It sits under `html` because it
+acts on the theme's chrome, the same layer as `html.theme` and `html.imageLightbox`, while `lang`
+describes the document itself alongside `title`. An unknown key is rejected so a typo does not
+silently keep the default, which also means **the key set is public API frozen at 1.0**: it is
+enumerated in the configuration reference rather than left to whatever the theme happens to read.
+
+Shipping two tables and making the rest overridable is the smaller promise. A half-translated language
+shipped in core is worse for its readers than no entry at all, and it is the maintainer, not its
+speakers, who would have to keep it current.
+
+Resolving a table against `lang` and applying `html.labels` over it happens in core, which makes core
+the single source of truth for what a label says. The result is published in `{{siteDataJson}}`, a
+token every custom template already has to keep. `app.js` consumes that instead of carrying its own
+copy of the strings, so a table and an override cannot drift apart between the two.
+
+**What a custom theme gets is bounded by the theme contract (23.3), and stating that bound precisely
+matters more than stating a generous one.** Four different things are guaranteed to four different
+degrees:
+
+- **Every theme** gets the resolved labels as data in `{{siteDataJson}}`. This is the only unqualified
+  guarantee, and it is the one monodocs can actually keep.
+- **The default `app.js`** applies them to the DOM hooks the default template provides. A theme that
+  replaces only `style.css` therefore behaves exactly as the built-in one does. A theme that replaces
+  `template.html` gets them wherever it kept those hooks, and nowhere else — the script can only
+  address structure it can find, so a template rewritten without them is not covered.
+- **A theme replacing `app.js`** receives the data and applies it itself, exactly as it already takes
+  over routing, search, and the table of contents. monodocs guarantees delivery, not application.
+- **Static text a custom `template.html` spells out itself** stays as written. monodocs cannot know
+  which strings in someone else's markup were meant to be labels. The default template takes its
+  static labels from tokens, so a theme starting from a copy of it inherits the behaviour.
+
+`{{lang}}` is added as an optional token rather than a required one; making it required would break
+every theme that exists today for a feature they may not want, and a custom template that hardcodes
+`<html lang="…">` keeps what it wrote.
+
+A label is a value from the configuration file that ends up in HTML text, in attributes such as
+`title` and `aria-label`, and in the JSON of `siteDataJson`. The three need different escaping, and
+getting one wrong turns a configuration key into an injection point, so escaping is per destination
+rather than once at the source.
+
+`lang` describes the document, and is deliberately not the same setting as the language of the CLI's
+own messages: a document is often written in one language by someone working in a terminal that
+reports another, and a build log should not change language because the document did.
+
 ---
 
 ## 24. PDF Output
@@ -1640,6 +1743,82 @@ and `monodocs v<version>` for both Creator and Producer, after the bookmark pass
 `DisplayDocTitle` viewer preference, without which a standards-following viewer keeps showing the
 file name even when a title is present.
 
+### 24.3.3 Missing Fonts (v0.10)
+
+An artifact is composed once, on the machine that runs the build, with the fonts that machine happens
+to have — and a character with no font becomes tofu (□ / ☒), permanently, in every copy that is then
+handed out. Japanese text needs a CJK font and emoji need an emoji font, and a CI runner cannot be
+assumed to carry either.
+
+HTML normally escapes this, because it is drawn with the reader's fonts. The exception is
+`mermaid.mode: pre-render` (21.2), which measures and positions diagram text with the build machine's
+fonts and bakes the result into the SVG; a missing font is baked in there too, in HTML as much as in
+PDF. The check therefore belongs to the build rather than to PDF output alone, which is why its
+setting is top-level `fontCheck` and not `pdf.fontCheck`.
+
+The documentation already warns about both — the site's CI guide installs `fonts-noto-cjk` and
+`fonts-noto-color-emoji` in its GitHub Actions and GitLab CI recipes, and the configuration page
+carries the same caveat for `pre-render`. What was missing was any check in the code: skip the step
+and the build reports success, and the artifact looks finished until someone opens it. A silent
+failure documented elsewhere is still a silent failure.
+
+v0.10 checks the document rather than the environment. Only what the document actually contains
+matters — a Latin-only document on a runner with no CJK font has no problem — and the unit is the
+**grapheme cluster paired with the computed font of the element it appears in**, not a representative
+character per script and not a bare codepoint. A script's common characters resolving says nothing
+about the extension blocks beside them; and a variation sequence, a combining mark, or an emoji ZWJ
+sequence can fail while every codepoint in it draws on its own, so measuring codepoints separately
+would report success for exactly the cases that motivate the check. Pairing with the computed font
+matters because body text, code blocks, and a custom theme need not resolve to the same family. The
+check runs after `document.fonts.ready`, so a theme's data-URI webfont is counted as present.
+
+Three ways of asking were measured in the development image (Chromium with `fonts-liberation`,
+`fonts-noto-cjk`, and `fonts-noto-color-emoji`) against characters it can draw — `A`, `日`, `✅` — and
+characters it cannot: Old Persian `U+103A0`, Adlam `U+1E900`, Tibetan `U+0F40`, Yi `U+A000`.
+
+Two of them do **not** work:
+
+- Comparing the advance width against a family name that cannot exist reported the same width for
+  every sample, drawable or not. A nonexistent family falls through the same fallback chain as
+  everything else, so the comparison measures one fallback against another.
+- CDP `CSS.getPlatformFontsForNode` reported a font with a glyph count for the undrawable characters
+  too — `Liberation Sans:2` for Old Persian and Adlam alike. It answers which font Chromium reached
+  for, not whether that font had anything to give.
+- `document.fonts.check()` returns true both for a nonexistent family and for a stack asked about a
+  character none of its fonts contain; it reports whether further loading is needed, not whether a
+  glyph was found.
+
+What does work is comparing against a **reference codepoint that no installed font is expected to
+draw**, rather than against a missing family. `U+10FFFD`, the last private-use codepoint, measured
+11.69 px at 32 px, and every undrawable sample measured exactly 11.69 px while every drawable one
+differed (`A` 21.34, `日` 32.02, `✅` 39.94). Rasterising the cluster and the reference into a canvas
+and comparing the pixels separated the same two groups. The check therefore measures the advance width
+as a cheap filter and confirms a hit by rasterising, since a real glyph could coincidentally share the
+notdef advance but not its bitmap. It runs in the browser already open for the build, which costs no
+extra startup.
+
+`U+10FFFD` is private use, which means a font *may* map it — the reference is conventional, not
+guaranteed. So the check validates its own reference first, against a second private-use codepoint
+from a different plane: if the two disagree, something on this machine draws private-use characters
+and the comparison is unsound, and the check reports itself unusable for this environment rather than
+producing findings it cannot stand behind.
+
+The result names the clusters at risk and gives an example of a font covering them, drawn from a small
+built-in script-to-example table — not a package name, because what supplies a face differs across
+Debian, Windows, and every other platform, and naming the wrong one is worse than naming none.
+
+Top-level `fontCheck: warn | error | off` follows the vocabulary `assets.onLargeImage` already
+established. The **default is `warn`**, and that is the point: the check is a heuristic over Chromium's
+fallback chain, so by default a false positive must not be able to break a build that would have been
+fine. `error` exists for someone who would rather CI stopped, and choosing it means accepting that a
+false positive stops it too — which is a trade the person configuring it makes knowingly, not one the
+default makes for them.
+
+`pre-render` is measured in its own rendering context rather than on the finished HTML, because
+re-measuring the embedded SVG would not reproduce the font resolution that produced it. The PDF header
+and footer fragments are a third context; they are checked in v0.10 only for the default fragment,
+whose content monodocs controls.
+
 ### 24.4 Display Mode for PDF
 
 Separately from the pseudo-page display of the HTML, a print mode that lays out all pages vertically is provided for PDF.
@@ -1651,6 +1830,55 @@ interactive mode:
 print mode:
   expand all pages vertically
 ```
+
+### 24.5 Page Numbers (v0.10)
+
+`page.pdf()` received only `format`, `margin`, and `printBackground`, so `displayHeaderFooter` kept
+Chromium's default of off and the generated PDF had no page numbers at all. A document meant to be
+printed and handed round needs them: without a number there is no way to say where to look, which is
+most of what a PDF is for once it leaves the screen.
+
+v0.10 turns the footer on by default, centred, showing the page number and the total. Its content is
+deliberately language-neutral — digits and a separator — so that the one piece of text monodocs adds
+to every page does not itself need translating (23.4).
+
+The header and footer are HTML fragments handed to Chromium, not a monodocs template language.
+Chromium substitutes into elements carrying its own classes, so the default footer is literally
+
+```html
+<span class="pageNumber"></span> / <span class="totalPages"></span>
+```
+
+and `pageNumber`, `totalPages`, `title`, `date`, `url` are the classes a replacement can use. There is
+no `{{pageNumber}}`: introducing monodocs tokens over Chromium's classes would add a substitution and
+escaping layer to specify and maintain for no gain, since the fragment is already HTML.
+
+The fragments inherit none of the document's styles, so the default sets its own font and size rather
+than relying on Chromium's unstyled default. `pdf.header` and `pdf.footer` take `false` to remove one
+or a fragment to replace it, and **`false` emits an explicitly empty fragment rather than omitting the
+option**: with `displayHeaderFooter` on, Chromium falls back to its own built-in header — the date and
+the document title — when handed nothing, so omission would produce the opposite of what was asked.
+
+Chromium sizes the header and footer bands to the top and bottom margins rather than taking space
+from the content, so the default 20 mm accommodates the built-in single-line template — 8 pt of text
+inset 15 pt from the paper edge — and no page reflows. This is an addition to the page, not a change
+to its layout.
+
+What a band too small for its content does depends on whose template it is, which was measured rather
+than assumed. Chromium's built-in template hides itself: with the templates omitted, the text-showing
+operators in the generated PDF dropped from 31 at a 20 mm and 10 mm bottom margin to 17 at 5 mm, 2 mm,
+and 0 mm — the header and footer stop being drawn somewhere between 10 mm and 5 mm rather than being
+cut in half. A supplied fragment does not: the same count stayed at 6 for every margin from 20 mm down
+to 0 mm.
+
+Since monodocs supplies a fragment, its footer is always drawn, and a margin too small for it produces
+a footer against the paper edge rather than a footer that vanishes. That is still worth a warning. The
+threshold is not a chosen number: it is the rendered height of the default fragment, measured at build
+time, so it stays correct if that fragment ever changes. The warning does not cover a replacement —
+arbitrary HTML and CSS cannot be judged from the margin value alone, and pretending otherwise would
+mean either false warnings or a promise that only measurement could keep.
+
+The bookmark and metadata passes run on the finished bytes (24.3.2) and are unaffected.
 
 ---
 
@@ -1669,6 +1897,16 @@ monodocs.config.yml
 docs/
   index.md
 ```
+
+Specified here from the beginning and implemented in v0.10; until then the CLI offered only `build`,
+`watch`, `serve`, and `validate`, and this chapter described a command that did not exist.
+
+It writes exactly the two files above and **refuses to overwrite** anything already present, naming
+what it found and writing nothing at all, so that running it in a populated directory cannot destroy
+work. The generated configuration is a short commented starting point, not a dump of every key:
+a dump would have to be regenerated with every option added, and it teaches the reader to keep keys
+they have not understood. It points at the configuration page of the documentation site for the rest.
+Its comments follow the message language (25.6).
 
 ### 25.2 build
 
@@ -1721,6 +1959,33 @@ Validation targets:
 - Duplicate routes
 - Invalid configuration file
 - Basic validation of Mermaid blocks
+
+### 25.6 Message Language (v0.10)
+
+Every string the CLI printed — `--help`, each error, each warning — was Japanese only, while the
+README, the documentation site, `CONTRIBUTING.md`, and `SECURITY.md` are English with a Japanese
+mirror. Someone who ran `npm install -g monodocs` off the English README met a Japanese `--help`,
+and the failure that most needs to be understood, the one that explains why PDF output cannot find a
+browser, was unreadable to most of the audience npm reaches.
+
+v0.10 makes English the default and Japanese an explicit choice: `--lang ja` on any command, or
+`MONODOCS_LANG=ja` for a shell or a CI job that should not repeat the flag. The flag wins over the
+environment variable, which wins over the default. Existing Japanese users see their messages change
+language unless they set one of the two — a breaking change, taken before 1.0.
+
+`LANG` and `LC_ALL` are deliberately **not** consulted. Auto-detection would be convenient and would
+make a build log depend on which machine produced it, so a log pasted into an issue could not be
+reproduced from the command alone. An explicit setting is worth the one-time cost of setting it.
+
+`--help` means the whole of it. Commander generates the `Usage:`, `Options:`, and `Commands:` headings
+and the description of `--help` itself, and leaving those in English while translating the descriptions
+around them would produce a help screen in neither language. Commander exposes these through
+`configureHelp` and `addHelpText`, so they go through the same catalogue as everything else. What stays
+out of scope is a message monodocs never sees before it is printed — a Zod parse error or a Puppeteer
+stack that reaches the user unwrapped. Where monodocs already wraps one, the wrapper is translated.
+
+This is separate from the document's `lang` (23.4), which describes the pages being built rather than
+the terminal building them.
 
 ---
 
@@ -2147,6 +2412,65 @@ Completion criteria:
   back as it was
 - Omitting `-o` writes `./dist/docs.html`, `--format pdf` writes `./dist/docs.pdf`, and `--format both`
   writes `docs.html` / `docs.pdf` into the directory it is given
+
+---
+
+## v0.10: Language and Pre-1.0 Gaps
+
+Purpose:
+
+Make monodocs address whoever is actually reading it — in its own messages, in the chrome around the
+generated document, and in the PDF it hands out — and close the two places where this specification
+promised something the implementation never delivered. Every item here changes a user-visible
+surface, which is why it happens before 1.0 freezes those surfaces rather than after.
+
+Implementation scope:
+
+- Translate the CLI and runtime messages, English by default and Japanese chosen explicitly (25.6)
+- Give the generated document a `lang` that sets both `<html lang>` and its UI labels, with
+  `html.labels` overriding individual entries (23.4), and reverse the English-only label decision
+  recorded in architecture.md
+- Implement `monodocs init`, specified in 25.1 from the beginning and never built
+- Warn when the machine running the build lacks the fonts the document needs, for PDF output and for
+  mermaid `pre-render` alike, instead of baking tofu into the artifact (24.3.3)
+- Put page numbers in the PDF (24.5)
+- Record Docker as a delivery form that will not be provided (8.3)
+- Update the documentation site — commands, configuration, and the CI guide — and their Japanese
+  mirrors, since every item above changes something the site documents
+
+Completion criteria (this chapter defines the milestone; [status.md](status.md) tracks it as a
+checklist, and the two are kept in step):
+
+- `--help` — including the headings Commander generates — and every error and warning read in English
+  by default, and in Japanese under `--lang ja` or `MONODOCS_LANG=ja`; the flag wins over the
+  environment variable, and an unsupported value is rejected naming the supported ones rather than
+  falling back silently
+- The catalogue covers every string monodocs itself emits, including the Commander help text reached
+  through `configureHelp` / `addHelpText`, and a test fails when a new one is added outside it. A
+  message that reaches the user unwrapped from a dependency (a Zod parse error, a Puppeteer stack) is
+  out of scope, and the boundary is written down rather than left to be rediscovered
+- `lang: ja` produces `<html lang="ja">` and Japanese labels, and the default produces English of
+  both, so the document no longer declares one language while displaying another. A tag with no
+  shipped table still reaches `<html lang>`, falls back to the English labels, and warns
+- Any single label can be replaced through `html.labels`, an unknown key is rejected rather than
+  ignored, and the full key set is enumerated in the configuration reference because 1.0 freezes it
+- A theme replacing only `template.html` or `style.css` gets the labels; a theme replacing `app.js`
+  reads them from `siteDataJson`. The two cases are documented as different guarantees, not as one
+- `monodocs init` writes a configuration and a first page that build without editing, and when
+  either file already exists it writes neither and names what it found
+- A build where a needed font is missing says which characters are at risk and shows a font that
+  covers them; a document needing nothing the machine lacks stays silent. `fontCheck: warn | error |
+  off` selects the three behaviours, and `error` exits non-zero
+- `mermaid.mode: pre-render` is covered by the same check, since it bakes the build machine's fonts
+  into the SVG (21.2)
+- A generated PDF carries page numbers by default, in a form that needs no translation.
+  `pdf.header: false` produces no band at all rather than Chromium's built-in date-and-title header,
+  and a replacement fragment renders through Chromium's own classes
+- Margins too small for the default footer warn; a custom fragment is documented as unchecked
+- `verify-published.yml` exercises the new surface — the message language, `init`, and a PDF whose
+  page numbers are actually present — rather than only asserting that a PDF was produced
+- The decision not to publish a Docker image is recorded with its reason, as Homebrew / Scoop /
+  winget were before it
 
 ---
 

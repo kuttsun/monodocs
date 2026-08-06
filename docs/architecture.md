@@ -171,8 +171,16 @@ system font stacks: the single file may not reference anything external, so a fa
 into every artifact, against the size the format exists for. Treat the difference from the site as a decision,
 not as an inconsistency to be fixed.
 
-Theme UI labels are standardized in English and are independent of document body language. Dynamic labels are
-centralized in `LABELS` in `app.js`; static labels live in `template.html`.
+Theme UI labels follow the document's `lang` (v0.10). Core is the source of truth: it resolves the table for
+`lang`, applies `html.labels` over it, and publishes the result in `siteDataJson`. `app.js` consumes that
+rather than holding its own copy of the strings, so a table and an override cannot drift apart; static labels
+come from tokens in `template.html`. Tables ship for `en` and `ja`, and a `lang` with no shipped table falls
+back to the English labels with a warning.
+
+They were standardized in English and independent of the body language until v0.10. That described the
+implementation more than it served the reader: it left a Japanese document declaring `lang="ja"` while
+displaying `On this page`, which is the one combination that helps nobody, and no configuration could correct
+either half. See [roadmap.md](roadmap.md) 23.4 for the reversal and for what a custom theme is guaranteed.
 
 TypeScript compilation does not copy `.html`, `.css`, or `.js` theme assets. The core build must run
 `packages/core/scripts/copy-theme.mjs` so `dist/themes` is usable after compilation. Rebuild after changing

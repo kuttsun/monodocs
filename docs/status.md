@@ -18,6 +18,7 @@ Last updated: 2026-08-06
 | VS Code extension                                 | ⏸️ Frozen | v0.7           |
 | Advanced features (search, themes, binary)        | ✅ Done   | v0.8           |
 | Search finishing (kana folding, keyboard)         | ✅ Done   | v0.9           |
+| Language, `init`, PDF fonts and page numbers      | 🚧 Planned| v0.10          |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
@@ -145,6 +146,55 @@ and both it and v0.9 are released.
 - [x] Verify the Windows x64 release binary by hand, plus `serve` / `watch` (`verify-published.yml` deliberately leaves long-running commands and the release binaries out of its scope). The mechanical part is now automated in [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1), run against the published asset on real Windows x64 hardware: `.sha256` match, `validate`, a build without `-o` writing `dist/docs.html`, no external asset reference in the output, a build from a path containing spaces and Japanese characters, PDF and Mermaid pre-render failing with the guidance to switch to the npm build, the NOTICES file, `serve` (live reload broadcast over SSE, the edit reaching the served page, and the port released on stop), and `watch` (initial build and rebuild after an edit) — 16 of 16 checks passed. Browser rendering and `serve --open` were checked by hand, since a script cannot settle them. As in v0.8 no Mark of the Web was attached, because the script downloads with `curl.exe` / `Invoke-WebRequest`, so the warning the documentation hedges about is still untested. The hedge stays a hedge; revisit only if code signing becomes possible
 - [x] Publish and verify the stable `0.9.0` release, and pin the CI guide on the documentation site to it
 
+### v0.10: Language and Pre-1.0 Gaps
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**CLI and runtime messages**
+
+- [ ] `--help` — including the `Usage:` / `Options:` / `Commands:` headings Commander generates, reached through `configureHelp` / `addHelpText` — and every error and warning read in English by default, and in Japanese under `--lang ja` or `MONODOCS_LANG=ja`. The flag wins over the environment variable; an unsupported value is rejected naming the supported ones rather than falling back silently. `LANG` / `LC_ALL` are deliberately not consulted, so a build log does not depend on the machine that produced it ([roadmap.md](roadmap.md) 25.6)
+- [ ] The catalogue covers every string monodocs itself emits and a test fails when a new one is added outside it. A message that reaches the user unwrapped from a dependency (a Zod parse error, a Puppeteer stack) is out of scope; where monodocs already wraps one, the wrapper is translated. The boundary is written down
+
+**Document language and UI labels** ([roadmap.md](roadmap.md) 23.4)
+
+- [ ] The top-level `lang` key sets both `<html lang>` and the UI labels, defaulting to `en`, so the output no longer declares one language while displaying another. This reverses the English-only label decision recorded in [architecture.md](architecture.md) and [development.md](development.md), both updated rather than left contradicting the roadmap. Anyone who relied on the previously hardcoded `<html lang="ja">` sees it change — a breaking change taken before 1.0
+- [ ] `lang` accepts any syntactically valid BCP 47 tag and rejects anything else instead of writing it into the attribute. Matching is case-insensitive on the primary language subtag (`en-GB`, `JA` → `en`, `ja`); a tag with no shipped table — including a wholly private-use `x-…` or a grandfathered tag, which have no subtag to match — falls back to the English labels and warns once per build, naming the tag
+- [ ] Core resolves the table and applies `html.labels` over it, publishing the result in `{{siteDataJson}}`; `app.js` consumes that rather than holding its own copy, so a table and an override cannot drift apart
+- [ ] `en` and `ja` tables are complete over the enumerated key set — a key missing from either is a build failure, not a silent fallback — and the key set is listed in the configuration reference because 1.0 freezes it. An unknown `html.labels` key is rejected rather than ignored
+- [ ] Label values are escaped per destination: HTML text, attributes such as `title` / `aria-label`, and the JSON of `siteDataJson` each need different treatment, and a value containing `<` or a quote reaches all three intact
+- [ ] The theme guarantee is implemented and documented as four distinct degrees, not one: every theme gets the labels as data in `{{siteDataJson}}`; the default `app.js` applies them to the default template's DOM hooks; a theme replacing `app.js` applies them itself; static text a custom `template.html` spells out stays as written. `{{lang}}` is an optional token, so a template hardcoding `<html lang>` keeps what it wrote
+
+**`monodocs init`** ([roadmap.md](roadmap.md) 25.1)
+
+- [ ] Writes `monodocs.config.yml` and `docs/index.md` that build without editing; when either already exists it writes neither and names what it found. The generated configuration is a short commented starting point rather than a dump of every key, and its comments follow the message language
+
+**Font checking** ([roadmap.md](roadmap.md) 24.3.3)
+
+- [ ] A build on a machine missing a font the document needs warns, naming the clusters at risk and an example font that covers them from a built-in script-to-example table — not a package name, which differs across platforms. A document needing nothing the machine lacks stays silent
+- [ ] The unit is the grapheme cluster paired with the computed font of the element it appears in, not a codepoint and not one representative character per script, so a variation sequence or emoji ZWJ sequence whose individual codepoints all draw is still caught. The check runs after `document.fonts.ready`
+- [ ] Detection compares against `U+10FFFD` and confirms a match by rasterising — measured in the development image as the only two methods that separate drawable from undrawable characters. Comparing against a nonexistent family and asking CDP `CSS.getPlatformFontsForNode` were both measured and rejected: the first reports one width for everything, the second reports `Liberation Sans:2` for characters it cannot draw
+- [ ] The check validates its own reference against a second private-use codepoint and reports itself unusable, rather than producing findings, if this machine draws private-use characters
+- [ ] `mermaid.mode: pre-render` is measured in its own rendering context, not on the finished HTML, because re-measuring the embedded SVG would not reproduce the font resolution that produced it ([roadmap.md](roadmap.md) 21.2). This is why the setting is top-level `fontCheck`, not `pdf.fontCheck`
+- [ ] `fontCheck: warn | error | off` defaults to `warn`, so a heuristic false positive cannot break a build by default; `error` exits non-zero and its user accepts that a false positive stops CI too
+
+**PDF page numbers** ([roadmap.md](roadmap.md) 24.5)
+
+- [ ] Generated PDFs carry page numbers by default, centred, in a form that needs no translation. The header and footer are HTML fragments using Chromium's own `pageNumber` / `totalPages` / `title` / `date` / `url` classes — there is no `{{token}}` syntax — and they set their own font because they inherit none of the document's styles
+- [ ] `pdf.header: false` and `pdf.footer: false` each emit an explicitly empty fragment rather than omitting the option, because with `displayHeaderFooter` on Chromium falls back to its own built-in date-and-title header when handed nothing. A replacement fragment renders through Chromium's classes in both positions
+- [ ] A margin too small for the default footer warns, with the threshold taken from that fragment's rendered height rather than a chosen number. Measured: Chromium's built-in template stops being drawn between a 10 mm and a 5 mm margin, but a supplied fragment — which is what monodocs uses — is still drawn at 0 mm, so the failure is a footer against the paper edge rather than one that vanishes. A replacement fragment is documented as unchecked, since arbitrary HTML and CSS cannot be judged from the margin value alone
+
+**Decisions and documentation**
+
+- [ ] Docker is recorded as a delivery form that will not be provided, with the same per-release maintenance argument that settled Homebrew / Scoop / winget ([roadmap.md](roadmap.md) 8.3). `Dockerfile.dev` is unaffected
+- [ ] The documentation site — commands, configuration, and the CI guide — and its Japanese mirror are updated, since every item above changes something the site documents
+- [ ] `verify-published.yml` exercises the new surface (the message language, `init`, and a PDF whose page numbers are actually present) rather than only asserting that a PDF was produced
+
+**Release**
+
+- [ ] Publish `0.10.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`
+- [ ] Verify the release binaries through `verify-release-binaries.yml` and `scripts/verify-windows-binary.ps1`
+- [ ] Publish and verify the stable `0.10.0` release, and pin the CI guide on the documentation site to it
+
 ## Supported Syntax
 
 The supported syntax for Markdown / AsciiDoc, along with the unsupported items and limitations that come with single-HTML generation, is documented as a specification in [syntax.md](syntax.md) (including footnote ID collision avoidance and in-page anchor handling). Markdown GFM alerts (such as `> [!NOTE]`) and AsciiDoc admonitions are normalized into a common `.admonition` structure for display.
@@ -156,5 +206,5 @@ The supported syntax for Markdown / AsciiDoc, along with the unsupported items a
 - Search matches substrings, now with multiple keywords (AND), field-weighted scoring, heading-level results, and highlighting (v0.8). Because matching is substring-based, Japanese needs no word segmentation. Matching folds case, full-width alphanumerics, katakana against hiragana, and the dash / tilde spellings (v0.9). What it deliberately does not fold is anything that would change string length, because highlight and snippet offsets are shared with the original text: half-width katakana (`ｶﾞ`), okurigana variants (`引き渡し` / `引渡し`, which need a multi-megabyte dictionary), and English stemming — `install` finds a page containing `installing`, but `installing` does not find a page that only says `install` ([roadmap.md](roadmap.md) 22.3)
 - `watch` / `serve` monitoring uses `fs.watch` (recursive when possible). If `input` is changed in the configuration, a restart is required. A custom theme directory is watched and follows a theme switch made in the configuration, but it must already exist: a theme directory created (or deleted and recreated) while watching is picked up only on the next source or configuration change. Watching an ancestor directory instead was rejected because it would react to unrelated churn — including the build's own output — and can spin into a rebuild loop
 - PDF output is supported (v0.5; `--format pdf` / `both`). Because it uses headless Chromium, Chromium must be present in the runtime environment, and it is not available in the bundled CLI (single `.cjs` / single executable) (the npm-installed version is required). When Mermaid is set to the `cdn` runtime, a network connection is required during PDF generation (use `inline` or `pre-render` to be reliably offline)
-- **PDF fonts use the system fonts of the runtime environment.** If a font for a character type appearing in the body is missing, it becomes tofu (□ / ☒) in the PDF (e.g., the emoji ✅ requires an emoji font). The development Docker image already bundles `fonts-noto-cjk` (Japanese) plus `fonts-noto-color-emoji` (emoji). When producing PDFs in your own environment, install fonts according to the character types you use (HTML is unaffected because it uses the browser's fonts)
+- **PDF fonts use the system fonts of the runtime environment.** If a font for a character type appearing in the body is missing, it becomes tofu (□ / ☒) in the PDF (e.g., the emoji ✅ requires an emoji font). The development Docker image already bundles `fonts-noto-cjk` (Japanese) plus `fonts-noto-color-emoji` (emoji). When producing PDFs in your own environment, install fonts according to the character types you use (HTML is unaffected because it uses the browser's fonts). Nothing in the build checks this yet, so a forgotten font produces a successful build and an unreadable PDF; v0.10 adds a warning ([roadmap.md](roadmap.md) 24.3.3). HTML escapes this only because it uses the reader's fonts — `mermaid.mode: pre-render` does not, since it bakes the build machine's fonts into the SVG
 - Input is assumed to be trusted documents (AsciiDoc raw HTML is not sanitized; see [development.md](development.md) for details)
