@@ -352,10 +352,18 @@ npm install -g monodocs@next
 8. CI で GitHub Release を生成する。
 9. CI から npm へ公開する。
 10. npm から公開版を再インストールして検証する。
-11. `next` dist-tag を公開した安定版へ移す。
-12. README、公式サイト、ステータス文書を更新する。
+11. リリースバイナリを対応プラットフォームで検証する。
+12. `next` dist-tag を公開した安定版へ移す。
+13. README、公式サイト、ステータス文書を更新する。
 
-手順 11 は maintainer アカウントから手作業で行う。
+手順 10 は `verify-published.yml` が行う。手順 11 を行うワークフローは無い。同ワークフローはリリース
+バイナリと長時間動作するコマンドを対象外にしており、CI が公開した資材を Node.js の無いホストで実行する
+こともない。バイナリを配る以上、動くと主張しているのはまさにその環境である。Windows x64 では
+[`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) をリリースに対して
+実行し、最後に表示される手作業の項目まで済ませる。Linux x64 では `.sha256` を照合して手で実行する。
+スクリプトが何を見て、何を意図的に人へ残すかは [maintenance.md](maintenance.md) に記録している。
+
+手順 12 は maintainer アカウントから手作業で行う。
 
 ```bash
 npm dist-tag add monodocs@0.9.0 next
