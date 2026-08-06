@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-07-31
+最終更新: 2026-08-06
 
 ## 対応状況
 
@@ -142,7 +142,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] `next` tag で `0.9.0-beta.1` を npm へ公開する
 - [x] 公開した beta の npm パッケージを `verify-published.yml` により Linux x64 / Windows x64 で検証する（install、HTML、PDF、`PUPPETEER_EXECUTABLE_PATH` なしのブラウザ自動検出、`--format both`、Mermaid pre-render）。改名した既定出力が `docs.html` / `docs.pdf` になることを確認した
 - [x] Linux x64 のリリースバイナリを `.sha256` で照合して実行する（`validate`、`-o` を省略したビルドが `dist/docs.html` を書くこと、出力に外部アセット参照が無いこと、PDF が想定どおり失敗して npm 版を案内すること）
-- [ ] Windows x64 のリリースバイナリと、`serve` / `watch` を手で検証する（`verify-published.yml` は長時間動作するコマンドとリリースバイナリを意図的に対象外にしている）
+- [x] Windows x64 のリリースバイナリと、`serve` / `watch` を手で検証する（`verify-published.yml` は長時間動作するコマンドとリリースバイナリを意図的に対象外にしている）。機械的に確認できる部分は [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) に自動化し、公開した資材に対して実機の Windows x64 で実行した（`.sha256` の照合、`validate`、`-o` を省略したビルドが `dist/docs.html` を書くこと、出力に外部アセット参照が無いこと、空白と日本語を含むパスからのビルド、PDF と Mermaid pre-render が npm 版への切り替えを案内して失敗すること、NOTICES、`serve` の SSE によるライブリロード通知・編集が配信ページに届くこと・停止時のポート解放、`watch` の初回ビルドと編集後の再ビルド。16 項目すべて PASS）。スクリプトでは決着しないブラウザでの表示と `serve --open` は手で確認した。v0.8 と同じく Mark of the Web は付いていない（スクリプトは `curl.exe` / `Invoke-WebRequest` で取得するため）ので、ドキュメントが留保している警告は依然として試していない。留保は留保のまま残し、コード署名が可能になった時点で再検討する
 - [x] stable `0.9.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる
 
 ## 対応記法

@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-07-31
+Last updated: 2026-08-06
 
 ## Support Status
 
@@ -142,7 +142,7 @@ and both it and v0.9 are released.
 - [x] Publish `0.9.0-beta.1` to npm under the `next` tag
 - [x] Verify the published beta npm package on Linux x64 and Windows x64 through `verify-published.yml` (install, HTML, PDF, browser auto-detection with no `PUPPETEER_EXECUTABLE_PATH`, `--format both`, Mermaid pre-render), confirming the renamed default output lands as `docs.html` / `docs.pdf`
 - [x] Verify the Linux x64 release binary against its `.sha256` and run it: `validate`, a build with `-o` omitted writing `dist/docs.html`, no external asset references in the output, and the expected PDF failure pointing at the npm package
-- [ ] Verify the Windows x64 release binary by hand, plus `serve` / `watch` (`verify-published.yml` deliberately leaves long-running commands and the release binaries out of its scope)
+- [x] Verify the Windows x64 release binary by hand, plus `serve` / `watch` (`verify-published.yml` deliberately leaves long-running commands and the release binaries out of its scope). The mechanical part is now automated in [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1), run against the published asset on real Windows x64 hardware: `.sha256` match, `validate`, a build without `-o` writing `dist/docs.html`, no external asset reference in the output, a build from a path containing spaces and Japanese characters, PDF and Mermaid pre-render failing with the guidance to switch to the npm build, the NOTICES file, `serve` (live reload broadcast over SSE, the edit reaching the served page, and the port released on stop), and `watch` (initial build and rebuild after an edit) — 16 of 16 checks passed. Browser rendering and `serve --open` were checked by hand, since a script cannot settle them. As in v0.8 no Mark of the Web was attached, because the script downloads with `curl.exe` / `Invoke-WebRequest`, so the warning the documentation hedges about is still untested. The hedge stays a hedge; revisit only if code signing becomes possible
 - [x] Publish and verify the stable `0.9.0` release, and pin the CI guide on the documentation site to it
 
 ## Supported Syntax

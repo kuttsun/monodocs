@@ -21,6 +21,30 @@ M6 の運用面にあたる。方針そのものはそちらに置く。
 alert とは重複しない。alert が依存グラフと GitHub の advisory database を突き合わせるのに対し、
 `pnpm audit` はこのリポジトリの `overrides` を効かせた実際の解決結果を見る。
 
+## リリースバイナリの検証
+
+`verify-published.yml` が見るのは公開済みの npm パッケージであり、リリースバイナリと長時間動作する
+コマンドは対象外である。これらはリリースごとに実機の Windows x64 で検証する。要点は、公開した資材
+そのものが Node.js 無しで動くことであり、これはこのリポジトリのどの CI ジョブも行っていない。
+
+この検証は [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) が自動化
+する。`monodocs-windows-x64.exe` を取得して公開済みの `.sha256` と照合し、CLI の確認に加えて
+`serve` / `watch` を実行する。ライブリロードの確認は SSE エンドポイントを直接読むため、編集が再ビルド
+に届くことの確認にブラウザを必要としない。各確認の結果を一覧で報告し、1 つでも失敗すれば非 0 で終了
+する。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-windows-binary.ps1 -Version v0.9.0
+```
+
+次の 3 つは、スクリプトでは決着しないため手作業のまま残す。
+
+- ブラウザでの表示。サイドバー、検索の操作、ダークモード、狭い画面でのドロワー。
+- SmartScreen と Mark of the Web。スクリプトのダウンロードは Mark of the Web を付けないため、警告を
+  試したことにはならない。バイナリは方針として署名しておらず（[roadmap.md](roadmap.md) 8.5）、
+  サイトでも注意喚起している。[status.md](status.md) を参照。
+- 既定のブラウザを開く `serve --open`。
+
 ## 四半期ごとの棚卸し
 
 以下はいずれも自動化できないため、心がけではなく日付を持たせる。`quarterly-review.yml` が 1 月・
