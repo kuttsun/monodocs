@@ -120,6 +120,47 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # リリースバイナリの検証スクリプトは CI で実行されないため、静的解析だけは毎回かける
+  # （両方とも、検査が黙って嘘をつく種類の不具合を実際に抱えていた）。
+  scripts:
+    name: Verification scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Check shell scripts
+        run: |
+          for script in scripts/*.sh; do
+            bash -n "$script"
+          done
+          shellcheck scripts/*.sh
+
+      # Write-Host はこのスクリプトの目的そのもの（端末への進捗表示）であり、ShouldProcess と
+      # 単数形の名詞は公開コマンドレット向けの規約なので、この 3 つだけ除外する。
+      - name: Check PowerShell scripts
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
+          $failed = $false
+          foreach ($script in Get-ChildItem -Path scripts -Filter *.ps1 -Recurse) {
+            $errors = $null
+            $tokens = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors) {
+              $errors | ForEach-Object { Write-Host "$($script.Name):$($_.Extent.StartLineNumber): $($_.Message)" }
+              $failed = $true
+            }
+          }
+          $issues = Invoke-ScriptAnalyzer -Path scripts -Recurse -Severity Error, Warning `
+            -ExcludeRule PSAvoidUsingWriteHost, PSUseShouldProcessForStateChangingFunctions, PSUseSingularNouns
+          if ($issues) {
+            $issues | Format-Table -AutoSize -Property Severity, ScriptName, Line, RuleName, Message | Out-String -Width 200 | Write-Host
+            $failed = $true
+          }
+          if ($failed) { throw 'Verification scripts have findings' }
+
   site:
     name: Site CI
     needs: app
