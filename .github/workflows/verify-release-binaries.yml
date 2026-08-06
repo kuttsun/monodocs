@@ -1,0 +1,94 @@
+name: Verify release binaries
+
+# Runs the per-platform verification scripts against the binaries attached to a published release.
+#
+# This does NOT replace the manual pass described in docs/maintenance.md. GitHub runners have
+# Node.js installed, so a green run here does not demonstrate that the binary works where Node.js
+# is absent — the property a binary release is making a claim about. It is an additional net that
+# catches a broken or missing asset without waiting for someone to find a machine.
+#
+# Browser rendering, `serve --open`, and SmartScreen / Mark of the Web stay manual either way.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to verify (for example v0.9.0)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-release-binaries-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            os: ubuntu-latest
+            asset: monodocs-linux-x64
+          - name: Windows x64
+            os: windows-latest
+            asset: monodocs-windows-x64.exe
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Resolve the release tag
+        id: release
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="${RELEASE_TAG:-$INPUT_TAG}"
+          case "$tag" in
+            v*) ;;
+            *) echo "Expected a tag like v0.9.0, got '$tag'" >&2; exit 1 ;;
+          esac
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      # release.yml attaches the binaries from a job that starts from this same event, so this
+      # workflow can begin before the asset exists. Waiting here keeps the failure honest: a
+      # missing asset after the release workflow has had its time is a real problem, not a race.
+      - name: Wait for the release asset
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          ASSET: ${{ matrix.asset }}
+        run: |
+          for attempt in $(seq 1 60); do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx "$ASSET"; then
+              echo "$ASSET is attached to $TAG"
+              exit 0
+            fi
+            echo "Attempt $attempt: $ASSET is not attached yet"
+            sleep 30
+          done
+          echo "Timed out waiting for $ASSET on $TAG" >&2
+          exit 1
+
+      # The scripts download the asset, its .sha256, its NOTICES file, and the tagged source archive
+      # for the example documents, so nothing here depends on the checked-out working tree matching
+      # the release.
+      - name: Verify the Linux x64 binary
+        if: runner.os == 'Linux'
+        run: scripts/verify-linux-binary.sh --version "${{ steps.release.outputs.tag }}"
+
+      - name: Verify the Windows x64 binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/verify-windows-binary.ps1 -Version "${{ steps.release.outputs.tag }}"

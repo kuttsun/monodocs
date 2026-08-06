@@ -12,8 +12,9 @@ M6 の運用面にあたる。方針そのものはそちらに置く。
 | 通常のバージョン更新     | Dependabot（月次。`github-actions` / `app/`（pnpm）/ `site/`（npm））                 |
 | 脆弱なバージョンの検知   | Dependabot alerts と automated security fixes（リポジトリ設定で有効）                 |
 | 依存ツリーへの advisory  | `.github/workflows/scheduled-audit.yml`（週次。失敗時に Issue を作成）                |
-| プルリクエストの検査     | `.github/workflows/pr-ci.yml`（両方の依存セットの audit も実行）                      |
+| プルリクエストの検査     | `.github/workflows/pr-ci.yml`（両方の依存セットの audit と、スクリプトの静的解析も実行） |
 | 公開済みパッケージの検証 | `.github/workflows/verify-published.yml`（dist-tag / バージョンを指定して手動実行）   |
+| リリースバイナリの検証   | `.github/workflows/verify-release-binaries.yml`（公開時に自動、タグ指定で手動実行）   |
 | 棚卸しのリマインダ       | `.github/workflows/quarterly-review.yml`（四半期のチェックリストを Issue として作成） |
 
 定期 audit を別に持つのは、PR CI の audit が PR のあるときしか走らないためである。インストールせずに
@@ -51,6 +52,12 @@ PowerShell だけ入れさせる理由は無く、またプラットフォーム
 拾えない）。Windows 側は空白と日本語を含むパスの扱いと Mark of the Web。確認すべき項目の正本はこの文書
 であり、2 本のスクリプトはその実装である。片方に確認を足したら、プラットフォーム固有でない限りもう
 片方にも足す。
+
+`verify-release-binaries.yml` は、公開済みリリースに対して両方のスクリプトを実行する。公開時に自動で
+1 回、任意のタグに対しては手動で実行できる。ただし上記の検証を置き換えるものではない。GitHub の
+ランナーには Node.js が入っているため、そこが緑であることが言えるのは資材が壊れていないことと CLI が
+期待どおり振る舞うことまでで、Node.js の無い環境で動くことではない。実機を用意できる人を待たずに、
+壊れた資材や添付漏れを捕まえるための網である。
 
 次の項目は、スクリプトでは決着しないため手作業のまま残す。
 

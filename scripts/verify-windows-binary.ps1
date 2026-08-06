@@ -243,7 +243,7 @@ function Get-HttpBody {
 function Open-SseStream {
     param([string]$Url)
     # Needed on Windows PowerShell 5.1; already loaded on PowerShell 7.
-    try { Add-Type -AssemblyName System.Net.Http -ErrorAction Stop } catch { }
+    try { Add-Type -AssemblyName System.Net.Http -ErrorAction Stop } catch { Write-Verbose "System.Net.Http is already available: $_" }
     $client = New-Object System.Net.Http.HttpClient
     $client.Timeout = [TimeSpan]::FromMinutes(5)
     $response = $client.GetAsync($Url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
@@ -278,9 +278,10 @@ function Wait-SseEvent {
 function Close-SseStream {
     param($Stream)
     if ($null -eq $Stream) { return }
-    try { $Stream.Reader.Dispose() } catch { }
-    try { $Stream.Response.Dispose() } catch { }
-    try { $Stream.Client.Dispose() } catch { }
+    # Best effort: the stream is already going away, and a failure here must not mask a result.
+    try { $Stream.Reader.Dispose() } catch { Write-Verbose "Reader dispose failed: $_" }
+    try { $Stream.Response.Dispose() } catch { Write-Verbose "Response dispose failed: $_" }
+    try { $Stream.Client.Dispose() } catch { Write-Verbose "Client dispose failed: $_" }
 }
 
 function New-Marker {

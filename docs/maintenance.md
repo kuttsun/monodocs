@@ -12,8 +12,9 @@ What keeps running after a release, and what a person has to check. This is the 
 | Routine version bumps  | Dependabot, monthly, for `github-actions`, `app/` (pnpm), and `site/` (npm)           |
 | Vulnerable versions    | Dependabot alerts and automated security fixes, enabled in the repository settings    |
 | Advisories on the tree | `.github/workflows/scheduled-audit.yml`, weekly, opening an issue when it fails       |
-| Pull request checks    | `.github/workflows/pr-ci.yml`, which also audits both dependency sets                 |
+| Pull request checks    | `.github/workflows/pr-ci.yml`, which also audits both dependency sets and lints the scripts |
 | Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version   |
+| Release binaries       | `.github/workflows/verify-release-binaries.yml`, on publish and by hand against a tag |
 | Review reminder        | `.github/workflows/quarterly-review.yml`, opening the quarterly checklist as an issue |
 
 The scheduled audit exists because the PR CI audit only runs when a pull request is open. It reads
@@ -53,6 +54,11 @@ the executable bit the asset arrives without, and a rebuild from an edit in a su
 recursive `fs.watch` catches, on Linux; path handling with spaces and Japanese characters, and Mark
 of the Web, on Windows. This document is where the required checks are recorded, and the scripts are
 its two implementations — a check added to one belongs in the other unless it is platform-specific.
+
+`verify-release-binaries.yml` runs both scripts against a published release, on publish and on
+demand for any tag. It does not replace the pass above: GitHub runners have Node.js installed, so a
+green run there says the asset is intact and the CLI behaves, not that it works where Node.js is
+absent. It exists to catch a broken or missing asset without waiting for someone to find a machine.
 
 What stays manual, because a script cannot settle it:
 

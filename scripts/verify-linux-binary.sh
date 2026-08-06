@@ -132,8 +132,10 @@ fatal() { printf '\n%serror:%s %s\n' "$C_RED" "$C_OFF" "$1" >&2; exit 1; }
 invoke_bin() {
   local cwd="$1"; shift
   run_index=$((run_index + 1))
-  local out="$log_dir/run-$(printf '%02d' "$run_index").out.log"
-  local err="$log_dir/run-$(printf '%02d' "$run_index").err.log"
+  local index out err
+  index="$(printf '%02d' "$run_index")"
+  out="$log_dir/run-$index.out.log"
+  err="$log_dir/run-$index.err.log"
   ( cd "$cwd" && "$bin" "$@" ) >"$out" 2>"$err"
   bin_status=$?
   bin_out="$(cat "$out")"
