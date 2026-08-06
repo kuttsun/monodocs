@@ -34,20 +34,33 @@ source_path=""
 port=4173
 clean=0
 
+# Prints the header comment block, whatever its length, and stops at the first line that is not part
+# of it. Errors send it to stderr so a usage mistake does not look like output.
 usage() {
-  sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
-  exit "${1:-0}"
+  local status="${1:-0}"
+  if [ "$status" -eq 0 ]; then
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
+  else
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0" >&2
+  fi
+  exit "$status"
+}
+
+# Called with the remaining arguments, so $1 is the option and $# tells whether a value follows.
+# Without this, `shift 2` on a trailing option fails, consumes nothing, and the loop never ends.
+require_value() {
+  [ $# -ge 2 ] || { echo "Option $1 requires a value" >&2; usage 1; }
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --version) version="${2:-}"; shift 2 ;;
-    --work-dir) work_dir="${2:-}"; shift 2 ;;
-    --binary) binary_path="${2:-}"; shift 2 ;;
-    --sha256) sha256_path="${2:-}"; shift 2 ;;
-    --notices) notices_path="${2:-}"; shift 2 ;;
-    --source) source_path="${2:-}"; shift 2 ;;
-    --port) port="${2:-}"; shift 2 ;;
+    --version) require_value "$@"; version="$2"; shift 2 ;;
+    --work-dir) require_value "$@"; work_dir="$2"; shift 2 ;;
+    --binary) require_value "$@"; binary_path="$2"; shift 2 ;;
+    --sha256) require_value "$@"; sha256_path="$2"; shift 2 ;;
+    --notices) require_value "$@"; notices_path="$2"; shift 2 ;;
+    --source) require_value "$@"; source_path="$2"; shift 2 ;;
+    --port) require_value "$@"; port="$2"; shift 2 ;;
     --clean) clean=1; shift ;;
     -h|--help) usage 0 ;;
     *) echo "Unknown option: $1" >&2; usage 1 ;;
@@ -66,6 +79,9 @@ mkdir -p "$work_dir" || exit 1
 work_dir="$(cd "$work_dir" && pwd)"
 log_dir="$work_dir/logs"
 mkdir -p "$log_dir"
+
+# The real stderr, kept aside for the interrupt handler (see `interrupted`).
+exec 9>&2
 
 # ---------------------------------------------------------------------------------------------
 # Helpers
@@ -142,27 +158,50 @@ file_contains() { grep -q -- "$2" "$1" 2>/dev/null; }
 
 url_contains() { curl -fsS --max-time 15 "$1" 2>/dev/null | grep -q -- "$2"; }
 
+# Stops a background process, escalating rather than waiting out one that cannot answer. SIGINT is
+# the documented way to stop serve / watch, so that is the default and the path a person would take;
+# it reaches them in well under a second. The curl that reads the live reload stream is passed TERM
+# instead: a background job of a non-interactive shell inherits SIG_IGN for SIGINT, and curl, unlike
+# the binary, never installs a handler of its own, so SIGINT would only cost the run a timeout.
 stop_process() {
-  local pid="$1"
+  local pid="$1" first_signal="${2:-INT}"
   [ -n "$pid" ] || return 0
   kill -0 "$pid" 2>/dev/null || return 0
-  # SIGINT is the documented way to stop serve / watch, so use the same path a person would.
-  kill -INT "$pid" 2>/dev/null
-  local deadline=$(( $(date +%s) + 10 ))
-  while [ "$(date +%s)" -lt "$deadline" ]; do
-    kill -0 "$pid" 2>/dev/null || return 0
-    sleep 0.2
+  local signal deadline
+  for signal in "$first_signal" TERM KILL; do
+    kill -"$signal" "$pid" 2>/dev/null
+    deadline=$(( $(date +%s) + 5 ))
+    while [ "$(date +%s)" -lt "$deadline" ]; do
+      kill -0 "$pid" 2>/dev/null || return 0
+      sleep 0.2
+    done
   done
-  kill -9 "$pid" 2>/dev/null
   return 0
 }
 
 cleanup() {
-  stop_process "$sse_pid"
+  stop_process "$sse_pid" TERM
   stop_process "$serve_pid"
   stop_process "$watch_pid"
 }
-trap cleanup EXIT INT TERM
+
+# INT / TERM stop the run. Cleaning up without exiting would let the interrupted check be recorded
+# and the remaining ones carry on, restarting serve after the person asked for it to stop.
+interrupted() {
+  local signal="$1"
+  cleanup
+  # fd 9 is the real stderr: a check redirects fd 2 to its detail file, and a trap that fires while
+  # one is running would otherwise write this notice there instead of to the terminal.
+  printf '\n%sInterrupted by SIG%s.%s Logs: %s\n' "$C_YELLOW" "$signal" "$C_OFF" "$work_dir" >&9
+  trap - EXIT
+  case "$signal" in
+    INT) exit 130 ;;
+    *) exit 143 ;;
+  esac
+}
+trap cleanup EXIT
+trap 'interrupted INT' INT
+trap 'interrupted TERM' TERM
 
 new_marker() { echo "MONODOCS-$1-$$-${RANDOM}"; }
 
@@ -396,7 +435,7 @@ check_live_reload() {
 run_check "live reload broadcasts a rebuild over SSE and serves the new content" check_live_reload
 
 check_serve_stops() {
-  stop_process "$sse_pid"; sse_pid=""
+  stop_process "$sse_pid" TERM; sse_pid=""
   stop_process "$serve_pid"; serve_pid=""
   wait_until 15 port_closed || { echo "Port $port stayed open" >&2; return 1; }
 }
