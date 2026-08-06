@@ -369,11 +369,11 @@ npm install -g monodocs@next
 
 Step 10 is `verify-published.yml`. No workflow does step 11: that one leaves the release binaries
 and the long-running commands out of its scope, and CI never runs the published asset on a host
-without Node.js — the very environment a binary release makes a claim about. On Windows x64, run
-[`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the release and
-finish the manual checks it prints at the end; on Linux x64, check the binary against its `.sha256`
-and run it by hand. [maintenance.md](maintenance.md) records what the script covers and what it
-deliberately leaves to a person.
+without Node.js — the very environment a binary release makes a claim about. Run
+[`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) on Windows x64 and
+[`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on Linux x64, on hosts without
+Node.js, and finish the manual checks each prints at the end. [maintenance.md](maintenance.md)
+records what the scripts cover and what they deliberately leave to a person.
 
 Step 12 is done by hand, from a maintainer account:
 
