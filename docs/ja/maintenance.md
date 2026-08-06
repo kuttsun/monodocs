@@ -24,26 +24,41 @@ alert とは重複しない。alert が依存グラフと GitHub の advisory da
 ## リリースバイナリの検証
 
 `verify-published.yml` が見るのは公開済みの npm パッケージであり、リリースバイナリと長時間動作する
-コマンドは対象外である。これらはリリースごとに実機の Windows x64 で検証する。要点は、公開した資材
-そのものが Node.js 無しで動くことであり、これはこのリポジトリのどの CI ジョブも行っていない。
-
-この検証は [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) が自動化
-する。`monodocs-windows-x64.exe` を取得して公開済みの `.sha256` と照合し、CLI の確認に加えて
-`serve` / `watch` を実行する。ライブリロードの確認は SSE エンドポイントを直接読むため、編集が再ビルド
-に届くことの確認にブラウザを必要としない。各確認の結果を一覧で報告し、1 つでも失敗すれば非 0 で終了
-する。
+コマンドは対象外である。これらはリリースごとに、対応プラットフォームそれぞれの実機で検証する。要点は、
+公開した資材そのものが Node.js 無しで動くことであり、これはこのリポジトリのどの CI ジョブも行っていない。
+実行する機には Node.js を入れないこと。バイナリは自前のランタイムを内包し `PATH` を見ないため検査結果は
+変わらないが、Node.js のある機ではリリースが主張している性質を実証できない。そのため、どちらの
+スクリプトも `node` を見つけたらその旨を表示する。
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-windows-binary.ps1 -Version v0.9.0
 ```
 
-次の 3 つは、スクリプトでは決着しないため手作業のまま残す。
+```bash
+scripts/verify-linux-binary.sh --version v0.9.0
+```
+
+[`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) と
+[`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) は、いずれも公開済みの資材を
+取得して `.sha256` で門を作り、同じ中核の確認を行う。CLI の表層、`-o` を省略したビルド、自己完結 HTML、
+PDF と Mermaid pre-render が npm 版への切り替えを案内して失敗すること、NOTICES、`serve`、`watch` である。
+ライブリロードの確認は SSE エンドポイントを直接読むため、編集が再ビルドに届くことの確認にブラウザを
+必要としない。各確認の結果を一覧で報告し、1 つでも失敗すれば非 0 で終了する。
+
+1 本にプラットフォーム分岐を持たせず 2 本に分けている。Node.js を意図的に持たない Linux ホストに
+PowerShell だけ入れさせる理由は無く、またプラットフォーム固有の確認は重ならないためである。Linux 側は
+資材に付いてこない実行ビットと、サブディレクトリの編集からの再ビルド（recursive な `fs.watch` でしか
+拾えない）。Windows 側は空白と日本語を含むパスの扱いと Mark of the Web。確認すべき項目の正本はこの文書
+であり、2 本のスクリプトはその実装である。片方に確認を足したら、プラットフォーム固有でない限りもう
+片方にも足す。
+
+次の項目は、スクリプトでは決着しないため手作業のまま残す。
 
 - ブラウザでの表示。サイドバー、検索の操作、ダークモード、狭い画面でのドロワー。
-- SmartScreen と Mark of the Web。スクリプトのダウンロードは Mark of the Web を付けないため、警告を
-  試したことにはならない。バイナリは方針として署名しておらず（[roadmap.md](roadmap.md) 8.5）、
-  サイトでも注意喚起している。[status.md](status.md) を参照。
 - 既定のブラウザを開く `serve --open`。
+- Windows のみ、SmartScreen と Mark of the Web。スクリプトのダウンロードは Mark of the Web を付けない
+  ため、警告を試したことにはならない。バイナリは方針として署名しておらず（[roadmap.md](roadmap.md) 8.5）、
+  サイトでも注意喚起している。[status.md](status.md) を参照。
 
 ## 四半期ごとの棚卸し
 

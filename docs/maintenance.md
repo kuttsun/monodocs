@@ -25,26 +25,42 @@ resolve to.
 ## Release binary verification
 
 `verify-published.yml` covers the published npm package, but not the release binaries and not the
-long-running commands. Those are verified per release on a real Windows x64 host, where the point is
-the published asset itself running without Node.js — something no CI job in this repository does.
-
-[`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) automates that pass. It
-downloads `monodocs-windows-x64.exe`, checks it against the published `.sha256`, and runs the CLI
-checks plus `serve` and `watch` — the live-reload check reads the SSE endpoint directly, so a browser
-is not needed to prove that an edit reaches a rebuild. Every check is reported and the script exits
-non-zero if any failed.
+long-running commands. Those are verified per release on a real host of each supported platform,
+where the point is the published asset itself running without Node.js — something no CI job in this
+repository does. Run each script on a machine that has no Node.js: the binary carries its own
+runtime and never consults `PATH`, but a host with Node.js installed cannot demonstrate the property
+the release is claiming, so both scripts say so when they find `node`.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-windows-binary.ps1 -Version v0.9.0
 ```
 
-Three things stay manual because a script cannot settle them:
+```bash
+scripts/verify-linux-binary.sh --version v0.9.0
+```
+
+[`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) and
+[`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) each download the published
+asset, gate on its `.sha256`, and run the same core checks: the CLI surface, a build without `-o`,
+self-contained HTML, PDF and Mermaid pre-render failing with the guidance to switch to the npm build,
+the NOTICES file, `serve`, and `watch`. The live-reload check reads the SSE endpoint directly, so a
+browser is not needed to prove that an edit reaches a rebuild. Every check is reported and the script
+exits non-zero if any failed.
+
+They are two scripts rather than one with a platform switch. A Linux host that deliberately has no
+Node.js should not need PowerShell installed either, and the platform-specific checks do not overlap:
+the executable bit the asset arrives without, and a rebuild from an edit in a subdirectory that only
+recursive `fs.watch` catches, on Linux; path handling with spaces and Japanese characters, and Mark
+of the Web, on Windows. This document is where the required checks are recorded, and the scripts are
+its two implementations — a check added to one belongs in the other unless it is platform-specific.
+
+What stays manual, because a script cannot settle it:
 
 - Browser rendering: sidebar, search interaction, dark mode, and the narrow-width drawer.
-- SmartScreen and Mark of the Web. Downloads made by the script do not attach a Mark of the Web, so
-  the warning is not exercised. The binary is unsigned by policy
-  ([roadmap.md](roadmap.md) 8.5) and the site documents the warning; see [status.md](status.md).
 - `serve --open`, which launches the default browser.
+- On Windows, SmartScreen and Mark of the Web. Downloads made by the script do not attach a Mark of
+  the Web, so the warning is not exercised. The binary is unsigned by policy
+  ([roadmap.md](roadmap.md) 8.5) and the site documents the warning; see [status.md](status.md).
 
 ## Quarterly review
 

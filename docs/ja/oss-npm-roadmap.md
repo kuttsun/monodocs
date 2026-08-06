@@ -358,10 +358,11 @@ npm install -g monodocs@next
 
 手順 10 は `verify-published.yml` が行う。手順 11 を行うワークフローは無い。同ワークフローはリリース
 バイナリと長時間動作するコマンドを対象外にしており、CI が公開した資材を Node.js の無いホストで実行する
-こともない。バイナリを配る以上、動くと主張しているのはまさにその環境である。Windows x64 では
-[`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) をリリースに対して
-実行し、最後に表示される手作業の項目まで済ませる。Linux x64 では `.sha256` を照合して手で実行する。
-スクリプトが何を見て、何を意図的に人へ残すかは [maintenance.md](maintenance.md) に記録している。
+こともない。バイナリを配る以上、動くと主張しているのはまさにその環境である。Node.js の無いホストで、
+Windows x64 では [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を、
+Linux x64 では [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行し、
+最後に表示される手作業の項目まで済ませる。スクリプトが何を見て、何を意図的に人へ残すかは
+[maintenance.md](maintenance.md) に記録している。
 
 手順 12 は maintainer アカウントから手作業で行う。
 

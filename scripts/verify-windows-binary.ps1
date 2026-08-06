@@ -11,6 +11,10 @@
 
     Node.js is not required: everything runs through the binary under test.
 
+    scripts/verify-linux-binary.sh is the Linux counterpart. They are separate scripts so that a
+    host which deliberately has no Node.js does not need PowerShell installed either, and because
+    the platform-specific checks differ. docs/maintenance.md records the checks both must cover.
+
     What this script deliberately does NOT cover, and still needs a person:
       * Browser rendering: sidebar, search interaction, dark mode, narrow-width drawer.
       * SmartScreen / Mark of the Web. Downloads here use curl.exe or Invoke-WebRequest, neither of
