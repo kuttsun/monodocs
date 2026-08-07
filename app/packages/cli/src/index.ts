@@ -1,7 +1,18 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
-import { Command } from "commander";
-import { buildSite, serveSite, validateSite, watchSite, type OutputFormat } from "@monodocs/core";
+import { Command, CommanderError } from "commander";
+import {
+  buildSite,
+  MESSAGE_LANGS,
+  resolveMessageLang,
+  serveSite,
+  setMessageLang,
+  t,
+  type MessageKey,
+  validateSite,
+  watchSite,
+  type OutputFormat,
+} from "@monodocs/core";
 import packageJson from "../package.json" with { type: "json" };
 
 declare const __MONODOCS_VERSION__: string;
@@ -11,6 +22,35 @@ declare const __MONODOCS_VERSION__: string;
 const CLI_VERSION =
   typeof __MONODOCS_VERSION__ === "string" ? __MONODOCS_VERSION__ : packageJson.version;
 
+/**
+ * メッセージ言語を、Commander が引数を解釈する前に確定させる。
+ *
+ * `--help` の文言も、引数の解釈中に出るエラーも、この時点ではもう決まっていないといけない。
+ * Commander の action まで待つと、`monodocs --lang ja --help` が英語のヘルプを出してしまう。
+ * そのため argv を自分で先読みする。`LANG` / `LC_ALL` は意図的に見ない（ビルドログが、
+ * それを作ったマシンに依存しないようにするため）。
+ */
+function applyMessageLang(argv: string[]): void {
+  let flag: string | undefined;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    // `--` から先はすべて位置引数。読み続けると、`-- --lang=fr` のような名前の入力
+    // ディレクトリを言語指定と取り違える。
+    if (arg === "--") break;
+    // 値の無い `--lang` は「空で指定された」。既定へ落とさず拒否させる。
+    if (arg === "--lang") flag = argv[i + 1] ?? "";
+    else if (arg?.startsWith("--lang=")) flag = arg.slice("--lang=".length);
+  }
+  try {
+    setMessageLang(resolveMessageLang({ flag, env: process.env.MONODOCS_LANG }));
+  } catch (error) {
+    // Commander が引数を読む前なので、その入口には乗らない。ここで monodocs のエラーとして
+    // 出して終える。素通しにすると Node のスタックトレースになり、対応する値も読み取れない。
+    fail((error as Error).message);
+    process.exit(1);
+  }
+}
+
 /** 既定のブラウザで URL を開く（プラットフォーム別。失敗しても致命的ではない）。 */
 function openBrowser(url: string): void {
   const platform = process.platform;
@@ -19,39 +59,66 @@ function openBrowser(url: string): void {
   try {
     const child = spawn(command, args, { stdio: "ignore", detached: true });
     child.on("error", () => {
-      console.warn(`warning: could not open browser (${command}).`);
+      warn(t("cli.browserOpenFailed", { command }));
     });
     child.unref();
   } catch {
-    console.warn("warning: could not open browser.");
+    warn(t("cli.browserOpenFailedNoCommand"));
   }
+}
+
+function warn(message: string): void {
+  console.warn(t("cli.warningPrefix", { message }));
+}
+
+function fail(message: string): void {
+  console.error(t("cli.errorPrefix", { message }));
 }
 
 /** ビルド結果の警告とサマリを標準出力へ表示する共通処理。 */
 function reportBuild(result: { pages: number; outputs: string[]; warnings: string[] }): void {
-  for (const warning of result.warnings) {
-    console.warn(`warning: ${warning}`);
-  }
-  console.log(`✓ Generated ${result.pages} page(s) -> ${result.outputs.join(", ")}`);
+  for (const warning of result.warnings) warn(warning);
+  console.log(t("cli.generated", { pages: result.pages, outputs: result.outputs.join(", ") }));
 }
+
+applyMessageLang(process.argv);
 
 const program = new Command();
 
+/**
+ * Commander が自前で生成する見出しとオプション説明も同じカタログを通す。
+ * 説明文だけ訳して `Usage:` / `Options:` / `Commands:` を英語のまま残すと、
+ * どちらの言語でもないヘルプ画面になる。
+ */
+program.configureHelp({
+  styleTitle: (title) => {
+    const map: Record<string, string> = {
+      "Usage:": t("cli.help.usage"),
+      "Options:": t("cli.help.options"),
+      "Commands:": t("cli.help.commands"),
+      "Arguments:": t("cli.help.arguments"),
+    };
+    return map[title] ?? title;
+  },
+});
+
 program
   .name("monodocs")
-  .description("複数の Markdown / AsciiDoc から単一 HTML / PDF を生成する")
-  .version(CLI_VERSION);
+  .description(t("cli.description"))
+  .version(CLI_VERSION, "-V, --version", t("cli.help.versionOption"))
+  .helpOption("-h, --help", t("cli.help.helpOption"))
+  .option("--lang <lang>", t("cli.opt.lang", { supported: MESSAGE_LANGS.join(" | ") }))
+  // Commander が自前で足す help サブコマンドの説明も、既定のままでは英語で残る。
+  .helpCommand("help [command]", t("cli.help.helpCommand"));
 
 program
   .command("build")
-  .description("ドキュメントをビルドして単一 HTML / PDF を生成する")
-  .argument("[input]", "入力ディレクトリ（既定: ./docs）")
-  .option(
-    "-o, --output <path>",
-    "出力先（html: ファイル / pdf: ファイル / both: ディレクトリ。既定: ./dist/docs.html）",
-  )
-  .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
-  .option("-f, --format <format>", "出力形式 html | pdf | both（既定: html）")
+  .description(t("cli.build.description"))
+  .argument("[input]", t("cli.arg.input"))
+  .option("-o, --output <path>", t("cli.build.opt.output"))
+  .option("-c, --config <file>", t("cli.opt.config"))
+  .option("-f, --format <format>", t("cli.build.opt.format"))
+  .helpOption("-h, --help", t("cli.help.helpOption"))
   .action(
     async (
       input: string | undefined,
@@ -67,7 +134,7 @@ program
         });
         reportBuild(result);
       } catch (error) {
-        console.error(`error: ${(error as Error).message}`);
+        fail((error as Error).message);
         process.exitCode = 1;
       }
     },
@@ -75,10 +142,11 @@ program
 
 program
   .command("watch")
-  .description("入力・設定ファイルの変更を監視して再ビルドする")
-  .argument("[input]", "入力ディレクトリ（既定: ./docs）")
-  .option("-o, --output <file>", "出力ファイル（既定: ./dist/docs.html）")
-  .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
+  .description(t("cli.watch.description"))
+  .argument("[input]", t("cli.arg.input"))
+  .option("-o, --output <file>", t("cli.watch.opt.output"))
+  .option("-c, --config <file>", t("cli.opt.config"))
+  .helpOption("-h, --help", t("cli.help.helpOption"))
   .action(async (input: string | undefined, options: { output?: string; config?: string }) => {
     const opts = {
       inputDir: input,
@@ -89,24 +157,25 @@ program
     try {
       await watchSite(opts, {
         onRebuild: reportBuild,
-        onError: (error) => console.error(`error: ${error.message}`),
+        onError: (error) => fail(error.message),
       });
-      console.log("Watching for changes… (Ctrl+C to stop)");
+      console.log(t("cli.watching"));
     } catch (error) {
-      console.error(`error: ${(error as Error).message}`);
+      fail((error as Error).message);
       process.exitCode = 1;
     }
   });
 
 program
   .command("serve")
-  .description("ローカルサーバーで配信し、変更を監視してライブリロードする")
-  .argument("[input]", "入力ディレクトリ（既定: ./docs）")
-  .option("-o, --output <file>", "出力ファイル（既定: ./dist/docs.html）")
-  .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
-  .option("-p, --port <port>", "ポート番号（既定: 4173）", (v) => Number(v))
-  .option("-H, --host <host>", "ホスト（既定: 127.0.0.1）")
-  .option("--open", "起動時に既定のブラウザで開く")
+  .description(t("cli.serve.description"))
+  .argument("[input]", t("cli.arg.input"))
+  .option("-o, --output <file>", t("cli.watch.opt.output"))
+  .option("-c, --config <file>", t("cli.opt.config"))
+  .option("-p, --port <port>", t("cli.serve.opt.port"), (v) => Number(v))
+  .option("-H, --host <host>", t("cli.serve.opt.host"))
+  .option("--open", t("cli.serve.opt.open"))
+  .helpOption("-h, --help", t("cli.help.helpOption"))
   .action(
     async (
       input: string | undefined,
@@ -130,19 +199,19 @@ program
           },
           {
             onRebuild: (result) => {
-              for (const warning of result.warnings) console.warn(`warning: ${warning}`);
-              console.log(`✓ Rebuilt ${result.pages} page(s)`);
+              for (const warning of result.warnings) warn(warning);
+              console.log(t("cli.rebuilt", { pages: result.pages }));
             },
-            onError: (error) => console.error(`error: ${error.message}`),
+            onError: (error) => fail(error.message),
           },
         );
-        console.log(`Serving at ${handle.url} (Ctrl+C to stop)`);
+        console.log(t("cli.serving", { url: handle.url }));
         if (options.open) openBrowser(handle.url);
         process.on("SIGINT", () => {
           void handle.close().then(() => process.exit(0));
         });
       } catch (error) {
-        console.error(`error: ${(error as Error).message}`);
+        fail((error as Error).message);
         process.exitCode = 1;
       }
     },
@@ -150,27 +219,62 @@ program
 
 program
   .command("validate")
-  .description("リンク切れ・画像欠落・タイトル欠落などを検出する（出力は書き出さない）")
-  .argument("[input]", "入力ディレクトリ（既定: ./docs）")
-  .option("-c, --config <file>", "設定ファイル（既定: monodocs.config.yml があれば使用）")
+  .description(t("cli.validate.description"))
+  .argument("[input]", t("cli.arg.input"))
+  .option("-c, --config <file>", t("cli.opt.config"))
+  .helpOption("-h, --help", t("cli.help.helpOption"))
   .action(async (input: string | undefined, options: { config?: string }) => {
     const result = await validateSite({ inputDir: input, configFile: options.config });
-    for (const error of result.errors) console.error(`error: ${error}`);
-    for (const warning of result.warnings) console.warn(`warning: ${warning}`);
+    for (const error of result.errors) fail(error);
+    for (const warning of result.warnings) warn(warning);
 
     const total = result.errors.length + result.warnings.length;
     if (total === 0) {
-      console.log(`✓ No issues found (${result.pages} page(s)).`);
+      console.log(t("cli.noIssues", { pages: result.pages }));
       return;
     }
     console.error(
-      `✗ ${result.errors.length} error(s), ${result.warnings.length} warning(s) in ${result.pages} page(s).`,
+      t("cli.issues", {
+        errors: result.errors.length,
+        warnings: result.warnings.length,
+        pages: result.pages,
+      }),
     );
     process.exitCode = 1;
   });
 
+/**
+ * Commander 自身が出す解析エラーを訳す。
+ *
+ * 見出しを差し替えるだけでは足りない。綴りを間違えたオプション名を打つのは日常的で、そのとき
+ * 出るのは Commander の英語のメッセージである。既定では Commander がその場で `process.exit` を
+ * 呼ぶので、下の `.catch()` にも届かない。`exitOverride` で捕まえて訳す。
+ *
+ * 訳すのは実際に当たる 4 つに絞る。文言の中の対象名（オプション名・コマンド名）は引用符から
+ * 取り出す。Commander が付ける候補提示のような、こちらが組み立て直せない部分を持つものは、
+ * Commander の文言のまま出す（訳したふりをして情報を削るより読める）。
+ */
+const COMMANDER_MESSAGES: Record<string, MessageKey> = {
+  "commander.unknownOption": "cli.unknownOption",
+  "commander.unknownCommand": "cli.unknownCommand",
+  "commander.missingArgument": "cli.missingArgument",
+  "commander.optionMissingArgument": "cli.optionMissingArgument",
+};
+
+function handleCommanderError(error: CommanderError): never {
+  // help と version は失敗ではない。Commander は同じ経路でこれらも投げる。
+  if (error.exitCode === 0) process.exit(0);
+  const key = COMMANDER_MESSAGES[error.code];
+  const target = /'([^']*)'/.exec(error.message)?.[1];
+  fail(key && target !== undefined ? t(key, { value: target }) : error.message);
+  process.exit(error.exitCode || 1);
+}
+
+for (const command of [program, ...program.commands]) command.exitOverride();
+
 // トップレベル await は使わない（単一実行ファイル化のため CJS バンドルにする都合）。
 program.parseAsync(process.argv).catch((error) => {
-  console.error(`error: ${(error as Error).message}`);
+  if (error instanceof CommanderError) handleCommanderError(error);
+  fail((error as Error).message);
   process.exit(1);
 });

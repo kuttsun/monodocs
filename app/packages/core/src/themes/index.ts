@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { t } from "../messages.js";
 
 export type Theme = {
   template: string;
@@ -55,10 +56,7 @@ async function loadBuiltInTheme(name: string): Promise<Theme> {
   if (embedded) return embedded;
 
   if (!(BUILT_IN_THEMES as readonly string[]).includes(name)) {
-    throw new Error(
-      `Unknown theme: ${name}. Built-in themes: ${BUILT_IN_THEMES.join(", ")}. ` +
-        `Use a path such as "./my-theme" to load a custom theme directory.`,
-    );
+    throw new Error(t("theme.unknown", { name, builtIn: BUILT_IN_THEMES.join(", ") }));
   }
 
   const dir = join(here, name);
@@ -84,7 +82,7 @@ async function readOptional(dir: string, file: string): Promise<string | undefin
 function assertTemplateTokens(template: string, source: string): void {
   const missing = REQUIRED_TEMPLATE_TOKENS.filter((token) => !template.includes(token));
   if (missing.length > 0) {
-    throw new Error(`Theme template is missing required tokens (${missing.join(", ")}): ${source}`);
+    throw new Error(t("theme.missingTokens", { tokens: missing.join(", "), source }));
   }
 }
 
@@ -99,8 +97,8 @@ function assertTemplateTokens(template: string, source: string): void {
 async function loadCustomTheme(dir: string): Promise<Theme> {
   // パスの打ち間違いと「ディレクトリはあるがテーマファイルが無い」を区別して伝える。
   const stats = await stat(dir).catch(() => undefined);
-  if (!stats) throw new Error(`Theme directory not found: ${dir}`);
-  if (!stats.isDirectory()) throw new Error(`Theme path is not a directory: ${dir}`);
+  if (!stats) throw new Error(t("theme.dirNotFound", { dir }));
+  if (!stats.isDirectory()) throw new Error(t("theme.notADirectory", { dir }));
 
   const [template, style, appJs] = await Promise.all([
     readOptional(dir, THEME_FILES.template),
@@ -109,9 +107,7 @@ async function loadCustomTheme(dir: string): Promise<Theme> {
   ]);
 
   if (template === undefined && style === undefined && appJs === undefined) {
-    throw new Error(
-      `Theme directory has none of ${Object.values(THEME_FILES).join(" / ")}: ${dir}`,
-    );
+    throw new Error(t("theme.empty", { files: Object.values(THEME_FILES).join(" / "), dir }));
   }
 
   const fallback = await loadBuiltInTheme("default");

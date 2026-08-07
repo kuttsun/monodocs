@@ -1,3 +1,4 @@
+import { t } from "./messages.js";
 /**
  * 生成した文書の UI ラベル（chrome）。
  *
@@ -198,9 +199,10 @@ export function resolveLabels(lang: string, overrides: Partial<Labels> = {}): Re
   if (table !== undefined) return { labels };
   return {
     labels,
-    warning:
-      `No UI label table ships for lang "${lang}"; using the ${DEFAULT_LANG} labels. ` +
-      `Tables ship for ${Object.keys(TABLES).join(", ")}; ` +
-      `html.labels can replace individual entries.`,
+    warning: t("labels.noTable", {
+      lang,
+      fallback: DEFAULT_LANG,
+      shipped: Object.keys(TABLES).join(", "),
+    }),
   };
 }

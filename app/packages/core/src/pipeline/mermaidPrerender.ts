@@ -1,6 +1,7 @@
 import type { ColorScheme } from "../config.js";
 import { loadMermaidInline } from "../themes/mermaid.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
+import { t } from "../messages.js";
 
 /**
  * ビルド時に Mermaid 図を SVG 文字列へ変換するレンダラ。
@@ -71,7 +72,7 @@ export function createPuppeteerPrerenderer(options: {
       throw new MermaidPrerenderSetupError(
         error instanceof BrowserSetupError
           ? error.message
-          : `mermaid.mode: pre-render のブラウザ初期化に失敗しました: ${(error as Error).message}`,
+          : t("mermaid.browserInitFailed", { detail: (error as Error).message }),
       );
     }
   }

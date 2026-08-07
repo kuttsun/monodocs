@@ -18,6 +18,7 @@ import { createPuppeteerPdfGenerator, type PdfGenerator } from "./pipeline/rende
 import { sidebarToOutline } from "./pipeline/pdfOutline.js";
 import { renderSingleHtml } from "./pipeline/renderSingleHtml.js";
 import { mermaidRuntimeScript } from "./themes/mermaid.js";
+import { t } from "./messages.js";
 
 /** {@link preparePages} のオプション（テスト時のレンダラ注入・validate の mode 上書き用）。 */
 type PreparePagesOptions = {
@@ -55,7 +56,7 @@ export async function preparePages(
 ): Promise<PreparedSite> {
   const inputDir = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
   if (!existsSync(inputDir)) {
-    throw new Error(`Input directory not found: ${config.inputDir}`);
+    throw new Error(t("build.inputNotFound", { path: config.inputDir }));
   }
 
   const extensions = new Map<string, SourceFormat>();
@@ -64,7 +65,7 @@ export async function preparePages(
 
   const sources = await scanSourceFiles(inputDir, { extensions, exclude: config.exclude });
   if (sources.length === 0) {
-    throw new Error(`No Markdown / AsciiDoc files found in: ${config.inputDir}`);
+    throw new Error(t("build.noSources", { path: config.inputDir }));
   }
 
   const { pages, warnings } = await buildPages(sources, [markdownRenderer, asciidocRenderer], {
@@ -175,10 +176,7 @@ export async function buildSite(
   }
   const { pages, sidebar, warnings, hasMermaid } = prepared;
   if (forceEmbed || forceLargeEmbed) {
-    warnings.unshift(
-      "PDF 出力のため画像を埋め込みました（配布 PDF は外部の相対画像を参照できないため、" +
-        "assets.embedImages / onLargeImage: external を上書き）。",
-    );
+    warnings.unshift(t("build.pdfImagesEmbedded"));
   }
 
   // pre-render は静的 SVG なのでランタイム JS を注入しない（client mode のときだけ注入）。

@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { t } from "../messages.js";
 
 /**
  * ヘッドレスブラウザ（`puppeteer-core` + システム Chromium）の共通起動処理。
@@ -80,11 +81,7 @@ export function resolveChromiumPath(): string {
   if (fromEnv) return fromEnv;
   const found = chromiumCandidates().find((p) => existsSync(p));
   if (found) return found;
-  throw new BrowserSetupError(
-    "ヘッドレスブラウザには Chromium / Google Chrome（Windows では Microsoft Edge も可）が必要です。" +
-      "PUPPETEER_EXECUTABLE_PATH を設定するか、Google Chrome もしくは Chromium をインストールしてください" +
-      "（開発用 Docker では Dockerfile.dev を参照）。",
-  );
+  throw new BrowserSetupError(t("browser.chromiumMissing"));
 }
 
 /**
@@ -108,19 +105,7 @@ export async function isStandaloneBinary(): Promise<boolean> {
  * コマンドを案内しても宛先が違う）。それ以外は追加インストールで直せる。
  */
 export function puppeteerMissingMessage(standalone: boolean): string {
-  if (standalone) {
-    return (
-      "PDF 出力と Mermaid pre-render は単一実行ファイル版では利用できません" +
-      "（ヘッドレスブラウザを操作する puppeteer-core を同梱していないため）。" +
-      "npm 版（`npm install -g monodocs`）を使ってください。"
-    );
-  }
-  return (
-    "ヘッドレスブラウザには puppeteer-core が必要です。npm 版では optionalDependency として " +
-    "install されるため、`--omit=optional` を付けたか optional の install に失敗した可能性が" +
-    "あります。`npm install -g monodocs` で入れ直すか、開発 workspace では " +
-    "`pnpm add puppeteer-core` を実行してください。"
-  );
+  return standalone ? t("browser.puppeteerMissingStandalone") : t("browser.puppeteerMissing");
 }
 
 async function importPuppeteer(): Promise<PuppeteerLike> {
@@ -149,8 +134,6 @@ export async function launchBrowser(): Promise<BrowserLike> {
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
   } catch (error) {
-    throw new BrowserSetupError(
-      `ヘッドレスブラウザの起動に失敗しました: ${(error as Error).message}`,
-    );
+    throw new BrowserSetupError(t("browser.launchFailed", { detail: (error as Error).message }));
   }
 }

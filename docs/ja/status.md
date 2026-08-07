@@ -152,8 +152,8 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **CLI・ランタイムのメッセージ**
 
-- [ ] `--help`（`configureHelp` / `addHelpText` 経由で届く Commander 生成の `Usage:` / `Options:` / `Commands:` 見出しを含む）と全てのエラー・警告が既定で英語になり、`--lang ja` または `MONODOCS_LANG=ja` で日本語になる。フラグが環境変数に優先し、対応していない値は黙ってフォールバックせず対応する値を挙げて拒否する。`LANG` / `LC_ALL` は意図的に見ない。ビルドログを出力したマシンに依存させないため（[roadmap.md](roadmap.md) 25.6）
-- [ ] カタログが monodocs 自身の出す全ての文字列を覆い、その外に新しい文字列を足すとテストが落ちる。包まれないまま利用者に届く依存パッケージ由来のメッセージ（Zod のパースエラー、Puppeteer のスタック）は対象外とし、monodocs が既に包んでいるものはその包み側を訳す。境界を文書に書く
+- [x] `--help`（`configureHelp` / `addHelpText` 経由で届く Commander 生成の `Usage:` / `Options:` / `Commands:` 見出しを含む）と全てのエラー・警告が既定で英語になり、`--lang ja` または `MONODOCS_LANG=ja` で日本語になる。フラグが環境変数に優先し、対応していない値は黙ってフォールバックせず対応する値を挙げて拒否する。`LANG` / `LC_ALL` は意図的に見ない。ビルドログを出力したマシンに依存させないため（[roadmap.md](roadmap.md) 25.6）
+- [x] カタログが monodocs 自身の出す全ての文字列を覆い、その外に新しい文字列を足すとテストが落ちる。包まれないまま利用者に届く依存パッケージ由来のメッセージ（Zod のパースエラー、Puppeteer のスタック）は対象外とし、monodocs が既に包んでいるものはその包み側を訳す。境界を文書に書く
 
 **文書の言語と UI ラベル**（[roadmap.md](roadmap.md) 23.4）
 

@@ -1,5 +1,6 @@
 import type { Page, SidebarItem, SidebarNode, TitleTransform } from "../types.js";
 import { applyTitleTransform, DEFAULT_TITLE_TRANSFORM } from "./titleTransform.js";
+import { t } from "../messages.js";
 
 type DirNode = Extract<SidebarNode, { type: "dir" }>;
 
@@ -89,7 +90,7 @@ export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomS
       const children = item.children.map(convert).filter((node) => node !== undefined);
       // 子がすべて落ちた（hidden のみ等）グループは見出しだけが残るため出さない。
       if (children.length === 0) {
-        warnings.push(`Sidebar group has no visible pages: ${item.title ?? ""}`);
+        warnings.push(t("sidebar.groupEmpty", { title: item.title ?? "" }));
         return undefined;
       }
       // path はフォルダ構造由来の識別子。custom では対応するフォルダが無いので空にする。
@@ -101,18 +102,14 @@ export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomS
     if (!page) {
       // ファイル自体はあっても sidebar.exclude や対象拡張子の設定でページ化されていない
       // ことがあるため、探す場所を示す。
-      throw new Error(
-        `Sidebar item not found: ${item.path}` +
-          ` (paths are relative to input and must resolve to a generated page;` +
-          ` check sidebar.exclude and sources.*.extensions)`,
-      );
+      throw new Error(t("sidebar.itemNotFound", { path: item.path ?? "" }));
     }
     if (page.hidden) {
-      warnings.push(`Sidebar item is hidden and was skipped: ${item.path}`);
+      warnings.push(t("sidebar.itemHidden", { path: item.path ?? "" }));
       return undefined;
     }
     if (seen.has(page.id)) {
-      warnings.push(`Sidebar item appears more than once: ${item.path}`);
+      warnings.push(t("sidebar.itemDuplicate", { path: item.path ?? "" }));
       return undefined;
     }
     seen.add(page.id);
@@ -125,9 +122,7 @@ export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomS
   const missing = pages.filter((page) => !page.hidden && !seen.has(page.id));
   if (missing.length > 0) {
     warnings.push(
-      `Not listed in the custom sidebar (reachable only by route): ${missing
-        .map((page) => page.relativePath)
-        .join(", ")}`,
+      t("sidebar.notListed", { paths: missing.map((page) => page.relativePath).join(", ") }),
     );
   }
 
