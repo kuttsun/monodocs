@@ -101,6 +101,17 @@ html:
   contentWidthToggle: true # 標準幅／ワイド幅切替ボタンを表示
   contentWidthDefault: standard # standard | wide（読者が選択するまでの初期状態）
   imageLightbox: true # リンクのない装飾目的以外の本文画像をクリックして拡大表示
+  # labels: # lang が選んだ表の上に個別の UI ラベルを差し替える
+  #   tocTitle: このページの内容
+
+pdf:
+  pageSize: A4
+  margin: { top: 20mm, right: 15mm, bottom: 20mm, left: 15mm }
+  printBackground: true
+  bookmarks: true # HTML サイドバーと同じ フォルダ→ページ 構造のしおり
+  header: false # false、または Chromium のクラスを使う HTML フラグメント
+  footer: '<div style="width:100%;margin:0 15pt;font-family:sans-serif;font-size:8pt;color:#666;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>'
+
 ```
 
 ## リファレンス
@@ -359,6 +370,44 @@ html:
 ディレクトリも監視するので、編集はプレビューへ反映されます（監視開始時にディレクトリが存在している
 必要があり、後から作成した場合は次にソースか設定が変わったときに拾います）。テーマは文書に埋め込まれる実行可能な
 コードです。ドキュメントのソースと同じ信頼度で扱ってください。
+
+### `pdf`
+
+出力形式が `pdf` または `both` のときに適用されます。
+
+| キー                  | 型                | 既定値    | 説明 |
+| --------------------- | ----------------- | --------- | ---- |
+| `pdf.pageSize`        | string            | `A4`      | 用紙サイズ。Chromium の `format` にそのまま渡す（`A4` / `Letter` / `A3` など）。 |
+| `pdf.margin`          | map               | `20mm` / `15mm` / `20mm` / `15mm` | ページ余白（CSS 長さ）を辺ごとに指定（`top` / `right` / `bottom` / `left`）。省略した辺は既定値のまま。 |
+| `pdf.printBackground` | boolean           | `true`    | 背景色・背景画像を印刷する。 |
+| `pdf.bookmarks`       | boolean           | `true`    | HTML サイドバーと同じ フォルダ → ページ 構造のしおりを付ける。 |
+| `pdf.header`          | `false` / string  | `false`   | 各ページ上部の帯。下記参照。 |
+| `pdf.footer`          | `false` / string  | ページ番号 | 各ページ下部の帯。下記参照。 |
+
+#### `pdf.header` / `pdf.footer`（ページの帯） {#pdf-bands}
+
+既定では、各ページの下端中央にページ番号と総ページ数が入ります。
+
+```text
+3 / 12
+```
+
+数字と区切りだけにしてあるのは意図的です。monodocs が全ページに足す唯一のテキストなので、この形なら翻訳が要らず、[`lang`](#lang) によって変わることもありません。
+
+どちらのキーも、`false` で帯を消し、HTML フラグメントで置き換えられます。
+
+```yaml
+pdf:
+  header: '<div style="width:100%;font-size:8pt;text-align:right;margin:0 15pt"><span class="title"></span></div>'
+  footer: false
+```
+
+フラグメントは Chromium に渡され、**Chromium 自身のクラス**（`pageNumber` / `totalPages` / `title` / `date` / `url`）を持つ要素に値が差し込まれます。独自のトークン構文はありません。フラグメントはすでに HTML であり、Chromium のクラスの上に monodocs のトークンを重ねても、置換とエスケープの層が一段増えるだけで得るものがないためです。
+
+つまずきやすい点が 2 つあります。
+
+- **フラグメントは文書のスタイルを一切継承しません。** 例のようにフォントと大きさを自分で指定してください。指定しないと、本文に合ったものではなく Chromium の素の既定になります。
+- **帯は余白の中に置かれます。** Chromium は帯を上下の余白の大きさに合わせるので、本文が押し出されて再レイアウトされることはありません。ただし帯より小さい余白では、帯が紙の端に貼りついた状態になります。monodocs は、下余白が既定フッタに足りないときに警告します。しきい値は決め打ちの数値ではなく、そのフッタ自身の高さを測って決めます。**置き換えフラグメントは検査しません。** 任意の HTML と CSS が収まるかは余白の値だけでは判断できず、判断したふりをすれば誤警告になるか、測定でしか守れない約束をすることになるためです。
 
 ## ページの並び順とタイトル
 

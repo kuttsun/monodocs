@@ -230,6 +230,9 @@ export async function buildSite(
         outline: config.pdfBookmarks ? sidebarToOutline(sidebar) : undefined,
         title: config.title,
         generator: options.generatorVersion ? `monodocs v${options.generatorVersion}` : "monodocs",
+        header: config.pdfHeader,
+        footer: config.pdfFooter,
+        onWarning: (message) => warnings.push(message),
       });
       await mkdir(dirname(outputs.pdf), { recursive: true });
       await writeFile(outputs.pdf, pdf);

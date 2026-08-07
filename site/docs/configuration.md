@@ -101,6 +101,17 @@ html:
   contentWidthToggle: true # show the standard/wide toggle
   contentWidthDefault: standard # standard | wide (used until the reader chooses)
   imageLightbox: true # click unlinked, non-decorative content images to enlarge them
+  # labels: # replace individual UI labels on top of the table lang chose
+  #   tocTitle: On this page
+
+pdf:
+  pageSize: A4
+  margin: { top: 20mm, right: 15mm, bottom: 20mm, left: 15mm }
+  printBackground: true
+  bookmarks: true # folder -> page outline, same structure as the HTML sidebar
+  header: false # false, or an HTML fragment using Chromium's classes
+  footer: '<div style="width:100%;margin:0 15pt;font-family:sans-serif;font-size:8pt;color:#666;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>'
+
 ```
 
 ## Reference
@@ -381,6 +392,55 @@ Because the output is a single self-contained file, a theme cannot reference ext
 fonts and images as data URIs in `style.css`. `monodocs watch` and `monodocs serve` also watch the
 theme directory, so edits show up in the preview. A theme is executable code in your document — treat
 it with the same trust as your documentation sources.
+
+### `pdf`
+
+Applies when the output format is `pdf` or `both`.
+
+| Key                   | Type              | Default   | Description |
+| --------------------- | ----------------- | --------- | ----------- |
+| `pdf.pageSize`        | string            | `A4`      | Paper size, passed to Chromium as its `format` (`A4`, `Letter`, `A3`, …). |
+| `pdf.margin`          | map               | `20mm` / `15mm` / `20mm` / `15mm` | Page margins as CSS lengths, per side (`top`, `right`, `bottom`, `left`). An omitted side keeps its default. |
+| `pdf.printBackground` | boolean           | `true`    | Print background colours and images. |
+| `pdf.bookmarks`       | boolean           | `true`    | Add a bookmark outline with the same folder → page structure as the HTML sidebar. |
+| `pdf.header`          | `false` / string  | `false`   | The band at the top of every page. See below. |
+| `pdf.footer`          | `false` / string  | page number | The band at the bottom of every page. See below. |
+
+#### `pdf.header` / `pdf.footer` (page bands) {#pdf-bands}
+
+By default every page carries its number and the total, centred at the foot:
+
+```text
+3 / 12
+```
+
+Digits and a separator, deliberately: this is the one piece of text monodocs adds to every page, and
+in this form it needs no translation and does not change with [`lang`](#lang).
+
+Both keys take `false` to remove the band, or an HTML fragment to replace it:
+
+```yaml
+pdf:
+  header: '<div style="width:100%;font-size:8pt;text-align:right;margin:0 15pt"><span class="title"></span></div>'
+  footer: false
+```
+
+The fragment is handed to Chromium, which substitutes into elements carrying **its own classes** —
+`pageNumber`, `totalPages`, `title`, `date`, `url`. There is no <span v-pre>`{{token}}`</span> syntax: the fragment is
+already HTML, and putting monodocs tokens over Chromium's classes would add a substitution and
+escaping layer for no gain.
+
+Two things are easy to be caught by:
+
+- **A fragment inherits none of the document's styles.** Set the font and size yourself, as the
+  examples do, or you get Chromium's unstyled default rather than something matching your pages.
+- **The band lives in the margin.** Chromium sizes it to the top and bottom margins rather than
+  taking space from the content, so nothing reflows — but a margin smaller than the band leaves the
+  band against the paper edge. monodocs warns when the bottom margin is smaller than the default
+  footer needs, measuring that footer rather than comparing against a fixed number. **A replacement
+  fragment is not checked**: whether arbitrary HTML and CSS fit cannot be judged from the margin
+  value alone, and a check that pretended otherwise would either warn falsely or promise something
+  only measurement could keep.
 
 ## Page order and titles
 

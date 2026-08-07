@@ -179,13 +179,13 @@ and both it and v0.9 are released.
 
 **PDF page numbers** ([roadmap.md](roadmap.md) 24.5)
 
-- [ ] Generated PDFs carry page numbers by default, centred, in a form that needs no translation. The header and footer are HTML fragments using Chromium's own `pageNumber` / `totalPages` / `title` / `date` / `url` classes — there is no `{{token}}` syntax — and they set their own font because they inherit none of the document's styles
-- [ ] `pdf.header: false` and `pdf.footer: false` each emit an explicitly empty fragment rather than omitting the option, because with `displayHeaderFooter` on Chromium falls back to its own built-in date-and-title header when handed nothing. A replacement fragment renders through Chromium's classes in both positions
-- [ ] A margin too small for the default footer warns, with the threshold taken from that fragment's rendered height rather than a chosen number. Measured: Chromium's built-in template stops being drawn between a 10 mm and a 5 mm margin, but a supplied fragment — which is what monodocs uses — is still drawn at 0 mm, so the failure is a footer against the paper edge rather than one that vanishes. A replacement fragment is documented as unchecked, since arbitrary HTML and CSS cannot be judged from the margin value alone
+- [x] Generated PDFs carry page numbers by default, centred, in a form that needs no translation. The header and footer are HTML fragments using Chromium's own `pageNumber` / `totalPages` / `title` / `date` / `url` classes — there is no `{{token}}` syntax — and they set their own font because they inherit none of the document's styles
+- [x] `pdf.header: false` and `pdf.footer: false` each emit an explicitly empty fragment rather than omitting the option, because with `displayHeaderFooter` on Chromium falls back to its own built-in date-and-title header when handed nothing. A replacement fragment renders through Chromium's classes in both positions
+- [x] A margin too small for the default footer warns, with the threshold taken from that fragment's rendered height rather than a chosen number. Measured: Chromium's built-in template stops being drawn between a 10 mm and a 5 mm margin, but a supplied fragment — which is what monodocs uses — is still drawn at 0 mm, so the failure is a footer against the paper edge rather than one that vanishes. A replacement fragment is documented as unchecked, since arbitrary HTML and CSS cannot be judged from the margin value alone
 
 **Decisions and documentation**
 
-- [ ] Docker is recorded as a delivery form that will not be provided, with the same per-release maintenance argument that settled Homebrew / Scoop / winget ([roadmap.md](roadmap.md) 8.3). `Dockerfile.dev` is unaffected
+- [x] Docker is recorded as a delivery form that will not be provided, with the same per-release maintenance argument that settled Homebrew / Scoop / winget ([roadmap.md](roadmap.md) 8.3). `Dockerfile.dev` is unaffected
 - [ ] The documentation site — commands, configuration, and the CI guide — and its Japanese mirror are updated, since every item above changes something the site documents
 - [ ] `verify-published.yml` exercises the new surface (the message language, `init`, and a PDF whose page numbers are actually present) rather than only asserting that a PDF was produced
 
