@@ -98,6 +98,44 @@ async function probe(height: number) {
   }
 }
 
+/**
+ * 検索ショートカットを押した後、実際に検索欄へフォーカスが入るか。閉じたサイドバーの
+ * 検索欄は不可視で focus() を受け付けないため、クライアントは先にサイドバーを開く。
+ * happy-dom はこの前提（可視性）を持たないので、開く処理を落としても素通りしてしまう。
+ */
+async function shortcutProbe(
+  viewport: { width: number; height: number },
+  keys: { key: string; ctrl?: boolean },
+) {
+  const puppeteer = (await import("puppeteer-core")).default;
+  const browser = await puppeteer.launch({
+    headless: true,
+    executablePath: chromium as string,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setViewport(viewport);
+    await page.setContent(html, { waitUntil: "load" });
+    // 広い画面では常設のサイドバーを畳んでおく（狭い画面のドロワーは既定で閉じている）。
+    if (viewport.width > 768) await page.click("#sidebar-toggle");
+    // 前提そのものを測る。閉じたサイドバーの検索欄は直接 focus() しても受け付けない。
+    // これが成り立たない環境では、後続の assert は何も保証しない。
+    const focusableWhileClosed = await page.evaluate(() => {
+      const input = document.getElementById("search-input") as HTMLElement;
+      input.focus();
+      return document.activeElement === input;
+    });
+    if (keys.ctrl) await page.keyboard.down("Control");
+    await page.keyboard.press(keys.key);
+    if (keys.ctrl) await page.keyboard.up("Control");
+    const focused = await page.evaluate(() => document.activeElement?.id ?? null);
+    return { focusableWhileClosed, focused };
+  } finally {
+    await browser.close();
+  }
+}
+
 describe.skipIf(!chromium)("default theme sidebar layout（実 Chromium）", () => {
   it("keeps the search box in place while the navigation tree scrolls to its end", async () => {
     // 目次がサイドバーより高くなる高さ。ここが本来の動作。
@@ -115,5 +153,19 @@ describe.skipIf(!chromium)("default theme sidebar layout（実 Chromium）", () 
     const r = await probe(120);
     expect(r.sidebarScrolls).toBe(true);
     expect(r.lastItemAfterSidebarScroll).toBe(true);
+  }, 60_000);
+
+  it("lands focus in the search box from a collapsed sidebar", async () => {
+    // 広い画面で畳んだサイドバーは display: none。
+    const r = await shortcutProbe({ width: 1280, height: 800 }, { key: "/" });
+    expect(r.focusableWhileClosed).toBe(false);
+    expect(r.focused).toBe("search-input");
+  }, 60_000);
+
+  it("lands focus in the search box from a closed drawer", async () => {
+    // 狭い画面の閉じたドロワーは visibility: hidden。
+    const r = await shortcutProbe({ width: 390, height: 700 }, { key: "k", ctrl: true });
+    expect(r.focusableWhileClosed).toBe(false);
+    expect(r.focused).toBe("search-input");
   }, 60_000);
 });

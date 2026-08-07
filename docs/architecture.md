@@ -152,9 +152,15 @@ Preserve these display and reachability invariants:
   carry the search box out of sight, because that is precisely when a reader reaches for it. Reachability
   outranks this: on a viewport too short to hold the column, the sidebar scrolls as a whole again rather than
   clipping the tree to nothing.
+- `/` and `Ctrl+K` / `⌘K` move focus to the search box from anywhere in the document, opening the sidebar first
+  when it is closed — a search box that cannot take focus makes the shortcut silently do nothing. No key may be
+  taken from a reader who is typing, nor from an IME mid-composition. `⌘K` is the sole exception, because it
+  carries no editing meaning; `Ctrl+K` does on macOS, where it deletes to the end of the line.
 - Below 768 px the sidebar becomes an overlay drawer that starts closed, so the document opens on its content.
   The drawer never leaves the page scrolling horizontally, and on wider viewports the sidebar stays permanent —
-  clicks outside it and `Escape` must not close it there.
+  clicks outside it and `Escape` must not close it there. Opening a page from inside the drawer closes it, by
+  pointer and by keyboard alike, or the page it opened stays hidden behind it. Whenever the drawer closes,
+  focus lands somewhere the reader can carry on from, never inside the hidden drawer and never on the body.
 - Generated PDFs carry the document title and `monodocs v<version>` as Creator and Producer. The metadata pass
   runs after the bookmark pass, because pdf-lib rewrites Producer whenever it saves.
 - `html.branding` shows a footer at the end of HTML and PDF output by default.

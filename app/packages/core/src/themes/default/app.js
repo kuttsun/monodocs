@@ -858,6 +858,10 @@
     // When the page changes, the showPage that follows marks it. Jumping inside the page already on
     // display may not go through showPage at all, so mark it here.
     if (current && current.getAttribute("data-route") === route) applyBodyHighlight();
+    // 狭い画面では、開いた本文がドロワーの陰に隠れたままにならないよう閉じる。クリックは
+    // setupSidebarAutoClose も閉じるが（結果一覧はサイドバーの中）、キーボードの Enter は
+    // click を出さないのでそこを通らない。閉じる側でフォーカスもサイドバーの外へ移る。
+    if (isNarrow() && document.body.classList.contains("sidebar-open")) setSidebarCollapsed(true);
   }
 
   function renderSearchResults(query) {
@@ -958,7 +962,10 @@
       if (e.key === "Escape") {
         input.value = "";
         renderSearchResults("");
-        input.blur();
+        // 狭い画面では、この Escape は document まで届いてドロワーも閉じる。閉じる側が
+        // サイドバー外（再表示ボタン）へフォーカスを移すので、ここで blur してしまうと
+        // その移動先が失われ、フォーカスが body に落ちて読者は現在地を見失う。
+        if (!(isNarrow() && document.body.classList.contains("sidebar-open"))) input.blur();
         return;
       }
       // Home / End はテキスト入力のキャレット移動に残す（結果一覧には割り当てない）。
@@ -977,6 +984,87 @@
           activateSearchResult(target);
         }
       }
+    });
+  }
+
+  /** 文字入力中の要素か（素のキーをショートカットに横取りしてよいかの判断）。 */
+  function isEditable(el) {
+    if (!el) return false;
+    var tag = el.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    return el.isContentEditable === true;
+  }
+
+  /** モーダルが開いている間か（画像 lightbox など。背後へフォーカスを移さない）。 */
+  function modalOpen() {
+    return !!document.querySelector("dialog[open]");
+  }
+
+  /**
+   * 検索欄へフォーカスを移す。移せたら true。
+   *
+   * サイドバーが閉じていれば先に開く。閉じたサイドバーの検索欄は不可視で
+   * （狭い画面のドロワーは visibility: hidden、広い画面の折りたたみは display: none）、
+   * そのまま focus() を呼んでも何も起こらないため、ショートカットが黙って無反応になる。
+   */
+  function focusSearch() {
+    var input = document.getElementById("search-input");
+    if (!input || typeof input.focus !== "function") return false;
+    if (!sidebarExpanded()) setSidebarCollapsed(false);
+    input.focus();
+    // 入力済みの語をまとめて選択する。続けて打てば置き換わり、前の検索語を消す手間がない。
+    if (typeof input.select === "function") input.select();
+    return true;
+  }
+
+  /**
+   * K の打鍵か。ラテン文字以外の配列（キリル文字など）では K の位置を押しても `key` は
+   * 別の文字になるため、そのときだけ物理位置（`code`）で見る。ラテン文字が出る配列で
+   * 位置を見てはいけない。Dvorak では K の位置が `v` を出すので、貼り付け（Ctrl+V）を
+   * 横取りしてしまう。
+   */
+  function isKKey(e) {
+    if (e.key === "k" || e.key === "K") return true;
+    if (typeof e.key === "string" && /^[A-Za-z]$/.test(e.key)) return false;
+    return e.code === "KeyK";
+  }
+
+  /**
+   * AltGr を押して出した文字か。Windows は AltGr を ctrlKey + altKey として報告するため、
+   * これを「修飾キー付き」として弾くと、AltGr でしか `/` を打てない配列（ドイツ語など）で
+   * ショートカットが一度も発火しなくなる。
+   */
+  function viaAltGraph(e) {
+    if (typeof e.getModifierState === "function" && e.getModifierState("AltGraph")) return true;
+    return e.ctrlKey && e.altKey;
+  }
+
+  /**
+   * 検索欄を呼び出すキーボードショートカット。目次が長くても検索欄は流れないが、
+   * 本文を読んでいる位置からはなお遠い。読んでいる手を動かさずに検索へ入れるようにする。
+   *
+   * `/` は素の打鍵なので、文字を入力できる場所では横取りしない。⌘K はどこからでも
+   * 効かせる（検索欄の中で押せば入力済みの語を選び直せる）。Ctrl+K だけは入力中を避ける。
+   * macOS の Ctrl+K は入力欄で「行末まで削除」に割り当てられた標準の編集操作で、
+   * そこを奪うと編集手段が減る。macOS には ⌘K があるので失うものはない。
+   */
+  function setupSearchShortcut() {
+    document.addEventListener("keydown", function (e) {
+      // IME の変換中は「/」も変換対象のキー入力で、Ctrl+K を変換操作に割り当てる
+      // 入力方式もある。keydown は変換中も届くため、ここで横取りすると日本語入力が壊れる。
+      if (e.isComposing || e.keyCode === 229) return;
+      if (modalOpen()) return;
+
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && isKKey(e)) {
+        if (e.ctrlKey && !e.metaKey && isEditable(document.activeElement)) return;
+        if (focusSearch()) e.preventDefault();
+        return;
+      }
+
+      if (e.key !== "/") return;
+      if (!viaAltGraph(e) && (e.ctrlKey || e.metaKey || e.altKey)) return;
+      if (isEditable(document.activeElement)) return;
+      if (focusSearch()) e.preventDefault();
     });
   }
 
@@ -1414,6 +1502,7 @@
     setupTheme();
     setupContentWidth();
     setupSearch();
+    setupSearchShortcut();
     setupSidebarToggle();
     setupSidebarAutoClose();
     setupSidebarDirs();
