@@ -10,6 +10,7 @@ import {
   type LabelKey,
   type Labels,
 } from "./labels.js";
+import { t } from "./messages.js";
 import { DEFAULT_PDF_FOOTER, EMPTY_PDF_BAND, resolveBand } from "./pipeline/pdfBands.js";
 import type {
   BuildOptions,
@@ -72,222 +73,231 @@ export type ContentWidthDefault = "standard" | "wide";
  */
 export type SidebarMode = "folder" | "custom";
 
-const regexTitleTransformSchema = z
-  .object({
-    type: z.literal("regex"),
-    pattern: z.string().min(1),
-    replacement: z.string(),
-    flags: z.string().optional(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    try {
-      new RegExp(value.pattern, value.flags);
-    } catch (error) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Invalid regex transform: ${(error as Error).message}`,
-      });
-    }
+/**
+ * スキーマは呼び出しのたびに組み立てる。モジュール定数のままだと、その中の `t()` が
+ * 読み込み時＝CLI が言語を決める前に評価され、`--lang ja` を付けても英語のまま固定される。
+ * loadConfig はビルド 1 回につき 1 度しか呼ばれないので、組み立て直す費用は無視できる。
+ */
+function buildConfigFileSchema() {
+  const regexTitleTransformSchema = z
+    .object({
+      type: z.literal("regex"),
+      pattern: z.string().min(1),
+      replacement: z.string(),
+      flags: z.string().optional(),
+    })
+    .strict()
+    .superRefine((value, ctx) => {
+      try {
+        new RegExp(value.pattern, value.flags);
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t("config.invalidRegexTransform", { detail: (error as Error).message }),
+        });
+      }
+    });
+
+  const titleTransformSchema = z.discriminatedUnion("type", [
+    z.object({ type: z.literal("none") }).strict(),
+    z.object({ type: z.literal("stripNumberPrefix") }).strict(),
+    regexTitleTransformSchema,
+  ]);
+
+  const sidebarTitleTransformSchema = z
+    .object({
+      page: titleTransformSchema.optional(),
+      directory: titleTransformSchema.optional(),
+    })
+    .strict();
+
+  /**
+   * `sidebar.mode: "custom"` の 1 項目。`path`（ページ）か `children`（グループ）の
+   * どちらか一方を持つ。ページは省略時にページ自身のタイトルを使うため `title` を省略でき、
+   * グループは導出元が無いため `title` が必須。
+   */
+  const sidebarItemSchema: z.ZodType<SidebarItem> = z.lazy(() =>
+    z
+      .object({
+        title: z.string().min(1).optional(),
+        path: z.string().min(1).optional(),
+        children: z.array(sidebarItemSchema).min(1).optional(),
+      })
+      .strict()
+      .superRefine((value, ctx) => {
+        const hasPath = value.path !== undefined;
+        const hasChildren = value.children !== undefined;
+        if (hasPath && hasChildren) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("config.sidebarItemBothPathAndChildren"),
+          });
+        }
+        if (!hasPath && !hasChildren) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("config.sidebarItemNeedsPathOrChildren"),
+          });
+        }
+        if (hasChildren && value.title === undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("config.sidebarItemChildrenNeedTitle"),
+          });
+        }
+      }),
+  );
+
+  /**
+   * `html.labels` のスキーマ。**未知のキーは拒否する**。タイプミスが黙って既定のまま残ると、
+   * 書いたのに効かないという最も気づきにくい失敗になる。その帰結としてキー集合は
+   * 1.0 で凍結される公開 API になり、設定リファレンスに列挙される（labels.ts の LABEL_KEYS）。
+   */
+  const labelsSchema = z
+    .object(
+      Object.fromEntries(LABEL_KEYS.map((key) => [key, z.string().min(1).optional()])) as Record<
+        LabelKey,
+        z.ZodOptional<z.ZodString>
+      >,
+    )
+    .strict();
+
+  /** `monodocs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
+  const configFileSchema = z.object({
+    title: z.string().optional(),
+    /**
+     * 生成した文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ（既定 "en"）。
+     * 同梱の表が無いタグも属性には書き、ラベルだけ en へ落とす。CLI 自身のメッセージの
+     * 言語とは別物（文書はある言語で書かれ、書いている人の端末は別の言語を返しうる）。
+     */
+    lang: z
+      .string()
+      .min(1)
+      .refine(isValidLanguageTag, { message: t("config.invalidLanguageTag") })
+      .optional(),
+    input: z.string().optional(),
+    output: z
+      .object({
+        format: z.enum(["html", "pdf", "both"]).optional(),
+        path: z.string().optional(),
+      })
+      .optional(),
+    sources: z
+      .object({
+        markdown: z.object({ extensions: z.array(z.string()).optional() }).optional(),
+        asciidoc: z.object({ extensions: z.array(z.string()).optional() }).optional(),
+      })
+      .optional(),
+    sidebar: z
+      .object({
+        // "folder"（既定）= フォルダ構造からサイドバーを生成する。
+        // "custom" = items に書いた構造と順序をそのまま使う。
+        mode: z.enum(["folder", "custom"]).optional(),
+        items: z.array(sidebarItemSchema).min(1).optional(),
+        exclude: z.array(z.string()).optional(),
+        // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
+        // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
+        collapseDepth: z.number().int().min(0).optional(),
+        // 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。
+        titleTransform: sidebarTitleTransformSchema.optional(),
+        // ページタイトルの取得元。"heading"（既定）= frontmatter → 見出し → ファイル名。
+        // "filename" = 見出しがあってもファイル名を使う（明示タイトルは常に最優先）。
+        titleFrom: z.enum(["heading", "filename"]).optional(),
+        // ページを 1 つだけ含む（サブフォルダを持たない）ディレクトリ階層をサイドバーから畳み、
+        // その唯一のページを親へ繰り上げる。ドキュメント＋画像を 1 フォルダにまとめた場合などに
+        // 冗長なフォルダ階層を消すための設定。画像はページに数えないため自動で判定できる。
+        flattenSingleChild: z.boolean().optional(),
+      })
+      .strict()
+      .superRefine((value, ctx) => {
+        // 片方だけの指定は「書いたのに効かない」事故になるため、両方そろっていることを求める。
+        if (value.mode === "custom" && value.items === undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("config.sidebarCustomNeedsItems"),
+          });
+        }
+        if (value.mode !== "custom" && value.items !== undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t("config.sidebarItemsNeedCustom"),
+          });
+        }
+      })
+      .optional(),
+    toc: z
+      .object({
+        // ページ内目次に出す見出しの最深レベル（2〜6）。h1 はページタイトル相当のため常に除外。
+        maxLevel: z.number().int().min(2).max(6).optional(),
+      })
+      .optional(),
+    assets: z
+      .object({
+        embedImages: z.boolean().optional(),
+        maxInlineSize: z.union([z.string(), z.number()]).optional(),
+        onLargeImage: z.enum(["warn", "error", "external"]).optional(),
+      })
+      .optional(),
+    mermaid: z
+      .object({
+        enabled: z.boolean().optional(),
+        mode: z.enum(["client", "pre-render"]).optional(),
+        runtime: z.enum(["cdn", "inline"]).optional(),
+      })
+      .optional(),
+    highlight: z.object({ enabled: z.boolean().optional() }).optional(),
+    html: z
+      .object({
+        theme: z.string().optional(),
+        contentWidth: z.union([z.string(), z.number()]).optional(),
+        /** 読者向けの本文幅切替ボタンを表示するか（既定 true）。 */
+        contentWidthToggle: z.boolean().optional(),
+        /** Initial content-width toggle state (default: standard). */
+        contentWidthDefault: z.enum(["standard", "wide"]).optional(),
+        /** Whether unlinked, non-decorative content images open in a lightbox (default: true). */
+        imageLightbox: z.boolean().optional(),
+        /** Whether the generated document shows the monodocs branding footer (default: true). */
+        branding: z.boolean().optional(),
+        // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
+        // 読者がトグルで切り替えると localStorage の選択が優先される。
+        colorScheme: z.enum(["light", "dark", "auto"]).optional(),
+        // lang が選んだ表の上に、個別の UI ラベルを差し替える。テーマの chrome に作用する
+        // 層なので html の下（lang は文書自身の記述なのでトップレベル）。
+        labels: labelsSchema.optional(),
+      })
+      .optional(),
+    pdf: z
+      .object({
+        // Puppeteer の page.pdf `format`（"A4" / "Letter" など）。既定は "A4"。
+        pageSize: z.string().optional(),
+        // ページ余白（CSS 長さ。"20mm" など）。省略した辺は既定値を使う。
+        margin: z
+          .object({
+            top: z.string().optional(),
+            right: z.string().optional(),
+            bottom: z.string().optional(),
+            left: z.string().optional(),
+          })
+          .strict()
+          .optional(),
+        // 背景色・背景画像を印刷するか（既定 true）。
+        printBackground: z.boolean().optional(),
+        // PDF のしおり（HTML サイドバーと同じ フォルダ→ページ 構造）を付与するか（既定 true）。
+        bookmarks: z.boolean().optional(),
+        // ページ上下の帯。false = 帯なし / HTML フラグメント = 置き換え。既定はヘッダ無し・
+        // フッタにページ番号。フラグメントは Chromium 自身のクラス（pageNumber / totalPages /
+        // title / date / url）に値が差し込まれる。monodocs のトークン構文ではない。
+        header: z.union([z.literal(false), z.string().min(1)]).optional(),
+        footer: z.union([z.literal(false), z.string().min(1)]).optional(),
+      })
+      .strict()
+      .optional(),
   });
 
-const titleTransformSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("none") }).strict(),
-  z.object({ type: z.literal("stripNumberPrefix") }).strict(),
-  regexTitleTransformSchema,
-]);
+  return configFileSchema;
+}
 
-const sidebarTitleTransformSchema = z
-  .object({
-    page: titleTransformSchema.optional(),
-    directory: titleTransformSchema.optional(),
-  })
-  .strict();
-
-/**
- * `sidebar.mode: "custom"` の 1 項目。`path`（ページ）か `children`（グループ）の
- * どちらか一方を持つ。ページは省略時にページ自身のタイトルを使うため `title` を省略でき、
- * グループは導出元が無いため `title` が必須。
- */
-const sidebarItemSchema: z.ZodType<SidebarItem> = z.lazy(() =>
-  z
-    .object({
-      title: z.string().min(1).optional(),
-      path: z.string().min(1).optional(),
-      children: z.array(sidebarItemSchema).min(1).optional(),
-    })
-    .strict()
-    .superRefine((value, ctx) => {
-      const hasPath = value.path !== undefined;
-      const hasChildren = value.children !== undefined;
-      if (hasPath && hasChildren) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "sidebar.items entry must not have both path and children",
-        });
-      }
-      if (!hasPath && !hasChildren) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "sidebar.items entry needs either path or children",
-        });
-      }
-      if (hasChildren && value.title === undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "sidebar.items entry with children needs a title",
-        });
-      }
-    }),
-);
-
-/**
- * `html.labels` のスキーマ。**未知のキーは拒否する**。タイプミスが黙って既定のまま残ると、
- * 書いたのに効かないという最も気づきにくい失敗になる。その帰結としてキー集合は
- * 1.0 で凍結される公開 API になり、設定リファレンスに列挙される（labels.ts の LABEL_KEYS）。
- */
-const labelsSchema = z
-  .object(
-    Object.fromEntries(LABEL_KEYS.map((key) => [key, z.string().min(1).optional()])) as Record<
-      LabelKey,
-      z.ZodOptional<z.ZodString>
-    >,
-  )
-  .strict();
-
-/** `monodocs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
-const configFileSchema = z.object({
-  title: z.string().optional(),
-  /**
-   * 生成した文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ（既定 "en"）。
-   * 同梱の表が無いタグも属性には書き、ラベルだけ en へ落とす。CLI 自身のメッセージの
-   * 言語とは別物（文書はある言語で書かれ、書いている人の端末は別の言語を返しうる）。
-   */
-  lang: z
-    .string()
-    .min(1)
-    .refine(isValidLanguageTag, { message: "must be a syntactically valid BCP 47 language tag" })
-    .optional(),
-  input: z.string().optional(),
-  output: z
-    .object({
-      format: z.enum(["html", "pdf", "both"]).optional(),
-      path: z.string().optional(),
-    })
-    .optional(),
-  sources: z
-    .object({
-      markdown: z.object({ extensions: z.array(z.string()).optional() }).optional(),
-      asciidoc: z.object({ extensions: z.array(z.string()).optional() }).optional(),
-    })
-    .optional(),
-  sidebar: z
-    .object({
-      // "folder"（既定）= フォルダ構造からサイドバーを生成する。
-      // "custom" = items に書いた構造と順序をそのまま使う。
-      mode: z.enum(["folder", "custom"]).optional(),
-      items: z.array(sidebarItemSchema).min(1).optional(),
-      exclude: z.array(z.string()).optional(),
-      // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
-      // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
-      collapseDepth: z.number().int().min(0).optional(),
-      // 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。
-      titleTransform: sidebarTitleTransformSchema.optional(),
-      // ページタイトルの取得元。"heading"（既定）= frontmatter → 見出し → ファイル名。
-      // "filename" = 見出しがあってもファイル名を使う（明示タイトルは常に最優先）。
-      titleFrom: z.enum(["heading", "filename"]).optional(),
-      // ページを 1 つだけ含む（サブフォルダを持たない）ディレクトリ階層をサイドバーから畳み、
-      // その唯一のページを親へ繰り上げる。ドキュメント＋画像を 1 フォルダにまとめた場合などに
-      // 冗長なフォルダ階層を消すための設定。画像はページに数えないため自動で判定できる。
-      flattenSingleChild: z.boolean().optional(),
-    })
-    .strict()
-    .superRefine((value, ctx) => {
-      // 片方だけの指定は「書いたのに効かない」事故になるため、両方そろっていることを求める。
-      if (value.mode === "custom" && value.items === undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'sidebar.mode: "custom" needs sidebar.items',
-        });
-      }
-      if (value.mode !== "custom" && value.items !== undefined) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'sidebar.items needs sidebar.mode: "custom"',
-        });
-      }
-    })
-    .optional(),
-  toc: z
-    .object({
-      // ページ内目次に出す見出しの最深レベル（2〜6）。h1 はページタイトル相当のため常に除外。
-      maxLevel: z.number().int().min(2).max(6).optional(),
-    })
-    .optional(),
-  assets: z
-    .object({
-      embedImages: z.boolean().optional(),
-      maxInlineSize: z.union([z.string(), z.number()]).optional(),
-      onLargeImage: z.enum(["warn", "error", "external"]).optional(),
-    })
-    .optional(),
-  mermaid: z
-    .object({
-      enabled: z.boolean().optional(),
-      mode: z.enum(["client", "pre-render"]).optional(),
-      runtime: z.enum(["cdn", "inline"]).optional(),
-    })
-    .optional(),
-  highlight: z.object({ enabled: z.boolean().optional() }).optional(),
-  html: z
-    .object({
-      theme: z.string().optional(),
-      contentWidth: z.union([z.string(), z.number()]).optional(),
-      /** 読者向けの本文幅切替ボタンを表示するか（既定 true）。 */
-      contentWidthToggle: z.boolean().optional(),
-      /** Initial content-width toggle state (default: standard). */
-      contentWidthDefault: z.enum(["standard", "wide"]).optional(),
-      /** Whether unlinked, non-decorative content images open in a lightbox (default: true). */
-      imageLightbox: z.boolean().optional(),
-      /** Whether the generated document shows the monodocs branding footer (default: true). */
-      branding: z.boolean().optional(),
-      // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
-      // 読者がトグルで切り替えると localStorage の選択が優先される。
-      colorScheme: z.enum(["light", "dark", "auto"]).optional(),
-      // lang が選んだ表の上に、個別の UI ラベルを差し替える。テーマの chrome に作用する
-      // 層なので html の下（lang は文書自身の記述なのでトップレベル）。
-      labels: labelsSchema.optional(),
-    })
-    .optional(),
-  pdf: z
-    .object({
-      // Puppeteer の page.pdf `format`（"A4" / "Letter" など）。既定は "A4"。
-      pageSize: z.string().optional(),
-      // ページ余白（CSS 長さ。"20mm" など）。省略した辺は既定値を使う。
-      margin: z
-        .object({
-          top: z.string().optional(),
-          right: z.string().optional(),
-          bottom: z.string().optional(),
-          left: z.string().optional(),
-        })
-        .strict()
-        .optional(),
-      // 背景色・背景画像を印刷するか（既定 true）。
-      printBackground: z.boolean().optional(),
-      // PDF のしおり（HTML サイドバーと同じ フォルダ→ページ 構造）を付与するか（既定 true）。
-      bookmarks: z.boolean().optional(),
-      // ページ上下の帯。false = 帯なし / HTML フラグメント = 置き換え。既定はヘッダ無し・
-      // フッタにページ番号。フラグメントは Chromium 自身のクラス（pageNumber / totalPages /
-      // title / date / url）に値が差し込まれる。monodocs のトークン構文ではない。
-      header: z.union([z.literal(false), z.string().min(1)]).optional(),
-      footer: z.union([z.literal(false), z.string().min(1)]).optional(),
-    })
-    .strict()
-    .optional(),
-});
-
-export type ConfigFile = z.infer<typeof configFileSchema>;
+export type ConfigFile = z.infer<ReturnType<typeof buildConfigFileSchema>>;
 
 /** PDF のページ余白（各辺 CSS 長さ）。 */
 export type PdfMargin = { top: string; right: string; bottom: string; left: string };
@@ -367,20 +377,20 @@ export function parseSize(value: string | number | undefined, fallback: number):
   if (value === undefined) return fallback;
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value <= 0) {
-      throw new Error(`Invalid maxInlineSize: ${value}`);
+      throw new Error(t("config.invalidMaxInlineSize", { value }));
     }
     return value;
   }
   const match = value.trim().match(/^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB)?$/i);
   if (!match) {
-    throw new Error(`Invalid maxInlineSize: "${value}"`);
+    throw new Error(t("config.invalidMaxInlineSize", { value: `"${value}"` }));
   }
   const amount = Number(match[1]);
   const unit = (match[2] ?? "B").toUpperCase();
   const factor = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 }[unit] ?? 1;
   const bytes = Math.round(amount * factor);
   if (bytes <= 0) {
-    throw new Error(`Invalid maxInlineSize: "${value}"`);
+    throw new Error(t("config.invalidMaxInlineSize", { value: `"${value}"` }));
   }
   return bytes;
 }
@@ -396,7 +406,7 @@ export function parseContentWidth(
   if (value === undefined) return fallback;
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value <= 0) {
-      throw new Error(`Invalid contentWidth: ${value}`);
+      throw new Error(t("config.invalidContentWidth", { value }));
     }
     return `${value}px`;
   }
@@ -408,16 +418,16 @@ export function parseContentWidth(
 
   const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*(px|rem|em|ch|vw|%)$/i);
   if (!match) {
-    throw new Error(`Invalid contentWidth: "${value}"`);
+    throw new Error(t("config.invalidContentWidth", { value: `"${value}"` }));
   }
   const rawAmount = match[1];
   const rawUnit = match[2];
   if (rawAmount === undefined || rawUnit === undefined) {
-    throw new Error(`Invalid contentWidth: "${value}"`);
+    throw new Error(t("config.invalidContentWidth", { value: `"${value}"` }));
   }
   const amount = Number(rawAmount);
   if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error(`Invalid contentWidth: "${value}"`);
+    throw new Error(t("config.invalidContentWidth", { value: `"${value}"` }));
   }
   return `${amount}${rawUnit.toLowerCase()}`;
 }
@@ -470,16 +480,18 @@ export async function loadConfig(
     try {
       parsed = parseYaml(await readFile(configPath, "utf8"));
     } catch (error) {
-      throw new Error(`Failed to parse config file ${configPath}: ${(error as Error).message}`);
+      throw new Error(
+        t("config.parseFailed", { path: configPath, detail: (error as Error).message }),
+      );
     }
-    const result = configFileSchema.safeParse(parsed ?? {});
+    const result = buildConfigFileSchema().safeParse(parsed ?? {});
     if (!result.success) {
-      throw new Error(`Invalid config file ${configPath}: ${result.error.message}`);
+      throw new Error(t("config.invalid", { path: configPath, detail: result.error.message }));
     }
     fileConfig = result.data;
   } else if (options.configFile) {
     // 明示指定された設定ファイルが存在しない場合はエラー。
-    throw new Error(`Config file not found: ${configPath}`);
+    throw new Error(t("config.notFound", { path: String(configPath) }));
   }
 
   const configBaseDir = configPath ? dirname(configPath) : cwd;
@@ -488,7 +500,7 @@ export async function loadConfig(
   // ここで検証する（不正値が resolveOutputs の both 分岐へ落ちるのを防ぐ）。
   const format = options.format ?? fileConfig.output?.format ?? "html";
   if (format !== "html" && format !== "pdf" && format !== "both") {
-    throw new Error(`Invalid output format: "${format}" (expected "html", "pdf", or "both").`);
+    throw new Error(t("config.invalidFormat", { value: String(format) }));
   }
 
   return {

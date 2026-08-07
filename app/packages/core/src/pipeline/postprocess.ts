@@ -10,6 +10,7 @@ import type { MermaidMode, OnLargeImage } from "../config.js";
 import type { Page } from "../types.js";
 import { type MermaidPrerenderer } from "./mermaidPrerender.js";
 import { BrowserSetupError } from "./browser.js";
+import { t } from "../messages.js";
 
 /** コードハイライトに使う配色（shiki の dual theme。ダークは CSS で切替）。 */
 const SHIKI_THEMES = { light: "github-light", dark: "github-dark" } as const;
@@ -321,9 +322,10 @@ async function processMermaidPrerender(
       if (error instanceof BrowserSetupError) throw error;
       // 図単位の描画エラー（構文エラー等）は警告してソース表示にフォールバックする。
       warnings.push(
-        `${page.relativePath}: Mermaid の pre-render に失敗しました（ソース表示にフォールバック）: ${
-          (error as Error).message
-        }`,
+        t("post.mermaidPrerenderFailed", {
+          path: page.relativePath,
+          detail: (error as Error).message,
+        }),
       );
       block.parent.children[block.index] = {
         type: "element",
@@ -584,14 +586,20 @@ function rewriteLinks(
     if (typeof href !== "string") return;
     const resolved = resolveHref(href, page.relativePath, targetMap, linkExtensions);
     if (resolved === null) {
-      warnings.push(`Unresolved link "${href}" in "${formatSourceRef(page, href, locations)}".`);
+      warnings.push(
+        t("post.unresolvedLink", { href, where: formatSourceRef(page, href, locations) }),
+      );
       return;
     }
     if (resolved === undefined) return;
     node.properties.href = resolved.href;
     if (resolved.unresolvedAnchor !== undefined) {
       warnings.push(
-        `Unresolved anchor "#${resolved.unresolvedAnchor}" in "${href}"; linked to page top in "${formatSourceRef(page, href, locations)}".`,
+        t("post.unresolvedAnchor", {
+          anchor: resolved.unresolvedAnchor,
+          href,
+          where: formatSourceRef(page, href, locations),
+        }),
       );
     }
   });
@@ -633,7 +641,7 @@ async function embedImages(
     const ext = posix.extname(pathPart).toLowerCase();
     const mime = IMAGE_MIME[ext];
     if (!mime) {
-      warnings.push(`Unsupported image type "${src}" in "${page.relativePath}".`);
+      warnings.push(t("post.unsupportedImage", { src, path: page.relativePath }));
       continue;
     }
 
@@ -642,11 +650,11 @@ async function embedImages(
     try {
       real = await realpath(resolve(baseDir, pathPart));
     } catch {
-      warnings.push(`Image not found "${src}" in "${page.relativePath}".`);
+      warnings.push(t("post.imageNotFound", { src, path: page.relativePath }));
       continue;
     }
     if (!isInside(realRoot, real)) {
-      warnings.push(`Image outside input directory "${src}" in "${page.relativePath}"; skipped.`);
+      warnings.push(t("post.imageOutside", { src, path: page.relativePath }));
       continue;
     }
 
@@ -654,13 +662,13 @@ async function embedImages(
     if (size > options.maxInlineSize) {
       const detail = `"${src}" (${formatBytes(size)} > ${formatBytes(options.maxInlineSize)}) in "${page.relativePath}"`;
       if (options.onLargeImage === "error") {
-        throw new Error(`Image exceeds maxInlineSize: ${detail}`);
+        throw new Error(t("post.imageExceedsLimit", { detail }));
       }
       if (options.onLargeImage === "external") {
-        warnings.push(`Image too large, left as-is: ${detail}`);
+        warnings.push(t("post.imageLeftAsIs", { detail }));
         continue;
       }
-      warnings.push(`Large image embedded: ${detail}`);
+      warnings.push(t("post.largeImageEmbedded", { detail }));
     }
 
     const data = await readFile(real);
@@ -699,9 +707,7 @@ export async function postprocessPages(
     options.mermaidMode === "pre-render" &&
     !options.mermaidPrerenderer
   ) {
-    throw new Error(
-      "mermaid.mode: pre-render が指定されていますが pre-render 用レンダラが渡されていません。",
-    );
+    throw new Error(t("mermaid.prerendererMissing"));
   }
 
   for (const page of pages) {

@@ -50,3 +50,21 @@ export {
 export { loadTheme, type Theme } from "./themes/index.js";
 export { watchSite, type WatchCallbacks, type WatchHandle } from "./watch.js";
 export { serveSite, type ServeOptions, type ServeCallbacks, type ServeHandle } from "./serve.js";
+export {
+  MESSAGE_LANGS,
+  DEFAULT_MESSAGE_LANG,
+  MESSAGE_KEYS,
+  setMessageLang,
+  getMessageLang,
+  resolveMessageLang,
+  t,
+  type MessageLang,
+  type MessageKey,
+} from "./messages.js";
+export {
+  resolveLabels,
+  isValidLanguageTag,
+  LABEL_KEYS,
+  type Labels,
+  type LabelKey,
+} from "./labels.js";

@@ -12,15 +12,45 @@ The `[input]` argument is the directory to scan (default: `./docs`). When omitte
 
 ## Global options
 
-| Option          | Description                            |
-| --------------- | -------------------------------------- |
-| `-V, --version` | Print the version and exit.            |
-| `-h, --help`    | Show help for the command and exit.    |
+| Option           | Description                                                              |
+| ---------------- | ------------------------------------------------------------------------ |
+| `-V, --version`  | Print the version and exit.                                              |
+| `-h, --help`     | Show help for the command and exit.                                      |
+| `--lang <lang>`  | Language of monodocs' own messages: `en` (default) or `ja`. See below.    |
 
 ```bash
 monodocs --help          # top-level help (lists all commands)
 monodocs build --help    # help for a single command
 ```
+
+### Message language {#message-language}
+
+Everything monodocs prints — `--help`, every error, every warning — is English by default. Japanese
+is an explicit choice, either per command or for a whole shell or CI job:
+
+```bash
+monodocs --lang ja build ./docs
+MONODOCS_LANG=ja monodocs build ./docs
+```
+
+The flag wins over the environment variable, which wins over the default. A value monodocs does not
+ship is rejected, naming the ones it does, rather than falling back quietly to English — a setting
+that is silently ignored is the hardest kind to notice.
+
+`LANG` and `LC_ALL` are deliberately **not** consulted. Detecting the locale would be convenient and
+would make a build log depend on which machine produced it, so a log pasted into an issue could not
+be reproduced from the command alone.
+
+This is separate from [`lang`](configuration#lang) in the configuration file, which describes the
+document being built rather than the terminal building it. A document is often written in one
+language by someone working in a terminal that reports another.
+
+One boundary is worth knowing: a message that reaches you unwrapped from a dependency — the body of
+a Zod schema error, a Puppeteer stack trace — stays in whatever language that dependency emits.
+Where monodocs wraps one, the wrapper is translated. The argument errors you are most likely to hit —
+an unknown option or command, a missing argument — are translated even though the argument parser
+raises them; a rarer one it phrases in a way monodocs cannot rebuild keeps the parser's wording
+rather than being paraphrased into something less precise.
 
 ## `build`
 

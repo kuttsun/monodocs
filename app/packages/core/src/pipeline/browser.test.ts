@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { DEFAULT_MESSAGE_LANG, setMessageLang } from "../messages";
 
 import { chromiumCandidates, isStandaloneBinary, puppeteerMissingMessage } from "./browser";
 
@@ -48,12 +50,14 @@ describe("chromiumCandidates", () => {
 });
 
 describe("puppeteerMissingMessage", () => {
+  afterEach(() => setMessageLang(DEFAULT_MESSAGE_LANG));
+
   // 単一実行ファイルの利用者は Node.js もパッケージマネージャも持たない前提なので、
   // `pnpm add` / `npm install puppeteer-core` を案内しても直せない。npm 版へ誘導する。
   it("tells a standalone-binary user to switch to the npm package, not to install anything", () => {
     const message = puppeteerMissingMessage(true);
 
-    expect(message).toContain("単一実行ファイル");
+    expect(message).toContain("single-executable");
     expect(message).toContain("npm install -g monodocs");
     expect(message).not.toContain("pnpm add");
     expect(message).not.toContain("npm install puppeteer-core");
@@ -63,9 +67,22 @@ describe("puppeteerMissingMessage", () => {
     const message = puppeteerMissingMessage(false);
 
     expect(message).toContain("puppeteer-core");
-    expect(message).toContain("optionalDependency");
+    expect(message).toContain("optional dependency");
     expect(message).toContain("pnpm add puppeteer-core");
-    expect(message).not.toContain("単一実行ファイル");
+    expect(message).not.toContain("single-executable");
+  });
+});
+
+describe("puppeteerMissingMessage（日本語）", () => {
+  afterEach(() => setMessageLang(DEFAULT_MESSAGE_LANG));
+
+  // 案内の中身が二者で違うことは言語に依らない性質なので、日本語でも同じ形を確かめる。
+  it("keeps the two audiences apart in Japanese too", () => {
+    setMessageLang("ja");
+    expect(puppeteerMissingMessage(true)).toContain("単一実行ファイル");
+    expect(puppeteerMissingMessage(true)).not.toContain("pnpm add");
+    expect(puppeteerMissingMessage(false)).toContain("pnpm add puppeteer-core");
+    expect(puppeteerMissingMessage(false)).not.toContain("単一実行ファイル");
   });
 });
 

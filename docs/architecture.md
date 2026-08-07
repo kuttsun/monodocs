@@ -161,6 +161,16 @@ Preserve these display and reachability invariants:
   clicks outside it and `Escape` must not close it there. Opening a page from inside the drawer closes it, by
   pointer and by keyboard alike, or the page it opened stays hidden behind it. Whenever the drawer closes,
   focus lands somewhere the reader can carry on from, never inside the hidden drawer and never on the body.
+- Everything monodocs prints — `--help` including the headings Commander generates, every error, and
+  every warning — goes through one catalogue, English by default and Japanese under `--lang ja` or
+  `MONODOCS_LANG=ja`, with the flag winning over the variable. `LANG` and `LC_ALL` are deliberately
+  not consulted: a build log must not depend on the machine that produced it. Core holds the current
+  language rather than returning codes, so the published `warnings: string[]` and `Error.message`
+  keep their shape. A message that reaches the user unwrapped from a dependency is out of scope, except
+  the argument errors a reader actually hits — unknown option, unknown command, missing argument —
+  which are intercepted and translated; the parser exits on its own otherwise, so nothing downstream
+  can reach them. A test fails when a new string is emitted outside the catalogue rather than
+  leaving the gap to be found later. This is not the document's `lang`, which describes the pages rather than the terminal.
 - Every PDF page carries its number and the total, centred at the foot. The band is an HTML fragment
   handed to Chromium and substituted through Chromium's own classes, not a monodocs template
   language, and it holds digits and a separator so the one thing added to every page needs no

@@ -152,8 +152,8 @@ and both it and v0.9 are released.
 
 **CLI and runtime messages**
 
-- [ ] `--help` — including the `Usage:` / `Options:` / `Commands:` headings Commander generates, reached through `configureHelp` / `addHelpText` — and every error and warning read in English by default, and in Japanese under `--lang ja` or `MONODOCS_LANG=ja`. The flag wins over the environment variable; an unsupported value is rejected naming the supported ones rather than falling back silently. `LANG` / `LC_ALL` are deliberately not consulted, so a build log does not depend on the machine that produced it ([roadmap.md](roadmap.md) 25.6)
-- [ ] The catalogue covers every string monodocs itself emits and a test fails when a new one is added outside it. A message that reaches the user unwrapped from a dependency (a Zod parse error, a Puppeteer stack) is out of scope; where monodocs already wraps one, the wrapper is translated. The boundary is written down
+- [x] `--help` — including the `Usage:` / `Options:` / `Commands:` headings Commander generates, reached through `configureHelp` / `addHelpText` — and every error and warning read in English by default, and in Japanese under `--lang ja` or `MONODOCS_LANG=ja`. The flag wins over the environment variable; an unsupported value is rejected naming the supported ones rather than falling back silently. `LANG` / `LC_ALL` are deliberately not consulted, so a build log does not depend on the machine that produced it ([roadmap.md](roadmap.md) 25.6)
+- [x] The catalogue covers every string monodocs itself emits and a test fails when a new one is added outside it. A message that reaches the user unwrapped from a dependency (a Zod parse error, a Puppeteer stack) is out of scope; where monodocs already wraps one, the wrapper is translated. The boundary is written down
 
 **Document language and UI labels** ([roadmap.md](roadmap.md) 23.4)
 

@@ -3,6 +3,7 @@ import { dirname, isAbsolute, resolve } from "node:path";
 import { buildSite, resolveOutputs } from "./build.js";
 import { loadConfig } from "./config.js";
 import type { BuildOptions, BuildResult } from "./types.js";
+import { t } from "./messages.js";
 
 /** 連続したファイルイベントをまとめる待ち時間。 */
 const DEBOUNCE_MS = 150;
@@ -43,7 +44,7 @@ export async function watchSite(
   // 入力ディレクトリが無ければ監視を確立できないため、ここで失敗させる
   // （CLI 側で「Watching…」と表示したまま無反応になるのを防ぐ）。
   if (!existsSync(inputDir)) {
-    throw new Error(`Input directory not found: ${config.inputDir}`);
+    throw new Error(t("build.inputNotFound", { path: config.inputDir }));
   }
 
   let timer: ReturnType<typeof setTimeout> | null = null;

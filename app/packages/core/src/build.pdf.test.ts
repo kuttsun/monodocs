@@ -167,7 +167,7 @@ describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () 
     expect(calls[0]!.html).toContain("data:image/svg+xml;base64,");
     expect(calls[0]!.html).not.toContain('src="./pic.svg"');
     // embedImages: false を上書きした旨を警告する。
-    expect(result.warnings.some((w) => w.includes("画像を埋め込みました"))).toBe(true);
+    expect(result.warnings.some((w) => w.includes("embedded for PDF output"))).toBe(true);
     await rm(idir, { recursive: true, force: true });
   });
 
@@ -194,7 +194,7 @@ describe("buildSite - PDF 分岐（偽ジェネレータで browserless）", () 
     // PDF では大きい画像も data URI として埋め込む（外部参照のままにしない）。
     expect(calls[0]!.html).toContain("data:image/svg+xml;base64,");
     expect(calls[0]!.html).not.toContain('src="./big.svg"');
-    expect(result.warnings.some((w) => w.includes("画像を埋め込みました"))).toBe(true);
+    expect(result.warnings.some((w) => w.includes("embedded for PDF output"))).toBe(true);
     await rm(idir, { recursive: true, force: true });
   });
 

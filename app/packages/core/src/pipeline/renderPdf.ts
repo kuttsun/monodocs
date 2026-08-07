@@ -3,6 +3,7 @@ import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } fro
 import { DEFAULT_PDF_FOOTER, EMPTY_PDF_BAND } from "./pdfBands.js";
 import { addOutline, collectDests, remapDests, type PdfOutlineNode } from "./pdfOutline.js";
 import { setPdfMetadata } from "./pdfMetadata.js";
+import { t } from "../messages.js";
 
 /** {@link PdfGenerator.render} のオプション。 */
 export type PdfRenderOptions = {
@@ -174,10 +175,7 @@ async function warnIfFooterDoesNotFit(page: PageLike, options: PdfRenderOptions)
   const bandPx = measured.bandPx as number;
   if (bandPx <= 0 || marginPx >= bandPx) return;
   options.onWarning(
-    `pdf.margin.bottom (${options.margin.bottom}) is smaller than the page-number footer needs ` +
-      `(${pxToMm(bandPx)}). The footer is still drawn, against the paper edge — a supplied ` +
-      `fragment does not hide itself the way Chromium's built-in one does. Enlarge the margin, or ` +
-      `set pdf.footer to a fragment that fits, or pdf.footer: false to drop the band.`,
+    t("pdf.footerMarginTooSmall", { margin: options.margin.bottom, needed: pxToMm(bandPx) }),
   );
 }
 
@@ -205,9 +203,7 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
         // 画像は data URI 済みなので "load" で十分（ネットワーク待ちは不要）。
         await page.setContent(html, { waitUntil: "load" });
       } catch (error) {
-        throw new BrowserSetupError(
-          `PDF 用ページの読み込みに失敗しました: ${(error as Error).message}`,
-        );
+        throw new BrowserSetupError(t("pdf.pageLoadFailed", { detail: (error as Error).message }));
       }
 
       if (options.waitForMermaid) {
