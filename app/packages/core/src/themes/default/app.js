@@ -15,23 +15,12 @@
   var STORAGE_THEME = "monodocs:theme";
   var STORAGE_CONTENT_WIDTH = "monodocs:content-width";
 
-  // クライアント UI（chrome）の文言。読者の言語に追従する i18n はせず、英語で統一する
-  // （著者が用意したドキュメント本文の言語とは独立した UI ラベル）。将来 config から
-  // 差し替えられるよう 1 箇所に集約しておく。静的な文言は template.html 側にある。
-  var LABELS = {
-    prev: "← Prev",
-    next: "Next →",
-    noResults: "No results",
-    searchResults: "Search results",
-    wrapToggle: "Toggle word wrap",
-    copyCode: "Copy code",
-    copy: "Copy",
-    copied: "Copied!",
-    copyFailed: "Copy failed",
-    useWideContent: "Use wide content",
-    useStandardContent: "Use standard content width",
-    openImagePreview: "Open image preview",
-  };
+  // クライアントが動的に書く UI（chrome）の文言。表の選択（lang）と html.labels の適用は
+  // core が行い、解決済みのものだけがここへ届く。自前の文字列をひとつも持たないのが要点で、
+  // 両方が持つと、表と上書きが 2 箇所で食い違い、片方だけ差し替わった文書ができる。
+  // テーマ契約上 {{siteDataJson}} はどのテンプレートにも必ずあるので、これは常に届く。
+  // 静的な文言は template.html 側のトークンで解決済みで、ここには現れない。
+  var LABELS = data.labels || {};
   // ページ内目次に出す見出しの最深レベル（設定由来。未指定は h3 まで）。
   var tocMaxLevel = typeof data.tocMaxLevel === "number" ? data.tocMaxLevel : 3;
   // 同一ルートへの遷移後にスクロールしたい見出し ID（あれば）。
@@ -304,11 +293,13 @@
     var next = idx < navPages.length - 1 ? navPages[idx + 1] : null;
     var html = "";
     // 「← Prev / Next →」ラベルはリンクにしない（<a> の外に出す）。タイトルだけをリンクにする。
+    // ラベルは設定ファイル由来なので、innerHTML へ入る以上はページタイトルと同様にエスケープする
+    // （ここだけ素通しにすると html.labels が任意スクリプトの実行口になる）。
     if (prev) {
       html +=
         '<div class="page-nav-item page-nav-item-prev">' +
         '<span class="page-nav-dir">' +
-        LABELS.prev +
+        escapeHtml(LABELS.prev) +
         '</span><a class="page-nav-link page-nav-prev" data-route="' +
         escapeHtml(prev.route) +
         '" href="#' +
@@ -323,7 +314,7 @@
       html +=
         '<div class="page-nav-item page-nav-item-next">' +
         '<span class="page-nav-dir">' +
-        LABELS.next +
+        escapeHtml(LABELS.next) +
         '</span><a class="page-nav-link page-nav-next" data-route="' +
         escapeHtml(next.route) +
         '" href="#' +

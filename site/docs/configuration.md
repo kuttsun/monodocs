@@ -36,6 +36,11 @@ Every key is optional. This example lists them all with their default values:
 # Document title shown in the output HTML
 title: Documentation
 
+# Language of the generated document. Fills <html lang> and selects the UI label table.
+# Any BCP 47 tag; label tables ship for en and ja, and anything else falls back to the en
+# labels with a warning. This is not the language of the CLI's own messages.
+lang: en
+
 # Input directory (overridden by the CLI input argument)
 input: ./docs
 
@@ -105,7 +110,33 @@ html:
 | Key      | Type   | Default           | Description                                                                                    |
 | -------- | ------ | ----------------- | ---------------------------------------------------------------------------------------------- |
 | `title`  | string | `Documentation`   | Title shown in the output HTML (`<title>` and header).                                          |
+| `lang`   | string | `en`              | Language of the generated document. Fills `<html lang>` and selects the UI label table. See below. |
 | `input`  | string | `./docs`          | Input directory to scan. The CLI input argument overrides this. Relative to the config file.   |
+
+#### `lang` (document language and UI labels) {#lang}
+
+A generated document carries two languages that have no reason to agree: the language its pages are
+written in, and the language of the chrome monodocs wraps around them — the search box, `On this
+page`, `No results`, `Copy`, the lightbox controls, prev/next. `lang` settles both: it fills
+`<html lang>` and selects the label table.
+
+```yaml
+lang: ja
+```
+
+Any syntactically valid BCP 47 tag is accepted, because it is your document's language and
+`<html lang>` has to be able to say so. A string that is not one is rejected rather than written into
+the attribute.
+
+Label tables ship for `en` (the default) and `ja` only. Tags are matched case-insensitively on the
+primary language subtag, so `en-GB`, `ja-JP`, and `JA` all find one. Any other tag still reaches
+`<html lang>`, falls back to the English labels, and warns once naming the tag — a French document
+should not have to misdeclare itself as English just to build. Use [`html.labels`](#html-labels) to
+supply the wording.
+
+`lang` describes the document. It is deliberately not the language of the CLI's own messages: a
+document is often written in one language by someone working in a terminal that reports another, and
+a build log should not change language because the document did.
 
 ### `output`
 
@@ -245,6 +276,66 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | `html.contentWidthToggle` | boolean | `true` | Show the reader-facing standard/wide content toggle. When `false`, stored reader choices and `html.contentWidthDefault` are ignored. |
 | `html.contentWidthDefault` | `standard` `wide` | `standard` | Initial content-width state. A reader's saved choice takes precedence. |
 | `html.imageLightbox` | boolean | `true` | Open unlinked, non-decorative content images in a viewport-sized dialog when clicked or activated from the keyboard. Linked images retain their original link behavior, and images with an explicit empty `alt` remain decorative. The dialog is omitted from print and PDF output. |
+| `html.labels`        | map     | (from `lang`) | Replace individual UI labels on top of the table [`lang`](#lang) chose. An unknown key is rejected. See below. |
+
+#### `html.labels` (UI labels) {#html-labels}
+
+Each entry replaces one label from the table `lang` selected; everything you leave out keeps the
+table's wording. This is also how you supply a language monodocs does not ship a table for.
+
+```yaml
+lang: fr
+html:
+  labels:
+    tocTitle: Sur cette page
+    noResults: Aucun résultat
+```
+
+An unknown key is rejected rather than ignored, so a typo cannot silently keep the default. That
+makes the key set part of the configuration surface, which is why it is enumerated here in full
+rather than left to whatever the theme happens to read.
+
+| Key                  | `en`                         | `ja`                       | Where it appears |
+| -------------------- | ---------------------------- | -------------------------- | ---------------- |
+| `openSidebar`        | Open sidebar                 | サイドバーを開く           | The ☰ button shown when the sidebar is closed |
+| `closeSidebar`       | Close sidebar                | サイドバーを閉じる         | The « button in the sidebar header |
+| `searchPlaceholder`  | Search…                      | 検索…                      | Placeholder in the search box |
+| `searchLabel`        | Search documents             | ドキュメントを検索         | Accessible name of the search box |
+| `searchResults`      | Search results               | 検索結果                   | Accessible name of the result list |
+| `noResults`          | No results                   | 該当なし                   | Shown when a query matches nothing |
+| `contentWidthToggle` | Toggle content width         | 本文幅を切り替え           | Accessible name of the width button |
+| `useWideContent`     | Use wide content             | 本文を広く表示             | Width button tooltip while standard |
+| `useStandardContent` | Use standard content width   | 本文を標準の幅で表示       | Width button tooltip while wide |
+| `darkModeToggle`     | Toggle dark mode             | ダークモードを切り替え     | The dark mode button |
+| `tocLabel`           | Table of contents            | 目次                       | Accessible name of the in-page table of contents |
+| `tocTitle`           | On this page                 | このページの内容           | Heading above the in-page table of contents |
+| `pageNavLabel`       | Page navigation              | ページ移動                 | Accessible name of the prev/next navigation |
+| `prev`               | ← Prev                       | ← 前へ                     | Previous-page link |
+| `next`               | Next →                       | 次へ →                     | Next-page link |
+| `wrapToggle`         | Toggle word wrap             | 折り返しを切り替え         | Word-wrap button on a code block |
+| `copyCode`           | Copy code                    | コードをコピー             | Accessible name of the copy button |
+| `copy`               | Copy                         | コピー                     | Copy button tooltip |
+| `copied`             | Copied!                      | コピーしました             | Shown after a successful copy |
+| `copyFailed`         | Copy failed                  | コピーできませんでした     | Shown when a copy fails |
+| `openImagePreview`   | Open image preview           | 画像を拡大表示             | Accessible name of an enlargeable image |
+| `imagePreview`       | Image preview                | 画像プレビュー             | Accessible name of the lightbox dialog |
+| `closeImagePreview`  | Close image preview          | 画像プレビューを閉じる     | Close button in the lightbox |
+| `generatedBy`        | Generated by                 | 生成:                      | Prefix of the branding footer |
+
+What a custom theme gets is bounded by the theme contract, and the four cases differ:
+
+- **Every theme** gets the resolved labels as data in <span v-pre>`{{siteDataJson}}`</span>. This is the only
+  unqualified guarantee.
+- **The default `app.js`** applies them to the DOM hooks the default template provides, so a theme
+  that replaces only `style.css` behaves exactly as the built-in one does. A theme that replaces
+  `template.html` gets them wherever it kept those hooks, through <span v-pre>`{{labelTocTitle}}`</span> and the other
+  <span v-pre>`{{label…}}`</span> tokens, and nowhere else.
+- **A theme replacing `app.js`** receives the data and applies it itself.
+- **Static text a custom `template.html` spells out itself** stays as written. monodocs cannot know
+  which strings in someone else's markup were meant to be labels.
+
+<span v-pre>`{{lang}}`</span> is an optional token, so a custom template that hardcodes `<html lang="…">` keeps what it
+wrote.
 
 #### `html.theme` (custom theme)
 

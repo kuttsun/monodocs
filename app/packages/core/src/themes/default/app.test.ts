@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from "vitest";
+import { resolveLabels } from "../../labels.js";
 import { loadTheme } from "../index";
 
 /**
@@ -18,6 +19,7 @@ async function mountClient(routes: string[]): Promise<void> {
   document.body.innerHTML = `<nav id="sidebar-nav">${links}</nav><main id="content">${articles}</main>`;
 
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
+    labels: resolveLabels("en").labels,
     initialRoute: routes[0],
   };
 

@@ -3,6 +3,13 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import {
+  DEFAULT_LANG,
+  isValidLanguageTag,
+  LABEL_KEYS,
+  type LabelKey,
+  type Labels,
+} from "./labels.js";
 import type {
   BuildOptions,
   OutputFormat,
@@ -133,9 +140,33 @@ const sidebarItemSchema: z.ZodType<SidebarItem> = z.lazy(() =>
     }),
 );
 
+/**
+ * `html.labels` のスキーマ。**未知のキーは拒否する**。タイプミスが黙って既定のまま残ると、
+ * 書いたのに効かないという最も気づきにくい失敗になる。その帰結としてキー集合は
+ * 1.0 で凍結される公開 API になり、設定リファレンスに列挙される（labels.ts の LABEL_KEYS）。
+ */
+const labelsSchema = z
+  .object(
+    Object.fromEntries(LABEL_KEYS.map((key) => [key, z.string().min(1).optional()])) as Record<
+      LabelKey,
+      z.ZodOptional<z.ZodString>
+    >,
+  )
+  .strict();
+
 /** `monodocs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
 const configFileSchema = z.object({
   title: z.string().optional(),
+  /**
+   * 生成した文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ（既定 "en"）。
+   * 同梱の表が無いタグも属性には書き、ラベルだけ en へ落とす。CLI 自身のメッセージの
+   * 言語とは別物（文書はある言語で書かれ、書いている人の端末は別の言語を返しうる）。
+   */
+  lang: z
+    .string()
+    .min(1)
+    .refine(isValidLanguageTag, { message: "must be a syntactically valid BCP 47 language tag" })
+    .optional(),
   input: z.string().optional(),
   output: z
     .object({
@@ -222,6 +253,9 @@ const configFileSchema = z.object({
       // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
       // 読者がトグルで切り替えると localStorage の選択が優先される。
       colorScheme: z.enum(["light", "dark", "auto"]).optional(),
+      // lang が選んだ表の上に、個別の UI ラベルを差し替える。テーマの chrome に作用する
+      // 層なので html の下（lang は文書自身の記述なのでトップレベル）。
+      labels: labelsSchema.optional(),
     })
     .optional(),
   pdf: z
@@ -257,6 +291,10 @@ export type ResolvedConfig = {
   /** 実際に読み込んだ設定ファイル。未検出の場合は undefined。 */
   configFilePath?: string;
   title: string;
+  /** 生成した文書の言語（BCP 47）。`<html lang>` を埋め、UI ラベルの表を選ぶ。 */
+  lang: string;
+  /** `lang` が選んだ表の上に重ねる UI ラベルの差し替え。 */
+  labelOverrides: Partial<Labels>;
   inputDir: string;
   outputFile: string;
   format: OutputFormat;
@@ -446,6 +484,8 @@ export async function loadConfig(
   return {
     configFilePath: configPath,
     title: fileConfig.title ?? DEFAULT_TITLE,
+    lang: fileConfig.lang ?? DEFAULT_LANG,
+    labelOverrides: fileConfig.html?.labels ?? {},
     inputDir:
       options.inputDir ??
       resolveConfigRelativePath(configBaseDir, fileConfig.input ?? DEFAULT_INPUT),
