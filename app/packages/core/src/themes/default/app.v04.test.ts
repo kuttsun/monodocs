@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from "vitest";
+import { resolveLabels } from "../../labels.js";
 import { loadTheme } from "../index";
 
 type ClientPage = {
@@ -73,6 +74,7 @@ async function mountClient(
     imageLightbox;
 
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
+    labels: resolveLabels("en").labels,
     initialRoute: pages[0]?.route,
     colorScheme: options.colorScheme,
     contentWidthDefault: options.contentWidthDefault,
@@ -467,6 +469,7 @@ describe("v0.4 client features (app.js)", () => {
       `<main id="content"><article class="page" data-route="/">${codeHtml}` +
       `<nav id="page-nav"></nav></article></main>`;
     (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
+      labels: resolveLabels("en").labels,
       initialRoute: "/",
       pages: [page("/", "Home")],
     };

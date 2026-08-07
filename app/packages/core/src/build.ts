@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { BuildOptions, BuildResult, Page, SidebarNode, SourceFormat } from "./types.js";
 import { loadConfig, type MermaidMode, type OnLargeImage, type ResolvedConfig } from "./config.js";
+import { resolveLabels } from "./labels.js";
 import { scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
 import { asciidocRenderer } from "./sources/asciidoc/renderer.js";
@@ -184,10 +185,16 @@ export async function buildSite(
   const clientMermaid = hasMermaid && config.mermaidEnabled && config.mermaidMode === "client";
   const bodyScripts = clientMermaid ? await mermaidRuntimeScript(config.mermaidRuntime) : "";
 
+  // ラベルの解決はここで 1 度だけ行う。同梱の表が無いタグの警告も、ビルド 1 回につき 1 度になる。
+  const resolvedLabels = resolveLabels(config.lang, config.labelOverrides);
+  if (resolvedLabels.warning !== undefined) warnings.push(resolvedLabels.warning);
+
   const html = await renderSingleHtml({
     title: config.title,
     pages,
     sidebar,
+    lang: config.lang,
+    labels: resolvedLabels.labels,
     theme: config.theme,
     colorScheme: config.colorScheme,
     contentWidth: config.contentWidth,

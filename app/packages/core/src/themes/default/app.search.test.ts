@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from "vitest";
+import { resolveLabels } from "../../labels.js";
 import { loadTheme } from "../index";
 
 type ClientHeading = { id: string; text: string; level: number };
@@ -53,6 +54,7 @@ async function mountClient(
     `</div>`;
 
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
+    labels: resolveLabels("en").labels,
     initialRoute: pages[0]?.route,
     tocMaxLevel: options.tocMaxLevel,
     // html is a DOM-side concern, so it stays out of the client data, as in a generated document.

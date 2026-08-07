@@ -1,13 +1,22 @@
 import type { Page, SidebarNode } from "../types.js";
 import { parseContentWidth, type ColorScheme, type ContentWidthDefault } from "../config.js";
+import { DEFAULT_LANG, LABEL_KEYS, resolveLabels, type Labels } from "../labels.js";
 import { loadTheme } from "../themes/index.js";
-import { escapeAttr, escapeHtml, renderTemplate } from "../util/html.js";
+import { escapeAttr, escapeHtml, escapeLabel, renderTemplate } from "../util/html.js";
 
 export type RenderHtmlInput = {
   title: string;
   pages: Page[];
   sidebar: SidebarNode[];
   theme?: string;
+  /** 文書の言語（BCP 47）。`{{lang}}` を持つテンプレートの `<html lang>` に入る。未指定は "en"。 */
+  lang?: string;
+  /**
+   * 解決済みの UI ラベル。解決（表の選択と `html.labels` の適用）は呼び出し側で 1 度だけ
+   * 行い、ここへは結果を渡す。未指定のときは `lang` から解決する（この境界を直接呼ぶ
+   * 利用者が、ラベルを組み立てずに済むようにするため）。
+   */
+  labels?: Labels;
   /** ドキュメントを開いたときの初期配色（未指定は "light"）。読者の選択があればそちらが優先。 */
   colorScheme?: ColorScheme;
   /** 本文領域の最大幅。`full` / `none` の場合は利用可能な横幅いっぱいに広げる。 */
@@ -133,14 +142,32 @@ function bodyContentWidthAttr(
     : "";
 }
 
-/** Return the initial accessible state for the content-width toggle button. */
-function contentWidthToggleState(contentWidthDefault: ContentWidthDefault): {
-  pressed: string;
-  title: string;
-} {
+/**
+ * Return the initial accessible state for the content-width toggle button.
+ * ボタンの `title` は押すと何が起きるかを示すので、`wide` で開く文書には「標準へ戻す」が入る。
+ * 文言はラベル表から取る（app.js がトグル後に書き換える文言と同じ出所にするため。
+ * 両方が自前の文字列を持つと、上書きしたときに初期表示だけ元のままになる）。
+ */
+function contentWidthToggleState(
+  contentWidthDefault: ContentWidthDefault,
+  labels: Labels,
+): { pressed: string; title: string } {
   return contentWidthDefault === "wide"
-    ? { pressed: "true", title: "Use standard content width" }
-    : { pressed: "false", title: "Use wide content" };
+    ? { pressed: "true", title: labels.useStandardContent }
+    : { pressed: "false", title: labels.useWideContent };
+}
+
+/**
+ * ラベルを `{{labelOpenSidebar}}` 形式のトークンに展開する。
+ * エスケープは行き先ごとに要るが、属性用のエスケープはテキストノードでも正しく描画される
+ * ので、テンプレート側はこれ 1 つで両方の置き場所を満たす（JSON 側は safeJson が別に扱う）。
+ */
+function labelTokens(labels: Labels): Record<string, string> {
+  const tokens: Record<string, string> = {};
+  for (const key of LABEL_KEYS) {
+    tokens[`label${key.charAt(0).toUpperCase()}${key.slice(1)}`] = escapeLabel(labels[key]);
+  }
+  return tokens;
 }
 
 /** テーマ内の単純な条件ブロックを残すか、内容ごと除去する。 */
@@ -168,7 +195,9 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   // 既定はライト。サーバ出力の data-theme と __MONODOCS_DATA__ の値を必ず一致させる。
   const colorScheme: ColorScheme = input.colorScheme ?? "light";
   const contentWidthDefault: ContentWidthDefault = input.contentWidthDefault ?? "standard";
-  const contentWidthState = contentWidthToggleState(contentWidthDefault);
+  const lang = input.lang ?? DEFAULT_LANG;
+  const labels = input.labels ?? resolveLabels(lang).labels;
+  const contentWidthState = contentWidthToggleState(contentWidthDefault, labels);
   const generatorVersion = input.generatorVersion?.trim();
 
   const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth);
@@ -182,6 +211,9 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     contentWidthDefault,
     // ページ内目次に出す見出しの最深レベル（クライアントが headings を絞り込む）。
     tocMaxLevel,
+    // 解決済みの UI ラベル。app.js が動的に書く文言（検索結果の見出し、コピーの結果、
+    // 前後ナビ）はここから読む。テーマがどれであれデータとしては必ず届く。
+    labels,
     // 目次・検索・前後ナビ用のページメタ（本文 HTML は含めない）。
     pages: input.pages.map(pageData),
   });
@@ -201,10 +233,16 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   // 1 回の走査でまとめて置換する。順番に置換すると、先に入れた本文 HTML やテーマの
   // CSS / JS に含まれる `{{...}}` が後続の置換で書き換えられてしまう。
   return renderTemplate(html, {
+    ...labelTokens(labels),
+    // 任意のトークン。必須にすると、この機能を望まないかもしれない既存テーマをすべて壊す。
+    // `<html lang="…">` を直接書いたカスタムテンプレートは書いたものをそのまま保つ。
+    lang: escapeAttr(lang),
     htmlAttrs: rootThemeAttr(colorScheme),
     bodyAttrs: bodyContentWidthAttr(input.contentWidthToggle, contentWidthDefault),
     contentWidthTogglePressed: contentWidthState.pressed,
-    contentWidthToggleTitle: contentWidthState.title,
+    // これもラベル由来なので labelTokens と同じ扱いにする。ここだけ生のまま渡すと、
+    // `"` を含む html.labels の値が title 属性から抜け出して属性を足せてしまう。
+    contentWidthToggleTitle: escapeLabel(contentWidthState.title),
     generatorVersion: escapeHtml(generatorVersion ?? ""),
     title: escapeHtml(input.title),
     style: styleWithOverrides(theme.style, input),
