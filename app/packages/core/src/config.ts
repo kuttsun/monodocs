@@ -10,6 +10,7 @@ import {
   type LabelKey,
   type Labels,
 } from "./labels.js";
+import { DEFAULT_PDF_FOOTER, EMPTY_PDF_BAND, resolveBand } from "./pipeline/pdfBands.js";
 import type {
   BuildOptions,
   OutputFormat,
@@ -276,6 +277,11 @@ const configFileSchema = z.object({
       printBackground: z.boolean().optional(),
       // PDF のしおり（HTML サイドバーと同じ フォルダ→ページ 構造）を付与するか（既定 true）。
       bookmarks: z.boolean().optional(),
+      // ページ上下の帯。false = 帯なし / HTML フラグメント = 置き換え。既定はヘッダ無し・
+      // フッタにページ番号。フラグメントは Chromium 自身のクラス（pageNumber / totalPages /
+      // title / date / url）に値が差し込まれる。monodocs のトークン構文ではない。
+      header: z.union([z.literal(false), z.string().min(1)]).optional(),
+      footer: z.union([z.literal(false), z.string().min(1)]).optional(),
     })
     .strict()
     .optional(),
@@ -347,6 +353,10 @@ export type ResolvedConfig = {
   pdfPrintBackground: boolean;
   /** PDF にしおり（サイドバーと同じ構造）を付与するか（既定 true）。 */
   pdfBookmarks: boolean;
+  /** ページ上部の帯（解決済み HTML フラグメント。帯なしのときは空フラグメント）。 */
+  pdfHeader: string;
+  /** ページ下部の帯（同上。既定はページ番号）。 */
+  pdfFooter: string;
 };
 
 /**
@@ -531,5 +541,8 @@ export async function loadConfig(
     },
     pdfPrintBackground: fileConfig.pdf?.printBackground ?? true,
     pdfBookmarks: fileConfig.pdf?.bookmarks ?? true,
+    // ヘッダは既定で帯なし。フッタは既定でページ番号。
+    pdfHeader: resolveBand(fileConfig.pdf?.header, EMPTY_PDF_BAND),
+    pdfFooter: resolveBand(fileConfig.pdf?.footer, DEFAULT_PDF_FOOTER),
   };
 }

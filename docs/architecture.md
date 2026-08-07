@@ -161,6 +161,14 @@ Preserve these display and reachability invariants:
   clicks outside it and `Escape` must not close it there. Opening a page from inside the drawer closes it, by
   pointer and by keyboard alike, or the page it opened stays hidden behind it. Whenever the drawer closes,
   focus lands somewhere the reader can carry on from, never inside the hidden drawer and never on the body.
+- Every PDF page carries its number and the total, centred at the foot. The band is an HTML fragment
+  handed to Chromium and substituted through Chromium's own classes, not a monodocs template
+  language, and it holds digits and a separator so the one thing added to every page needs no
+  translation. Turning a band off must emit an explicitly empty fragment: `displayHeaderFooter` with
+  nothing supplied falls back to Chromium's own date-and-title header, so omission produces the
+  opposite of what was asked. A bottom margin too small for the default footer warns, with the
+  threshold measured from that fragment rather than chosen; a replacement fragment is not judged,
+  because whether arbitrary HTML fits cannot be told from the margin value.
 - Generated PDFs carry the document title and `monodocs v<version>` as Creator and Producer. The metadata pass
   runs after the bookmark pass, because pdf-lib rewrites Producer whenever it saves.
 - `html.branding` shows a footer at the end of HTML and PDF output by default.
