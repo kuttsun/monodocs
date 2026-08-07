@@ -142,6 +142,12 @@ body.sidebar-collapsed #sidebar-show {
 }
 
 /* ---- sidebar ---- */
+/* The sidebar is a column that normally does not scroll as a whole: the title and the tool row keep
+   their place, and only the navigation tree (or the result list that replaces it) scrolls. Letting
+   the whole sidebar scroll would push the search box, the width toggle and the dark mode toggle out
+   of sight as soon as the tree is taller than the viewport, which is exactly when they are wanted.
+   `overflow-y: auto` stays as the fallback for a viewport too short to hold the column at all — see
+   the floor on the scrolling part below. */
 #sidebar {
   width: var(--sidebar-width);
   flex: 0 0 var(--sidebar-width);
@@ -150,6 +156,8 @@ body.sidebar-collapsed #sidebar-show {
   height: 100vh;
   position: sticky;
   top: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   padding: 1rem 0;
 }
@@ -158,7 +166,10 @@ body.sidebar-collapsed #sidebar {
   display: none;
 }
 
+/* Both stay put while the tree scrolls. The explicit `flex: 0 0 auto` matters: a flex item defaults
+   to `flex-shrink: 1`, so a tall tree would otherwise squeeze them instead of scrolling. */
 .sidebar-header {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -179,6 +190,7 @@ body.sidebar-collapsed #sidebar {
 }
 
 .sidebar-tools {
+  flex: 0 0 auto;
   display: flex;
   gap: 0.5rem;
   /* ヘッダーと左右パディングを揃え、テーマ切替ボタンの右端を閉じるボタン «（.sidebar-header）と一致させる。 */
@@ -236,6 +248,22 @@ body.sidebar-collapsed #sidebar {
 #content-width-toggle[aria-pressed="true"] {
   color: var(--color-accent);
   border-color: var(--color-accent);
+}
+
+/* The scrolling part of the sidebar. app.js shows exactly one of these two at a time (searching
+   hides the tree and reveals the results), so making both grow is safe: only one is ever laid out.
+   An explicit `min-height` is required because a flex item defaults to `min-height: auto`, which
+   refuses to shrink below its content and would push the column past the sidebar instead of
+   scrolling. The value is a floor rather than 0: once the viewport is too short to leave even this
+   much, the column stops shrinking, overflows, and the sidebar scrolls as a whole the way it did
+   before. Shrinking to 0 instead would clip the tree away with no way left to reach it — a viewport
+   that short is degenerate, but it is what a reader at a high zoom level or a large browser font
+   size ends up with. Expressed in rem so the floor grows with that font size. */
+#sidebar-nav,
+#search-results {
+  flex: 1 1 auto;
+  min-height: 4rem;
+  overflow-y: auto;
 }
 
 #sidebar-nav ul {
