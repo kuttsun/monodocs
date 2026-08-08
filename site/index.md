@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: monodocs
-  text: Many files in, one HTML out
-  tagline: A lightweight CLI that bundles split Markdown / AsciiDoc into a single, self-contained HTML file — built for distribution, not for general-purpose format conversion.
+  text: Many files in, one file out
+  tagline: A lightweight CLI that bundles split Markdown / AsciiDoc into a single, self-contained HTML or PDF file — built for distribution, not for general-purpose format conversion.
   actions:
     - theme: brand
       text: Get Started
@@ -15,7 +15,7 @@ hero:
 
 features:
   - title: Single-file output
-    details: Keep your docs split across many files; ship one self-contained HTML with no server and no runtime dependency.
+    details: Keep your docs split across many files; ship one self-contained HTML — no server, no runtime — or a PDF with bookmarks.
   - title: Markdown + AsciiDoc
     details: Each format is handled by its own renderer and normalized into one consistent page model — mix them freely.
   - title: Built for reading

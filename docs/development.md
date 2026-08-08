@@ -93,10 +93,14 @@ load-bearing rather than cosmetic:
   For the same reason `style.css` takes inline code off the accent colour: with a coloured link and coloured
   code in the same paragraph, a reader cannot tell which one is clickable.
 - `BundleDiagram.vue` and `HeroCommand.vue` share one input directory and one artifact name, so the hero
-  reads as a single statement: run this command, get that file. The artifact is named after the directory it
-  came from (`docs.html`) rather than after a kind of document, because monodocs bundles whatever set of
-  pages it is pointed at. Keep the two components in step when either changes. The link on the artifact
-  opens the published sample, which is a separate file (`site/public/sample.html`).
+  reads as a single statement: run this command, get that file. The artifacts are named after the directory
+  they came from (`docs.html`, and `docs.pdf` for the second output the diagram shows) rather than after a
+  kind of document, because monodocs bundles whatever set of pages it is pointed at. Keep the two components
+  in step when either changes — the command is the HTML one, so it is `docs.html` that has to match. The
+  link on that artifact opens the published sample, which is a separate file (`site/public/sample.html`).
+- The diagram's source list is a tree because the hierarchy of pages is what becomes the sidebar of the
+  artifact. The image in it is deliberately not mirrored in the artifact's miniature sidebar: `buildSidebar`
+  builds from pages, so a folder holding only assets never appears there.
 - Overrides in `style.css` carry an extra class or element in the selector on purpose. The default theme's
   component styles are scoped, which adds an attribute selector to their specificity; matching it exactly
   would leave these rules depending on stylesheet order.
