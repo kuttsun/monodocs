@@ -2,6 +2,11 @@
 
 [English](README.md)
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/bundle-dark.svg">
+  <img alt="フォルダ階層に置かれた Markdown / AsciiDoc / 画像ファイルを monodocs build ./docs でまとめ、ページの階層がそのままサイドバーになる単一の docs.html、または単一の docs.pdf を生成する図。画像は出力に埋め込まれる。" src="docs/assets/bundle-light.svg">
+</picture>
+
 **単一ファイル配布に特化した軽量ドキュメントジェネレータ**です。複数の Markdown / AsciiDoc ファイルから **単一の HTML または PDF** ドキュメントを生成する CLI ツールで、ドキュメントは複数ファイルに分割して管理しながら、配布時には 1 ファイルにまとめられます。
 
 **📖 ドキュメント → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス。[単一ファイルのサンプル](https://kuttsun.github.io/monodocs/ja/sample.html)もあります。

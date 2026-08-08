@@ -2,6 +2,11 @@
 
 [日本語](README.ja.md)
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/bundle-dark.svg">
+  <img alt="A docs directory of Markdown, AsciiDoc and image files, nested in folders, bundled by 'monodocs build ./docs' into a single docs.html whose sidebar follows the same hierarchy of pages, or a single docs.pdf. The image is embedded in the output." src="docs/assets/bundle-light.svg">
+</picture>
+
 `monodocs` is a **lightweight documentation generator focused on single-file distribution**. It is a CLI tool that turns a directory of Markdown and AsciiDoc files into a **single HTML or PDF document** — keep your documentation as multiple source files, and distribute it as one self-contained file.
 
 **📖 Full documentation → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference. Try the [single-file sample](https://kuttsun.github.io/monodocs/sample.html).

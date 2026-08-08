@@ -8,7 +8,7 @@ hero:
   text: |-
     分割管理、
     配布は1ファイル
-  tagline: 分割した Markdown / AsciiDoc を単一の自己完結 HTML にまとめる軽量 CLI。汎用の形式変換ではなく「単一ファイル配布特化」を目指します。
+  tagline: 分割した Markdown / AsciiDoc を単一の自己完結 HTML / PDF にまとめる軽量 CLI。汎用の形式変換ではなく「単一ファイル配布特化」を目指します。
   actions:
     - theme: brand
       text: はじめる
@@ -19,7 +19,7 @@ hero:
 
 features:
   - title: 単一ファイル出力
-    details: ドキュメントは複数ファイルに分割したまま、配布物はサーバ不要・ランタイム不要の自己完結 HTML 1 つにまとめます。
+    details: ドキュメントは複数ファイルに分割したまま、配布物はサーバ不要・ランタイム不要の自己完結 HTML 1 つ、またはしおり付き PDF にまとめます。
   - title: Markdown + AsciiDoc
     details: 形式ごとに専用 renderer で処理し、共通のページモデルへ正規化。混在もそのまま扱えます。
   - title: 読むための機能
