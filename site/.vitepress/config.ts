@@ -37,7 +37,14 @@ export default defineConfig({
   ignoreDeadLinks: [/^\/sample\.html$/, /^\/ja\/sample\.html$/],
 
   // theme-color は site/.vitepress/theme/style.css の paper / ink と揃える。
+  //
+  // アイコンは public/ 直下の静的アセット。head のリンクには VitePress が base を付けないため、
+  // サブパス配信（project pages）で 404 にならないよう明示的に前置する。SVG を読めない
+  // ブラウザだけが .ico を取りに行くよう、.ico は `alternate icon` で並べる。
   head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}favicon.svg` }],
+    ['link', { rel: 'alternate icon', type: 'image/x-icon', href: `${base}favicon.ico` }],
+    ['link', { rel: 'apple-touch-icon', href: `${base}apple-touch-icon.png` }],
     ['meta', { name: 'theme-color', content: '#f8f8f5', media: '(prefers-color-scheme: light)' }],
     ['meta', { name: 'theme-color', content: '#15171a', media: '(prefers-color-scheme: dark)' }]
   ],

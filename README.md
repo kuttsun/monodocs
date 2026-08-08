@@ -1,4 +1,4 @@
-# monodocs
+# <img src="site/public/favicon.svg" alt="" height="28">&nbsp;monodocs
 
 [日本語](README.ja.md)
 

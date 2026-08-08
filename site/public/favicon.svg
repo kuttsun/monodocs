@@ -1,0 +1,31 @@
+<!-- The site icon. `favicon.ico` and `apple-touch-icon.png` next to this file are
+     rendered from it and have to be regenerated when this drawing changes: the
+     .ico holds 16, 32 and 48px PNGs with the transparent corners kept, and the
+     apple-touch icon is 180px, opaque and full-bleed, because iOS paints its own
+     rounding and turns transparency black.
+
+     An open book is the most common mark a documentation tool can wear — it is
+     the standard glyph in every icon set, and the neighbouring tools wear it too
+     — so what distinguishing there is has to come from the drawing itself. It is
+     set taller than the usual wide book-open glyph, which is also the proportion
+     of an actual book.
+
+     No accent. style.css spends the binding red on links and on the artifact in
+     the hero and on nothing decorative, and a red gutter here would be exactly
+     that; at 16px a line that thin reads as a smear rather than as a decision.
+
+     Two rules a page, not three: rendered at 16px the three merge into an even
+     grey, and two still read as separate lines. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#f8f8f5"/>
+  <g fill="#16191c">
+    <path d="M15.2 8C12.4 6.2 9 5.2 6 5.2 4.6 5.2 3.4 6.1 3.4 7.4v14.3c0 1.2 1 1.9 2.3 1.9 3.1 0 6.7 1 9.5 2.8Z"/>
+    <path d="M16.8 8c2.8-1.8 6.2-2.8 9.2-2.8 1.4 0 2.6.9 2.6 2.2v14.3c0 1.2-1 1.9-2.3 1.9-3.1 0-6.7 1-9.5 2.8Z"/>
+  </g>
+  <g stroke="#f8f8f5" stroke-width="2.2" stroke-linecap="round">
+    <path d="M6.4 12 13.2 14.1"/>
+    <path d="M6.4 17.2 13.2 19.3"/>
+    <path d="M25.6 12 18.8 14.1"/>
+    <path d="M25.6 17.2 18.8 19.3"/>
+  </g>
+</svg>
