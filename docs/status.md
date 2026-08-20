@@ -190,6 +190,14 @@ and both it and v0.9 are released.
 - [x] A single file is a valid input (`monodocs build ./docs/plan.md`), read as a one-page document with the directory holding it as the base for links, images, and `monodocs.config.yml`. The exclude patterns do not apply to a file named on the command line. A path whose extension no renderer claims is refused naming the extensions that work, rather than reaching `readdir` and surfacing Node's `ENOTDIR` ([roadmap.md](roadmap.md) 25.2)
 - [x] Printed tables use `table-layout: auto`, so each column takes the width its contents need instead of an equal share of the page, while the cells' `overflow-wrap: anywhere` keeps the table inside the page — the truncation the print block exists to prevent ([roadmap.md](roadmap.md) 24.3.1)
 
+**Page density** ([roadmap.md](roadmap.md) 24.6)
+
+- [x] `pdf.density` takes a preset name (`normal` / `compact` / `tight`) or an object, and moves the four values that decide a page count: root font size, leading, the space above headings, and table cell padding. On a Japanese business document of headings, paragraphs, bullets, and a 24-row table the three presets come out as five, three, and two sheets. `pdf.margin`, the only lever before, left the same document at nine pages across its whole useful range
+- [x] The object form starts from the preset named by `base` (default `normal`) and replaces only what it names, so adjusting one value does not mean copying the rest and a retuned preset still carries — the resolution order `html.labels` already uses over the table `lang` chose
+- [x] `normal` emits no rules at all, so a document that does not ask for a density prints byte-identically to before, including inheriting the reader's own base font size when they print the HTML from a browser. Only what differs from `normal` is ever written
+- [x] A preset rather than Puppeteer's `page.pdf({ scale })`: scale photographs the finished page smaller, keeping line breaks and column widths decided at the original size, while a density sets the page at the size it will be read. In a document made largely of tables that is the difference that matters
+- [x] Values are validated as plainly a number and a unit — `calc(...)` or anything carrying a `;` is refused — at the configuration boundary and again at `renderSingleHtml`, which is a public entry point of its own. No measure and no arbitrary-CSS hook: the column width belongs to `pdf.margin`, and a closed key set is what 1.0 can freeze
+
 **Decisions and documentation**
 
 - [x] Docker is recorded as a delivery form that will not be provided, with the same per-release maintenance argument that settled Homebrew / Scoop / winget ([roadmap.md](roadmap.md) 8.3). `Dockerfile.dev` is unaffected

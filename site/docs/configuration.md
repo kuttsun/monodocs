@@ -124,6 +124,7 @@ pdf:
   pageSize: A4
   margin: { top: 20mm, right: 15mm, bottom: 20mm, left: 15mm }
   printBackground: true
+  density: normal # normal | compact | tight, or an object (see below)
   bookmarks: true # folder -> page outline, same structure as the HTML sidebar
   header: false # false, or an HTML fragment using Chromium's classes
   footer: '<div style="width:100%;margin:0 15pt;font-family:sans-serif;font-size:8pt;color:#666;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>'
@@ -429,16 +430,65 @@ it with the same trust as your documentation sources.
 
 ### `pdf`
 
-Applies when the output format is `pdf` or `both`.
+Applies when the output format is `pdf` or `both` — with one exception.
+[`pdf.density`](#pdf-density) is written into the HTML as well, because printing that HTML from a
+browser is the same act of putting the document on paper.
 
 | Key                   | Type              | Default   | Description |
 | --------------------- | ----------------- | --------- | ----------- |
 | `pdf.pageSize`        | string            | `A4`      | Paper size, passed to Chromium as its `format` (`A4`, `Letter`, `A3`, …). |
 | `pdf.margin`          | map               | `20mm` / `15mm` / `20mm` / `15mm` | Page margins as CSS lengths, per side (`top`, `right`, `bottom`, `left`). An omitted side keeps its default. |
 | `pdf.printBackground` | boolean           | `true`    | Print background colours and images. |
+| `pdf.density`         | string / map      | `normal`  | How tightly the page is set: `normal`, `compact`, `tight`, or an object. See below. |
 | `pdf.bookmarks`       | boolean           | `true`    | Add a bookmark outline with the same folder → page structure as the HTML sidebar. |
 | `pdf.header`          | `false` / string  | `false`   | The band at the top of every page. See below. |
 | `pdf.footer`          | `false` / string  | page number | The band at the bottom of every page. See below. |
+
+#### `pdf.density` (how tightly the page is set) {#pdf-density}
+
+`pdf.margin` decides where the text starts, not how much of it fits. What decides a page count is
+type size, leading, the space above headings, and the padding inside table cells. `pdf.density`
+moves those four together:
+
+```yaml
+pdf:
+  density: compact
+```
+
+| | `fontSize` | `lineHeight` | `headingSpacing` | `tableCellPadding` |
+| --- | --- | --- | --- | --- |
+| `normal` (default) | `16px` | `1.7` | `1.8em` | `0.5rem 0.8rem` |
+| `compact` | `13.5px` | `1.55` | `1.15em` | `0.3rem 0.5rem` |
+| `tight` | `11.5px` | `1.45` | `0.9em` | `0.2rem 0.35rem` |
+
+A Japanese business document of headings, paragraphs, bullets, and a 24-row table comes out as five,
+three, and two sheets across the three.
+
+To adjust a preset, give an object instead of a name. `base` says which preset to start from
+(default `normal`), and the object replaces only what it names — so changing one value does not mean
+copying the other three, and a preset retuned in a later release still reaches you:
+
+```yaml
+pdf:
+  density:
+    base: compact
+    fontSize: 12px
+    lineHeight: 1.5
+```
+
+`fontSize` and `headingSpacing` take a CSS length (a number and one of `px`, `pt`, `mm`, `cm`, `in`,
+`rem`, `em`, or plain `0`). `lineHeight` takes a positive number with no unit. `tableCellPadding`
+takes one or two lengths, as CSS padding does. Anything else — `calc(...)`, a value with something
+after it — is refused rather than written into the stylesheet.
+
+Two things follow from where the rules live:
+
+- **The default writes nothing.** `normal` is a record of what the theme already does, not a set of
+  values to restate, so a document that does not set a density is unchanged — down to inheriting
+  your own base font size when you print the HTML from a browser.
+- **The rules are `@media print`.** The same file stays as it was on screen and is set tighter on
+  paper. `--format pdf` goes through the print stylesheet and gets the density; so does printing the
+  HTML from a browser. The key sits under `pdf` because that is what it is for.
 
 #### `pdf.header` / `pdf.footer` (page bands) {#pdf-bands}
 

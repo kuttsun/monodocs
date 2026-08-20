@@ -124,6 +124,7 @@ pdf:
   pageSize: A4
   margin: { top: 20mm, right: 15mm, bottom: 20mm, left: 15mm }
   printBackground: true
+  density: normal # normal | compact | tight、またはオブジェクト（下記参照）
   bookmarks: true # HTML サイドバーと同じ フォルダ→ページ 構造のしおり
   header: false # false、または Chromium のクラスを使う HTML フラグメント
   footer: '<div style="width:100%;margin:0 15pt;font-family:sans-serif;font-size:8pt;color:#666;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>'
@@ -407,16 +408,65 @@ html:
 
 ### `pdf`
 
-出力形式が `pdf` または `both` のときに適用されます。
+出力形式が `pdf` または `both` のときに適用されます。ただし 1 つだけ例外があります。
+[`pdf.density`](#pdf-density) は HTML 側にも書き込まれます。その HTML をブラウザから印刷するのも、
+同じ「文書を紙に載せる」行為だからです。
 
 | キー                  | 型                | 既定値    | 説明 |
 | --------------------- | ----------------- | --------- | ---- |
 | `pdf.pageSize`        | string            | `A4`      | 用紙サイズ。Chromium の `format` にそのまま渡す（`A4` / `Letter` / `A3` など）。 |
 | `pdf.margin`          | map               | `20mm` / `15mm` / `20mm` / `15mm` | ページ余白（CSS 長さ）を辺ごとに指定（`top` / `right` / `bottom` / `left`）。省略した辺は既定値のまま。 |
 | `pdf.printBackground` | boolean           | `true`    | 背景色・背景画像を印刷する。 |
+| `pdf.density`         | string / map      | `normal`  | 版面の密度。`normal` / `compact` / `tight`、またはオブジェクト。下記参照。 |
 | `pdf.bookmarks`       | boolean           | `true`    | HTML サイドバーと同じ フォルダ → ページ 構造のしおりを付ける。 |
 | `pdf.header`          | `false` / string  | `false`   | 各ページ上部の帯。下記参照。 |
 | `pdf.footer`          | `false` / string  | ページ番号 | 各ページ下部の帯。下記参照。 |
+
+#### `pdf.density`（版面の密度） {#pdf-density}
+
+`pdf.margin` が決めるのは本文の始まる位置であって、どれだけ入るかではありません。枚数を決めて
+いるのは、文字の大きさ・行送り・見出し上の空き・表のセル余白です。`pdf.density` はこの 4 つを
+まとめて動かします。
+
+```yaml
+pdf:
+  density: compact
+```
+
+| | `fontSize` | `lineHeight` | `headingSpacing` | `tableCellPadding` |
+| --- | --- | --- | --- | --- |
+| `normal`（既定） | `16px` | `1.7` | `1.8em` | `0.5rem 0.8rem` |
+| `compact` | `13.5px` | `1.55` | `1.15em` | `0.3rem 0.5rem` |
+| `tight` | `11.5px` | `1.45` | `0.9em` | `0.2rem 0.35rem` |
+
+見出し・段落・箇条書きと 24 行の表からなる日本語の事業書類で、3 つはそれぞれ 5 枚・3 枚・2 枚に
+なります。
+
+プリセットを調整したいときは、名前の代わりにオブジェクトを書きます。`base` がどのプリセットを
+土台にするかを指し（既定は `normal`）、オブジェクトは名指しした値だけを差し替えます。1 つ変える
+ために残り 3 つを書き写す必要はなく、将来プリセット側が調整されてもそれが届きます。
+
+```yaml
+pdf:
+  density:
+    base: compact
+    fontSize: 12px
+    lineHeight: 1.5
+```
+
+`fontSize` と `headingSpacing` は CSS の長さ（数値と `px` / `pt` / `mm` / `cm` / `in` / `rem` /
+`em` のいずれか、または `0`）。`lineHeight` は単位の無い正の数。`tableCellPadding` は CSS の
+padding と同じく長さ 1 つか 2 つ。それ以外（`calc(...)`、後ろに何かが続く値）は、スタイルシートに
+書き込まずに拒否します。
+
+規則の置き場所から、2 つのことが導かれます。
+
+- **既定は何も出力しません。** `normal` はテーマが既にしていることの記録であって、書き直すべき値の
+  集合ではありません。密度を指定しない文書は変わりません。ブラウザから HTML を印刷するときに、
+  あなた自身の基準文字サイズを継承することも含めてです。
+- **規則は `@media print` です。** 同じファイルが、画面ではこれまでどおり、紙の上ではより詰まって
+  組まれます。`--format pdf` は印刷用スタイルシートを通るので密度が効き、ブラウザから HTML を
+  印刷した場合も同じです。キーが `pdf` の下にあるのは、それが目的だからです。
 
 #### `pdf.header` / `pdf.footer`（ページの帯） {#pdf-bands}
 
