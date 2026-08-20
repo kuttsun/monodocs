@@ -36,6 +36,9 @@ beforeAll(async () => {
       "| --- | --- |",
       "| 2026-09 | The first cohort of documents is converted and handed to the reviewers. |",
       "| 2026-10 | Feedback is folded back in and the second cohort follows the same route. |",
+      // One cell of unbreakable text. `table-layout: auto` sizes columns from their contents, so
+      // without a rule that lets a word break anywhere this row would push the table past the page.
+      `| 2026-11 | https://example.invalid/${"handover".repeat(12)}/final |`,
       "",
     ].join("\n"),
   );
@@ -49,7 +52,12 @@ afterAll(async () => {
 });
 
 /** Measure the header cells of the first content table under the print stylesheet. */
-async function printedColumnWidths(): Promise<{ widths: number[]; tableWidth: number }> {
+async function printedColumnWidths(): Promise<{
+  widths: number[];
+  tableWidth: number;
+  tableOverflow: number;
+  contentOverflow: number;
+}> {
   const puppeteer = (await import("puppeteer-core")).default;
   const browser = await puppeteer.launch({
     headless: true,
@@ -64,9 +72,13 @@ async function printedColumnWidths(): Promise<{ widths: number[]; tableWidth: nu
     return await page.evaluate(() => {
       const table = document.querySelector("#content table") as HTMLTableElement;
       const cells = [...table.querySelectorAll("thead th")] as HTMLElement[];
+      const content = document.getElementById("content") as HTMLElement;
       return {
         widths: cells.map((c) => c.getBoundingClientRect().width),
         tableWidth: table.getBoundingClientRect().width,
+        // What actually spills off the page: the box wanting to be wider than it is allowed to be.
+        tableOverflow: table.scrollWidth - table.clientWidth,
+        contentOverflow: content.scrollWidth - content.clientWidth,
       };
     });
   } finally {
@@ -86,12 +98,16 @@ describe.skipIf(!chromium)("printed tables", () => {
   }, 60_000);
 
   it("still fits the table inside the page rather than overflowing it", async () => {
-    const { widths, tableWidth } = await printedColumnWidths();
-    const content = 794; // viewport width; #content spans it with no max-width in print
+    const { widths, tableWidth, tableOverflow, contentOverflow } = await printedColumnWidths();
+    const page = 794; // viewport width; #content spans it with no max-width in print
 
     // The reason the print block reshapes tables at all: paper has no horizontal scrollbar, so
-    // anything past the page edge is simply gone from the PDF.
-    expect(tableWidth).toBeLessThanOrEqual(content);
+    // anything past the page edge is simply gone from the PDF. The fixture's last row is a single
+    // unbreakable string, which is what `overflow-wrap: anywhere` on the cells is there for —
+    // `break-word` alone does not reduce the min-content width the auto algorithm sizes from.
+    expect(tableWidth).toBeLessThanOrEqual(page);
     expect(widths[0]! + widths[1]!).toBeLessThanOrEqual(tableWidth + 1);
+    expect(tableOverflow).toBeLessThanOrEqual(1);
+    expect(contentOverflow).toBeLessThanOrEqual(1);
   }, 60_000);
 });

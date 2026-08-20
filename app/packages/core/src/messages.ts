@@ -74,7 +74,7 @@ const EN = {
   "sidebar.groupEmpty": "Sidebar group has no visible pages: {title}",
   "sidebar.itemNotFound":
     "Sidebar item not found: {path} (paths are relative to input and must resolve to a " +
-    "generated page; check sidebar.exclude and sources.*.extensions)",
+    "generated page; check sources.exclude and sources.*.extensions)",
   "sidebar.itemHidden": "Sidebar item is hidden and was skipped: {path}",
   "sidebar.itemDuplicate": "Sidebar item appears more than once: {path}",
   "sidebar.notListed": "Not listed in the custom sidebar (reachable only by route): {paths}",
@@ -222,7 +222,7 @@ const JA: Record<MessageKey, string> = {
   "sidebar.groupEmpty": "サイドバーのグループに表示できるページがありません: {title}",
   "sidebar.itemNotFound":
     "サイドバーの項目が見つかりません: {path}（パスは入力ディレクトリ基準で、生成されるページに" +
-    "解決できる必要があります。sidebar.exclude と sources.*.extensions を確認してください）",
+    "解決できる必要があります。sources.exclude と sources.*.extensions を確認してください）",
   "sidebar.itemHidden": "サイドバーの項目が hidden のためスキップしました: {path}",
   "sidebar.itemDuplicate": "サイドバーの項目が重複しています: {path}",
   "sidebar.notListed": "カスタムサイドバーに未掲載です（route でのみ到達できます）: {paths}",

@@ -214,7 +214,9 @@ theme assets.
 
 [`watch.ts`](../app/packages/core/src/watch.ts) uses `fs.watch`, recursive mode where supported, and debouncing.
 It watches source and configuration inputs, ignores output-file writes to prevent rebuild loops, and rejects a
-missing input directory.
+missing input path. A single-file input is watched through the directory that holds it, filtered to that one
+name: `fs.watch` follows the inode, so watching the file itself would go silent after an editor saves by
+writing a temporary file and renaming it over the original.
 
 [`serve.ts`](../app/packages/core/src/serve.ts) provides HTTP serving, `watchSite`, and SSE live reload using
 Node.js APIs. Keep the implementation dependency-free unless a clear portability requirement justifies a new

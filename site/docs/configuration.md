@@ -138,7 +138,7 @@ pdf:
 | -------- | ------ | ----------------- | ---------------------------------------------------------------------------------------------- |
 | `title`  | string | `Documentation`   | Title shown in the output HTML (`<title>` and header).                                          |
 | `lang`   | string | `en`              | Language of the generated document. Fills `<html lang>` and selects the UI label table. See below. |
-| `input`  | string | `./docs`          | Input directory to scan. The CLI input argument overrides this. Relative to the config file.   |
+| `input`  | string | `./docs`          | Input path to scan: a directory, or a single source file. The CLI input argument overrides this. Relative to the config file. |
 
 #### `lang` (document language and UI labels) {#lang}
 

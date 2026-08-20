@@ -1,8 +1,9 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildSite, validateSite } from "./build";
+import { watchSite } from "./watch";
 
 /**
  * Pointing a tool that produces a single file at a single file is the obvious thing to try, and
@@ -130,4 +131,66 @@ describe("a single file as the input", () => {
       buildSite({ inputDir: join(dir, "nope.md"), outputFile: join(dir, "out.html") }),
     ).rejects.toThrow(/not found/i);
   });
+
+  it("keeps watching a single file across an editor's save-by-rename", async () => {
+    const docs = join(dir, "docs");
+    await mkdir(docs, { recursive: true });
+    const file = join(docs, "plan.md");
+    await writeFile(file, "# First\n");
+    const out = join(dir, "dist", "plan.html");
+
+    let rebuilds = 0;
+    let resolveNext: (() => void) | null = null;
+    const nextRebuild = () =>
+      new Promise<void>((res) => {
+        resolveNext = res;
+      });
+    const handle = await watchSite(
+      { inputDir: file, outputFile: out },
+      {
+        onRebuild: () => {
+          rebuilds++;
+          const r = resolveNext;
+          resolveNext = null;
+          r?.();
+        },
+      },
+    );
+
+    try {
+      expect(rebuilds).toBe(1);
+
+      // An ordinary in-place write.
+      let next = nextRebuild();
+      await writeFile(file, "# Second\n");
+      await next;
+      expect(await readFile(out, "utf8")).toContain("Second");
+
+      // What many editors actually do: write a temporary file and rename it over the original.
+      next = nextRebuild();
+      const temp = join(docs, "plan.md.tmp");
+      await writeFile(temp, "# Third\n");
+      await rename(temp, file);
+      await next;
+      expect(await readFile(out, "utf8")).toContain("Third");
+
+      // The edit *after* the replacement is the one that matters: a watch bound to the inode is
+      // holding the file that was renamed away, and everything from here on is silent. On Linux
+      // libuv already watches the parent directory and filters by name, so this passes either
+      // way there; the backends that attach to the file itself are why watch.ts does the same
+      // thing explicitly.
+      next = nextRebuild();
+      await writeFile(file, "# Fourth\n");
+      await next;
+      expect(await readFile(out, "utf8")).toContain("Fourth");
+
+      // A sibling file is not this watch's business, so it must not trigger a rebuild.
+      const before = rebuilds;
+      await writeFile(join(docs, "other.md"), "# Other\n");
+      await new Promise((res) => setTimeout(res, 400));
+      expect(rebuilds).toBe(before);
+    } finally {
+      handle.close();
+    }
+  }, 15000);
 });
