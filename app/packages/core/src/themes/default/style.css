@@ -1171,10 +1171,15 @@ body.content-wide #content {
   }
   /* 画面では `display: block` + 横スクロールで表を見せているが、印刷では
      切り捨てになるうえ thead の繰り返しも効かない。表として組み直す。 */
+  /* `auto`, not `fixed`: with no <col> widths to go on, fixed hands every column an equal share,
+     so a table of short labels against full sentences splits the page in half regardless of what
+     is in it. The `overflow-wrap: anywhere` below gives each cell a one-character minimum width,
+     which is what lets the auto algorithm always fit the table to the page rather than overflow
+     it — the truncation this whole block exists to prevent. */
   #content table {
     display: table;
     width: 100%;
-    table-layout: fixed;
+    table-layout: auto;
     overflow-x: visible;
   }
   #content th,

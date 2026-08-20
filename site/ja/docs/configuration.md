@@ -7,7 +7,7 @@ monodocs は任意の `monodocs.config.yml` を読み込み、ファイルを単
 monodocs は次の順で設定ファイルを探します。
 
 1. `-c, --config <file>` で渡したパス。
-2. **入力ディレクトリ内**の `monodocs.config.yml`（`monodocs build ./docs` のように入力引数を渡した場合）。
+2. **入力ディレクトリ内**の `monodocs.config.yml`（`monodocs build ./docs` のように入力引数を渡した場合）。入力引数が単一ファイルのときは、それを含むディレクトリを見ます（`monodocs build ./docs/plan.md` は `monodocs build ./docs` と同じ設定ファイルを読みます）。
 3. **カレントディレクトリ**の `monodocs.config.yml`（入力引数を渡さない場合）。
 
 `--config` を明示したのにファイルが存在しない場合はビルドが失敗します。設定内の相対パス（`input`・`output.path`）は、カレントディレクトリではなく **設定ファイルの場所** を基準に解決されます。
@@ -19,6 +19,19 @@ monodocs build ./docs
 # 設定ファイルを明示
 monodocs build -c ./monodocs.config.yml
 ```
+
+## 未知のキー
+
+すべてのキーを、階層の深さに関わらず検証します。未知のキーがあればビルドは失敗し、そのキーと、
+それを含むオブジェクトを示します。
+
+```text
+error: 設定ファイル ./monodocs.config.yml の内容が不正です: pdf: Unrecognized key: "footr"
+```
+
+受理されて無視される設定は、拒否される設定より悪いためです（ファイルは正しく見え、出力を読んで
+初めて分かる）。これはトップレベルにも当てはまるので、まだ存在しないキーを先取りで書くことは
+できません。
 
 ## 優先順位
 
@@ -53,6 +66,11 @@ sources:
     extensions: [.md, .markdown]
   asciidoc:
     extensions: [.adoc, .asciidoc, .asc]
+  # ページ化しない glob。下の既定リストを置き換えず、そこへ追加される
+  # 既定: ['_partials/**', 'partials/**', 'includes/**', '**/_*']
+  # exclude: [drafts/**]
+  # false にすると既定リストが外れ、_ 始まりのファイルなども束に入る
+  excludeDefaults: true
 
 sidebar:
   # "folder"（既定）はフォルダ構造から生成、"custom" は下の items をそのまま使う
@@ -64,8 +82,6 @@ sidebar:
   #   - title: セットアップ
   #     children:
   #       - path: setup/install.adoc
-  # 走査から除外する glob（partials/includes、_ で始まるファイル）
-  exclude: ['_partials/**', 'partials/**', 'includes/**', '**/_*']
   # この階層より深いディレクトリを既定で折りたたむ。既定は未指定=全展開 / 0=全畳み
   # collapseDepth: 2
   # ナビ用タイトルの取得元: "heading"（既定）または "filename"
@@ -122,7 +138,7 @@ pdf:
 | -------- | ------ | --------------- | -------------------------------------------------------------------------- |
 | `title`  | string | `Documentation` | 出力 HTML に表示されるタイトル（`<title>`・ヘッダ）。                       |
 | `lang`   | string | `en`            | 生成する文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ。下記参照。   |
-| `input`  | string | `./docs`        | 走査する入力ディレクトリ。CLI の入力引数で上書き。設定ファイル基準の相対パス。 |
+| `input`  | string | `./docs`        | 走査する入力パス。ディレクトリ、または単一のソースファイル。CLI の入力引数で上書き。設定ファイル基準の相対パス。 |
 
 #### `lang`（文書の言語と UI ラベル） {#lang}
 
@@ -147,22 +163,40 @@ lang: ja
 
 ### `sources`
 
-どの拡張子を Markdown / AsciiDoc として扱うかを指定します。
+どの拡張子を Markdown / AsciiDoc として扱うか、そしてどのファイルを束に入れないかを指定します。
 
-| キー                          | 型       | 既定値                       |
-| ----------------------------- | -------- | ---------------------------- |
-| `sources.markdown.extensions` | string[] | `[.md, .markdown]`           |
-| `sources.asciidoc.extensions` | string[] | `[.adoc, .asciidoc, .asc]`   |
+| キー                          | 型       | 既定値                       | 説明 |
+| ----------------------------- | -------- | ---------------------------- | ---- |
+| `sources.markdown.extensions` | string[] | `[.md, .markdown]`           | Markdown として描画する拡張子。 |
+| `sources.asciidoc.extensions` | string[] | `[.adoc, .asciidoc, .asc]`   | AsciiDoc として描画する拡張子。 |
+| `sources.exclude`             | string[] | `[]`                         | ページ化しない glob（入力ディレクトリからの相対パスに対して評価）。既定リストを置き換えず、**そこへ追加される**。 |
+| `sources.excludeDefaults`     | boolean  | `true`                       | 既定の除外リストを適用するか。`_` 始まりのファイルも束ねたいツリーでは `false` にする。 |
+
+既定リストは `['_partials/**', 'partials/**', 'includes/**', '**/_*']` で、ページではなく include
+用の断片が置かれる場所です。`sources.exclude` はこれを置き換えずに追加します。下書き 1 つを外す
+ために書いたリストが、同時にすべての断片を呼び戻してしまうのは静かな失敗で、しかも原因から遠い
+ところに現れるためです。
+
+```yaml
+sources:
+  exclude: [drafts/**] # これも、_partials/** なども除外されたまま
+```
+
+コマンドラインで直接名指ししたファイル（`monodocs build ./docs/_draft.md`）は、パターンに関わらず
+束に入ります。名指しは明示的な選択であり、パターンが決めるのはディレクトリ走査が何を拾うかだけ
+だからです。
+
+> このキーは以前 `sidebar.exclude` にありました。いまも動き、挙動も同じ（置換ではなく追加）に
+> なりましたが、警告を出します。サイドバーの設定ではなく、束そのものからファイルを外す設定
+> だったためです。
 
 ### `sidebar`
-
-`sidebar` 配下の未知のキーはエラーになります（このセクションは厳格に検証されます）。
 
 | キー                         | 型                   | 既定値                                                    | 説明 |
 | ---------------------------- | -------------------- | --------------------------------------------------------- | ---- |
 | `sidebar.mode`               | `folder` `custom`    | `folder`                                                  | サイドバーの生成方式。`folder` はフォルダ構造から生成し、`custom` は `sidebar.items` をそのまま使う。下記参照。 |
 | `sidebar.items`              | object[]             | 未指定                                                    | `mode: custom` で使うサイドバー定義。`mode: custom` とセットで指定する（片方だけはエラー）。下記参照。 |
-| `sidebar.exclude`            | string[]             | `['_partials/**', 'partials/**', 'includes/**', '**/_*']` | 走査から除外する glob。`_` で始まるファイルは拡張子を問わず include/partial 扱い。 |
+| `sidebar.exclude`            | string[]             | 未指定                                                    | **非推奨** — [`sources.exclude`](#sources) を使う。いまも有効だが警告が出る。 |
 | `sidebar.collapseDepth`      | integer              | 未指定                                                    | この階層より **深い** ディレクトリを既定で折りたたむ（トップレベル=深さ 1）。`0` で全畳み、未指定で全展開。畳んでも隠さないため到達性は失わず、いつでも開ける。 |
 | `sidebar.titleFrom`          | `heading` `filename` | `heading`                                                 | ナビ用タイトルの取得元。`heading` = 明示タイトル → 見出し → ファイル名。`filename` = 見出しを飛ばしファイル名を使う（明示タイトル / `:sd-title:` はどちらでも常に最優先）。 |
 | `sidebar.flattenSingleChild` | boolean              | `false`                                                   | **ページちょうど 1 つ・サブフォルダ 0** のディレクトリを畳み、唯一のページを親へ繰り上げる。ドキュメント＋画像を 1 フォルダにまとめた場合などに有効（画像はページに数えない）。 |
@@ -196,7 +230,7 @@ sidebar:
 ページがすべて消えたグループは出力しません。存在しないパスはエラーです。
 
 構造とタイトルを明示するモードのため、`sidebar.titleTransform.directory` と
-`sidebar.flattenSingleChild` は適用されません。`sidebar.collapseDepth` / `sidebar.exclude` /
+`sidebar.flattenSingleChild` は適用されません。`sidebar.collapseDepth` / `sources.exclude` /
 `sidebar.titleFrom` / `sidebar.titleTransform.page` はこれまでどおり有効です。
 
 #### `sidebar.titleTransform`

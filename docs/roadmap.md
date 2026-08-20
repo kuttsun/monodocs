@@ -737,6 +737,11 @@ sources:
     attributes:
       sectnums: true
       icons: font
+  # Patterns that never become pages, added to the built-in list rather than replacing it (12.3).
+  # exclude:
+  #   - "drafts/**"
+  # Whether the built-in list ("_partials/**", "partials/**", "includes/**", "**/_*") applies.
+  excludeDefaults: true
 
 sidebar:
   mode: "folder"
@@ -760,10 +765,6 @@ sidebar:
     directory:
       type: "none"
       # type: "stripNumberPrefix"
-  exclude:
-    - "_partials/**"
-    - "partials/**"
-    - "includes/**"
 
 toc:
   # The deepest heading level shown in the in-page table of contents (2–6). Default is 3 (h2–h3).
@@ -817,6 +818,42 @@ pdf:
 search:
   enabled: true
 ```
+
+### 12.2 Unknown Keys (v0.10)
+
+Every object in the schema refuses a key it does not know, the top level included. Until v0.10 only
+some of them did — `sidebar`, `pdf`, `html.labels` — so whether a misspelling was caught depended on
+how deep it sat: `pdf.footr` failed the build while a top-level `langauge` was accepted and quietly
+ignored.
+
+Accepted-and-ignored is the worse half of that pair. A rejected key is a build that stops and names
+the problem; an ignored one is a configuration that looks right, and only the output says otherwise.
+It is how a document was published declaring the wrong language with a `lang:` line sitting in the
+file looking correct — the key was read, validated, and dropped on the floor. One rule for the whole
+file replaces "it depends where you wrote it".
+
+The error names the key and the object that holds it, `pdf: Unrecognized key: "footr"`, rather than
+reproducing Zod's issue array as JSON. Making the top level strict breaks a configuration that
+carries a key ahead of the release introducing it; taken before 1.0 rather than after.
+
+### 12.3 What Never Becomes a Page (v0.10)
+
+`sources.exclude` lists glob patterns, matched against the path relative to the input directory,
+whose matches are not turned into pages. It is **added** to the built-in list
+(`_partials/**`, `partials/**`, `includes/**`, `**/_*`) rather than replacing it.
+
+Replacing was the earlier behaviour and it failed silently, at a distance. The built-in list exists
+because those paths hold include fragments rather than pages; writing one unrelated pattern to keep a
+draft out also switched that protection off, and what the author saw was fragments appearing in the
+sidebar some commits later, with nothing connecting the two. A list that adds cannot do that.
+`sources.excludeDefaults: false` is the way out for a tree that really does bundle its `_`-prefixed
+files, and it says so where anyone reading the configuration can see it.
+
+The key also moved. It was `sidebar.exclude`, but it was never a sidebar setting: a match never
+becomes a page at all, so it leaves the bundle rather than the navigation. `sidebar.exclude` is still
+honoured, merged the same way, and warns that it moved. A file named directly on the command line is
+bundled whatever the patterns say (25.2) — naming a file is a choice, and the patterns only decide
+what a directory scan picks up.
 
 ---
 
@@ -1726,12 +1763,20 @@ indicate it. Measured on A4 with the default margins (a 680 px content column), 
 reached 728 px and a paragraph with a long URL reached 862 px — both lost their tails.
 
 The print stylesheet therefore wraps instead of scrolling: `pre` becomes `pre-wrap` with
-`overflow-wrap: anywhere`, tables drop back to `display: table` with `table-layout: fixed` (the
-screen-side `display: block` that makes them scrollable also disables `thead` repetition, so a table
-crossing a page break lost its header row), cells break long words, and diagrams are capped at the
-page width. `overflow-wrap: break-word` on the content column covers long URLs in body text, on
+`overflow-wrap: anywhere`, tables drop back to `display: table` (the screen-side `display: block`
+that makes them scrollable also disables `thead` repetition, so a table crossing a page break lost
+its header row), cells break long words, and diagrams are capped at the page width. `overflow-wrap: break-word` on the content column covers long URLs in body text, on
 screen as well — the same unbreakable strings were also what forced narrow screens to scroll
 horizontally.
+
+That reshaping first used `table-layout: fixed`, which turned out to be the wrong half of the fix
+(v0.10). With no `<col>` widths to work from, fixed divides the width equally whatever the contents
+are: a schedule of short dates against whole sentences came out 50/50, the date column half empty
+and the sentences wrapping in a column narrower than they needed — in a document made largely of
+tables, that is a real part of its page count. `auto` reaches the same guarantee by a different
+route. The cells already carry `overflow-wrap: anywhere`, which gives every column a one-character
+minimum width, so the auto algorithm can always fit the table into the page rather than overflow it.
+No truncation, and each column is as wide as what is in it.
 
 ### 24.3.2 Document Information (v0.8)
 
@@ -1927,6 +1972,22 @@ monodocs build ./docs --format html -o ./dist/docs.html
 monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs build ./docs --format both -o ./dist/
 ```
+
+The input may be a single file as well as a directory (v0.10):
+
+```bash
+monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
+```
+
+Until v0.10 the input was checked with `existsSync` alone, so a file passed that gate and failed
+further in, inside `readdir`, as Node's own `ENOTDIR: not a directory, scandir`. That names neither
+the constraint nor the fix, and pointing a tool that produces one file at one file is the first
+thing a new reader tries. It is also a reasonable request rather than a mistake — monodocs bundles a
+set of pages into one artifact, and a set of one is still a set — so the file is accepted instead of
+diagnosed. The directory holding it becomes the base for its links, images, and `monodocs.config.yml`,
+which is the same relationship an input directory has to what it contains. The exclude patterns
+(12.3) do not apply: naming a file is an explicit choice, so `_draft.md` is a page when it is asked
+for by name. A file whose extension no renderer claims is refused, naming the extensions that work.
 
 ### 25.3 watch
 
@@ -2435,6 +2496,9 @@ Implementation scope:
   mermaid `pre-render` alike, instead of baking tofu into the artifact (24.3.3)
 - Put page numbers in the PDF (24.5)
 - Record Docker as a delivery form that will not be provided (8.3)
+- Close the gaps the first outside use of a published release turned up: one rule for unknown keys
+  (12.2), an exclude list that adds to the built-in one instead of replacing it (12.3), a single file
+  as an input (25.2), and printed tables whose columns follow their contents (24.3.1)
 - Update the documentation site — commands, configuration, and the CI guide — and their Japanese
   mirrors, since every item above changes something the site documents
 
@@ -2471,6 +2535,16 @@ checklist, and the two are kept in step):
   page numbers are actually present — rather than only asserting that a PDF was produced
 - The decision not to publish a Docker image is recorded with its reason, as Homebrew / Scoop /
   winget were before it
+- An unknown key fails the build wherever it sits, naming the key and the object that holds it. No
+  key is checked differently for sitting deeper in the file, and the report is not a JSON dump of the
+  validator's issue array
+- `sources.exclude` adds to the built-in exclude list rather than replacing it,
+  `sources.excludeDefaults: false` drops that list, and `sidebar.exclude` still builds while saying
+  where it moved and that it now merges
+- `monodocs build ./docs/plan.md` builds that file as a one-page document, reading the configuration
+  and resolving links and images from the directory that holds it. A path that is not a source
+  monodocs can read says so and names the extensions that work, rather than surfacing an `ENOTDIR`
+- A printed table gives each column the width its contents need and still fits inside the page
 
 ---
 

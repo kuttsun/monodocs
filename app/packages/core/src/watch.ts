@@ -1,5 +1,5 @@
-import { existsSync, watch as fsWatch, type FSWatcher } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { existsSync, statSync, watch as fsWatch, type FSWatcher } from "node:fs";
+import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { buildSite, resolveOutputs } from "./build.js";
 import { loadConfig } from "./config.js";
 import type { BuildOptions, BuildResult } from "./types.js";
@@ -33,7 +33,7 @@ export async function watchSite(
 ): Promise<WatchHandle> {
   const cwd = process.cwd();
   const config = await loadConfig(options, cwd);
-  const inputDir = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
+  const inputPath = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
   // 生成物への書き込みでイベントが発火し再ビルドが連鎖するのを避けるため、
   // 出力ファイルへの変更イベントは無視する（出力が入力配下にある場合の対策）。
   // both では html / pdf の両方が生成されるため、resolveOutputs で実際の出力集合を得る
@@ -41,11 +41,12 @@ export async function watchSite(
   const outputs = resolveOutputs(config, cwd);
   const outputFiles = new Set<string>([outputs.html, outputs.pdf].filter((p): p is string => !!p));
 
-  // 入力ディレクトリが無ければ監視を確立できないため、ここで失敗させる
+  // 入力が無ければ監視を確立できないため、ここで失敗させる
   // （CLI 側で「Watching…」と表示したまま無反応になるのを防ぐ）。
-  if (!existsSync(inputDir)) {
+  if (!existsSync(inputPath)) {
     throw new Error(t("build.inputNotFound", { path: config.inputDir }));
   }
+  const inputIsFile = statSync(inputPath).isFile();
 
   let timer: ReturnType<typeof setTimeout> | null = null;
   let building = false;
@@ -83,15 +84,23 @@ export async function watchSite(
     }, DEBOUNCE_MS);
   }
 
-  /** baseDir 配下で発生したファイルイベントを処理する listener を作る。 */
+  /**
+   * baseDir 配下で発生したファイルイベントを処理する listener を作る。
+   * `only` を渡すと、その名前のファイルの変更だけを通す（単一ファイル入力のとき、
+   * 同じディレクトリにある他のファイルはこの監視の関心事ではない）。
+   */
   function makeListener(
     baseDir: string,
+    only?: string,
   ): (event: string, filename: string | Buffer | null) => void {
     return (_event, filename) => {
       // 出力ファイル自身への書き込みは無視（自己再ビルドループ防止）。
       if (filename) {
-        const changed = resolve(baseDir, filename.toString());
+        const name = filename.toString();
+        const changed = resolve(baseDir, name);
         if (outputFiles.has(changed)) return;
+        // 名前が分かる場合だけ絞り込む。分からない環境では取りこぼすより再ビルドする。
+        if (only !== undefined && name !== only) return;
       }
       schedule();
     };
@@ -99,14 +108,19 @@ export async function watchSite(
 
   const watchers = new Set<FSWatcher>();
   /** 監視を開始する。確立できない場合は例外を投げる（recursive は非対応時にフォールバック）。 */
-  function startWatch(target: string, baseDir: string, recursive: boolean): FSWatcher {
+  function startWatch(
+    target: string,
+    baseDir: string,
+    recursive: boolean,
+    only?: string,
+  ): FSWatcher {
     try {
-      const watcher = fsWatch(target, { recursive }, makeListener(baseDir));
+      const watcher = fsWatch(target, { recursive }, makeListener(baseDir, only));
       watchers.add(watcher);
       return watcher;
     } catch (error) {
       // 一部環境は recursive 非対応。トップレベルのみ監視へフォールバックする。
-      if (recursive) return startWatch(target, baseDir, false);
+      if (recursive) return startWatch(target, baseDir, false, only);
       throw error;
     }
   }
@@ -143,8 +157,18 @@ export async function watchSite(
     }
   }
 
-  // 入力ディレクトリの監視は必須。確立できなければ watchSite ごと失敗させる。
-  startWatch(inputDir, inputDir, true);
+  // 入力の監視は必須。確立できなければ watchSite ごと失敗させる。
+  //
+  // A single-file input is watched through its directory rather than directly. `fs.watch` follows
+  // the inode, and an editor that saves by writing a temporary file and renaming it over the
+  // original leaves the watcher holding the replaced inode: the first save arrives and every one
+  // after it is silent. Watching the directory and filtering by name survives that.
+  if (inputIsFile) {
+    const parent = dirname(inputPath);
+    startWatch(parent, parent, false, basename(inputPath));
+  } else {
+    startWatch(inputPath, inputPath, true);
+  }
   // 設定ファイルの監視は best-effort（失敗しても入力監視は継続する）。
   if (config.configFilePath && existsSync(config.configFilePath)) {
     try {

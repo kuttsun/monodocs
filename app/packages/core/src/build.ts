@@ -1,10 +1,17 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import type { BuildOptions, BuildResult, Page, SidebarNode, SourceFormat } from "./types.js";
+import type {
+  BuildOptions,
+  BuildResult,
+  Page,
+  SidebarNode,
+  SourceFile,
+  SourceFormat,
+} from "./types.js";
 import { loadConfig, type MermaidMode, type OnLargeImage, type ResolvedConfig } from "./config.js";
 import { resolveLabels } from "./labels.js";
-import { scanSourceFiles } from "./scan.js";
+import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
 import { asciidocRenderer } from "./sources/asciidoc/renderer.js";
 import { buildPages } from "./pipeline/buildPages.js";
@@ -54,8 +61,8 @@ export async function preparePages(
   cwd: string,
   opts: PreparePagesOptions = {},
 ): Promise<PreparedSite> {
-  const inputDir = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
-  if (!existsSync(inputDir)) {
+  const inputPath = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
+  if (!existsSync(inputPath)) {
     throw new Error(t("build.inputNotFound", { path: config.inputDir }));
   }
 
@@ -63,9 +70,30 @@ export async function preparePages(
   for (const ext of config.markdownExtensions) extensions.set(ext.toLowerCase(), "markdown");
   for (const ext of config.asciidocExtensions) extensions.set(ext.toLowerCase(), "asciidoc");
 
-  const sources = await scanSourceFiles(inputDir, { extensions, exclude: config.exclude });
-  if (sources.length === 0) {
-    throw new Error(t("build.noSources", { path: config.inputDir }));
+  // A single file is a legitimate input: monodocs bundles a set of pages into one artifact, and a
+  // set of one is still a set, so pointing at `plan.md` is the obvious thing to try. The directory
+  // holding the file becomes the base for its links and images — the same relationship the input
+  // directory has to what it contains.
+  const inputIsFile = statSync(inputPath).isFile();
+  const inputDir = inputIsFile ? dirname(inputPath) : inputPath;
+
+  let sources: SourceFile[];
+  if (inputIsFile) {
+    const file = await readSourceFile(inputPath, { extensions });
+    if (file === undefined) {
+      throw new Error(
+        t("build.inputUnsupportedFile", {
+          path: config.inputDir,
+          extensions: [...extensions.keys()].sort().join(", "),
+        }),
+      );
+    }
+    sources = [file];
+  } else {
+    sources = await scanSourceFiles(inputDir, { extensions, exclude: config.exclude });
+    if (sources.length === 0) {
+      throw new Error(t("build.noSources", { path: config.inputDir }));
+    }
   }
 
   const { pages, warnings } = await buildPages(sources, [markdownRenderer, asciidocRenderer], {
@@ -90,7 +118,7 @@ export async function preparePages(
     return {
       pages: orderPagesBySidebar(pages, custom.orderedPages),
       sidebar: custom.sidebar,
-      warnings: [...warnings, ...post.warnings, ...custom.warnings],
+      warnings: [...config.warnings, ...warnings, ...post.warnings, ...custom.warnings],
       hasMermaid: post.hasMermaid,
     };
   }
@@ -103,7 +131,7 @@ export async function preparePages(
   return {
     pages,
     sidebar,
-    warnings: [...warnings, ...post.warnings],
+    warnings: [...config.warnings, ...warnings, ...post.warnings],
     hasMermaid: post.hasMermaid,
   };
 }

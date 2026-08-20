@@ -119,7 +119,7 @@ TypeScript コンパイルはテーマ資産をコピーしません。core buil
 
 ## Watch と Serve
 
-`watch.ts` は `fs.watch` と debounce を使用します。対応環境では recursive mode を使い、出力ファイル自身による再ビルドループを避け、入力ディレクトリがなければ拒否します。
+`watch.ts` は `fs.watch` と debounce を使用します。対応環境では recursive mode を使い、出力ファイル自身による再ビルドループを避け、入力パスがなければ拒否します。単一ファイルの入力は、それを含むディレクトリを監視し、その名前だけに絞って拾います。`fs.watch` は inode を追うため、ファイル自身を監視すると、エディタが一時ファイルを書いて元の名前へ rename する保存の後は何も届かなくなるからです。
 
 `serve.ts` は Node.js API で HTTP 配信、`watchSite`、SSE live reload を提供します。明確な移植性要件がない限り依存を増やしません。
 

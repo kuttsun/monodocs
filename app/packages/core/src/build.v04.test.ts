@@ -47,11 +47,11 @@ describe("watchSite", () => {
     await rm(dir, { recursive: true, force: true });
   }, 15000);
 
-  it("rejects when the input directory does not exist", async () => {
+  it("rejects when the input path does not exist", async () => {
     const dir = await mkdtemp(join(tmpdir(), "monodocs-watch-missing-"));
     await expect(
       watchSite({ inputDir: join(dir, "nope"), outputFile: join(dir, "out.html") }),
-    ).rejects.toThrow(/Input directory not found/);
+    ).rejects.toThrow(/Input path not found/);
     await rm(dir, { recursive: true, force: true });
   });
 

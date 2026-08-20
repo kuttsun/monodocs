@@ -1,6 +1,6 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import {
@@ -24,8 +24,12 @@ const DEFAULT_INPUT = "./docs";
 const DEFAULT_TITLE = "Documentation";
 const DEFAULT_MARKDOWN_EXTENSIONS = [".md", ".markdown"];
 const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
-// `_` 始まりのファイルは拡張子を問わず include/partial 用とみなしてページ化しない。
-const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
+/**
+ * Paths that are never pages: include fragments and partials. A file whose name starts with `_` is
+ * a fragment whatever its extension. `sources.exclude` adds to this list instead of replacing it,
+ * so naming one unrelated path cannot quietly turn every fragment into a page.
+ */
+export const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
 const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
 const DEFAULT_MAX_INLINE_SIZE = 5 * 1024 * 1024; // 5MB
 const DEFAULT_CONTENT_WIDTH = "860px";
@@ -162,137 +166,170 @@ function buildConfigFileSchema() {
     )
     .strict();
 
-  /** `monodocs.config.yml` のスキーマ（現状利用する項目のみ。未知のキーは無視）。 */
-  const configFileSchema = z.object({
-    title: z.string().optional(),
-    /**
-     * 生成した文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ（既定 "en"）。
-     * 同梱の表が無いタグも属性には書き、ラベルだけ en へ落とす。CLI 自身のメッセージの
-     * 言語とは別物（文書はある言語で書かれ、書いている人の端末は別の言語を返しうる）。
-     */
-    lang: z
-      .string()
-      .min(1)
-      .refine(isValidLanguageTag, { message: t("config.invalidLanguageTag") })
-      .optional(),
-    input: z.string().optional(),
-    output: z
-      .object({
-        format: z.enum(["html", "pdf", "both"]).optional(),
-        path: z.string().optional(),
-      })
-      .optional(),
-    sources: z
-      .object({
-        markdown: z.object({ extensions: z.array(z.string()).optional() }).optional(),
-        asciidoc: z.object({ extensions: z.array(z.string()).optional() }).optional(),
-      })
-      .optional(),
-    sidebar: z
-      .object({
-        // "folder"（既定）= フォルダ構造からサイドバーを生成する。
-        // "custom" = items に書いた構造と順序をそのまま使う。
-        mode: z.enum(["folder", "custom"]).optional(),
-        items: z.array(sidebarItemSchema).min(1).optional(),
-        exclude: z.array(z.string()).optional(),
-        // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
-        // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
-        collapseDepth: z.number().int().min(0).optional(),
-        // 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。
-        titleTransform: sidebarTitleTransformSchema.optional(),
-        // ページタイトルの取得元。"heading"（既定）= frontmatter → 見出し → ファイル名。
-        // "filename" = 見出しがあってもファイル名を使う（明示タイトルは常に最優先）。
-        titleFrom: z.enum(["heading", "filename"]).optional(),
-        // ページを 1 つだけ含む（サブフォルダを持たない）ディレクトリ階層をサイドバーから畳み、
-        // その唯一のページを親へ繰り上げる。ドキュメント＋画像を 1 フォルダにまとめた場合などに
-        // 冗長なフォルダ階層を消すための設定。画像はページに数えないため自動で判定できる。
-        flattenSingleChild: z.boolean().optional(),
-      })
-      .strict()
-      .superRefine((value, ctx) => {
-        // 片方だけの指定は「書いたのに効かない」事故になるため、両方そろっていることを求める。
-        if (value.mode === "custom" && value.items === undefined) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: t("config.sidebarCustomNeedsItems"),
-          });
-        }
-        if (value.mode !== "custom" && value.items !== undefined) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: t("config.sidebarItemsNeedCustom"),
-          });
-        }
-      })
-      .optional(),
-    toc: z
-      .object({
-        // ページ内目次に出す見出しの最深レベル（2〜6）。h1 はページタイトル相当のため常に除外。
-        maxLevel: z.number().int().min(2).max(6).optional(),
-      })
-      .optional(),
-    assets: z
-      .object({
-        embedImages: z.boolean().optional(),
-        maxInlineSize: z.union([z.string(), z.number()]).optional(),
-        onLargeImage: z.enum(["warn", "error", "external"]).optional(),
-      })
-      .optional(),
-    mermaid: z
-      .object({
-        enabled: z.boolean().optional(),
-        mode: z.enum(["client", "pre-render"]).optional(),
-        runtime: z.enum(["cdn", "inline"]).optional(),
-      })
-      .optional(),
-    highlight: z.object({ enabled: z.boolean().optional() }).optional(),
-    html: z
-      .object({
-        theme: z.string().optional(),
-        contentWidth: z.union([z.string(), z.number()]).optional(),
-        /** 読者向けの本文幅切替ボタンを表示するか（既定 true）。 */
-        contentWidthToggle: z.boolean().optional(),
-        /** Initial content-width toggle state (default: standard). */
-        contentWidthDefault: z.enum(["standard", "wide"]).optional(),
-        /** Whether unlinked, non-decorative content images open in a lightbox (default: true). */
-        imageLightbox: z.boolean().optional(),
-        /** Whether the generated document shows the monodocs branding footer (default: true). */
-        branding: z.boolean().optional(),
-        // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
-        // 読者がトグルで切り替えると localStorage の選択が優先される。
-        colorScheme: z.enum(["light", "dark", "auto"]).optional(),
-        // lang が選んだ表の上に、個別の UI ラベルを差し替える。テーマの chrome に作用する
-        // 層なので html の下（lang は文書自身の記述なのでトップレベル）。
-        labels: labelsSchema.optional(),
-      })
-      .optional(),
-    pdf: z
-      .object({
-        // Puppeteer の page.pdf `format`（"A4" / "Letter" など）。既定は "A4"。
-        pageSize: z.string().optional(),
-        // ページ余白（CSS 長さ。"20mm" など）。省略した辺は既定値を使う。
-        margin: z
-          .object({
-            top: z.string().optional(),
-            right: z.string().optional(),
-            bottom: z.string().optional(),
-            left: z.string().optional(),
-          })
-          .strict()
-          .optional(),
-        // 背景色・背景画像を印刷するか（既定 true）。
-        printBackground: z.boolean().optional(),
-        // PDF のしおり（HTML サイドバーと同じ フォルダ→ページ 構造）を付与するか（既定 true）。
-        bookmarks: z.boolean().optional(),
-        // ページ上下の帯。false = 帯なし / HTML フラグメント = 置き換え。既定はヘッダ無し・
-        // フッタにページ番号。フラグメントは Chromium 自身のクラス（pageNumber / totalPages /
-        // title / date / url）に値が差し込まれる。monodocs のトークン構文ではない。
-        header: z.union([z.literal(false), z.string().min(1)]).optional(),
-        footer: z.union([z.literal(false), z.string().min(1)]).optional(),
-      })
-      .strict()
-      .optional(),
-  });
+  /**
+   * The `monodocs.config.yml` schema. **Every object in it rejects unknown keys**, top level
+   * included. A key that is accepted and ignored is worse than one that is refused: the file
+   * looks right, and only the output says otherwise. The depth a key sits at is not a reason
+   * for it to be checked differently.
+   */
+  const configFileSchema = z
+    .object({
+      title: z.string().optional(),
+      /**
+       * 生成した文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ（既定 "en"）。
+       * 同梱の表が無いタグも属性には書き、ラベルだけ en へ落とす。CLI 自身のメッセージの
+       * 言語とは別物（文書はある言語で書かれ、書いている人の端末は別の言語を返しうる）。
+       */
+      lang: z
+        .string()
+        .min(1)
+        .refine(isValidLanguageTag, { message: t("config.invalidLanguageTag") })
+        .optional(),
+      input: z.string().optional(),
+      output: z
+        .object({
+          format: z.enum(["html", "pdf", "both"]).optional(),
+          path: z.string().optional(),
+        })
+        .strict()
+        .optional(),
+      sources: z
+        .object({
+          markdown: z
+            .object({ extensions: z.array(z.string()).optional() })
+            .strict()
+            .optional(),
+          asciidoc: z
+            .object({ extensions: z.array(z.string()).optional() })
+            .strict()
+            .optional(),
+          /**
+           * Glob patterns whose matches are not turned into pages, evaluated against the path
+           * relative to the input directory. These are added to DEFAULT_EXCLUDE rather than
+           * replacing it: a list written to keep one draft out of the bundle should not also
+           * hand back the fragments the built-in list exists to keep out.
+           */
+          exclude: z.array(z.string()).optional(),
+          /** Set false to drop DEFAULT_EXCLUDE, for a tree that really does bundle its `_*` files. */
+          excludeDefaults: z.boolean().optional(),
+        })
+        .strict()
+        .optional(),
+      sidebar: z
+        .object({
+          // "folder"（既定）= フォルダ構造からサイドバーを生成する。
+          // "custom" = items に書いた構造と順序をそのまま使う。
+          mode: z.enum(["folder", "custom"]).optional(),
+          items: z.array(sidebarItemSchema).min(1).optional(),
+          /**
+           * Deprecated in favour of `sources.exclude`, which is named for what it does: a match is
+           * left out of the bundle, not merely out of the sidebar. Still honoured, with a warning,
+           * and merged with DEFAULT_EXCLUDE like its replacement.
+           */
+          exclude: z.array(z.string()).optional(),
+          // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
+          // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
+          collapseDepth: z.number().int().min(0).optional(),
+          // 明示タイトルではなく、ページタイトル・ディレクトリ名から導出した表示名へ適用する変換。
+          titleTransform: sidebarTitleTransformSchema.optional(),
+          // ページタイトルの取得元。"heading"（既定）= frontmatter → 見出し → ファイル名。
+          // "filename" = 見出しがあってもファイル名を使う（明示タイトルは常に最優先）。
+          titleFrom: z.enum(["heading", "filename"]).optional(),
+          // ページを 1 つだけ含む（サブフォルダを持たない）ディレクトリ階層をサイドバーから畳み、
+          // その唯一のページを親へ繰り上げる。ドキュメント＋画像を 1 フォルダにまとめた場合などに
+          // 冗長なフォルダ階層を消すための設定。画像はページに数えないため自動で判定できる。
+          flattenSingleChild: z.boolean().optional(),
+        })
+        .strict()
+        .superRefine((value, ctx) => {
+          // 片方だけの指定は「書いたのに効かない」事故になるため、両方そろっていることを求める。
+          if (value.mode === "custom" && value.items === undefined) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t("config.sidebarCustomNeedsItems"),
+            });
+          }
+          if (value.mode !== "custom" && value.items !== undefined) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t("config.sidebarItemsNeedCustom"),
+            });
+          }
+        })
+        .optional(),
+      toc: z
+        .object({
+          // ページ内目次に出す見出しの最深レベル（2〜6）。h1 はページタイトル相当のため常に除外。
+          maxLevel: z.number().int().min(2).max(6).optional(),
+        })
+        .strict()
+        .optional(),
+      assets: z
+        .object({
+          embedImages: z.boolean().optional(),
+          maxInlineSize: z.union([z.string(), z.number()]).optional(),
+          onLargeImage: z.enum(["warn", "error", "external"]).optional(),
+        })
+        .strict()
+        .optional(),
+      mermaid: z
+        .object({
+          enabled: z.boolean().optional(),
+          mode: z.enum(["client", "pre-render"]).optional(),
+          runtime: z.enum(["cdn", "inline"]).optional(),
+        })
+        .strict()
+        .optional(),
+      highlight: z.object({ enabled: z.boolean().optional() }).strict().optional(),
+      html: z
+        .object({
+          theme: z.string().optional(),
+          contentWidth: z.union([z.string(), z.number()]).optional(),
+          /** 読者向けの本文幅切替ボタンを表示するか（既定 true）。 */
+          contentWidthToggle: z.boolean().optional(),
+          /** Initial content-width toggle state (default: standard). */
+          contentWidthDefault: z.enum(["standard", "wide"]).optional(),
+          /** Whether unlinked, non-decorative content images open in a lightbox (default: true). */
+          imageLightbox: z.boolean().optional(),
+          /** Whether the generated document shows the monodocs branding footer (default: true). */
+          branding: z.boolean().optional(),
+          // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
+          // 読者がトグルで切り替えると localStorage の選択が優先される。
+          colorScheme: z.enum(["light", "dark", "auto"]).optional(),
+          // lang が選んだ表の上に、個別の UI ラベルを差し替える。テーマの chrome に作用する
+          // 層なので html の下（lang は文書自身の記述なのでトップレベル）。
+          labels: labelsSchema.optional(),
+        })
+        .strict()
+        .optional(),
+      pdf: z
+        .object({
+          // Puppeteer の page.pdf `format`（"A4" / "Letter" など）。既定は "A4"。
+          pageSize: z.string().optional(),
+          // ページ余白（CSS 長さ。"20mm" など）。省略した辺は既定値を使う。
+          margin: z
+            .object({
+              top: z.string().optional(),
+              right: z.string().optional(),
+              bottom: z.string().optional(),
+              left: z.string().optional(),
+            })
+            .strict()
+            .optional(),
+          // 背景色・背景画像を印刷するか（既定 true）。
+          printBackground: z.boolean().optional(),
+          // PDF のしおり（HTML サイドバーと同じ フォルダ→ページ 構造）を付与するか（既定 true）。
+          bookmarks: z.boolean().optional(),
+          // ページ上下の帯。false = 帯なし / HTML フラグメント = 置き換え。既定はヘッダ無し・
+          // フッタにページ番号。フラグメントは Chromium 自身のクラス（pageNumber / totalPages /
+          // title / date / url）に値が差し込まれる。monodocs のトークン構文ではない。
+          header: z.union([z.literal(false), z.string().min(1)]).optional(),
+          footer: z.union([z.literal(false), z.string().min(1)]).optional(),
+        })
+        .strict()
+        .optional(),
+    })
+    .strict();
 
   return configFileSchema;
 }
@@ -306,6 +343,12 @@ export type PdfMargin = { top: string; right: string; bottom: string; left: stri
 export type ResolvedConfig = {
   /** 実際に読み込んだ設定ファイル。未検出の場合は undefined。 */
   configFilePath?: string;
+  /**
+   * Problems found while resolving the configuration that do not stop the build — a deprecated
+   * key, for one. The build surfaces them alongside its own warnings, because a configuration
+   * that is quietly half-honoured is the failure this is here to prevent.
+   */
+  warnings: string[];
   title: string;
   /** 生成した文書の言語（BCP 47）。`<html lang>` を埋め、UI ラベルの表を選ぶ。 */
   lang: string;
@@ -452,14 +495,39 @@ function resolveTheme(baseDir: string, theme: string | undefined): string {
   return looksLikePath ? resolveConfigRelativePath(baseDir, theme) : theme;
 }
 
+/**
+ * The directory a configuration file would sit in for a given input. A single-file input is
+ * configured from the directory that holds it — `monodocs build ./docs/plan.md` should read the
+ * same `monodocs.config.yml` as `monodocs build ./docs`.
+ */
+function configBaseFor(input: string): string {
+  return existsSync(input) && statSync(input).isFile() ? dirname(input) : input;
+}
+
 function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
   if (options.inputDir) {
-    const inputConfigPath = resolve(cwd, options.inputDir, DEFAULT_CONFIG_FILE);
+    const inputConfigPath = join(
+      configBaseFor(resolve(cwd, options.inputDir)),
+      DEFAULT_CONFIG_FILE,
+    );
     return existsSync(inputConfigPath) ? inputConfigPath : undefined;
   }
 
   const cwdConfigPath = resolve(cwd, DEFAULT_CONFIG_FILE);
   return existsSync(cwdConfigPath) ? cwdConfigPath : undefined;
+}
+
+/**
+ * Render a schema failure as `path: message` per problem. Zod's own `error.message` is a JSON dump
+ * of the issue array, which buries the one thing the author needs — which key, and what about it.
+ */
+function formatConfigIssues(error: z.ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.join(".");
+      return path ? `${path}: ${issue.message}` : issue.message;
+    })
+    .join("; ");
 }
 
 /**
@@ -486,7 +554,9 @@ export async function loadConfig(
     }
     const result = buildConfigFileSchema().safeParse(parsed ?? {});
     if (!result.success) {
-      throw new Error(t("config.invalid", { path: configPath, detail: result.error.message }));
+      throw new Error(
+        t("config.invalid", { path: configPath, detail: formatConfigIssues(result.error) }),
+      );
     }
     fileConfig = result.data;
   } else if (options.configFile) {
@@ -495,6 +565,24 @@ export async function loadConfig(
   }
 
   const configBaseDir = configPath ? dirname(configPath) : cwd;
+
+  const warnings: string[] = [];
+
+  // `sidebar.exclude` moved to `sources.exclude`, which is where it acts: a match never becomes a
+  // page, so it leaves the bundle rather than just the sidebar. The old key still works — a 0.9
+  // configuration keeps building — but it is worth one line of output, because its meaning changed
+  // too: the patterns now add to the built-in list instead of replacing it.
+  const sidebarExclude = fileConfig.sidebar?.exclude;
+  const sourcesExclude = fileConfig.sources?.exclude;
+  if (sidebarExclude !== undefined && sourcesExclude !== undefined) {
+    throw new Error(t("config.excludeInBothPlaces"));
+  }
+  if (sidebarExclude !== undefined) warnings.push(t("config.sidebarExcludeMoved"));
+  const excludeDefaults = fileConfig.sources?.excludeDefaults ?? true;
+  const exclude = [
+    ...(excludeDefaults ? DEFAULT_EXCLUDE : []),
+    ...(sourcesExclude ?? sidebarExclude ?? []),
+  ];
 
   // 設定ファイルの output.format は zod で検証済みだが、CLI の --format は生文字列で渡るため
   // ここで検証する（不正値が resolveOutputs の both 分岐へ落ちるのを防ぐ）。
@@ -505,6 +593,7 @@ export async function loadConfig(
 
   return {
     configFilePath: configPath,
+    warnings,
     title: fileConfig.title ?? DEFAULT_TITLE,
     lang: fileConfig.lang ?? DEFAULT_LANG,
     labelOverrides: fileConfig.html?.labels ?? {},
@@ -517,7 +606,7 @@ export async function loadConfig(
     format,
     markdownExtensions: fileConfig.sources?.markdown?.extensions ?? DEFAULT_MARKDOWN_EXTENSIONS,
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
-    exclude: fileConfig.sidebar?.exclude ?? DEFAULT_EXCLUDE,
+    exclude,
     sidebarMode: fileConfig.sidebar?.mode ?? "folder",
     sidebarItems: fileConfig.sidebar?.items ?? [],
     sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,

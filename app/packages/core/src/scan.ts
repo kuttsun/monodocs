@@ -1,5 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
-import { extname, join, relative, sep } from "node:path";
+import { basename, extname, join, relative, sep } from "node:path";
 import picomatch from "picomatch";
 import type { SourceFile, SourceFormat } from "./types.js";
 
@@ -46,4 +46,22 @@ export async function scanSourceFiles(
   await walk(inputDir);
   files.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
   return files;
+}
+
+/**
+ * Read one named file as a source, or return undefined when no renderer claims its extension.
+ *
+ * The exclude patterns are deliberately not applied: naming a file is an explicit choice, so a
+ * `_draft.md` passed on the command line is a page the reader asked for, not a fragment. Its own
+ * name becomes the relative path, which makes the directory holding it the base for links and
+ * images — the same relationship a scanned file has to the input directory.
+ */
+export async function readSourceFile(
+  filePath: string,
+  options: { extensions: Map<string, SourceFormat> },
+): Promise<SourceFile | undefined> {
+  const format = options.extensions.get(extname(filePath).toLowerCase());
+  if (format === undefined) return undefined;
+  const raw = await readFile(filePath, "utf8");
+  return { absolutePath: filePath, relativePath: basename(filePath), raw, format };
 }
