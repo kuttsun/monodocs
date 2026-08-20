@@ -44,6 +44,15 @@ const EN = {
   "config.sidebarCustomNeedsItems": 'sidebar.mode: "custom" needs sidebar.items',
   "config.sidebarItemsNeedCustom": 'sidebar.items needs sidebar.mode: "custom"',
   "config.invalidLanguageTag": "must be a syntactically valid BCP 47 language tag",
+  "config.invalidPdfLengthValue":
+    "must be a CSS length: a number and a unit (px, pt, mm, cm, in, rem, em), or 0",
+  "config.invalidPdfLineHeightValue": "must be a positive number, without a unit",
+  "config.invalidPdfCellPaddingValue": 'must be one or two CSS lengths, as in "0.3rem 0.5rem"',
+  "config.invalidPdfLength": 'Invalid pdf.density {key}: "{value}" is not a CSS length.',
+  "config.invalidPdfLineHeight":
+    'Invalid pdf.density lineHeight: "{value}" is not a positive number.',
+  "config.invalidPdfCellPadding":
+    'Invalid pdf.density tableCellPadding: "{value}" is not one or two CSS lengths.',
   "config.excludeInBothPlaces":
     "Both sources.exclude and sidebar.exclude are set. Keep sources.exclude and remove sidebar.exclude.",
   "config.sidebarExcludeMoved":
@@ -194,6 +203,17 @@ const JA: Record<MessageKey, string> = {
   "config.sidebarCustomNeedsItems": 'sidebar.mode: "custom" には sidebar.items が必要です',
   "config.sidebarItemsNeedCustom": 'sidebar.items には sidebar.mode: "custom" が必要です',
   "config.invalidLanguageTag": "構文的に妥当な BCP 47 言語タグである必要があります",
+  "config.invalidPdfLengthValue":
+    "CSS の長さ（数値と単位 px / pt / mm / cm / in / rem / em、または 0）である必要があります",
+  "config.invalidPdfLineHeightValue": "単位の無い正の数である必要があります",
+  "config.invalidPdfCellPaddingValue":
+    'CSS の長さ 1 つ、または 2 つ（"0.3rem 0.5rem" のように）である必要があります',
+  "config.invalidPdfLength":
+    'pdf.density の {key} が不正です: "{value}" は CSS の長さではありません。',
+  "config.invalidPdfLineHeight":
+    'pdf.density の lineHeight が不正です: "{value}" は正の数ではありません。',
+  "config.invalidPdfCellPadding":
+    'pdf.density の tableCellPadding が不正です: "{value}" は CSS の長さ 1〜2 個ではありません。',
   "config.excludeInBothPlaces":
     "sources.exclude と sidebar.exclude の両方が設定されています。" +
     "sources.exclude を残して sidebar.exclude を削除してください。",

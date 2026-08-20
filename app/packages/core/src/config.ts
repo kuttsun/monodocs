@@ -39,6 +39,57 @@ const DEFAULT_TOC_MAX_LEVEL = 3;
 const DEFAULT_PDF_PAGE_SIZE = "A4";
 const DEFAULT_PDF_MARGIN = { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" };
 
+/**
+ * How tightly the printed page is set. The four values are what decide how many sheets a document
+ * comes out as: type size, leading, the air around headings, and the padding inside table cells.
+ *
+ * `normal` is not a choice so much as a record of what the stylesheet already does — nothing is
+ * emitted for it, so a document that does not ask for a density prints exactly as it did before.
+ * The named presets move all four together, because moving one alone rarely reads well: smaller
+ * type with unchanged leading looks lost on the line.
+ *
+ * There is deliberately no measure (maximum text width) here. The width of the text column is what
+ * `pdf.margin` decides, and a second cap would fight it — a reader who set 12mm margins to fit more
+ * on the page would find the column stopping short of the margin they chose. Its right value also
+ * differs by script, which makes it a poor thing to freeze into a preset.
+ */
+export type PdfDensity = {
+  /** Root font size for print; every rem/em in the stylesheet follows it. */
+  fontSize: string;
+  /** Body line-height, unitless. */
+  lineHeight: string;
+  /** Space above headings (`margin-top`). */
+  headingSpacing: string;
+  /** Padding inside table cells, one or two lengths. */
+  tableCellPadding: string;
+};
+
+/** The shipped densities. `normal` mirrors the default theme's own values. */
+export const PDF_DENSITY_PRESETS = {
+  normal: {
+    fontSize: "16px",
+    lineHeight: "1.7",
+    headingSpacing: "1.8em",
+    tableCellPadding: "0.5rem 0.8rem",
+  },
+  compact: {
+    fontSize: "13.5px",
+    lineHeight: "1.55",
+    headingSpacing: "1.15em",
+    tableCellPadding: "0.3rem 0.5rem",
+  },
+  tight: {
+    fontSize: "11.5px",
+    lineHeight: "1.45",
+    headingSpacing: "0.9em",
+    tableCellPadding: "0.2rem 0.35rem",
+  },
+} as const satisfies Record<string, PdfDensity>;
+
+/** Names accepted by `pdf.density`, and by `base` inside its object form. */
+export const PDF_DENSITY_NAMES = ["normal", "compact", "tight"] as const;
+export type PdfDensityName = (typeof PDF_DENSITY_NAMES)[number];
+
 /** `-o` / 設定の output.path が未指定のときの既定出力パス（format 別）。 */
 function defaultOutputFor(format: OutputFormat): string {
   if (format === "pdf") return "./dist/docs.pdf";
@@ -325,6 +376,39 @@ function buildConfigFileSchema() {
           // title / date / url）に値が差し込まれる。monodocs のトークン構文ではない。
           header: z.union([z.literal(false), z.string().min(1)]).optional(),
           footer: z.union([z.literal(false), z.string().min(1)]).optional(),
+          /**
+           * 版面の密度。プリセット名か、プリセットを土台に一部だけ差し替えるオブジェクト。
+           * 値を 4 つ書き写させないために `base` を持たせている（写しは、後でプリセット側を
+           * 調整したときに取り残される）。`html.labels` が lang の表に重なるのと同じ解決順。
+           */
+          density: z
+            .union([
+              z.enum(PDF_DENSITY_NAMES),
+              z
+                .object({
+                  base: z.enum(PDF_DENSITY_NAMES).optional(),
+                  fontSize: z
+                    .string()
+                    .refine(isCssLength, { message: t("config.invalidPdfLengthValue") })
+                    .optional(),
+                  lineHeight: z
+                    .union([z.number(), z.string()])
+                    .refine(isCssNumberAboveZero, {
+                      message: t("config.invalidPdfLineHeightValue"),
+                    })
+                    .optional(),
+                  headingSpacing: z
+                    .string()
+                    .refine(isCssLength, { message: t("config.invalidPdfLengthValue") })
+                    .optional(),
+                  tableCellPadding: z
+                    .string()
+                    .refine(isCssLengthPair, { message: t("config.invalidPdfCellPaddingValue") })
+                    .optional(),
+                })
+                .strict(),
+            ])
+            .optional(),
         })
         .strict()
         .optional(),
@@ -338,6 +422,25 @@ export type ConfigFile = z.infer<ReturnType<typeof buildConfigFileSchema>>;
 
 /** PDF のページ余白（各辺 CSS 長さ）。 */
 export type PdfMargin = { top: string; right: string; bottom: string; left: string };
+
+/**
+ * Resolve `pdf.density` into the four values the stylesheet needs. The object form starts from the
+ * preset named by `base` (default `normal`) and replaces only what it names, so adjusting one value
+ * does not mean copying the other three — and a preset that is retuned later still carries.
+ */
+function resolvePdfDensity(density: NonNullable<ConfigFile["pdf"]>["density"]): PdfDensity {
+  if (density === undefined) return PDF_DENSITY_PRESETS.normal;
+  if (typeof density === "string") return PDF_DENSITY_PRESETS[density];
+  const base = PDF_DENSITY_PRESETS[density.base ?? "normal"];
+  return {
+    fontSize: density.fontSize?.trim() ?? base.fontSize,
+    lineHeight:
+      density.lineHeight !== undefined ? String(density.lineHeight).trim() : base.lineHeight,
+    headingSpacing: density.headingSpacing?.trim() ?? base.headingSpacing,
+    tableCellPadding:
+      density.tableCellPadding?.trim().replace(/\s+/g, " ") ?? base.tableCellPadding,
+  };
+}
 
 /** 設定ファイルと CLI オプションを統合した、解決済みの設定。 */
 export type ResolvedConfig = {
@@ -406,6 +509,8 @@ export type ResolvedConfig = {
   pdfPrintBackground: boolean;
   /** PDF にしおり（サイドバーと同じ構造）を付与するか（既定 true）。 */
   pdfBookmarks: boolean;
+  /** 印刷時の版面の密度（解決済みの値。`normal` は既定テーマの値そのもの）。 */
+  pdfDensity: PdfDensity;
   /** ページ上部の帯（解決済み HTML フラグメント。帯なしのときは空フラグメント）。 */
   pdfHeader: string;
   /** ページ下部の帯（同上。既定はページ番号）。 */
@@ -436,6 +541,64 @@ export function parseSize(value: string | number | undefined, fallback: number):
     throw new Error(t("config.invalidMaxInlineSize", { value: `"${value}"` }));
   }
   return bytes;
+}
+
+/**
+ * A CSS length monodocs is willing to write into a stylesheet. Deliberately narrow: these values
+ * reach the generated CSS, so anything that is not plainly a number and a unit — `calc(...)`, or a
+ * value with a `;` after it — has to be refused rather than passed through.
+ */
+const CSS_LENGTH = /^(?:0|\d+(?:\.\d+)?(?:px|pt|mm|cm|in|rem|em))$/;
+
+function isCssLength(value: string): boolean {
+  return CSS_LENGTH.test(value.trim());
+}
+
+/** One or two lengths, as CSS shorthand padding takes them (`0.3rem` / `0.3rem 0.5rem`). */
+function isCssLengthPair(value: string): boolean {
+  const parts = value.trim().split(/\s+/);
+  return parts.length >= 1 && parts.length <= 2 && parts.every(isCssLength);
+}
+
+/**
+ * A unitless CSS number, above zero. Written as a pattern rather than handed to `Number()`, which
+ * also accepts spellings CSS does not have: `0x10`, `0b10`, `1e2`, `Infinity`. Those would pass a
+ * numeric check and then sit in the stylesheet as an invalid declaration.
+ */
+const CSS_NUMBER = /^(?:\d+(?:\.\d+)?|\.\d+)$/;
+
+function isCssNumberAboveZero(value: string | number): boolean {
+  const text = String(value).trim();
+  return CSS_NUMBER.test(text) && Number(text) > 0;
+}
+
+/**
+ * Re-check a density before it is written into CSS, and return the **normalized** values.
+ * `loadConfig` already validates what it read, but `renderSingleHtml` is a public entry point of
+ * its own and takes these values as data. Returning the checked form matters as much as the check:
+ * validating a trimmed copy while the caller writes the original is how a value that passed and a
+ * value that was written stop being the same string.
+ */
+export function validatePdfDensity(density: PdfDensity): PdfDensity {
+  const fontSize = density.fontSize.trim();
+  const lineHeight = String(density.lineHeight).trim();
+  const headingSpacing = density.headingSpacing.trim();
+  const tableCellPadding = density.tableCellPadding.trim().replace(/\s+/g, " ");
+  if (!isCssLength(fontSize)) {
+    throw new Error(t("config.invalidPdfLength", { key: "fontSize", value: density.fontSize }));
+  }
+  if (!isCssNumberAboveZero(lineHeight)) {
+    throw new Error(t("config.invalidPdfLineHeight", { value: density.lineHeight }));
+  }
+  if (!isCssLength(headingSpacing)) {
+    throw new Error(
+      t("config.invalidPdfLength", { key: "headingSpacing", value: density.headingSpacing }),
+    );
+  }
+  if (!isCssLengthPair(tableCellPadding)) {
+    throw new Error(t("config.invalidPdfCellPadding", { value: density.tableCellPadding }));
+  }
+  return { fontSize, lineHeight, headingSpacing, tableCellPadding };
 }
 
 /**
@@ -640,6 +803,7 @@ export async function loadConfig(
       bottom: fileConfig.pdf?.margin?.bottom ?? DEFAULT_PDF_MARGIN.bottom,
       left: fileConfig.pdf?.margin?.left ?? DEFAULT_PDF_MARGIN.left,
     },
+    pdfDensity: resolvePdfDensity(fileConfig.pdf?.density),
     pdfPrintBackground: fileConfig.pdf?.printBackground ?? true,
     pdfBookmarks: fileConfig.pdf?.bookmarks ?? true,
     // ヘッダは既定で帯なし。フッタは既定でページ番号。

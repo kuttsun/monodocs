@@ -1,5 +1,12 @@
 import type { Page, SidebarNode } from "../types.js";
-import { parseContentWidth, type ColorScheme, type ContentWidthDefault } from "../config.js";
+import {
+  parseContentWidth,
+  PDF_DENSITY_PRESETS,
+  validatePdfDensity,
+  type ColorScheme,
+  type ContentWidthDefault,
+  type PdfDensity,
+} from "../config.js";
 import { DEFAULT_LANG, LABEL_KEYS, resolveLabels, type Labels } from "../labels.js";
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, escapeLabel, renderTemplate } from "../util/html.js";
@@ -21,6 +28,11 @@ export type RenderHtmlInput = {
   colorScheme?: ColorScheme;
   /** 本文領域の最大幅。`full` / `none` の場合は利用可能な横幅いっぱいに広げる。 */
   contentWidth?: string;
+  /**
+   * 印刷時の版面の密度（`pdf.density` の解決結果）。既定（`normal`）と同じ値なら何も出力しない。
+   * 画面表示には影響しない。
+   */
+  pdfDensity?: PdfDensity;
   /** 読者向けの本文幅切替ボタンを表示するか。未指定は true。 */
   contentWidthToggle?: boolean;
   /** Initial state when the content-width toggle is shown. Defaults to standard. */
@@ -88,12 +100,60 @@ function safeJson(value: unknown): string {
 
 /** 設定由来のテーマ CSS 変数を追加する。公開レンダリング境界でも値を検証する。 */
 function styleWithOverrides(style: string, input: RenderHtmlInput): string {
+  let out = style;
   const overrides: string[] = [];
   if (input.contentWidth !== undefined) {
     overrides.push(`  --content-max-width: ${parseContentWidth(input.contentWidth)};`);
   }
-  if (overrides.length === 0) return style;
-  return `${style}\n:root {\n${overrides.join("\n")}\n}\n`;
+  if (overrides.length > 0) {
+    out = `${out}\n:root {\n${overrides.join("\n")}\n}\n`;
+  }
+  const density = printDensityRules(input.pdfDensity);
+  return density === "" ? out : `${out}\n${density}`;
+}
+
+/**
+ * Print-only rules for a density, carrying **only what differs from `normal`**.
+ *
+ * The default is not "write the defaults out again", it is to say nothing: a document that does not
+ * ask for a density prints exactly as it did before, down to inheriting the reader's own base font
+ * size when they print the HTML from a browser. Pinning 16px to mean "normal" would take that away
+ * from them for no gain.
+ *
+ * Each rule names both the default theme's container and the `.page` article core itself emits, so
+ * a theme that lays the pages out somewhere other than `#content` is still reached. The two are
+ * listed rather than one: `.page h1` alone loses to the theme's `#content h1` on specificity, and
+ * `#content h1` alone matches nothing in a theme that has no `#content`.
+ */
+function printDensityRules(density: PdfDensity | undefined): string {
+  if (density === undefined) return "";
+  const { fontSize, lineHeight, headingSpacing, tableCellPadding } = validatePdfDensity(density);
+  const base = PDF_DENSITY_PRESETS.normal;
+  const rules: string[] = [];
+  if (fontSize !== base.fontSize) {
+    // Every rem and em in the stylesheet is measured from here, so this one declaration moves the
+    // whole page: type, the space between blocks, and the padding that is not overridden below.
+    rules.push(`  :root {\n    font-size: ${fontSize};\n  }`);
+  }
+  if (lineHeight !== base.lineHeight) {
+    rules.push(`  body {\n    line-height: ${lineHeight};\n  }`);
+  }
+  if (headingSpacing !== base.headingSpacing) {
+    // The theme sets this on h1-h3 only, and resets the first heading of a page to 0 through a
+    // more specific selector; both of those stay true here.
+    rules.push(
+      `  #content h1,\n  #content h2,\n  #content h3,\n` +
+        `  .page h1,\n  .page h2,\n  .page h3 {\n    margin-top: ${headingSpacing};\n  }`,
+    );
+  }
+  if (tableCellPadding !== base.tableCellPadding) {
+    rules.push(
+      `  #content th,\n  #content td,\n  .page th,\n  .page td {\n` +
+        `    padding: ${tableCellPadding};\n  }`,
+    );
+  }
+  if (rules.length === 0) return "";
+  return `@media print {\n${rules.join("\n")}\n}\n`;
 }
 
 /** クライアント（目次・検索・前後ナビ）へ渡す 1 ページ分のデータ。 */

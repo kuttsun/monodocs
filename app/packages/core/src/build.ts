@@ -224,6 +224,9 @@ export async function buildSite(
     theme: config.theme,
     colorScheme: config.colorScheme,
     contentWidth: config.contentWidth,
+    // 印刷時の密度は生成物そのものに書き込む。PDF はこの HTML を印刷して作るので、
+    // ブラウザから同じ HTML を印刷したときも同じ版面になる。
+    pdfDensity: config.pdfDensity,
     contentWidthToggle: config.contentWidthToggle,
     contentWidthDefault: config.contentWidthDefault,
     imageLightbox: config.imageLightbox,

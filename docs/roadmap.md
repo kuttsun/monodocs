@@ -809,6 +809,9 @@ pdf:
     bottom: "20mm"
     left: "15mm"
   printBackground: true
+  # How tightly the printed page is set (v0.10): normal (default) / compact / tight, or an object
+  # taking base plus any of fontSize / lineHeight / headingSpacing / tableCellPadding (24.6).
+  density: "normal"
   # Page numbers, on by default (v0.10). false removes the band; an HTML fragment replaces it, using
   # Chromium's own pageNumber / totalPages / title / date / url classes (24.5). There is no {{token}}
   # syntax: the fragment is handed to Chromium as written.
@@ -1925,6 +1928,77 @@ mean either false warnings or a promise that only measurement could keep.
 
 The bookmark and metadata passes run on the finished bytes (24.3.2) and are unaffected.
 
+### 24.6 Page Density (v0.10)
+
+The default theme is set for reading on a screen, which is the right default and the wrong one for
+a document that has to fit on a given number of sheets. Converting an A4 business document with
+0.9.0 produced nine pages where the same body hand-set at 9.5pt with 14mm margins produced four, and
+nothing in the configuration could close that gap: `pdf.margin` was the only lever, and margins are
+not what decides the count. Measured across the full range from 25/30mm to 10/8mm, that document
+stayed at nine pages except at the widest setting. Type size, leading, and cell padding decide it,
+and none of the three was reachable.
+
+`pdf.density` reaches them. It takes either a preset name or an object:
+
+```yaml
+pdf:
+  density: compact
+```
+
+```yaml
+pdf:
+  density:
+    base: compact
+    fontSize: 12px
+    lineHeight: 1.5
+```
+
+Three presets ship. The values are the ones that decide a page count, moved together, because moving
+one alone rarely reads well — smaller type against unchanged leading looks lost on the line:
+
+| | fontSize | lineHeight | headingSpacing | tableCellPadding |
+| --- | --- | --- | --- | --- |
+| `normal` (default) | 16px | 1.7 | 1.8em | 0.5rem 0.8rem |
+| `compact` | 13.5px | 1.55 | 1.15em | 0.3rem 0.5rem |
+| `tight` | 11.5px | 1.45 | 0.9em | 0.2rem 0.35rem |
+
+On a Japanese business document of headings, paragraphs, bullets, and a 24-row table, those come out
+as five, three, and two sheets.
+
+**`normal` emits nothing.** It is not a set of values to write out again but a record of what the
+stylesheet already does, so a document that does not ask for a density prints byte-identically to
+before — including inheriting the reader's own base font size when they print the HTML from a
+browser. Pinning 16px to mean "normal" would take that away for no gain. The same rule applies
+inside the object form: only what differs from `normal` is written.
+
+**Why a preset rather than `pdf.scale`.** Puppeteer's `page.pdf()` already takes a `scale`, and
+passing it through would have been one field on an existing call. But scale shrinks the finished
+page: the line breaks, the column widths, and the rule weights are all decided at the original size
+and then photographed smaller. A density changes the size the page is set at, so the text re-flows
+and the table columns are re-measured at the size they will be read. In a document made largely of
+tables — which is the case that raised this — that is the difference between a page that was
+designed small and one that was reduced.
+
+**Why the object form has `base`.** Someone who wants "compact, but 12px" should not have to copy
+the other three values; a copy is what gets left behind when a preset is later retuned. `base` names
+the table to start from and the object replaces only what it names, which is the resolution order
+`html.labels` already uses over the table `lang` chose (23.4).
+
+**What is deliberately not here.** There is no measure — no maximum width for the text column. The
+column is what `pdf.margin` decides, and a second cap would fight it: a reader who narrowed the
+margins to fit more would find the text stopping short of the margin they set. Its right value also
+differs between scripts, which makes it a poor thing to freeze into a preset. There is also no hook
+for arbitrary CSS. A stylesheet hook would cover this case and every other one, at the cost of a
+public surface with no shape to it; the density is a closed set of keys that 1.0 can freeze.
+
+The values reach the generated stylesheet, so they are validated as plainly a number and a unit —
+`calc(...)` and anything carrying a `;` are refused, at the configuration boundary and again at
+`renderSingleHtml`, which is a public entry point of its own.
+
+The rules are `@media print`, which is what makes one artifact serve both readings: the same HTML
+stays as it was on screen and is set tighter on paper. `--format pdf` goes through the print
+stylesheet, so it gets the same treatment, and so does a reader printing the HTML from a browser.
+
 ---
 
 ## 25. CLI Specification
@@ -2499,6 +2573,8 @@ Implementation scope:
 - Close the gaps the first outside use of a published release turned up: one rule for unknown keys
   (12.2), an exclude list that adds to the built-in one instead of replacing it (12.3), a single file
   as an input (25.2), and printed tables whose columns follow their contents (24.3.1)
+- Give the author a way to set the printed page more or less tightly, which `pdf.margin` never
+  reached (24.6)
 - Update the documentation site — commands, configuration, and the CI guide — and their Japanese
   mirrors, since every item above changes something the site documents
 
@@ -2545,6 +2621,10 @@ checklist, and the two are kept in step):
   and resolving links and images from the directory that holds it. A path that is not a source
   monodocs can read says so and names the extensions that work, rather than surfacing an `ENOTDIR`
 - A printed table gives each column the width its contents need and still fits inside the page
+- `pdf.density` puts the same document on fewer sheets at each step of `normal` / `compact` /
+  `tight`, and the object form starts from a named preset so that adjusting one value does not mean
+  copying the rest. The default emits no rules at all, so a document that does not ask for a density
+  prints exactly as it did before
 
 ---
 
