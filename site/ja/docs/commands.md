@@ -6,7 +6,7 @@ monodocs は 1 つの CLI に `build`・`watch`・`serve`・`validate` の 4 つ
 monodocs <command> [input] [options]
 ```
 
-`[input]` は走査する入力ディレクトリ（既定: `./docs`）です。省略すると `./docs` が使われます。CLI オプションは常に設定ファイルより優先されます。マージ順序や `monodocs.config.yml` の探索場所は [設定ファイル](/ja/docs/configuration) を参照してください。
+`[input]` は走査する入力ディレクトリ、または単一のソースファイル（既定: `./docs`）です。省略すると `./docs` が使われます。ファイルを渡すと、そのファイル 1 ページだけを束ね、リンク・画像・`monodocs.config.yml` の基準はそれを含むディレクトリになります。CLI オプションは常に設定ファイルより優先されます。マージ順序や `monodocs.config.yml` の探索場所は [設定ファイル](/ja/docs/configuration) を参照してください。
 
 > ソースから実行する場合は `monodocs` を `node packages/cli/dist/index.js`（必要に応じて `scripts/app.sh` 経由）に読み替えてください。[はじめに](/ja/docs/getting-started) を参照。
 
@@ -50,7 +50,7 @@ monodocs build [input] [options]
 
 | 引数 / オプション       | 既定値                 | 説明                                                       |
 | ----------------------- | ---------------------- | ---------------------------------------------------------- |
-| `[input]`               | `./docs`               | 走査する入力ディレクトリ。                                 |
+| `[input]`               | `./docs`               | 走査する入力ディレクトリ、または単一のソースファイル。      |
 | `-o, --output <file>`   | `./dist/docs.html`   | 出力ファイルパス。`output.path` を上書き。                 |
 | `-c, --config <file>`   | 自動検出               | 設定ファイル。`monodocs.config.yml` があれば使用。         |
 | `-f, --format <format>` | `html`                 | 出力形式: `html` \| `pdf` \| `both`。`output.format` を上書き。 |
@@ -64,6 +64,9 @@ monodocs build ./docs -o ./dist/docs.html
 
 # 設定ファイルを明示
 monodocs build ./docs -c ./monodocs.config.yml
+
+# 単一ファイルを 1 ページの文書として出力する
+monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 ```
 
 成功すると生成ページ数と出力パスを表示します。警告（リンク切れ・タイトル欠落など）は表示されますがビルドは失敗しません。問題で失敗させたいときは `validate` を使います。
@@ -78,7 +81,7 @@ monodocs watch [input] [options]
 
 | 引数 / オプション     | 既定値               | 説明                                               |
 | --------------------- | -------------------- | -------------------------------------------------- |
-| `[input]`             | `./docs`             | 監視する入力ディレクトリ。                         |
+| `[input]`             | `./docs`             | 監視する入力ディレクトリ、または単一のソースファイル。 |
 | `-o, --output <file>` | `./dist/docs.html` | 出力ファイルパス。`output.path` を上書き。         |
 | `-c, --config <file>` | 自動検出             | 設定ファイル。`monodocs.config.yml` があれば使用。 |
 
@@ -94,7 +97,7 @@ monodocs serve [input] [options]
 
 | 引数 / オプション     | 既定値               | 説明                                               |
 | --------------------- | -------------------- | -------------------------------------------------- |
-| `[input]`             | `./docs`             | 配信する入力ディレクトリ。                         |
+| `[input]`             | `./docs`             | 配信する入力ディレクトリ、または単一のソースファイル。 |
 | `-o, --output <file>` | `./dist/docs.html` | 出力ファイルパス。`output.path` を上書き。         |
 | `-c, --config <file>` | 自動検出             | 設定ファイル。`monodocs.config.yml` があれば使用。 |
 | `-p, --port <port>`   | `4173`               | 待ち受けポート番号。                               |
@@ -121,7 +124,7 @@ monodocs validate [input] [options]
 
 | 引数 / オプション     | 既定値   | 説明                                               |
 | --------------------- | -------- | -------------------------------------------------- |
-| `[input]`             | `./docs` | 検証する入力ディレクトリ。                         |
+| `[input]`             | `./docs` | 検証する入力ディレクトリ、または単一のソースファイル。 |
 | `-c, --config <file>` | 自動検出 | 設定ファイル。`monodocs.config.yml` があれば使用。 |
 
 ```bash

@@ -7,7 +7,7 @@ monodocs reads an optional `monodocs.config.yml` to control how your files are b
 monodocs resolves the config file in this order:
 
 1. The path passed to `-c, --config <file>`.
-2. `monodocs.config.yml` **inside the input directory** (when you pass an input argument, e.g. `monodocs build ./docs`).
+2. `monodocs.config.yml` **inside the input directory** (when you pass an input argument, e.g. `monodocs build ./docs`). When that argument is a single file, the directory holding it is used, so `monodocs build ./docs/plan.md` reads the same file as `monodocs build ./docs`.
 3. `monodocs.config.yml` in the **current working directory** (when no input argument is given).
 
 If you pass `--config` explicitly and the file does not exist, the build fails. Relative paths inside the config (`input`, `output.path`) are resolved **relative to the config file's location**, not the current directory.
@@ -19,6 +19,19 @@ monodocs build ./docs
 # Use an explicit config file
 monodocs build -c ./monodocs.config.yml
 ```
+
+## Unknown keys
+
+Every key is checked, at every depth, and an unrecognized one fails the build naming the key and the
+object that holds it:
+
+```text
+error: Invalid config file ./monodocs.config.yml: pdf: Unrecognized key: "footr"
+```
+
+A key that is accepted and ignored is worse than one that is refused: the file looks right, and only
+the output says otherwise. This holds at the top level too, so a key written ahead of the release
+that introduces it has to come out until then.
 
 ## Precedence
 
@@ -53,6 +66,11 @@ sources:
     extensions: [.md, .markdown]
   asciidoc:
     extensions: [.adoc, .asciidoc, .asc]
+  # Glob patterns that are never turned into pages. Added to the built-in list below, not
+  # replacing it: ['_partials/**', 'partials/**', 'includes/**', '**/_*']
+  # exclude: [drafts/**]
+  # Set false to bundle the fragments that built-in list keeps out
+  excludeDefaults: true
 
 sidebar:
   # "folder" (default) builds the sidebar from the directory structure; "custom" uses the items below
@@ -64,8 +82,6 @@ sidebar:
   #   - title: Setup
   #     children:
   #       - path: setup/install.adoc
-  # Glob patterns excluded from scanning (partials/includes, files starting with _)
-  exclude: ['_partials/**', 'partials/**', 'includes/**', '**/_*']
   # Collapse directories deeper than this level by default. Unset by default = all expanded; 0 = collapse all
   # collapseDepth: 2
   # Take the navigation title from "heading" (default) or "filename"
@@ -158,22 +174,40 @@ a build log should not change language because the document did.
 
 ### `sources`
 
-Controls which file extensions are treated as Markdown vs. AsciiDoc.
+Controls which file extensions are treated as Markdown vs. AsciiDoc, and which files are left out of
+the bundle entirely.
 
-| Key                            | Type       | Default                       |
-| ------------------------------ | ---------- | ----------------------------- |
-| `sources.markdown.extensions`  | string[]   | `[.md, .markdown]`            |
-| `sources.asciidoc.extensions`  | string[]   | `[.adoc, .asciidoc, .asc]`    |
+| Key                            | Type       | Default                       | Description |
+| ------------------------------ | ---------- | ----------------------------- | ----------- |
+| `sources.markdown.extensions`  | string[]   | `[.md, .markdown]`            | Extensions rendered as Markdown. |
+| `sources.asciidoc.extensions`  | string[]   | `[.adoc, .asciidoc, .asc]`    | Extensions rendered as AsciiDoc. |
+| `sources.exclude`              | string[]   | `[]`                          | Glob patterns, matched against the path relative to the input directory, whose matches are never turned into pages. **Added to the built-in list**, not replacing it. |
+| `sources.excludeDefaults`      | boolean    | `true`                        | Whether the built-in list applies. Set `false` for a tree that really does bundle its `_`-prefixed files. |
+
+The built-in list is `['_partials/**', 'partials/**', 'includes/**', '**/_*']` — the paths that hold
+include fragments rather than pages. `sources.exclude` adds to it, because a list written to keep one
+draft out of the bundle should not also hand back every fragment: that failure is silent, and it
+surfaces far from its cause.
+
+```yaml
+sources:
+  exclude: [drafts/**] # kept out, and so are _partials/** and the rest
+```
+
+A file named directly on the command line (`monodocs build ./docs/_draft.md`) is bundled whatever the
+patterns say. Naming it is a choice; the patterns only decide what a directory scan picks up.
+
+> `sidebar.exclude` was the earlier home for this key. It still works and now behaves the same way —
+> merged rather than replacing — but it warns, because it never was a sidebar setting: a match is
+> left out of the bundle, not just out of the navigation.
 
 ### `sidebar`
-
-Unknown keys under `sidebar` are rejected (this section is validated strictly).
 
 | Key                          | Type      | Default                                            | Description |
 | ---------------------------- | --------- | -------------------------------------------------- | ----------- |
 | `sidebar.mode`               | `folder` `custom` | `folder`                                   | How the sidebar is built. `folder` derives it from the directory structure. `custom` uses `sidebar.items` exactly as written. See below. |
 | `sidebar.items`             | object[]  | unset                                              | The sidebar definition for `mode: custom`. Requires `mode: custom`, and `mode: custom` requires it. See below. |
-| `sidebar.exclude`            | string[]  | `['_partials/**', 'partials/**', 'includes/**', '**/_*']` | Glob patterns excluded from scanning. Files starting with `_` are treated as include/partial files regardless of extension. |
+| `sidebar.exclude`            | string[]  | unset                                              | **Deprecated** — use [`sources.exclude`](#sources). Still honoured, with a warning. |
 | `sidebar.collapseDepth`      | integer   | unset                                              | Collapse directories **deeper** than this level by default (top level = depth 1). `0` collapses everything, unset keeps all expanded. Pages stay reachable — collapsing hides nothing, it can always be re-opened. |
 | `sidebar.titleFrom`          | `heading` `filename` | `heading`                               | Where the navigation title comes from. `heading` = explicit title → heading → filename. `filename` = skip the heading and use the filename (the explicit frontmatter / `:sd-title:` title always wins either way). |
 | `sidebar.flattenSingleChild` | boolean   | `false`                                            | Flatten a directory that holds **exactly one page and no subfolders**, pulling that page up to its parent. Useful when each document lives in its own folder with its images (images are not counted as pages). |
@@ -209,7 +243,7 @@ order. A `hidden` page listed here is skipped with a warning, and a group whose 
 dropped. A path that does not exist is an error.
 
 Because the structure and titles are explicit, `sidebar.titleTransform.directory` and
-`sidebar.flattenSingleChild` do not apply in this mode. `sidebar.collapseDepth`, `sidebar.exclude`,
+`sidebar.flattenSingleChild` do not apply in this mode. `sidebar.collapseDepth`, `sources.exclude`,
 `sidebar.titleFrom`, and `sidebar.titleTransform.page` still work as usual.
 
 #### `sidebar.titleTransform`

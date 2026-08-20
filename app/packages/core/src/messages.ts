@@ -44,11 +44,19 @@ const EN = {
   "config.sidebarCustomNeedsItems": 'sidebar.mode: "custom" needs sidebar.items',
   "config.sidebarItemsNeedCustom": 'sidebar.items needs sidebar.mode: "custom"',
   "config.invalidLanguageTag": "must be a syntactically valid BCP 47 language tag",
+  "config.excludeInBothPlaces":
+    "Both sources.exclude and sidebar.exclude are set. Keep sources.exclude and remove sidebar.exclude.",
+  "config.sidebarExcludeMoved":
+    "sidebar.exclude is deprecated: use sources.exclude, which is named for what it does — a match " +
+    "is left out of the bundle, not only out of the sidebar. Patterns are now added to the built-in " +
+    "exclude list rather than replacing it (sources.excludeDefaults: false drops that list).",
   "config.unsupportedMessageLang":
     'Unsupported message language: "{value}" (supported: {supported}).',
 
   // ---- build ----
-  "build.inputNotFound": "Input directory not found: {path}",
+  "build.inputNotFound": "Input path not found: {path}",
+  "build.inputUnsupportedFile":
+    "Input file is not a supported source: {path} (supported extensions: {extensions}).",
   "build.noSources": "No Markdown / AsciiDoc files found in: {path}",
   "build.pdfImagesEmbedded":
     "Images were embedded for PDF output, overriding assets.embedImages / onLargeImage: external. " +
@@ -130,7 +138,7 @@ const EN = {
   // ---- CLI ----
   "cli.description": "Generate a single HTML / PDF from many Markdown / AsciiDoc files",
   "cli.opt.lang": "Language of monodocs' own messages: {supported} (env: MONODOCS_LANG)",
-  "cli.arg.input": "Input directory (default: ./docs)",
+  "cli.arg.input": "Input directory, or a single source file (default: ./docs)",
   "cli.opt.config": "Config file (default: monodocs.config.yml when present)",
   "cli.build.description": "Build the documents into a single HTML / PDF",
   "cli.build.opt.output":
@@ -186,9 +194,19 @@ const JA: Record<MessageKey, string> = {
   "config.sidebarCustomNeedsItems": 'sidebar.mode: "custom" には sidebar.items が必要です',
   "config.sidebarItemsNeedCustom": 'sidebar.items には sidebar.mode: "custom" が必要です',
   "config.invalidLanguageTag": "構文的に妥当な BCP 47 言語タグである必要があります",
+  "config.excludeInBothPlaces":
+    "sources.exclude と sidebar.exclude の両方が設定されています。" +
+    "sources.exclude を残して sidebar.exclude を削除してください。",
+  "config.sidebarExcludeMoved":
+    "sidebar.exclude は非推奨です。sources.exclude を使ってください" +
+    "（サイドバーからではなく束そのものからファイルを外す設定です）。" +
+    "指定したパターンは既定の除外リストを置き換えず、そこへ追加されるようになりました" +
+    "（既定リストを外すには sources.excludeDefaults: false）。",
   "config.unsupportedMessageLang": 'メッセージ言語が不正です: "{value}"（対応: {supported}）。',
 
-  "build.inputNotFound": "入力ディレクトリが見つかりません: {path}",
+  "build.inputNotFound": "入力パスが見つかりません: {path}",
+  "build.inputUnsupportedFile":
+    "入力ファイルの形式に対応していません: {path}（対応する拡張子: {extensions}）。",
   "build.noSources": "Markdown / AsciiDoc ファイルが見つかりません: {path}",
   "build.pdfImagesEmbedded":
     "PDF 出力のため画像を埋め込みました（assets.embedImages / onLargeImage: external を上書き）。" +
@@ -262,7 +280,7 @@ const JA: Record<MessageKey, string> = {
 
   "cli.description": "複数の Markdown / AsciiDoc から単一 HTML / PDF を生成する",
   "cli.opt.lang": "monodocs 自身のメッセージの言語: {supported}（環境変数: MONODOCS_LANG）",
-  "cli.arg.input": "入力ディレクトリ（既定: ./docs）",
+  "cli.arg.input": "入力ディレクトリ、または単一のソースファイル（既定: ./docs）",
   "cli.opt.config": "設定ファイル（既定: monodocs.config.yml があれば使用）",
   "cli.build.description": "ドキュメントをビルドして単一 HTML / PDF を生成する",
   "cli.build.opt.output":

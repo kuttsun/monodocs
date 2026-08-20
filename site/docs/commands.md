@@ -6,7 +6,7 @@ monodocs is a single CLI with four subcommands: `build`, `watch`, `serve`, and `
 monodocs <command> [input] [options]
 ```
 
-The `[input]` argument is the directory to scan (default: `./docs`). When omitted, monodocs uses `./docs`. CLI options always override the config file — see [Configuration](/docs/configuration) for the merge order and where `monodocs.config.yml` is looked up.
+The `[input]` argument is the directory to scan, or a single source file (default: `./docs`). When omitted, monodocs uses `./docs`. Given a file, monodocs bundles that one page and treats the directory holding it as the base for the links, images, and `monodocs.config.yml` it uses. CLI options always override the config file — see [Configuration](/docs/configuration) for the merge order and where `monodocs.config.yml` is looked up.
 
 > When running from source, replace `monodocs` with `node packages/cli/dist/index.js` (optionally via `scripts/app.sh`). See [Getting Started](/docs/getting-started).
 
@@ -62,7 +62,7 @@ monodocs build [input] [options]
 
 | Argument / Option       | Default                | Description                                                  |
 | ----------------------- | ---------------------- | ------------------------------------------------------------ |
-| `[input]`               | `./docs`               | Input directory to scan.                                     |
+| `[input]`               | `./docs`               | Input directory to scan, or a single source file.            |
 | `-o, --output <file>`   | `./dist/docs.html`   | Output file path. Overrides `output.path`.                   |
 | `-c, --config <file>`   | auto-detected          | Config file. Uses `monodocs.config.yml` if present.          |
 | `-f, --format <format>` | `html`                 | Output format: `html` \| `pdf` \| `both`. Overrides `output.format`. |
@@ -76,6 +76,9 @@ monodocs build ./docs -o ./dist/docs.html
 
 # Use a specific config file
 monodocs build ./docs -c ./monodocs.config.yml
+
+# A single file, as a one-page document
+monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 ```
 
 On success it prints the number of pages generated and the output path. Warnings (e.g. broken links, missing titles) are printed but do not fail the build — use `validate` to fail on issues.
@@ -90,7 +93,7 @@ monodocs watch [input] [options]
 
 | Argument / Option     | Default              | Description                                         |
 | --------------------- | -------------------- | --------------------------------------------------- |
-| `[input]`             | `./docs`             | Input directory to watch.                           |
+| `[input]`             | `./docs`             | Input directory, or a single source file, to watch. |
 | `-o, --output <file>` | `./dist/docs.html` | Output file path. Overrides `output.path`.          |
 | `-c, --config <file>` | auto-detected        | Config file. Uses `monodocs.config.yml` if present. |
 
@@ -106,7 +109,7 @@ monodocs serve [input] [options]
 
 | Argument / Option     | Default              | Description                                         |
 | --------------------- | -------------------- | --------------------------------------------------- |
-| `[input]`             | `./docs`             | Input directory to serve.                           |
+| `[input]`             | `./docs`             | Input directory, or a single source file, to serve. |
 | `-o, --output <file>` | `./dist/docs.html` | Output file path. Overrides `output.path`.          |
 | `-c, --config <file>` | auto-detected        | Config file. Uses `monodocs.config.yml` if present. |
 | `-p, --port <port>`   | `4173`               | Port to listen on.                                  |
@@ -133,7 +136,7 @@ monodocs validate [input] [options]
 
 | Argument / Option     | Default       | Description                                         |
 | --------------------- | ------------- | --------------------------------------------------- |
-| `[input]`             | `./docs`      | Input directory to validate.                        |
+| `[input]`             | `./docs`      | Input directory, or a single source file, to validate. |
 | `-c, --config <file>` | auto-detected | Config file. Uses `monodocs.config.yml` if present. |
 
 ```bash

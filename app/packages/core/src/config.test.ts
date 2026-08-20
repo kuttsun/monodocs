@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadConfig, parseContentWidth, parseSize } from "./config";
+import { DEFAULT_EXCLUDE, loadConfig, parseContentWidth, parseSize } from "./config";
 
 describe("parseSize", () => {
   it("parses sizes with units", () => {
@@ -403,5 +403,110 @@ describe("loadConfig: sidebar.collapseDepth / toc.maxLevel", () => {
     );
     // both はディレクトリ扱いの既定（build 側で docs.html / docs.pdf を生成）。
     expect((await loadConfig({ format: "both" }, dir)).outputFile).toBe(join(dir, "dist"));
+  });
+});
+
+/**
+ * A list written to keep one path out of the bundle must not also hand back the fragments the
+ * built-in list exists to keep out. That failure is silent and lands far from its cause: an
+ * unrelated exclude goes in, and several commits later the sidebar has grown include fragments.
+ */
+describe("loadConfig: what is excluded from the bundle", () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "monodocs-exclude-"));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  async function writeConfig(yaml: string): Promise<void> {
+    await writeFile(join(dir, "monodocs.config.yml"), yaml);
+  }
+
+  it("uses the built-in list when the configuration says nothing", async () => {
+    const config = await loadConfig({}, dir);
+    expect(config.exclude).toEqual(DEFAULT_EXCLUDE);
+    expect(config.warnings).toEqual([]);
+  });
+
+  it("adds sources.exclude to the built-in list instead of replacing it", async () => {
+    await writeConfig("sources:\n  exclude:\n    - skip.md\n");
+    const config = await loadConfig({}, dir);
+    expect(config.exclude).toEqual([...DEFAULT_EXCLUDE, "skip.md"]);
+    expect(config.warnings).toEqual([]);
+  });
+
+  it("drops the built-in list only when asked to", async () => {
+    await writeConfig("sources:\n  excludeDefaults: false\n  exclude:\n    - skip.md\n");
+    expect((await loadConfig({}, dir)).exclude).toEqual(["skip.md"]);
+  });
+
+  it("drops the built-in list with no list of its own", async () => {
+    await writeConfig("sources:\n  excludeDefaults: false\n");
+    expect((await loadConfig({}, dir)).exclude).toEqual([]);
+  });
+
+  it("still honours sidebar.exclude, merged, and says it moved", async () => {
+    await writeConfig("sidebar:\n  exclude:\n    - skip.md\n");
+    const config = await loadConfig({}, dir);
+    expect(config.exclude).toEqual([...DEFAULT_EXCLUDE, "skip.md"]);
+    expect(config.warnings).toHaveLength(1);
+    expect(config.warnings[0]).toMatch(/sources\.exclude/);
+  });
+
+  it("refuses a configuration that excludes from both places", async () => {
+    await writeConfig("sources:\n  exclude:\n    - a.md\nsidebar:\n  exclude:\n    - b.md\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow(/sidebar\.exclude/);
+  });
+});
+
+/**
+ * One rule for the whole file: an unknown key is refused wherever it sits. A key that is accepted
+ * and ignored is worse than one that is refused — the configuration looks right, and only the
+ * output says otherwise.
+ */
+describe("loadConfig: unknown keys", () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "monodocs-strict-"));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  async function writeConfig(yaml: string): Promise<void> {
+    await writeFile(join(dir, "monodocs.config.yml"), yaml);
+  }
+
+  it("rejects an unknown top-level key", async () => {
+    await writeConfig("title: t\nlanguage: en\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow(/language/);
+  });
+
+  it("rejects an unknown key at every depth", async () => {
+    for (const yaml of [
+      "output:\n  filename: docs.html\n",
+      "sources:\n  markdown:\n    extension: .md\n",
+      "toc:\n  depth: 3\n",
+      "assets:\n  inlineImages: true\n",
+      "mermaid:\n  theme: forest\n",
+      "highlight:\n  theme: nord\n",
+      "html:\n  stylesheet: ./print.css\n",
+    ]) {
+      await writeConfig(yaml);
+      await expect(loadConfig({}, dir), yaml).rejects.toThrow(/Unrecognized key/i);
+    }
+  });
+
+  it("names the key and the object holding it, rather than dumping the issue list", async () => {
+    await writeConfig("pdf:\n  footr: x\n");
+    // Zod's own error.message is a JSON array; what the author needs is which key, and where.
+    await expect(loadConfig({}, dir)).rejects.toThrow(/pdf: .*footr/);
+    await expect(loadConfig({}, dir)).rejects.not.toThrow(/\[\s*\{/);
   });
 });

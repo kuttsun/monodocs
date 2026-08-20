@@ -1,4 +1,4 @@
-import { existsSync, watch as fsWatch, type FSWatcher } from "node:fs";
+import { existsSync, statSync, watch as fsWatch, type FSWatcher } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { buildSite, resolveOutputs } from "./build.js";
 import { loadConfig } from "./config.js";
@@ -33,7 +33,7 @@ export async function watchSite(
 ): Promise<WatchHandle> {
   const cwd = process.cwd();
   const config = await loadConfig(options, cwd);
-  const inputDir = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
+  const inputPath = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
   // 生成物への書き込みでイベントが発火し再ビルドが連鎖するのを避けるため、
   // 出力ファイルへの変更イベントは無視する（出力が入力配下にある場合の対策）。
   // both では html / pdf の両方が生成されるため、resolveOutputs で実際の出力集合を得る
@@ -41,11 +41,12 @@ export async function watchSite(
   const outputs = resolveOutputs(config, cwd);
   const outputFiles = new Set<string>([outputs.html, outputs.pdf].filter((p): p is string => !!p));
 
-  // 入力ディレクトリが無ければ監視を確立できないため、ここで失敗させる
+  // 入力が無ければ監視を確立できないため、ここで失敗させる
   // （CLI 側で「Watching…」と表示したまま無反応になるのを防ぐ）。
-  if (!existsSync(inputDir)) {
+  if (!existsSync(inputPath)) {
     throw new Error(t("build.inputNotFound", { path: config.inputDir }));
   }
+  const inputIsFile = statSync(inputPath).isFile();
 
   let timer: ReturnType<typeof setTimeout> | null = null;
   let building = false;
@@ -143,8 +144,9 @@ export async function watchSite(
     }
   }
 
-  // 入力ディレクトリの監視は必須。確立できなければ watchSite ごと失敗させる。
-  startWatch(inputDir, inputDir, true);
+  // 入力の監視は必須。確立できなければ watchSite ごと失敗させる。A single-file input is watched
+  // as itself, with its parent as the base the listener resolves event paths against.
+  startWatch(inputPath, inputIsFile ? dirname(inputPath) : inputPath, !inputIsFile);
   // 設定ファイルの監視は best-effort（失敗しても入力監視は継続する）。
   if (config.configFilePath && existsSync(config.configFilePath)) {
     try {

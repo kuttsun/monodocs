@@ -70,7 +70,7 @@ describe("the catalogue", () => {
 
   it("substitutes parameters and leaves an unknown placeholder alone", () => {
     setMessageLang("en");
-    expect(t("build.inputNotFound", { path: "./docs" })).toBe("Input directory not found: ./docs");
+    expect(t("build.inputNotFound", { path: "./docs" })).toBe("Input path not found: ./docs");
     // 値の無いプレースホルダは消さずに残す。消すと文が壊れて原因が読めなくなる。
     expect(t("build.inputNotFound")).toContain("{path}");
   });
@@ -78,7 +78,7 @@ describe("the catalogue", () => {
   it("switches every message together", () => {
     setMessageLang("ja");
     expect(getMessageLang()).toBe("ja");
-    expect(t("build.inputNotFound", { path: "x" })).toBe("入力ディレクトリが見つかりません: x");
+    expect(t("build.inputNotFound", { path: "x" })).toBe("入力パスが見つかりません: x");
   });
 });
 
