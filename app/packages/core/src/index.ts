@@ -14,6 +14,7 @@ export {
   validatePdfDensity,
   PDF_DENSITY_NAMES,
   PDF_DENSITY_PRESETS,
+  PDF_DENSITY_SCREEN,
   type PdfDensity,
   type PdfDensityName,
   type ConfigFile,

@@ -109,6 +109,16 @@ jobs:
           node dist/monodocs.cjs build ../examples/en -o ../site/public/sample.html
           node dist/monodocs.cjs build ../examples/ja -o ../site/public/ja/sample.html
 
+      # 版面密度の比較（設定リファレンスが 4 段を並べて見せる PDF とサムネイル）。サイトの
+      # ビルドはこの成果物を参照するため、ここで作らないと Site CI が資産の欠けたページを組む。
+      # 生成そのものは scripts/site-density.sh に持たせ、ローカルと同じ手順を通す。
+      - name: Generate density samples
+        if: matrix.name == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils
+          MONODOCS_RUNNER= ../scripts/site-density.sh
+
       - name: Upload site demos
         if: matrix.name == 'Linux'
         uses: actions/upload-artifact@v7
@@ -117,6 +127,8 @@ jobs:
           path: |
             site/public/sample.html
             site/public/ja/sample.html
+            site/public/density
+            site/public/ja/density
           if-no-files-found: error
           retention-days: 1
 

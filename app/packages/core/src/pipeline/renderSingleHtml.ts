@@ -1,7 +1,7 @@
 import type { Page, SidebarNode } from "../types.js";
 import {
   parseContentWidth,
-  PDF_DENSITY_PRESETS,
+  PDF_DENSITY_SCREEN,
   validatePdfDensity,
   type ColorScheme,
   type ContentWidthDefault,
@@ -29,8 +29,8 @@ export type RenderHtmlInput = {
   /** 本文領域の最大幅。`full` / `none` の場合は利用可能な横幅いっぱいに広げる。 */
   contentWidth?: string;
   /**
-   * 印刷時の版面の密度（`pdf.density` の解決結果）。既定（`normal`）と同じ値なら何も出力しない。
-   * 画面表示には影響しない。
+   * 印刷時の版面の密度（`pdf.density` の解決結果）。画面の値（`PDF_DENSITY_SCREEN`）と
+   * 一致する項目は出力しない。画面表示には影響しない。
    */
   pdfDensity?: PdfDensity;
   /** 読者向けの本文幅切替ボタンを表示するか。未指定は true。 */
@@ -113,12 +113,13 @@ function styleWithOverrides(style: string, input: RenderHtmlInput): string {
 }
 
 /**
- * Print-only rules for a density, carrying **only what differs from `normal`**.
+ * Print-only rules for a density, carrying **only what differs from the screen**.
  *
- * The default is not "write the defaults out again", it is to say nothing: a document that does not
- * ask for a density prints exactly as it did before, down to inheriting the reader's own base font
- * size when they print the HTML from a browser. Pinning 16px to mean "normal" would take that away
- * from them for no gain.
+ * The baseline is `PDF_DENSITY_SCREEN`, not the default density: a value the theme already produces
+ * is not worth restating, and one of them is worth actively leaving alone. The theme sets no root
+ * `font-size`, so a density that keeps the screen's type size writes no rule for it and the HTML
+ * still prints at whatever base size the reader's browser uses — which is true of the default
+ * density, since it buys its sheets from leading and heading spacing instead.
  *
  * Each rule names both the default theme's container and the `.page` article core itself emits, so
  * a theme that lays the pages out somewhere other than `#content` is still reached. The two are
@@ -128,7 +129,7 @@ function styleWithOverrides(style: string, input: RenderHtmlInput): string {
 function printDensityRules(density: PdfDensity | undefined): string {
   if (density === undefined) return "";
   const { fontSize, lineHeight, headingSpacing, tableCellPadding } = validatePdfDensity(density);
-  const base = PDF_DENSITY_PRESETS.normal;
+  const base = PDF_DENSITY_SCREEN;
   const rules: string[] = [];
   if (fontSize !== base.fontSize) {
     // Every rem and em in the stylesheet is measured from here, so this one declaration moves the

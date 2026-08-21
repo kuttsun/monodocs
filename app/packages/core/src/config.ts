@@ -44,9 +44,6 @@ const DEFAULT_PDF_MARGIN = { top: "20mm", right: "15mm", bottom: "20mm", left: "
 /**
  * How tightly the printed page is set. The four values are what decide how many sheets a document
  * comes out as: type size, leading, the air around headings, and the padding inside table cells.
- *
- * `normal` is not a choice so much as a record of what the stylesheet already does — nothing is
- * emitted for it, so a document that does not ask for a density prints exactly as it did before.
  * The named presets move all four together, because moving one alone rarely reads well: smaller
  * type with unchanged leading looks lost on the line.
  *
@@ -66,30 +63,61 @@ export type PdfDensity = {
   tableCellPadding: string;
 };
 
-/** The shipped densities. `normal` mirrors the default theme's own values. */
+/**
+ * What the default theme sets for the screen, and the baseline the print rules are written against:
+ * only what differs from these values is ever emitted. It is a record of the stylesheet rather than
+ * a density anyone chooses, which is why it is kept apart from the presets below — the default
+ * density is free to move without changing what "the same as on screen" means.
+ *
+ * `fontSize` is the one value the theme does not set. There is no `font-size` on the root at all, so
+ * leaving it alone means inheriting whatever base size the reader's browser uses; 16px records what
+ * that is in practice, so that a density which does not change the type size writes no rule for it.
+ */
+export const PDF_DENSITY_SCREEN = {
+  fontSize: "16px",
+  lineHeight: "1.7", // style.css: body
+  headingSpacing: "1.8em", // style.css: #content h1, h2, h3
+  tableCellPadding: "0.5rem 0.8rem", // style.css: #content th, td
+} as const satisfies PdfDensity;
+
+/**
+ * The shipped densities, loosest first.
+ *
+ * The default is set for paper, not for a screen. A web stylesheet is generous with leading and with
+ * the air above headings, and that generosity is most of what a printed page pays for: the same
+ * document comes out on 49 sheets at `normal` where the screen values put it on 56, with the type
+ * size untouched. Type size is the last lever rather than the first, because it is the one that also
+ * lengthens the line — the measure is what `pdf.margin` leaves, so 16px inside the default margins
+ * is around 42 Japanese characters, and dropping to 12px stretches that to 56 unless the margins
+ * widen with it.
+ *
+ * `relaxed` is the screen setting under a name, for a document that is read on a screen and printed
+ * only now and then. It is `PDF_DENSITY_SCREEN` itself, so asking for it emits nothing at all.
+ */
 export const PDF_DENSITY_PRESETS = {
+  relaxed: PDF_DENSITY_SCREEN,
   normal: {
     fontSize: "16px",
-    lineHeight: "1.7",
-    headingSpacing: "1.8em",
-    tableCellPadding: "0.5rem 0.8rem",
+    lineHeight: "1.45",
+    headingSpacing: "0.9em",
+    tableCellPadding: "0.35rem 0.6rem",
   },
   compact: {
-    fontSize: "13.5px",
-    lineHeight: "1.55",
-    headingSpacing: "1.15em",
+    fontSize: "14px",
+    lineHeight: "1.35",
+    headingSpacing: "0.8em",
     tableCellPadding: "0.3rem 0.5rem",
   },
   tight: {
-    fontSize: "11.5px",
-    lineHeight: "1.45",
-    headingSpacing: "0.9em",
+    fontSize: "12px",
+    lineHeight: "1.3",
+    headingSpacing: "0.6em",
     tableCellPadding: "0.2rem 0.35rem",
   },
 } as const satisfies Record<string, PdfDensity>;
 
-/** Names accepted by `pdf.density`, and by `base` inside its object form. */
-export const PDF_DENSITY_NAMES = ["normal", "compact", "tight"] as const;
+/** Names accepted by `pdf.density`, and by `base` inside its object form. Loosest first. */
+export const PDF_DENSITY_NAMES = ["relaxed", "normal", "compact", "tight"] as const;
 export type PdfDensityName = (typeof PDF_DENSITY_NAMES)[number];
 
 /** `-o` / 設定の output.path が未指定のときの既定出力パス（format 別）。 */
