@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { Command, CommanderError } from "commander";
 import {
   buildSite,
+  initSite,
   MESSAGE_LANGS,
   resolveMessageLang,
   serveSite,
@@ -110,6 +111,22 @@ program
   .option("--lang <lang>", t("cli.opt.lang", { supported: MESSAGE_LANGS.join(" | ") }))
   // Commander が自前で足す help サブコマンドの説明も、既定のままでは英語で残る。
   .helpCommand("help [command]", t("cli.help.helpCommand"));
+
+// First in the list because it is the first command run: it produces the configuration and the
+// page every other command then works on.
+program
+  .command("init")
+  .description(t("cli.init.description"))
+  .helpOption("-h, --help", t("cli.help.helpOption"))
+  .action(async () => {
+    try {
+      const result = await initSite();
+      console.log(t("cli.created", { files: result.created.join(", ") }));
+    } catch (error) {
+      fail((error as Error).message);
+      process.exitCode = 1;
+    }
+  });
 
 program
   .command("build")

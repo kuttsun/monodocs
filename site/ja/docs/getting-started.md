@@ -53,13 +53,24 @@ chmod +x monodocs-linux-x64
 ./monodocs-linux-x64 build ./docs -o ./dist/docs.html
 ```
 
-バイナリで使えるのは `build`（HTML）・`validate`・`watch`・`serve` です。**PDF 出力と Mermaid の
+バイナリで使えるのは `init`・`build`（HTML）・`validate`・`watch`・`serve` です。**PDF 出力と Mermaid の
 `pre-render` は利用できません**。どちらもヘッドレスブラウザを `puppeteer-core` 経由で使いますが、
 これはバンドルに含めていないためで、実行するとその旨のエラーで失敗します。必要な場合は npm 版を
 使ってください。バイナリは署名していないため、Windows では初回実行時に SmartScreen の警告が出る
 ことがあります。
 
 ## 最初のビルド
+
+何も無いところから始めるなら、`init` が手を入れずにビルドできる設定ファイルと最初のページを書き出します。
+
+```bash
+monodocs init     # -> monodocs.config.yml, docs/index.md
+monodocs build    # -> dist/docs.html
+```
+
+上書きはしません。どちらかのファイルが既にあれば、どちらも書かずに見つけたものを伝えるので、作業の入ったディレクトリで試しても安全です。生成される設定ファイルの中身は [`init`](/ja/docs/commands#init) を参照してください。
+
+既にある文書をビルドする場合は次のとおりです。
 
 ```bash
 # 単一の自己完結 HTML
@@ -98,7 +109,7 @@ scripts/app.sh node packages/cli/dist/index.js build examples/ja -o dist/docs.ht
 
 ## 次のステップ
 
-- コマンド一覧とオプションは [コマンドオプション](/ja/docs/commands)（`build` / `watch` / `serve` / `validate`）を参照してください。
+- コマンド一覧とオプションは [コマンドオプション](/ja/docs/commands)（`init` / `build` / `watch` / `serve` / `validate`）を参照してください。
 - `monodocs.config.yml` の設定項目は [設定ファイル](/ja/docs/configuration) を参照してください。
 - バージョン計画は [ロードマップ](https://github.com/kuttsun/monodocs/blob/main/docs/roadmap.md) を参照してください。
 - 対応記法と、単一ファイル化に伴う制限は [対応記法](https://github.com/kuttsun/monodocs/blob/main/docs/syntax.md) にまとまっています。

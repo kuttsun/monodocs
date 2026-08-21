@@ -43,6 +43,7 @@ Node.js 無しで動くスタンドアロンバイナリを、Linux x64 / Window
 入力は Markdown / AsciiDoc を混在でき、フォルダ構造がそのままサイドバーになります。
 
 ```bash
+monodocs init                                         # 手を入れずにビルドできる設定と最初のページ
 monodocs build ./docs -o ./dist/doc.html              # 自己完結した単一 HTML
 monodocs build ./docs --format pdf -o ./dist/doc.pdf  # PDF（要 Chromium）
 monodocs serve ./docs                                 # 編集しながらライブプレビュー

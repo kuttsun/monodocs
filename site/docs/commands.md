@@ -1,6 +1,6 @@
 # Command Options
 
-monodocs is a single CLI with four subcommands: `build`, `watch`, `serve`, and `validate`. Every subcommand takes the same optional input argument and shares the config-file option; each adds a few of its own.
+monodocs is a single CLI with five subcommands: `init`, `build`, `watch`, `serve`, and `validate`. The four that read documents take the same optional input argument and share the config-file option, each adding a few of its own; `init` takes neither, because it creates what the others read.
 
 ```bash
 monodocs <command> [input] [options]
@@ -51,6 +51,30 @@ Where monodocs wraps one, the wrapper is translated. The argument errors you are
 an unknown option or command, a missing argument — are translated even though the argument parser
 raises them; a rarer one it phrases in a way monodocs cannot rebuild keeps the parser's wording
 rather than being paraphrased into something less precise.
+
+## `init`
+
+Writes a configuration and a first page to start from. It is the one subcommand with no input argument and no config option: it creates what the others read.
+
+```bash
+monodocs init
+```
+
+| Writes                | Contents                                                                                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `monodocs.config.yml` | A short commented starting point — `title`, `lang`, `input`, `output`. Every other key keeps its default; the rest of them are in [Configuration](/docs/configuration). |
+| `docs/index.md`       | A first page, at the path the default `input` already points at.                                                                                       |
+
+What it writes builds unedited, so the first build needs no options either:
+
+```bash
+monodocs init
+monodocs build      # -> dist/docs.html
+```
+
+**It never overwrites.** When either file is already there it writes *neither*, names everything it found, and exits with code `1`, so running it in a directory that already holds work cannot cost you any of it. An existing `docs/` directory is not in its way — the page is added beside what is there.
+
+The scaffold follows the [message language](#message-language) throughout: its comments, the text of the first page, and the `lang` it sets. `monodocs --lang ja init` therefore writes a Japanese first page under `lang: "ja"`, rather than Japanese text in a document that declares English. The two settings are otherwise independent, and the generated file says so where `lang` sits; documenting in another language means changing that one line.
 
 ## `build`
 

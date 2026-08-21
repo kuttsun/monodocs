@@ -36,6 +36,7 @@ under the `next` tag (`npm install -g monodocs@next`).
 ## Usage
 
 ```bash
+monodocs init
 monodocs build ./docs -o ./dist/docs.html
 monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs build ./docs --format both -o ./dist/

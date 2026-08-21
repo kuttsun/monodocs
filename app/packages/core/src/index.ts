@@ -7,6 +7,7 @@ export {
   type BuildInternals,
 } from "./build.js";
 export {
+  DEFAULT_CONFIG_FILE,
   DEFAULT_EXCLUDE,
   loadConfig,
   parseSize,
@@ -22,6 +23,7 @@ export {
   type PdfMargin,
   type SidebarMode,
 } from "./config.js";
+export { initSite, type InitResult } from "./init.js";
 export { readSourceFile, scanSourceFiles, type ScanOptions } from "./scan.js";
 export { detectFormat, FORMAT_EXTENSIONS } from "./sources/detectFormat.js";
 export { toPageId, toRoute } from "./route.js";

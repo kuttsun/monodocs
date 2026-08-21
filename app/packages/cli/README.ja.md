@@ -28,6 +28,7 @@ tag なしの `monodocs` が安定版です。prerelease は `next` tag で公�
 ## 使い方
 
 ```bash
+monodocs init
 monodocs build ./docs -o ./dist/docs.html
 monodocs build ./docs --format pdf -o ./dist/docs.pdf
 monodocs build ./docs --format both -o ./dist/
