@@ -83,8 +83,8 @@ function codeMap(font) {
   return map;
 }
 
-/** The digit runs a page draws, in the order they are drawn. */
-function pageDigits(page) {
+/** The text a page draws, in the order it is drawn. */
+function pageText(page) {
   const fonts = new Map();
   const resources = page.node.Resources()?.get(PDFName.of("Font"));
   if (resources instanceof PDFDict) {
@@ -120,25 +120,35 @@ function pageDigits(page) {
     // and `2`. What keeps two different numbers apart is the text between them — the band's own
     // `/` — which is why the fixture has to be free of the document's own digits.
   }
-  return text.match(/\d+/g) ?? [];
+  return text;
 }
+
+const digitsIn = (text) => text.match(/\d+/g) ?? [];
 
 const pages = doc.getPages();
 const total = pages.length;
 const failures = [];
 
+// Fewer than three pages would not tell a page number from a total that happens to match it, and
+// both modes are pointed at the same multi-page fixture.
+if (total < 3) failures.push(`expected a document of at least 3 pages, got ${total}`);
+
 if (expected === "none") {
   pages.forEach((page, index) => {
-    const digits = pageDigits(page);
+    const text = pageText(page);
+    const digits = digitsIn(text);
     if (digits.length > 0) {
       failures.push(`page ${index + 1} draws digits ${JSON.stringify(digits)}, expected none`);
     }
+    // Absence of digits is what a blank page looks like too. A build that lost its content
+    // entirely would otherwise pass this mode for exactly the wrong reason.
+    if (!/[A-Za-z]/.test(text)) {
+      failures.push(`page ${index + 1} draws no text at all, so it proves nothing about the band`);
+    }
   });
 } else {
-  // Fewer than three pages would not tell a page number from a total that happens to match it.
-  if (total < 3) failures.push(`expected a document of at least 3 pages, got ${total}`);
   pages.forEach((page, index) => {
-    const digits = pageDigits(page);
+    const digits = digitsIn(pageText(page));
     const want = [String(index + 1), String(total)];
     if (digits.join(" ") !== want.join(" ")) {
       failures.push(

@@ -64,7 +64,14 @@ jobs:
         run: |
           version="$(monodocs --version | tr -d '\r')"
           echo "verifying monodocs $version"
-          supports="$(node -e "const m=/^(\d+)\.(\d+)/.exec(process.argv[1]); process.stdout.write(m && (Number(m[1]) > 0 || Number(m[2]) >= 10) ? 'true' : 'false');" "$version")"
+          # A version this cannot read fails the step rather than answering "false": that answer
+          # would skip every check below and still report a green verification run.
+          supports="$(node -e "
+            const raw = process.argv[1].trim().replace(/^v/, '');
+            const m = /^(\d+)\.(\d+)\.(\d+)/.exec(raw);
+            if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
+            process.stdout.write(Number(m[1]) > 0 || Number(m[2]) >= 10 ? 'true' : 'false');
+          " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$supports" >> "$GITHUB_ENV"
 
