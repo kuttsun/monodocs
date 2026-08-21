@@ -65,6 +65,12 @@ export interface PageLike {
     fn: string,
     options?: { timeout?: number; polling?: string | number },
   ): Promise<unknown>;
+  /**
+   * メディアタイプのエミュレーション。フォント検査（{@link file://./fontCheck.ts}）が
+   * 「紙に載るもの」だけを測るために print へ切り替える。任意扱いにしてあるのは、
+   * テストが渡す偽ページに実装を強いないため。
+   */
+  emulateMediaType?(type: string): Promise<void>;
   pdf(options: Record<string, unknown>): Promise<Uint8Array>;
 }
 export interface BrowserLike {

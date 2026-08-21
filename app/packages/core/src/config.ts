@@ -11,6 +11,7 @@ import {
   type Labels,
 } from "./labels.js";
 import { t } from "./messages.js";
+import { FONT_CHECK_MODES, type FontCheckMode } from "./pipeline/fontCheck.js";
 import { DEFAULT_PDF_FOOTER, EMPTY_PDF_BAND, resolveBand } from "./pipeline/pdfBands.js";
 import type {
   BuildOptions,
@@ -237,6 +238,12 @@ function buildConfigFileSchema() {
         .min(1)
         .refine(isValidLanguageTag, { message: t("config.invalidLanguageTag") })
         .optional(),
+      /**
+       * ビルドを走らせているマシンに、文書が必要とするフォントが無いときの挙動
+       * （warn 既定 / error / off）。PDF 出力と mermaid pre-render の両方を覆うため
+       * `pdf.fontCheck` ではなくトップレベルに置く（24.3.3）。
+       */
+      fontCheck: z.enum(FONT_CHECK_MODES).optional(),
       input: z.string().optional(),
       output: z
         .object({
@@ -458,6 +465,8 @@ export type ResolvedConfig = {
   lang: string;
   /** `lang` が選んだ表の上に重ねる UI ラベルの差し替え。 */
   labelOverrides: Partial<Labels>;
+  /** 必要なフォントがビルド環境に無いときの挙動（既定 warn）。 */
+  fontCheck: FontCheckMode;
   inputDir: string;
   outputFile: string;
   format: OutputFormat;
@@ -761,6 +770,9 @@ export async function loadConfig(
     title: fileConfig.title ?? DEFAULT_TITLE,
     lang: fileConfig.lang ?? DEFAULT_LANG,
     labelOverrides: fileConfig.html?.labels ?? {},
+    // 既定は warn。検査は Chromium のフォールバック連鎖に対するヒューリスティックなので、
+    // 誤検出が既定でビルドを止められる形にはしない。
+    fontCheck: fileConfig.fontCheck ?? "warn",
     inputDir:
       options.inputDir ??
       resolveConfigRelativePath(configBaseDir, fileConfig.input ?? DEFAULT_INPUT),

@@ -54,6 +54,10 @@ title: Documentation
 # labels with a warning. This is not the language of the CLI's own messages.
 lang: en
 
+# What to do when the machine running the build lacks a font the document needs.
+# Covers PDF output and mermaid pre-render alike, which is why it is top level.
+fontCheck: warn # warn | error | off
+
 # Input directory (overridden by the CLI input argument)
 input: ./docs
 
@@ -139,6 +143,7 @@ pdf:
 | -------- | ------ | ----------------- | ---------------------------------------------------------------------------------------------- |
 | `title`  | string | `Documentation`   | Title shown in the output HTML (`<title>` and header).                                          |
 | `lang`   | string | `en`              | Language of the generated document. Fills `<html lang>` and selects the UI label table. See below. |
+| `fontCheck` | `warn` `error` `off` | `warn` | What to do when the build machine lacks a font the document needs. See below. |
 | `input`  | string | `./docs`          | Input path to scan: a directory, or a single source file. The CLI input argument overrides this. Relative to the config file. |
 
 #### `lang` (document language and UI labels) {#lang}
@@ -165,6 +170,63 @@ supply the wording.
 `lang` describes the document. It is deliberately not the language of the CLI's own messages: a
 document is often written in one language by someone working in a terminal that reports another, and
 a build log should not change language because the document did.
+
+#### `fontCheck` (missing fonts) {#font-check}
+
+An artifact is composed once, on the machine that runs the build, with the fonts that machine
+happens to have — and a character with no font becomes tofu (□ / ☒) permanently, in every copy that
+is then handed out. Japanese text needs a CJK font and emoji need an emoji font, and a CI runner
+cannot be assumed to carry either.
+
+```yaml
+fontCheck: warn # warn (default) | error | off
+```
+
+`warn` names the characters at risk and keeps building. `error` exits non-zero, for a pipeline that
+would rather stop than publish tofu, and no PDF is written. With `--format both` the HTML is written
+before the PDF is printed, so `error` leaves that HTML in place, and a PDF from an earlier build
+where it is — clean the output directory if a pipeline reads it. `off` does not measure at all.
+
+The check runs where the fonts are actually decided:
+
+- **PDF output**, in the browser that is already open to print it, so it costs no extra startup.
+- **`mermaid.mode: pre-render`**, which measures and positions diagram text with the build machine's
+  fonts and bakes the result into the SVG — a missing font is baked in there too, in the HTML as
+  much as in the PDF. That is why this key is top level rather than under `pdf`.
+
+Plain HTML output is not measured, and needs no measuring: it is drawn with the reader's fonts.
+
+What it reports is the characters themselves, with an example of a font that covers them:
+
+```text
+warning: No font on the machine running this build draws 2 character(s) this document uses, so they
+come out as tofu (□ / ☒) in the PDF — permanently, in every copy of it. At risk: 日 (U+65E5, e.g.
+Noto Sans CJK); ✅ (U+2705, e.g. Noto Color Emoji). Install a font that covers them …
+```
+
+The example is a **font face, not a package**: what supplies a face differs across Debian, Windows,
+and every other platform, and naming the wrong package is worse than naming none. On Debian and
+Ubuntu the usual answer is `fonts-noto-cjk` and `fonts-noto-color-emoji` — the [CI guide](/docs/ci)
+installs both.
+
+What it does and does not see:
+
+- **Only what will be drawn is measured.** The sidebar, the table of contents, and the search
+  results are hidden when printing, so a character that appears only there is not reported. What
+  counts as hidden is `display: none`, `content-visibility: hidden`, and `visibility: hidden`.
+- **The unit is the grapheme cluster**, together with the font of the element it appears in, so a
+  variation sequence or an emoji ZWJ sequence is judged as the unit it is drawn as, not as separate
+  codepoints. A long list is cut short with a count of the rest rather than silently truncated.
+- **It is a heuristic** over the browser's font fallback: each cluster is compared against a
+  private-use codepoint no font is expected to draw, and a hit is confirmed by rasterising it. That
+  is why `warn` is the default — a false positive must not be able to break a build that would
+  otherwise have been fine. Choosing `error` accepts that one stops CI too.
+- **It checks its own reference**, against a second private-use codepoint and a noncharacter. If
+  this machine turns out to draw something that should have no glyph, the check says so and reports
+  nothing else, rather than producing findings it cannot stand behind. If it runs out of patience
+  before the end of a very large document, it says that too rather than reporting a clean bill.
+- **The default page-number footer is measured too.** A replacement `pdf.header` / `pdf.footer`
+  fragment is not: it is arbitrary HTML that brings a font of its own.
 
 ### `output`
 
@@ -302,7 +364,7 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | Interactivity (`click`) | Works                                    | Disabled (static SVG)                          |
 | Print / unvisited pages | May be missing                           | Always rendered                                |
 
-> **Fonts caveat**: `pre-render` measures and positions text using the fonts of **the machine running the build**, then bakes the result into the SVG. Diagrams with non-Latin labels (e.g. Japanese) render as boxes or wrap incorrectly if the build environment lacks the needed font (e.g. Noto CJK). `client` uses the reader's fonts, so it is not affected. Note that when installed via npm, what matters is **your build environment's fonts** — monodocs cannot supply them.
+> **Fonts caveat**: `pre-render` measures and positions text using the fonts of **the machine running the build**, then bakes the result into the SVG. Diagrams with non-Latin labels (e.g. Japanese) render as boxes or wrap incorrectly if the build environment lacks the needed font (e.g. Noto CJK). `client` uses the reader's fonts, so it is not affected. Note that when installed via npm, what matters is **your build environment's fonts** — monodocs cannot supply them. [`fontCheck`](#font-check) warns when a diagram needs a font this machine does not have.
 
 > **Default is `client`**: `pre-render` needs Chromium at build time and the build fails if it is missing (environment errors fail fast; only per-diagram syntax errors warn and fall back to source). To avoid forcing this dependency on everyone, the default is `client`. Point at a local Chromium with `PUPPETEER_EXECUTABLE_PATH` (bundled in the dev Docker image). `pre-render` is unavailable in the bundled CLI (single `.cjs` / single-executable), which ships without `node_modules`; use a package install instead.
 
