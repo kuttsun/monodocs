@@ -106,7 +106,7 @@ The SEA standalone binary is a future item whose start will be decided after the
 - The initial supported targets for the npm version are Linux x64 and Windows x64, and HTML, validate, watch, and serve will be verified with GitHub Actions before the beta publish. Linux arm64 and macOS arm64 will be considered for addition once an environment for continuous verification is available.
 - The SEA standalone binary is out of scope for v0.6 and will be reconsidered after the npm stable publish.
 - Chromium will not be auto-downloaded. `PUPPETEER_EXECUTABLE_PATH` takes top priority, and if unspecified, the standard Chromium / Google Chrome install locations are searched on Linux and Windows (on Windows, Chromium-based Microsoft Edge is also used as a fallback). macOS has no built-in candidates yet, so `PUPPETEER_EXECUTABLE_PATH` must be set there.
-- During the 0.x period, provide normal support for the latest minor, and address only critical vulnerabilities for past minors.
+- During the 0.x period, support only the version `latest` points at. A vulnerability found in an older version is answered by the upgrade that carries the fix, not by a backport ([SECURITY.md](../SECURITY.md)).
 - The canonical source of the changelog will be GitHub Releases, with important changes and known limitations recorded in the release notes.
 - The availability of `monodocs` on the npm registry will be finalized just before the GitHub migration and publishing work.
 
@@ -146,7 +146,7 @@ The SEA standalone binary is a future item whose start will be decided after the
       project is maintained by a single person, and there is no separate reporting channel to name in one
       (vulnerability reporting deliberately goes through GitHub private reporting only). Revisit if the number
       of contributors grows.
-- [x] Clearly state that no support scope or SLA is provided.
+- [x] Clearly state the support scope, and that no SLA is provided.
 - [x] Clearly state that contributions are provided under the MIT License.
 
 ### 6.2 Repository Operation
@@ -416,12 +416,14 @@ monodocs build ./docs -o ./dist/docs.html
 ### 11.1 Versioning
 
 - patch: Backward-compatible bug fixes.
-- minor: Backward-compatible feature additions.
-- major: Breaking changes.
+- minor: Feature additions. In 0.x a minor may also carry a breaking change, recorded in the release notes — 0.10 changed `<html lang>`, the printed page, and the treatment of unknown configuration keys.
+- major: Breaking changes. Reserved for 1.0 and the compatibility boundaries after it.
 - `next`: Pre-release.
 - `latest`: Stable version.
 
-During the 0.x period, treat the latest minor as the normal support target, and address only critical vulnerabilities for past minors.
+During the 0.x period the supported version is the single stable release `latest` points at. Fixes ship forward only, and an older version is answered by the upgrade that carries the fix rather than by a backport. The reasoning, and what is promised to a reporter on an older version, are in [SECURITY.md](../SECURITY.md).
+
+Forward-only, rather than the earlier promise to patch an older minor for a critical finding, because that promise was one this project cannot keep. A backport is not a commit on an old tag: it is a branch, a tag, a Release, an npm publish that must not disturb `latest`, two standalone binaries, `verify-published.yml` and `verify-release-binaries.yml`, and the manual pass on a Linux and a Windows host with no Node.js — a second full release, run by one maintainer during an incident. The same per-release cost settled Docker and the VS Code extension ([roadmap.md](roadmap.md) 8.3, v0.7), and a security promise deserves the harder test, not the softer one: an unkeepable promise is worse than a plain statement that upgrading is the remedy. What makes it acceptable here is that monodocs is a build-time CLI whose output is a static file, not a library compiled into someone's product, so the upgrade is a re-run of a build rather than a migration.
 
 ### 11.2 Security Handling
 
@@ -451,7 +453,7 @@ only a document.
       workflow file, or the environment breaks publishing silently.)
 - [x] Review the supported ranges of Node.js and Chromium. (Quarterly checklist, with the Node 22
       LTS end in April 2027 as the next forcing date.)
-- [x] Announce EOL versions. (Quarterly checklist, against the support policy in SECURITY.md.)
+- [x] Keep the dist-tags pointing where the support policy says. (Quarterly checklist. With one supported version there is no separate EOL announcement to make: publishing a stable release is what moves support onto it.)
 - [x] Review priority issues based on Issues and download status. (Quarterly checklist.)
 
 ## 12. Future: SEA Standalone Binary

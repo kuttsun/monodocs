@@ -95,11 +95,13 @@ PowerShell だけ入れさせる理由は無く、またプラットフォーム
 - [ ] **Node.js / Chromium のサポート範囲。** 下限は Node 22.12。Node 22 は 2027 年 4 月に LTS を
       終えるため、それまでに引き上げるかを決める。[ci.md](../../site/ja/docs/ci.md) に書いた Chromium の
       検出パスが、サポート対象プラットフォームの実際のインストール先と合っているかも確認する。
-- [ ] **dist-tag と EOL。** `latest` / `next` が意図した先を指し、`next` が `latest` より古くない
-      こと。安定版を公開すると `next` は直前の prerelease を指したまま残るため、これを移すことは
-      リリース手順の一部であり（[oss-npm-roadmap.md](oss-npm-roadmap.md) 10.1）、ここはその網である。
-      [SECURITY.md](../../SECURITY.ja.md) の方針でサポート外になった minor は、リリースノートで
-      その旨を告知済みであること。
+- [ ] **dist-tag。** `latest` / `next` が意図した先を指し、`next` が `latest` より古くないこと。
+      安定版を公開すると `next` は直前の prerelease を指したまま残るため、これを移すことはリリース
+      手順の一部であり（[oss-npm-roadmap.md](oss-npm-roadmap.md) 10.1）、ここはその網である。
+      `latest` は単なるポインタではない。[SECURITY.ja.md](../../SECURITY.ja.md) がサポート対象を
+      `latest` の指す版と定義しているので、`latest` が古いままならサポート表明が古いままになる。
+      EOL の告知を別に確認する項目は無い。サポート対象が 1 つなら、リリースそのものがサポートを
+      移す行為だからである。
 - [ ] **優先順位。** open な Issue と npm のダウンロード数を見て、ロードマップだけでなくそれらに
       次の作業を決めさせる。
 
@@ -113,4 +115,5 @@ PowerShell だけ入れさせる理由は無く、またプラットフォーム
 3. [SECURITY.md](../../SECURITY.ja.md) のとおり、Critical / High を他の作業より優先する。
 4. 修正版がまだ無い場合は、削除条件をコメントに書いた最小限の `overrides` を選び、上の四半期棚卸しの
    対象に加える。
-5. 修正は patch としてリリースする。公開済みバージョンを作り直さない。
+5. 修正は現行系列の新しい patch としてリリースする。公開済みバージョンを作り直さず、旧版へ
+   バックポートもしない（[SECURITY.ja.md](../../SECURITY.ja.md)）。

@@ -4,9 +4,13 @@
 
 ## Supported versions
 
-`monodocs` is in its 0.x series. The latest published minor version is the supported one: security fixes are released for it, and older minor versions receive fixes only for critical vulnerabilities. Support is provided on a best-effort basis, and there is no SLA for response or remediation times.
+`monodocs` is in its 0.x series, and the supported version is the single stable release that npm's `latest` dist-tag points at. Prereleases, including whatever `next` points at, are not supported.
 
-Changes to version support are announced in the release notes.
+A report is accepted and investigated whatever version it was found in, and the advisory records the full affected range. Fixes only ship forward: the fixed version is a new one on the current line, never a backport to an earlier one. If you are on an affected older version, upgrading to the stable release that carries the fix is the remedy. Support is provided on a best-effort basis, and there is no SLA for response or remediation times.
+
+A published npm package, Git tag, or GitHub Release asset is never rebuilt or replaced under the same version number. The one exception is a re-run that finishes a release whose asset upload failed part-way; assets that have been verified and announced are not replaced, and a correction is published as a new patch version instead.
+
+Changes to this policy are announced in the release notes. The support window is reconsidered before 1.0, which promises nothing about supporting more than one line.
 
 ## Reporting a vulnerability
 
@@ -30,9 +34,9 @@ This is what happens after a report arrives, so that reporters know what to expe
 
 1. **Triage.** The report is confirmed and rated. Critical and High findings take precedence over feature work; anything lower is scheduled with the normal release flow.
 2. **Private coordination.** Discussion stays in the GitHub Security Advisory draft for the report. Fixes are prepared without a public issue or a pull request that describes the vulnerability.
-3. **Fix and release.** The fix ships as a new version — a patch on the supported minor, and a separate patch on an older minor if the finding is critical enough to reach it. Already-published versions are never rebuilt or replaced.
+3. **Fix and release.** The fix ships as a new version on the current line. A finding that also reaches older versions is recorded in the advisory's affected range rather than backported to them, and already-published artifacts are not rebuilt or replaced ([Supported versions](#supported-versions)).
 4. **Disclosure.** Once the fixed version is on npm, the advisory is published with the affected range, the impact, and any workaround, and the release notes point at it. The reporter is credited unless they ask otherwise.
-5. **Deprecation.** If a published version cannot be made safe, it is deprecated on npm with a message pointing at the fixed version. Published versions are not unpublished, because that breaks installs that depend on them.
+5. **Deprecation.** Once the fixed version is published, an affected version that is genuinely dangerous to keep using is deprecated on npm with a message pointing at it. Deprecation changes the metadata npm serves, not the published artifact, so it sits inside the rule above rather than being an exception to it. Published versions are not unpublished, because that breaks installs that depend on them.
 
 Findings that reach the project through a dependency audit rather than a report are handled the same way from step 1, and the routine that surfaces them is described in [docs/maintenance.md](docs/maintenance.md).
 
