@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -199,8 +200,32 @@ const chromium =
     existsSync(p),
   );
 
-/** 開発イメージが描けない文字（ロードマップ 24.3.3 の計測と同じもの）。 */
-const OLD_PERSIAN = "\u{103A0}";
+/**
+ * どのマシンでも描けない文字。**未割り当て**のコードポイント（第 5 面は全体が未割り当て）を使う。
+ *
+ * 実在する用字系の文字は環境の条件になってしまう。最初は古ペルシア文字 U+103A0 を使っていたが、
+ * これは開発イメージには無く Windows には（Segoe UI Historic として）ある。CI の Linux ランナー
+ * には CJK フォントが無く、Windows ランナーには古ペルシア文字がある——つまりどちらの向きにも
+ * 環境が割れる。文字に glyph が割り当てられていなければ、その割れ方自体が起こらない。
+ */
+const UNASSIGNED = "\u{50000}";
+
+/**
+ * この機械が実際に描ける文字を使った検証は、そのフォントがある環境でだけ意味を持つ。
+ * fontconfig に訊く（検査そのものとは独立した尺度であることが要点。Windows には無いので
+ * その場合はスキップする）。
+ */
+function fontconfigCovers(codepoint: string): boolean {
+  try {
+    return (
+      execFileSync("fc-list", [`:charset=${codepoint}`, "family"], { encoding: "utf8" }).trim()
+        .length > 0
+    );
+  } catch {
+    return false;
+  }
+}
+const hasCjkAndEmoji = fontconfigCovers("65E5") && fontconfigCovers("2705");
 
 async function buildPdf(
   name: string,
@@ -247,35 +272,44 @@ function fontWarnings(result: { warnings: string[] } | Error): string[] {
 
 describe.skipIf(!chromium)("font check（実 Chromium）", () => {
   it("stays silent for a document this machine can draw", async () => {
-    // 開発イメージは fonts-liberation / fonts-noto-cjk / fonts-noto-color-emoji を持つ。
-    // ここが鳴るなら、それは誤検出そのもの。
-    const result = await buildPdf("real-ok", "# Home\n\nPlain text, 日本語, ✅ emoji.\n");
+    // ラテン文字はどの環境にもある。ここが鳴るなら、それは誤検出そのもの。
+    const result = await buildPdf("real-ok", "# Home\n\nPlain text, nothing exotic.\n");
     expect(fontWarnings(result)).toEqual([]);
     // この文書はほかに警告の出る要素を持たない。全体が空であることまで見ておくと、
     // 別種の警告が紛れ込んだときにここで気づける。
     expect((result as { warnings: string[] }).warnings).toEqual([]);
   }, 120_000);
 
-  it("warns, naming the character and a font that covers it", async () => {
-    const result = await buildPdf("real-missing", `# Home\n\nOld Persian: ${OLD_PERSIAN}\n`);
+  // 日本語と絵文字で黙ることは、そのフォントがある環境でしか主張できない。GitHub の Linux
+  // ランナーには CJK フォントが無く、そこで鳴るのは誤検出ではなく正しい検出である。
+  it.skipIf(!hasCjkAndEmoji)(
+    "stays silent for CJK and emoji where their fonts are installed",
+    async () => {
+      const result = await buildPdf("real-cjk", "# Home\n\n日本語のテキストと ✅ 絵文字。\n");
+      expect(fontWarnings(result)).toEqual([]);
+    },
+    120_000,
+  );
+
+  it("warns, naming the character and its codepoint", async () => {
+    const result = await buildPdf("real-missing", `# Home\n\nUnassigned: ${UNASSIGNED}\n`);
     const warning = fontWarnings(result)[0];
     expect(warning).toBeDefined();
-    expect(warning).toContain("U+103A0");
-    expect(warning).toContain("Noto Sans Old Persian");
+    expect(warning).toContain("U+50000");
   }, 120_000);
 
   it("fails the build for error, and says nothing for off", async () => {
     const failed = await buildPdf(
       "real-error",
-      `# Home\n\n${OLD_PERSIAN}\n`,
+      `# Home\n\n${UNASSIGNED}\n`,
       'fontCheck: "error"\n',
     );
     expect(failed).toBeInstanceOf(Error);
-    expect((failed as Error).message).toContain("U+103A0");
+    expect((failed as Error).message).toContain("U+50000");
     // 豆腐入りの PDF は書き出さない。
     expect(existsSync(join(dir, "real-error", "docs.pdf"))).toBe(false);
 
-    const off = await buildPdf("real-off", `# Home\n\n${OLD_PERSIAN}\n`, 'fontCheck: "off"\n');
+    const off = await buildPdf("real-off", `# Home\n\n${UNASSIGNED}\n`, 'fontCheck: "off"\n');
     expect(fontWarnings(off)).toEqual([]);
     expect(existsSync(join(dir, "real-off", "docs.pdf"))).toBe(true);
   }, 180_000);
@@ -288,7 +322,7 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     await writeFile(join(theme, "style.css"), "@media print { html { display: none } }\n");
     const result = await buildPdf(
       "real-roothidden",
-      `# Home\n\n${OLD_PERSIAN}\n`,
+      `# Home\n\n${UNASSIGNED}\n`,
       'html:\n  theme: "./my-theme"\n',
     );
     expect(fontWarnings(result)).toEqual([]);
@@ -299,7 +333,7 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     const result = await buildPdf(
       "real-chrome",
       "# Home\n\n## Section\n\nPlain text.\n",
-      `html:\n  labels:\n    tocTitle: "${OLD_PERSIAN}"\n    searchResults: "${OLD_PERSIAN}"\n`,
+      `html:\n  labels:\n    tocTitle: "${UNASSIGNED}"\n    searchResults: "${UNASSIGNED}"\n`,
     );
     expect(fontWarnings(result)).toEqual([]);
   }, 120_000);
@@ -310,7 +344,7 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     await mkdir(docs, { recursive: true });
     await writeFile(
       join(docs, "index.md"),
-      `# Diagram\n\n\`\`\`mermaid\ngraph TD\n  A["${OLD_PERSIAN}"] --> B[ok]\n\`\`\`\n`,
+      `# Diagram\n\n\`\`\`mermaid\ngraph TD\n  A["${UNASSIGNED}"] --> B[ok]\n\`\`\`\n`,
     );
     const configFile = join(root, "monodocs.config.yml");
     await writeFile(configFile, "mermaid:\n  mode: pre-render\n");
@@ -322,6 +356,6 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     const warning = result.warnings.find((w) => /tofu/.test(w));
     expect(warning).toBeDefined();
     expect(warning).toMatch(/pre-render/);
-    expect(warning).toContain("U+103A0");
+    expect(warning).toContain("U+50000");
   }, 180_000);
 });
