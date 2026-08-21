@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-08-21
+最終更新: 2026-08-22
 
 ## 対応状況
 
@@ -22,7 +22,7 @@
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
 メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
-[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9 は
+[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9・v0.10 は
 いずれもリリース済みである。
 
 ## 完了条件の達成状況
@@ -214,7 +214,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] `next` tag で `0.10.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する
 - [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証し、加えて Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する。バイナリ配布が主張しているのはまさにその環境であり、このリポジトリのどの CI ジョブも用意できないものである（[maintenance.md](maintenance.md)）。16 項目すべてが PASS: `.sha256` による資産の検証、CLI の表面、`validate`、`-o` を省いたビルドが `dist/docs.html` を書くこと、外部参照を持たない HTML、空白を含むパスからのビルド、PDF と Mermaid の pre-render が npm 版への切り替えを案内して失敗すること、NOTICES、そして長時間動作する `serve` / `watch`（SSE によるライブリロードの配信と、サブディレクトリの編集からの再ビルドを含む）
 - [ ] Windows x64 のリリースバイナリを、Node.js の無いホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) により手動で検証する。あわせて両スクリプトが人に委ねている確認を終える: 生成された HTML のブラウザ確認（サイドバー・検索・ダークモード・狭い幅のドロワー）、`serve --open`、Windows の Mark of the Web と SmartScreen
-- [ ] stable `0.10.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる
+- [x] stable `0.10.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる。`v0.10.0` タグから CI で公開して `latest` dist-tag が指し、`verify-published.yml` と `verify-release-binaries.yml` により Linux x64 / Windows x64 で検証済み。サイトの CI ガイドは英日とも `monodocs@0.10.0` を固定する
 
 ## 対応記法
 
