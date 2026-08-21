@@ -57,6 +57,17 @@ jobs:
           monodocs --version
           monodocs --help
 
+      # The version decides which surface exists to be verified: this workflow takes any dist-tag or
+      # version as input, and `init`, the message language, and PDF page numbers all arrive in 0.10.
+      # Verifying 0.9 must stay possible, so those steps ask rather than assume.
+      - name: Record the published version
+        run: |
+          version="$(monodocs --version | tr -d '\r')"
+          echo "verifying monodocs $version"
+          supports="$(node -e "const m=/^(\d+)\.(\d+)/.exec(process.argv[1]); process.stdout.write(m && (Number(m[1]) > 0 || Number(m[2]) >= 10) ? 'true' : 'false');" "$version")"
+          echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V010=$supports" >> "$GITHUB_ENV"
+
       - name: Validate
         run: monodocs validate examples/en
 
@@ -100,3 +111,102 @@ jobs:
           node -e "require('node:fs').writeFileSync('pre-render.yml','mermaid:\n  mode: pre-render\n');"
           monodocs build examples/en -c pre-render.yml -o out/pre-render.html
           node -e "const h=require('node:fs').readFileSync('out/pre-render.html','utf8'); if(!h.includes('<figure class=\"mermaid\"><svg')) throw new Error('Mermaid diagram was not pre-rendered to inline SVG');"
+
+      # v0.10. The messages are asserted through files rather than through the shell, so the check
+      # does not depend on the console code page of a Windows runner, and the Japanese is written as
+      # escapes so that nothing non-ASCII has to survive being passed as a command-line argument.
+      - name: Message language
+        if: env.SUPPORTS_V010 == 'true'
+        run: |
+          monodocs --help > help-default.txt 2>&1
+          monodocs --lang ja --help > help-flag.txt 2>&1
+          MONODOCS_LANG=ja monodocs --help > help-env.txt 2>&1
+          MONODOCS_LANG=ja monodocs --lang en --help > help-precedence.txt 2>&1
+          if monodocs --lang fr --help > help-unsupported.txt 2>&1; then
+            echo "--lang fr should have been rejected"; cat help-unsupported.txt; exit 1
+          fi
+          node -e "
+            const fs = require('node:fs');
+            const read = (f) => fs.readFileSync(f, 'utf8');
+            const ja = '\u4f7f\u3044\u65b9:'; // 使い方:
+            const fail = (m) => { throw new Error(m); };
+            if (!read('help-default.txt').includes('Usage:')) fail('default help is not English');
+            if (read('help-default.txt').includes(ja)) fail('default help carries Japanese');
+            if (!read('help-flag.txt').includes(ja)) fail('--lang ja did not translate the help');
+            if (!read('help-env.txt').includes(ja)) fail('MONODOCS_LANG=ja did not translate the help');
+            if (!read('help-precedence.txt').includes('Usage:')) fail('--lang did not win over MONODOCS_LANG');
+            const bad = read('help-unsupported.txt');
+            if (!bad.includes('en, ja')) fail('an unsupported --lang did not name the supported ones: ' + bad);
+          "
+
+      # v0.10. What `init` writes has to build unedited — that is the whole claim — so the scaffold
+      # is built rather than merely inspected, and the second run has to refuse rather than overwrite.
+      - name: Init scaffold
+        if: env.SUPPORTS_V010 == 'true'
+        run: |
+          mkdir -p scaffold
+          cd scaffold
+          monodocs init
+          monodocs build
+          node -e "
+            const fs = require('node:fs');
+            for (const f of ['monodocs.config.yml', 'docs/index.md', 'dist/docs.html']) {
+              if (!fs.existsSync(f)) throw new Error('init scaffold did not produce ' + f);
+            }
+            const html = fs.readFileSync('dist/docs.html', 'utf8');
+            if (!html.includes('data-route')) throw new Error('the scaffold built no pages');
+          "
+          if monodocs init > second-init.txt 2>&1; then
+            echo "a second init should have refused"; exit 1
+          fi
+          node -e "
+            const found = require('node:fs').readFileSync('second-init.txt', 'utf8');
+            if (!found.includes('monodocs.config.yml')) throw new Error('init did not name what it found: ' + found);
+          "
+          cd ..
+          mkdir -p scaffold-ja
+          cd scaffold-ja
+          monodocs --lang ja init
+          node -e "
+            const config = require('node:fs').readFileSync('monodocs.config.yml', 'utf8');
+            if (!config.includes('lang: \"ja\"')) throw new Error('the Japanese scaffold does not declare lang: ja');
+          "
+
+      # v0.10. A PDF that exists is not a PDF with page numbers on it, which is all this workflow
+      # used to establish. The fixture carries no digits of its own — branding included, since it
+      # prints the CLI version — so every digit read back off a page came from the band.
+      - name: PDF page numbers
+        if: env.SUPPORTS_V010 == 'true'
+        run: |
+          npm install --no-save --no-package-lock pdf-lib
+          node -e "
+            const fs = require('node:fs');
+            fs.mkdirSync('pagenum/docs', { recursive: true });
+            const filler = Array.from({ length: 120 }, () => 'Filler paragraph of text, no numerals here.').join('\n\n');
+            fs.writeFileSync('pagenum/docs/index.md', '# Home\n\n' + filler + '\n');
+            fs.writeFileSync('pagenum/docs/guide.md', '# Guide\n\n' + filler + '\n');
+            fs.writeFileSync('pagenum/on.yml', 'html:\n  branding: false\n');
+            fs.writeFileSync('pagenum/off.yml', 'html:\n  branding: false\npdf:\n  footer: false\n');
+          "
+          monodocs build pagenum/docs -c pagenum/on.yml --format pdf -o pagenum/numbered.pdf
+          monodocs build pagenum/docs -c pagenum/off.yml --format pdf -o pagenum/plain.pdf
+          node scripts/assert-pdf-page-numbers.mjs pagenum/numbered.pdf --expect numbered
+          node scripts/assert-pdf-page-numbers.mjs pagenum/plain.pdf --expect none
+
+      # v0.10. The build now measures the fonts it needs against the ones this machine has. An
+      # unassigned codepoint is used rather than a real script: no font anywhere can cover it, so
+      # the assertion does not depend on what the runner happens to have installed.
+      - name: Font check
+        if: env.SUPPORTS_V010 == 'true'
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            fs.mkdirSync('fontcheck/docs', { recursive: true });
+            fs.writeFileSync('fontcheck/docs/index.md', '# Home\n\nUnassigned: \u{50000}\n');
+          "
+          monodocs build fontcheck/docs --format pdf -o fontcheck/out.pdf > fontcheck/log.txt 2>&1
+          cat fontcheck/log.txt
+          node -e "
+            const log = require('node:fs').readFileSync('fontcheck/log.txt', 'utf8');
+            if (!log.includes('U+50000')) throw new Error('the font check did not report the undrawable character');
+          "

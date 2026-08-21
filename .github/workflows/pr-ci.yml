@@ -137,6 +137,14 @@ jobs:
           done
           shellcheck scripts/*.sh
 
+      # 検証スクリプトに Node 製のものが増えたので、シェル・PowerShell と同じく構文だけは見る
+      # （実行して確かめる側は verify-published.yml が担う）。
+      - name: Check Node scripts
+        run: |
+          for script in scripts/*.mjs; do
+            node --check "$script"
+          done
+
       # Write-Host はこのスクリプトの目的そのもの（端末への進捗表示）であり、ShouldProcess と
       # 単数形の名詞は公開コマンドレット向けの規約なので、この 3 つだけ除外する。
       - name: Check PowerShell scripts
