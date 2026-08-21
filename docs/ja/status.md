@@ -211,8 +211,9 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **リリース**
 
-- [ ] `next` tag で `0.10.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する
-- [ ] リリースバイナリを `verify-release-binaries.yml` と `scripts/verify-windows-binary.ps1` で検証する
+- [x] `next` tag で `0.10.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する
+- [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証し、加えて Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する。バイナリ配布が主張しているのはまさにその環境であり、このリポジトリのどの CI ジョブも用意できないものである（[maintenance.md](maintenance.md)）。16 項目すべてが PASS: `.sha256` による資産の検証、CLI の表面、`validate`、`-o` を省いたビルドが `dist/docs.html` を書くこと、外部参照を持たない HTML、空白を含むパスからのビルド、PDF と Mermaid の pre-render が npm 版への切り替えを案内して失敗すること、NOTICES、そして長時間動作する `serve` / `watch`（SSE によるライブリロードの配信と、サブディレクトリの編集からの再ビルドを含む）
+- [ ] Windows x64 のリリースバイナリを、Node.js の無いホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) により手動で検証する。あわせて両スクリプトが人に委ねている確認を終える: 生成された HTML のブラウザ確認（サイドバー・検索・ダークモード・狭い幅のドロワー）、`serve --open`、Windows の Mark of the Web と SmartScreen
 - [ ] stable `0.10.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる
 
 ## 対応記法

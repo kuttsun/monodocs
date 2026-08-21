@@ -211,8 +211,9 @@ and both it and v0.9 are released.
 
 **Release**
 
-- [ ] Publish `0.10.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`
-- [ ] Verify the release binaries through `verify-release-binaries.yml` and `scripts/verify-windows-binary.ps1`
+- [x] Publish `0.10.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`
+- [x] Verify the release binaries through `verify-release-binaries.yml` on both platforms, and run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js — the environment a binary release makes its claim about, and the one no CI job in this repository provides ([maintenance.md](maintenance.md)). Sixteen checks pass: the asset gated on its `.sha256`, the CLI surface, `validate`, a build with `-o` omitted writing `dist/docs.html`, self-contained HTML, a build from a path containing spaces, PDF and Mermaid pre-render failing with the guidance to switch to the npm build, the NOTICES file, and the long-running `serve` / `watch` — live reload broadcast over SSE and a rebuild from an edit in a subdirectory included
+- [ ] Verify the Windows x64 release binary by hand with [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) on a host without Node.js, and finish the checks both scripts leave to a person: the browser pass over the generated HTML (sidebar, search, dark mode, the narrow-width drawer), `serve --open`, and Mark of the Web and SmartScreen on Windows
 - [ ] Publish and verify the stable `0.10.0` release, and pin the CI guide on the documentation site to it
 
 ## Supported Syntax
