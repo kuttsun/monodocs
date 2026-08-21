@@ -371,6 +371,48 @@ summary:focus-visible,
   line-height: 1.9;
 }
 
+/* The four print densities, side by side. Each thumbnail is the first page of the
+   PDF it links to, so the tiles are given the proportions and the edge of a sheet
+   rather than the framing of a screenshot. The links are relative on purpose: the
+   PDFs live in public/ and raw HTML gets no base prepended, so `../density/x.pdf`
+   is what keeps them found under the project-pages subpath. */
+/* Two across rather than four: in the width of a documentation column, four sheets
+   are 150px wide each and the leading — the thing being compared — stops being
+   visible at all. Two also pairs them the way the ladder does, the presets that
+   share a type size above the ones that do not. */
+.density-samples {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin: 24px 0;
+}
+
+.density-samples figure {
+  margin: 0;
+}
+
+.density-samples img {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--md-rule);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(22 25 28 / 12%);
+}
+
+.density-samples figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vp-c-text-2);
+}
+
+@media (max-width: 520px) {
+  .density-samples {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Sidebar ───────────────────────────────────────────────────────────── */
 
 /* The `.has-active` variant has to be listed as well: the default theme styles

@@ -809,7 +809,7 @@ pdf:
     bottom: "20mm"
     left: "15mm"
   printBackground: true
-  # How tightly the printed page is set (v0.10): normal (default) / compact / tight, or an object
+  # How tightly the printed page is set (v0.10): relaxed / normal (default) / compact / tight, or an object
   # taking base plus any of fontSize / lineHeight / headingSpacing / tableCellPadding (24.6).
   density: "normal"
   # Page numbers, on by default (v0.10). false removes the band; an HTML fragment replaces it, using
@@ -1971,23 +1971,37 @@ pdf:
     lineHeight: 1.5
 ```
 
-Three presets ship. The values are the ones that decide a page count, moved together, because moving
+Four presets ship. The values are the ones that decide a page count, moved together, because moving
 one alone rarely reads well — smaller type against unchanged leading looks lost on the line:
 
 | | fontSize | lineHeight | headingSpacing | tableCellPadding |
 | --- | --- | --- | --- | --- |
-| `normal` (default) | 16px | 1.7 | 1.8em | 0.5rem 0.8rem |
-| `compact` | 13.5px | 1.55 | 1.15em | 0.3rem 0.5rem |
-| `tight` | 11.5px | 1.45 | 0.9em | 0.2rem 0.35rem |
+| `relaxed` | 16px | 1.7 | 1.8em | 0.5rem 0.8rem |
+| `normal` (default) | 16px | 1.45 | 0.9em | 0.35rem 0.6rem |
+| `compact` | 14px | 1.35 | 0.8em | 0.3rem 0.5rem |
+| `tight` | 12px | 1.3 | 0.6em | 0.2rem 0.35rem |
 
-On a Japanese business document of headings, paragraphs, bullets, and a 24-row table, those come out
-as five, three, and two sheets.
+The documentation set in `examples/ja` comes out as 56, 49, 44, and 40 sheets across the four.
 
-**`normal` emits nothing.** It is not a set of values to write out again but a record of what the
-stylesheet already does, so a document that does not ask for a density prints byte-identically to
-before — including inheriting the reader's own base font size when they print the HTML from a
-browser. Pinning 16px to mean "normal" would take that away for no gain. The same rule applies
-inside the object form: only what differs from `normal` is written.
+**The default is set for paper, and the ladder runs both ways.** The first version of this shipped
+three presets whose top step was the screen setting, which made the ladder one-directional and left
+the default looser than a printed page has any reason to be. It was also buying sheets in the wrong
+currency. The screen values and the default now set the same 16px body: everything between them is
+leading, heading spacing, and cell padding, and that alone is 56 sheets down to 49 — as many as the
+old `compact` bought by dropping the type to 13.5px. Type size only starts moving below the default,
+because it is the lever with a second effect: the measure is whatever `pdf.margin` leaves, so smaller
+type is a longer line — about 42 Japanese characters at 16px in the default A4 margins, and 56 at
+12px. Someone who wants tighter type without the longer line widens the margin in the same change,
+which is a decision that belongs to them rather than to a preset.
+
+**`relaxed` is the screen setting under a name**, for a document read on a screen and printed only
+now and then. Naming it is what lets the default move: before, "the same as on screen" and "the
+default" were one table, and neither could change without the other.
+
+**Only what differs from the screen is emitted**, which is a separate constant (`PDF_DENSITY_SCREEN`)
+rather than the default preset. Asking for `relaxed` therefore writes no print rules at all, and the
+default writes no font size — the theme sets none on the root, so the HTML still prints at whatever
+base size the reader's browser uses. The same rule applies inside the object form.
 
 **Why a preset rather than `pdf.scale`.** Puppeteer's `page.pdf()` already takes a `scale`, and
 passing it through would have been one field on an existing call. But scale shrinks the finished
@@ -2016,6 +2030,14 @@ The values reach the generated stylesheet, so they are validated as plainly a nu
 The rules are `@media print`, which is what makes one artifact serve both readings: the same HTML
 stays as it was on screen and is set tighter on paper. `--format pdf` goes through the print
 stylesheet, so it gets the same treatment, and so does a reader printing the HTML from a browser.
+
+**The documentation site shows the four rather than describing them.** A page count is the claim, and
+a table of numbers is a poor way to make it. `site/samples/density/` holds one short document per
+language, and `site-build.sh` builds each of them four times, changing nothing but the density, into
+`site/public/density/`; the first page of every PDF becomes its own thumbnail through `pdftoppm`, so
+what the site shows is the artifact rather than a picture of a print preview. The configuration
+reference links the four sheets side by side. The sample document's own text says what to look at,
+which is also how it stays honest: it is set at the density it is describing.
 
 ---
 
@@ -2605,7 +2627,7 @@ Implementation scope:
   (12.2), an exclude list that adds to the built-in one instead of replacing it (12.3), a single file
   as an input (25.2), and printed tables whose columns follow their contents (24.3.1)
 - Give the author a way to set the printed page more or less tightly, which `pdf.margin` never
-  reached (24.6)
+  reached, with a default set for paper rather than for a screen (24.6)
 - Update the documentation site — commands, configuration, and the CI guide — and their Japanese
   mirrors, since every item above changes something the site documents
 
@@ -2652,10 +2674,12 @@ checklist, and the two are kept in step):
   and resolving links and images from the directory that holds it. A path that is not a source
   monodocs can read says so and names the extensions that work, rather than surfacing an `ENOTDIR`
 - A printed table gives each column the width its contents need and still fits inside the page
-- `pdf.density` puts the same document on fewer sheets at each step of `normal` / `compact` /
-  `tight`, and the object form starts from a named preset so that adjusting one value does not mean
-  copying the rest. The default emits no rules at all, so a document that does not ask for a density
-  prints exactly as it did before
+- `pdf.density` puts the same document on fewer sheets at each step of `relaxed` / `normal` /
+  `compact` / `tight`, and the object form starts from a named preset so that adjusting one value
+  does not mean copying the rest. The default is set for paper rather than for a screen and saves
+  sheets without changing the type size; `relaxed` is the screen setting under a name and emits no
+  rules at all. The documentation site shows the four built from one source, as PDFs with their own
+  first pages as thumbnails
 
 ---
 

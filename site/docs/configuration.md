@@ -128,7 +128,7 @@ pdf:
   pageSize: A4
   margin: { top: 20mm, right: 15mm, bottom: 20mm, left: 15mm }
   printBackground: true
-  density: normal # normal | compact | tight, or an object (see below)
+  density: normal # relaxed | normal | compact | tight, or an object (see below)
   bookmarks: true # folder -> page outline, same structure as the HTML sidebar
   header: false # false, or an HTML fragment using Chromium's classes
   footer: '<div style="width:100%;margin:0 15pt;font-family:sans-serif;font-size:8pt;color:#666;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>'
@@ -501,7 +501,7 @@ browser is the same act of putting the document on paper.
 | `pdf.pageSize`        | string            | `A4`      | Paper size, passed to Chromium as its `format` (`A4`, `Letter`, `A3`, …). |
 | `pdf.margin`          | map               | `20mm` / `15mm` / `20mm` / `15mm` | Page margins as CSS lengths, per side (`top`, `right`, `bottom`, `left`). An omitted side keeps its default. |
 | `pdf.printBackground` | boolean           | `true`    | Print background colours and images. |
-| `pdf.density`         | string / map      | `normal`  | How tightly the page is set: `normal`, `compact`, `tight`, or an object. See below. |
+| `pdf.density`         | string / map      | `normal`  | How tightly the page is set: `relaxed`, `normal`, `compact`, `tight`, or an object. See below. |
 | `pdf.bookmarks`       | boolean           | `true`    | Add a bookmark outline with the same folder → page structure as the HTML sidebar. |
 | `pdf.header`          | `false` / string  | `false`   | The band at the top of every page. See below. |
 | `pdf.footer`          | `false` / string  | page number | The band at the bottom of every page. See below. |
@@ -519,12 +519,25 @@ pdf:
 
 | | `fontSize` | `lineHeight` | `headingSpacing` | `tableCellPadding` |
 | --- | --- | --- | --- | --- |
-| `normal` (default) | `16px` | `1.7` | `1.8em` | `0.5rem 0.8rem` |
-| `compact` | `13.5px` | `1.55` | `1.15em` | `0.3rem 0.5rem` |
-| `tight` | `11.5px` | `1.45` | `0.9em` | `0.2rem 0.35rem` |
+| `relaxed` | `16px` | `1.7` | `1.8em` | `0.5rem 0.8rem` |
+| `normal` (default) | `16px` | `1.45` | `0.9em` | `0.35rem 0.6rem` |
+| `compact` | `14px` | `1.35` | `0.8em` | `0.3rem 0.5rem` |
+| `tight` | `12px` | `1.3` | `0.6em` | `0.2rem 0.35rem` |
 
-A Japanese business document of headings, paragraphs, bullets, and a 24-row table comes out as five,
-three, and two sheets across the three.
+**The default is set for paper, not for a screen.** A stylesheet written for reading on a screen is
+generous with leading and with the air above headings, and on paper that generosity is what a page
+count pays for. Between `relaxed` and `normal` the type size does not change at all — both set the
+body at 16px — and the same document still comes out on fewer sheets. See the four of them
+[side by side](#pdf-density-sample) below.
+
+**`relaxed` is the screen setting under a name**, for a document that is read on a screen and printed
+only now and then.
+
+**Type size is the last lever, not the first.** The width of the text column is whatever `pdf.margin`
+leaves — a density does not narrow it — so each step down in type size is also a step up in the
+number of characters on a line. At the default A4 margins that is roughly 42 Japanese characters at
+16px and around 56 at 12px. If you want `compact` or `tight` without the longer line, widen
+`pdf.margin` in the same change.
 
 To adjust a preset, give an object instead of a name. `base` says which preset to start from
 (default `normal`), and the object replaces only what it names — so changing one value does not mean
@@ -545,12 +558,48 @@ after it — is refused rather than written into the stylesheet.
 
 Two things follow from where the rules live:
 
-- **The default writes nothing.** `normal` is a record of what the theme already does, not a set of
-  values to restate, so a document that does not set a density is unchanged — down to inheriting
-  your own base font size when you print the HTML from a browser.
+- **Only what differs from the screen is written.** `relaxed` is a record of what the theme already
+  does, so asking for it produces no print rules at all. The default writes leading, heading spacing,
+  and cell padding — but no font size, because it does not change one, so printing this HTML from
+  your browser still uses your own base font size.
 - **The rules are `@media print`.** The same file stays as it was on screen and is set tighter on
   paper. `--format pdf` goes through the print stylesheet and gets the density; so does printing the
   HTML from a browser. The key sits under `pdf` because that is what it is for.
+
+##### The four presets on the same document {#pdf-density-sample}
+
+One source, one paper size, one set of margins, built four times with nothing changed but
+`pdf.density`. Each thumbnail is the first page of the PDF beside it.
+
+<div class="density-samples">
+  <figure>
+    <a href="../density/relaxed.pdf" target="_blank" rel="noopener">
+      <img src="/density/relaxed.png" alt="First page at the relaxed density" loading="lazy">
+    </a>
+    <figcaption><code>relaxed</code> — 5 sheets</figcaption>
+  </figure>
+  <figure>
+    <a href="../density/normal.pdf" target="_blank" rel="noopener">
+      <img src="/density/normal.png" alt="First page at the normal density" loading="lazy">
+    </a>
+    <figcaption><code>normal</code> (default) — 4 sheets</figcaption>
+  </figure>
+  <figure>
+    <a href="../density/compact.pdf" target="_blank" rel="noopener">
+      <img src="/density/compact.png" alt="First page at the compact density" loading="lazy">
+    </a>
+    <figcaption><code>compact</code> — 3 sheets</figcaption>
+  </figure>
+  <figure>
+    <a href="../density/tight.pdf" target="_blank" rel="noopener">
+      <img src="/density/tight.png" alt="First page at the tight density" loading="lazy">
+    </a>
+    <figcaption><code>tight</code> — 2 sheets</figcaption>
+  </figure>
+</div>
+
+The document itself says what to look at on each page. Read one on paper before choosing: a density
+that looks fine at 100% on a screen can be a page nobody wants to read at arm's length.
 
 #### `pdf.header` / `pdf.footer` (page bands) {#pdf-bands}
 

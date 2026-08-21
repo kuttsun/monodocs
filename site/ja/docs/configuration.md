@@ -128,7 +128,7 @@ pdf:
   pageSize: A4
   margin: { top: 20mm, right: 15mm, bottom: 20mm, left: 15mm }
   printBackground: true
-  density: normal # normal | compact | tight、またはオブジェクト（下記参照）
+  density: normal # relaxed | normal | compact | tight、またはオブジェクト（下記参照）
   bookmarks: true # HTML サイドバーと同じ フォルダ→ページ 構造のしおり
   header: false # false、または Chromium のクラスを使う HTML フラグメント
   footer: '<div style="width:100%;margin:0 15pt;font-family:sans-serif;font-size:8pt;color:#666;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>'
@@ -457,7 +457,7 @@ html:
 | `pdf.pageSize`        | string            | `A4`      | 用紙サイズ。Chromium の `format` にそのまま渡す（`A4` / `Letter` / `A3` など）。 |
 | `pdf.margin`          | map               | `20mm` / `15mm` / `20mm` / `15mm` | ページ余白（CSS 長さ）を辺ごとに指定（`top` / `right` / `bottom` / `left`）。省略した辺は既定値のまま。 |
 | `pdf.printBackground` | boolean           | `true`    | 背景色・背景画像を印刷する。 |
-| `pdf.density`         | string / map      | `normal`  | 版面の密度。`normal` / `compact` / `tight`、またはオブジェクト。下記参照。 |
+| `pdf.density`         | string / map      | `normal`  | 版面の密度。`relaxed` / `normal` / `compact` / `tight`、またはオブジェクト。下記参照。 |
 | `pdf.bookmarks`       | boolean           | `true`    | HTML サイドバーと同じ フォルダ → ページ 構造のしおりを付ける。 |
 | `pdf.header`          | `false` / string  | `false`   | 各ページ上部の帯。下記参照。 |
 | `pdf.footer`          | `false` / string  | ページ番号 | 各ページ下部の帯。下記参照。 |
@@ -475,12 +475,22 @@ pdf:
 
 | | `fontSize` | `lineHeight` | `headingSpacing` | `tableCellPadding` |
 | --- | --- | --- | --- | --- |
-| `normal`（既定） | `16px` | `1.7` | `1.8em` | `0.5rem 0.8rem` |
-| `compact` | `13.5px` | `1.55` | `1.15em` | `0.3rem 0.5rem` |
-| `tight` | `11.5px` | `1.45` | `0.9em` | `0.2rem 0.35rem` |
+| `relaxed` | `16px` | `1.7` | `1.8em` | `0.5rem 0.8rem` |
+| `normal`（既定） | `16px` | `1.45` | `0.9em` | `0.35rem 0.6rem` |
+| `compact` | `14px` | `1.35` | `0.8em` | `0.3rem 0.5rem` |
+| `tight` | `12px` | `1.3` | `0.6em` | `0.2rem 0.35rem` |
 
-見出し・段落・箇条書きと 24 行の表からなる日本語の事業書類で、3 つはそれぞれ 5 枚・3 枚・2 枚に
-なります。
+**既定は画面向けではなく紙向けに組みます。** 画面で読むために書かれたスタイルシートは行送りと
+見出し上の空きに余裕を持たせていて、紙の上ではその余裕が枚数を払っています。`relaxed` と `normal`
+のあいだで文字の大きさは変わりません（どちらも本文は 16px です）。それでも同じ文書が少ない枚数に
+なります。4 つを[並べたもの](#pdf-density-sample)を下に載せています。
+
+**`relaxed` は画面の設定に名前を付けたものです。** 画面で読み、たまに印刷する文書のためのものです。
+
+**文字の大きさは最初ではなく最後の手段です。** 本文の段の幅は `pdf.margin` が残した幅そのもので、
+密度はそれを狭めません。つまり文字を 1 段小さくするたびに 1 行の文字数は増えます。A4 の既定余白で
+は、16px でおよそ 42 字、12px では 56 字ほどです。行を長くせずに `compact` や `tight` を使いたい
+ときは、同じ変更で `pdf.margin` も広げてください。
 
 プリセットを調整したいときは、名前の代わりにオブジェクトを書きます。`base` がどのプリセットを
 土台にするかを指し（既定は `normal`）、オブジェクトは名指しした値だけを差し替えます。1 つ変える
@@ -501,12 +511,48 @@ padding と同じく長さ 1 つか 2 つ。それ以外（`calc(...)`、後ろ�
 
 規則の置き場所から、2 つのことが導かれます。
 
-- **既定は何も出力しません。** `normal` はテーマが既にしていることの記録であって、書き直すべき値の
-  集合ではありません。密度を指定しない文書は変わりません。ブラウザから HTML を印刷するときに、
-  あなた自身の基準文字サイズを継承することも含めてです。
+- **画面と違う値だけを書き出します。** `relaxed` はテーマが既にしていることの記録なので、指定して
+  も印刷用の規則は 1 つも出力されません。既定は行送り・見出し上の空き・セル余白を書きますが、
+  文字サイズは書きません（変えていないからです）。ブラウザから HTML を印刷するときに、あなた自身
+  の基準文字サイズが使われるのはこのためです。
 - **規則は `@media print` です。** 同じファイルが、画面ではこれまでどおり、紙の上ではより詰まって
   組まれます。`--format pdf` は印刷用スタイルシートを通るので密度が効き、ブラウザから HTML を
   印刷した場合も同じです。キーが `pdf` の下にあるのは、それが目的だからです。
+
+##### 同じ文書で 4 つのプリセットを見る {#pdf-density-sample}
+
+原稿も用紙も余白も 1 つ。`pdf.density` だけを変えて 4 回組んだものです。各サムネイルは、その隣に
+ある PDF の 1 ページ目そのものです。
+
+<div class="density-samples">
+  <figure>
+    <a href="../density/relaxed.pdf" target="_blank" rel="noopener">
+      <img src="/ja/density/relaxed.png" alt="relaxed で組んだ 1 ページ目" loading="lazy">
+    </a>
+    <figcaption><code>relaxed</code> — 5 枚</figcaption>
+  </figure>
+  <figure>
+    <a href="../density/normal.pdf" target="_blank" rel="noopener">
+      <img src="/ja/density/normal.png" alt="normal で組んだ 1 ページ目" loading="lazy">
+    </a>
+    <figcaption><code>normal</code>（既定） — 4 枚</figcaption>
+  </figure>
+  <figure>
+    <a href="../density/compact.pdf" target="_blank" rel="noopener">
+      <img src="/ja/density/compact.png" alt="compact で組んだ 1 ページ目" loading="lazy">
+    </a>
+    <figcaption><code>compact</code> — 3 枚</figcaption>
+  </figure>
+  <figure>
+    <a href="../density/tight.pdf" target="_blank" rel="noopener">
+      <img src="/ja/density/tight.png" alt="tight で組んだ 1 ページ目" loading="lazy">
+    </a>
+    <figcaption><code>tight</code> — 2 枚</figcaption>
+  </figure>
+</div>
+
+どこを見ればよいかは、文書自身に書いてあります。決める前に一度は紙で読んでください。画面上の
+100% 表示では問題なく見える密度が、腕を伸ばした距離では誰も読みたくないページになることがあります。
 
 #### `pdf.header` / `pdf.footer`（ページの帯） {#pdf-bands}
 

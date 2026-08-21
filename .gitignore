@@ -14,6 +14,9 @@ coverage/
 site/.vitepress/cache/
 site/public/sample.html
 site/public/ja/sample.html
+# 版面密度の比較サンプル（site-build.sh が site/samples/density/ から生成する PDF と画像）
+site/public/density/
+site/public/ja/density/
 
 # misc
 tmp/

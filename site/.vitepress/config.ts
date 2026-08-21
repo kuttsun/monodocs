@@ -31,7 +31,9 @@ export default defineConfig({
   cleanUrls: true,
 
   // 開発用 README はページ化しない（/README.html を出力させない）。
-  srcExclude: ['**/README.md', '**/README.ja.md'],
+  // samples/ は monodocs 自身に組ませるための原稿置き場で、サイトのページではない
+  // （site-build.sh が PDF にして public/ へ出す）。
+  srcExclude: ['**/README.md', '**/README.ja.md', 'samples/**'],
 
   // /sample.html・/ja/sample.html は VitePress 管轄外（public/ の静的アセット）なので dead link 対象外。
   ignoreDeadLinks: [/^\/sample\.html$/, /^\/ja\/sample\.html$/],
