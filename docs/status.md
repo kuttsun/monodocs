@@ -18,7 +18,7 @@ Last updated: 2026-08-21
 | VS Code extension                                 | ⏸️ Frozen | v0.7           |
 | Advanced features (search, themes, binary)        | ✅ Done   | v0.8           |
 | Search finishing (kana folding, keyboard)         | ✅ Done   | v0.9           |
-| Language, `init`, PDF fonts and page numbers      | 🚧 Planned| v0.10          |
+| Language, `init`, PDF fonts and page numbers      | ✅ Done   | v0.10          |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
