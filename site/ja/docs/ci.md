@@ -111,7 +111,7 @@ docs:
 ## 注意点
 
 - **Chromium の検出**：`PUPPETEER_EXECUTABLE_PATH` が常に最優先です。未指定の場合、Linux と Windows では標準のインストール先を探索します（Windows では Chromium ベースの Microsoft Edge にフォールバックします）。コンテナイメージと macOS では明示的に指定してください。
-- **PDF のフォントはランナー側のもの**：フォントが無い文字は PDF で tofu（□）になります。日本語には `fonts-noto-cjk`、絵文字には `fonts-noto-color-emoji` が必要です。HTML は閲覧側のフォントを使うため影響を受けません。
+- **PDF のフォントはランナー側のもの**：フォントが無い文字は PDF で tofu（□）になります。日本語には `fonts-noto-cjk`、絵文字には `fonts-noto-color-emoji` が必要です。HTML は閲覧側のフォントを使うため影響を受けません。ランナーが描けない文字があるとビルドが警告し、[`fontCheck: error`](/ja/docs/configuration#font-check) にすればその警告でジョブを落とせます。
 - **オフラインビルド**：`mermaid.mode: client` は既定で CDN からランタイムを読み込みます。ランナーが外部ネットワークに出られない場合は `inline` か `pre-render` を使ってください。
 - **警告では `build` は失敗しない**：リンク切れやタイトルの欠落は報告されますが、出力は生成されます。ジョブを失敗させたい場合は `validate` を実行してください。
 

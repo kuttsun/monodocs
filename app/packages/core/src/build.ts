@@ -199,6 +199,12 @@ export async function buildSite(
       embedImages: forceEmbed ? true : undefined,
       onLargeImage: forceLargeEmbed ? "warn" : undefined,
     });
+    // pre-render は本文と違って、ビルドマシンのフォントを SVG へ焼き込む。図を描いた文脈が
+    // まだ開いているこの時点で確かめる（fontCheck: error なら例外が出てビルドは止まる）。
+    await prerenderer?.checkFonts?.({
+      mode: config.fontCheck,
+      onWarning: (message) => prepared.warnings.push(message),
+    });
   } finally {
     if (ownPrerenderer) await prerenderer?.close();
   }
@@ -261,6 +267,7 @@ export async function buildSite(
         generator: options.generatorVersion ? `monodocs v${options.generatorVersion}` : "monodocs",
         header: config.pdfHeader,
         footer: config.pdfFooter,
+        fontCheck: config.fontCheck,
         onWarning: (message) => warnings.push(message),
       });
       await mkdir(dirname(outputs.pdf), { recursive: true });

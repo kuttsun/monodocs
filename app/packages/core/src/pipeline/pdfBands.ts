@@ -29,6 +29,19 @@ export const DEFAULT_PDF_FOOTER =
   '<span class="pageNumber"></span> / <span class="totalPages"></span></div>';
 
 /**
+ * 既定フッタを、Chromium が実際に描く姿にしたもの。フォント検査
+ * （{@link file://./fontCheck.ts}）はテキストを測るので、空の span では何も測れない。
+ *
+ * 定数から導出する。数字を別の場所に書き写すと、フラグメントを変えたときに取り残される。
+ * 検査するのは monodocs が内容を決めている既定フラグメントだけで、置き換えフラグメントは
+ * 対象外（余白検査と同じ線引き）。
+ */
+export const DEFAULT_PDF_FOOTER_PROBE = DEFAULT_PDF_FOOTER.replace(
+  /<span class="(pageNumber|totalPages)"><\/span>/g,
+  '<span class="$1">0123456789</span>',
+);
+
+/**
  * 帯を出さないときに渡すフラグメント。**省略ではなく空を明示する**のが要点で、
  * `displayHeaderFooter` を有効にしたまま何も渡さないと、Chromium は自前の組み込みヘッダ
  * （日付と文書タイトル）へフォールバックする。「出さない」と指定した結果が

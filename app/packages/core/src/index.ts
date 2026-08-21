@@ -47,6 +47,16 @@ export {
   type PdfGenerator,
   type PdfRenderOptions,
 } from "./pipeline/renderPdf.js";
+export {
+  runFontCheck,
+  inspectFonts,
+  describeFontCheck,
+  FontCheckError,
+  FONT_CHECK_MODES,
+  type FontCheckMode,
+  type FontCheckContext,
+  type FontCheckOutcome,
+} from "./pipeline/fontCheck.js";
 export { sidebarToOutline, addOutline, type PdfOutlineNode } from "./pipeline/pdfOutline.js";
 export { setPdfMetadata, type PdfMetadata } from "./pipeline/pdfMetadata.js";
 export { BrowserSetupError } from "./pipeline/browser.js";

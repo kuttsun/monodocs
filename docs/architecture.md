@@ -233,7 +233,10 @@ PDF generation expands the single HTML document in Chromium's print layout. Pres
 - Browser setup failures fail fast and remain distinguishable from document-specific rendering failures.
 
 PDF output uses system fonts. The development image includes Noto CJK and Noto Color Emoji; other runtime
-environments must install fonts appropriate for their document content.
+environments must install fonts appropriate for their document content. Since v0.10 the build measures what
+the document needs against what the machine can draw and reports the difference (`fontCheck`, default `warn`),
+in the browser already open for PDF output and for Mermaid pre-render alike — the latter bakes the build
+machine's fonts into the SVG, which is why the setting is not part of `pdf`.
 
 ## Security Boundaries
 

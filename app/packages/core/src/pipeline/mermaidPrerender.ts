@@ -1,6 +1,7 @@
 import type { ColorScheme } from "../config.js";
 import { loadMermaidInline } from "../themes/mermaid.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
+import { runFontCheck, type FontCheckMode } from "./fontCheck.js";
 import { t } from "../messages.js";
 
 /**
@@ -10,6 +11,15 @@ import { t } from "../messages.js";
 export interface MermaidPrerenderer {
   /** `id` は生成 SVG のルート id（CSS/SVG セーフ・全 HTML で一意であること）。 */
   render(id: string, code: string): Promise<string>;
+  /**
+   * 図が必要とするフォントがこのマシンに揃っていたかを、**図を描いた文脈そのもの**で確かめる
+   * （{@link file://./fontCheck.ts}）。完成 HTML の側で測り直しても、その SVG を生んだフォント
+   * 解決は再現できない。実装は任意（テストの偽レンダラは持たない）。
+   */
+  checkFonts?(options: {
+    mode: FontCheckMode;
+    onWarning: (message: string) => void;
+  }): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -49,6 +59,10 @@ export function createPuppeteerPrerenderer(options: {
   const theme = mermaidThemeFor(options.colorScheme);
   let browser: BrowserLike | undefined;
   let page: PageLike | undefined;
+  // 生成した SVG を保持し、フォント検査でこのページへ差し戻して測る。図の文字がどのフォントへ
+  // 解決されるかを決めるのは SVG 自身が持つ <style> なので、それを描いたページの中で測れば
+  // 同じ解決を再現できる。
+  const rendered: string[] = [];
 
   async function ensurePage(): Promise<PageLike> {
     if (page) return page;
@@ -85,7 +99,13 @@ export function createPuppeteerPrerenderer(options: {
           id,
         )},${JSON.stringify(code)});return r.svg;})()`,
       );
+      rendered.push(String(svg));
       return String(svg);
+    },
+    async checkFonts({ mode, onWarning }) {
+      // 図が 1 つも無ければブラウザすら起動していない。測る対象も無い。
+      if (mode === "off" || page === undefined || rendered.length === 0) return;
+      await runFontCheck(page, { mode, context: "prerender", onWarning, probes: rendered });
     },
     async close() {
       if (browser) {

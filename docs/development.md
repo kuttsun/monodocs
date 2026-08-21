@@ -254,6 +254,12 @@ After adding fonts, rebuild the image with `docker build -f Dockerfile.dev -t mo
 (`scripts/app.sh` auto-builds the image **only when it is absent**, so a manual rebuild is required after changing the Dockerfile).
 If you produce PDFs in your own environment, separately install fonts appropriate for the character types you use.
 
+The build no longer leaves this to be discovered by opening the artifact: it measures the characters the
+document actually contains against what the machine can draw and warns, naming them and an example font
+(`fontCheck: warn | error | off`, default `warn`; see [roadmap.md](roadmap.md) 24.3.3). Note that the example
+sample documents legitimately trip it — `examples/*/pdf.md` writes `☒` to describe tofu, and Asciidoctor
+renders an unchecked list item as `❏` (U+274F), neither of which any font in the development image covers.
+
 ## Input Assumptions (Security)
 
 `monodocs` is intended for converting **trusted documents that you (your team) manage**.

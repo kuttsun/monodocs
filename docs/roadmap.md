@@ -1814,11 +1814,20 @@ v0.10 checks the document rather than the environment. Only what the document ac
 matters — a Latin-only document on a runner with no CJK font has no problem — and the unit is the
 **grapheme cluster paired with the computed font of the element it appears in**, not a representative
 character per script and not a bare codepoint. A script's common characters resolving says nothing
-about the extension blocks beside them; and a variation sequence, a combining mark, or an emoji ZWJ
-sequence can fail while every codepoint in it draws on its own, so measuring codepoints separately
-would report success for exactly the cases that motivate the check. Pairing with the computed font
-matters because body text, code blocks, and a custom theme need not resolve to the same family. The
-check runs after `document.fonts.ready`, so a theme's data-URI webfont is counted as present.
+about the extension blocks beside them; and a cluster — a variation sequence, a base with a
+combining mark, an emoji ZWJ sequence — is what a reader sees fail, so it is what the report should
+name. The cluster is measured first, and its codepoints only when the cluster is not itself a single
+notdef box, which is what separates a cluster that comes out as one tofu from a sequence that falls
+apart into several. Pairing with the computed font matters because body text, code blocks, and a
+custom theme need not resolve to the same family. The check runs after `document.fonts.ready`, so a
+theme's data-URI webfont is counted as present.
+
+What this does **not** reach is a sequence every codepoint of which draws and which the font merely
+declines to compose — an emoji ZWJ sequence rendered as its three components instead of one. That is
+a composition failure rather than a missing glyph, and no amount of comparing against a notdef
+advance can see it; separating it from a correct composition means measuring the cluster against the
+sum of its parts, which is where the false positives live. It is left out for the same reason `warn`
+is the default.
 
 Three ways of asking were measured in the development image (Chromium with `fonts-liberation`,
 `fonts-noto-cjk`, and `fonts-noto-color-emoji`) against characters it can draw — `A`, `日`, `✅` — and
@@ -1846,10 +1855,19 @@ notdef advance but not its bitmap. It runs in the browser already open for the b
 extra startup.
 
 `U+10FFFD` is private use, which means a font *may* map it — the reference is conventional, not
-guaranteed. So the check validates its own reference first, against a second private-use codepoint
-from a different plane: if the two disagree, something on this machine draws private-use characters
-and the comparison is unsound, and the check reports itself unusable for this environment rather than
+guaranteed. So the check validates its own reference first, per font stack, against two controls: a
+second private-use codepoint from a different plane, and a **noncharacter** (`U+FDD0`). If any of the
+three disagree, something on this machine draws characters that were supposed to have no glyph, the
+comparison is unsound, and the check reports itself unusable for this environment rather than
 producing findings it cannot stand behind.
+
+The noncharacter is the half that makes the validation mean anything. Two private-use codepoints
+agreeing only proves that they render alike, which is exactly what a font mapping both of them to one
+glyph does — and then the reference *is* a glyph, every genuinely missing character differs from it,
+and the check reports a clean document while seeing nothing at all. A noncharacter is never assigned
+a glyph, so it pins the comparison to the notdef box itself. Measured in the development image,
+`U+10FFFD`, `U+FFFFD` and `U+FDD0` all come out at 11.69 px with the same bitmap, alongside the
+characters it cannot draw.
 
 The result names the clusters at risk and gives an example of a font covering them, drawn from a small
 built-in script-to-example table — not a package name, because what supplies a face differs across

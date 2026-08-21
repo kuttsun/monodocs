@@ -137,6 +137,31 @@ const EN = {
     "way Chromium's built-in one does. Enlarge the margin, or set pdf.footer to a fragment that " +
     "fits, or pdf.footer: false to drop the band.",
 
+  // ---- font check (24.3.3) ----
+  "fontCheck.missingPdf":
+    "No font on the machine running this build draws {count} character(s) this document uses, so " +
+    "they come out as tofu (□ / ☒) in the PDF — permanently, in every copy of it. At risk: " +
+    "{samples}. Install a font that covers them (the package that supplies one differs by " +
+    "platform), or set fontCheck: off to accept it.",
+  "fontCheck.missingPrerender":
+    "No font on the machine running this build draws {count} character(s) used in the Mermaid " +
+    "diagrams, so they come out as tofu (□ / ☒) in the SVG that mermaid.mode: pre-render bakes " +
+    "into the output — in the HTML as much as in the PDF. At risk: {samples}. Install a font that " +
+    "covers them (the package that supplies one differs by platform), or set fontCheck: off to " +
+    "accept it.",
+  "fontCheck.incomplete":
+    "The font check stopped after {count} distinct characters and did not reach the end of this " +
+    "document, so it found nothing rather than confirming there is nothing to find. It says so " +
+    "instead of staying silent, because a check that was cut short reads exactly like one that " +
+    "passed.",
+  "fontCheck.sample": "{cluster} ({codepoints})",
+  "fontCheck.sampleWithExample": "{cluster} ({codepoints}, e.g. {font})",
+  "fontCheck.more": "and {count} more",
+  "fontCheck.unusable":
+    "The font check did not run: this machine draws private-use characters, which the check uses " +
+    "as its reference for a missing glyph, so it cannot tell a drawn character from an undrawn " +
+    "one. Nothing is reported about the fonts this build needs.",
+
   // ---- mermaid ----
   "mermaid.prerenderFailed": "Mermaid pre-render failed: {detail}",
   "mermaid.browserInitFailed":
@@ -338,6 +363,28 @@ const JA: Record<MessageKey, string> = {
     "フッタは描かれますが紙の端に貼りつきます（渡したフラグメントは Chromium 組み込みのものと" +
     "違って自分を隠しません）。余白を広げるか、pdf.footer に収まるフラグメントを指定するか、" +
     "pdf.footer: false で帯を消してください。",
+
+  "fontCheck.missingPdf":
+    "この文書が使う {count} 文字を描けるフォントが、ビルドを走らせているマシンにありません。" +
+    "PDF では豆腐（□ / ☒）になります（配った複製すべてで、後からは直せません）。該当: {samples}。" +
+    "それらを含むフォントを入れる（提供するパッケージ名はプラットフォームごとに違います）か、" +
+    "fontCheck: off で許容してください。",
+  "fontCheck.missingPrerender":
+    "Mermaid の図が使う {count} 文字を描けるフォントが、ビルドを走らせているマシンにありません。" +
+    "mermaid.mode: pre-render が焼き込む SVG の中で豆腐（□ / ☒）になり、PDF だけでなく HTML でも" +
+    "そのままです。該当: {samples}。それらを含むフォントを入れる（提供するパッケージ名は" +
+    "プラットフォームごとに違います）か、fontCheck: off で許容してください。",
+  "fontCheck.incomplete":
+    "フォント検査は異なる文字 {count} 個で打ち切られ、この文書の最後までは到達しませんでした。" +
+    "「無かった」ではなく「そこまでは見つからなかった」という結果です。打ち切られた検査は" +
+    "通過した検査とまったく同じに見えるため、黙らずにそのことを述べています。",
+  "fontCheck.sample": "{cluster}（{codepoints}）",
+  "fontCheck.sampleWithExample": "{cluster}（{codepoints}、例: {font}）",
+  "fontCheck.more": "ほか {count} 件",
+  "fontCheck.unusable":
+    "フォント検査は実行しませんでした: このマシンは私用領域の文字を描画します。検査はそれを" +
+    "「グリフが無い」ことの基準に使うため、描けた文字と描けなかった文字を区別できません。" +
+    "このビルドが必要とするフォントについては何も報告しません。",
 
   "mermaid.prerenderFailed": "Mermaid の pre-render に失敗しました: {detail}",
   "mermaid.browserInitFailed": "mermaid.mode: pre-render のブラウザ初期化に失敗しました: {detail}",

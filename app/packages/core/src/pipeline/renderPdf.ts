@@ -1,6 +1,7 @@
 import type { PdfMargin } from "../config.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
-import { DEFAULT_PDF_FOOTER, EMPTY_PDF_BAND } from "./pdfBands.js";
+import { runFontCheck, type FontCheckMode } from "./fontCheck.js";
+import { DEFAULT_PDF_FOOTER, DEFAULT_PDF_FOOTER_PROBE, EMPTY_PDF_BAND } from "./pdfBands.js";
 import { addOutline, collectDests, remapDests, type PdfOutlineNode } from "./pdfOutline.js";
 import { setPdfMetadata } from "./pdfMetadata.js";
 import { t } from "../messages.js";
@@ -32,7 +33,13 @@ export type PdfRenderOptions = {
   header?: string;
   /** ページ下部の帯（同上）。未指定は帯なし扱い。 */
   footer?: string;
-  /** 余白が既定フッタに足りないときの通知先。ビルドの警告へ流す。 */
+  /**
+   * 版面に必要なフォントがこのマシンに揃っているかの検査。未指定は検査しない（偽ジェネレータを
+   * 注入するテスト経路のため）。`error` のときは {@link file://./fontCheck.ts FontCheckError}
+   * を投げ、豆腐入りの PDF を書き出させない。
+   */
+  fontCheck?: FontCheckMode;
+  /** 余白・フォントの検査で問題が出たときの通知先。ビルドの警告へ流す。 */
   onWarning?: (message: string) => void;
 };
 
@@ -230,6 +237,18 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
       }
 
       await warnIfFooterDoesNotFit(page, options);
+
+      // 紙に載る文字だけを測る。帯は文書とは別の文脈で描かれるため、内容を monodocs が
+      // 決めている既定フッタのときだけ、その姿を別途渡して一緒に測る。
+      if (options.fontCheck !== undefined) {
+        await runFontCheck(page, {
+          mode: options.fontCheck,
+          context: "pdf",
+          // 警告の宛先が無くても検査は行う。`error` は宛先の有無に関わらずビルドを止める。
+          onWarning: options.onWarning ?? (() => {}),
+          probes: options.footer === DEFAULT_PDF_FOOTER ? [DEFAULT_PDF_FOOTER_PROBE] : [],
+        });
+      }
 
       const pdf = await page.pdf({
         format: options.pageSize,

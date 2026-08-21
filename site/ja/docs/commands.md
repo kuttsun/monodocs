@@ -93,7 +93,7 @@ monodocs build ./docs -c ./monodocs.config.yml
 monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 ```
 
-成功すると生成ページ数と出力パスを表示します。警告（リンク切れ・タイトル欠落など）は表示されますがビルドは失敗しません。問題で失敗させたいときは `validate` を使います。
+成功すると生成ページ数と出力パスを表示します。警告（リンク切れ・タイトル欠落など）は表示されますがビルドは失敗しません。問題で失敗させたいときは `validate` を使います。唯一の例外は [`fontCheck: error`](/ja/docs/configuration#font-check) で、そのマシンにフォントが無い文字を成果物が抱えることになるビルドを止めます。
 
 ## `watch`
 
