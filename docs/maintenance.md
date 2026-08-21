@@ -13,7 +13,7 @@ What keeps running after a release, and what a person has to check. This is the 
 | Vulnerable versions    | Dependabot alerts and automated security fixes, enabled in the repository settings    |
 | Advisories on the tree | `.github/workflows/scheduled-audit.yml`, weekly, opening an issue when it fails       |
 | Pull request checks    | `.github/workflows/pr-ci.yml`, which also audits both dependency sets and lints the scripts |
-| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version   |
+| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version. Steps that verify a feature added in 0.10 are gated on the installed version, so an older release can still be verified |
 | Release binaries       | `.github/workflows/verify-release-binaries.yml`, on publish and by hand against a tag |
 | Review reminder        | `.github/workflows/quarterly-review.yml`, opening the quarterly checklist as an issue |
 

@@ -205,7 +205,7 @@ and both it and v0.9 are released.
 
 - [x] Docker is recorded as a delivery form that will not be provided, with the same per-release maintenance argument that settled Homebrew / Scoop / winget ([roadmap.md](roadmap.md) 8.3). `Dockerfile.dev` is unaffected
 - [x] The documentation site — commands, configuration, and the CI guide — and its Japanese mirror are updated, since every item above changes something the site documents
-- [ ] `verify-published.yml` exercises the new surface (the message language, `init`, and a PDF whose page numbers are actually present) rather than only asserting that a PDF was produced
+- [x] `verify-published.yml` exercises the new surface rather than only asserting that a PDF was produced: the message language (English by default, Japanese under the flag and under `MONODOCS_LANG`, the flag winning, an unsupported value rejected naming the supported ones), `init` (the scaffold built unedited, a second run refusing and naming what it found, `--lang ja` writing `lang: "ja"`), a PDF whose page numbers are read back off the page through each font's `ToUnicode` map by [`scripts/assert-pdf-page-numbers.mjs`](../scripts/assert-pdf-page-numbers.mjs) — asserted present with the default footer and absent under `pdf.footer: false` — and the font check reporting a character no font anywhere covers. The steps that need 0.10 are gated on the installed version, so the workflow can still verify 0.9
 
 **Release**
 
