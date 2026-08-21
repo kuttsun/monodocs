@@ -53,12 +53,23 @@ chmod +x monodocs-linux-x64
 ./monodocs-linux-x64 build ./docs -o ./dist/docs.html
 ```
 
-The binary covers `build` (HTML), `validate`, `watch`, and `serve`. **PDF output and Mermaid
+The binary covers `init`, `build` (HTML), `validate`, `watch`, and `serve`. **PDF output and Mermaid
 `pre-render` are not available** in it: both drive a headless browser through `puppeteer-core`, which
 is deliberately left out of the bundle, and the command fails with a message saying so. Use the npm
 package when you need them. The binaries are unsigned, so Windows SmartScreen may warn on first run.
 
 ## First build
+
+Starting from nothing, `init` writes a configuration and a first page that build unedited:
+
+```bash
+monodocs init     # -> monodocs.config.yml, docs/index.md
+monodocs build    # -> dist/docs.html
+```
+
+It never overwrites: if either file is already there it writes neither and says what it found, so it is safe to try in a directory that already holds work. See [`init`](/docs/commands#init) for what the generated configuration contains.
+
+With documents you already have:
 
 ```bash
 # Single self-contained HTML
@@ -97,7 +108,7 @@ scripts/app.sh node packages/cli/dist/index.js build examples/en -o dist/docs.ht
 
 ## Next steps
 
-- See [Command Options](/docs/commands) for the CLI reference (`build` / `watch` / `serve` / `validate`).
+- See [Command Options](/docs/commands) for the CLI reference (`init` / `build` / `watch` / `serve` / `validate`).
 - See [Configuration](/docs/configuration) for the `monodocs.config.yml` options.
 - See [the roadmap](https://github.com/kuttsun/monodocs/blob/main/docs/roadmap.md) for the version plan.
 - See [supported syntax](https://github.com/kuttsun/monodocs/blob/main/docs/syntax.md) for what is supported and what single-file bundling intentionally restricts.

@@ -30,7 +30,8 @@ const DEFAULT_ASCIIDOC_EXTENSIONS = [".adoc", ".asciidoc", ".asc"];
  * so naming one unrelated path cannot quietly turn every fragment into a page.
  */
 export const DEFAULT_EXCLUDE = ["_partials/**", "partials/**", "includes/**", "**/_*"];
-const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
+/** The one file name a build looks for on its own. `init` writes this name for that reason. */
+export const DEFAULT_CONFIG_FILE = "monodocs.config.yml";
 const DEFAULT_MAX_INLINE_SIZE = 5 * 1024 * 1024; // 5MB
 const DEFAULT_CONTENT_WIDTH = "860px";
 // ページ内目次に出す見出しの最深レベル（h2〜h3）。h1 はページタイトル相当のため常に除外。

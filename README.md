@@ -43,6 +43,7 @@ A standalone binary that runs without Node.js is attached to every [release](htt
 Markdown and AsciiDoc files may be mixed; the input directory structure becomes the sidebar.
 
 ```bash
+monodocs init                                         # a config and a first page that build unedited
 monodocs build ./docs -o ./dist/doc.html              # single self-contained HTML
 monodocs build ./docs --format pdf -o ./dist/doc.pdf  # PDF (requires Chromium)
 monodocs serve ./docs                                 # live preview while editing

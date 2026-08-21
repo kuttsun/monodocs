@@ -2022,10 +2022,23 @@ Specified here from the beginning and implemented in v0.10; until then the CLI o
 
 It writes exactly the two files above and **refuses to overwrite** anything already present, naming
 what it found and writing nothing at all, so that running it in a populated directory cannot destroy
-work. The generated configuration is a short commented starting point, not a dump of every key:
-a dump would have to be regenerated with every option added, and it teaches the reader to keep keys
-they have not understood. It points at the configuration page of the documentation site for the rest.
-Its comments follow the message language (25.6).
+work. Both are checked before either is written: a run that stopped halfway would leave a scaffold
+the author then has to take apart to see which half is theirs. It names everything it found rather
+than the first one, so a second run does not report a second file. A `docs/` directory that already
+exists is not something it overwrites — the page is added beside what is there.
+
+The generated configuration is a short commented starting point, not a dump of every key: a dump
+would have to be regenerated with every option added, and it teaches the reader to keep keys they
+have not understood. It points at the configuration page of the documentation site for the rest.
+
+**The whole scaffold follows the message language (25.6), including the `lang` it writes.** The
+comments are the obvious part; the first page is the reason. That page is prose, and prose is in a
+language, so `--lang ja` writes a Japanese page — which under the default `lang: "en"` would be a
+document declaring one language while displaying another, exactly what 23.4 exists to end. The two
+settings stay independent everywhere else, and the config it writes says so in a comment; what
+couples them here is that init authors the document as well as configuring it, and it can only
+author in one language. Anyone documenting in a third language changes one line, which is the line
+the comment above it explains.
 
 ### 25.2 build
 

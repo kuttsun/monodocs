@@ -166,7 +166,8 @@ and both it and v0.9 are released.
 
 **`monodocs init`** ([roadmap.md](roadmap.md) 25.1)
 
-- [ ] Writes `monodocs.config.yml` and `docs/index.md` that build without editing; when either already exists it writes neither and names what it found. The generated configuration is a short commented starting point rather than a dump of every key, and its comments follow the message language
+- [x] Writes `monodocs.config.yml` and `docs/index.md` that build without editing; when either already exists it writes neither and names what it found — everything it found, not the first one. The generated configuration is a short commented starting point rather than a dump of every key, and points at the configuration page for the rest
+- [x] The whole scaffold follows the message language, the `lang` it writes included, not only its comments: the first page is prose in that language, so `--lang ja` writes a Japanese page under `lang: "ja"`. Writing the default `en` there would publish a Japanese document declaring English — the mismatch [roadmap.md](roadmap.md) 23.4 exists to end
 
 **Font checking** ([roadmap.md](roadmap.md) 24.3.3)
 

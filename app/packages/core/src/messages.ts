@@ -144,11 +144,57 @@ const EN = {
   "mermaid.prerendererMissing":
     "mermaid.mode: pre-render is set, but no pre-render renderer was supplied.",
 
+  // ---- init (25.1) ----
+  "init.exists":
+    "monodocs init writes nothing when a file it would create is already there. Found: {paths}",
+  // The scaffold is a document in its own right, so it follows the message language throughout —
+  // comments, page text, and the `lang` it sets. A Japanese first page under `lang: "en"` would
+  // be exactly the mismatch 23.4 exists to end.
+  "init.configTemplate": `# monodocs configuration.
+#
+# Every key has a default, so this file carries only what most documents change.
+# The full reference — sidebar, assets, mermaid, html, pdf, search — is at
+# https://kuttsun.github.io/monodocs/docs/configuration
+
+# Used as the document title, in <title>, and in the PDF metadata.
+title: "Documentation"
+
+# Language of the generated document. It fills <html lang> and selects the UI labels
+# (the search box, "On this page", prev/next). This is not the language of monodocs'
+# own messages, which is --lang / MONODOCS_LANG.
+lang: "en"
+
+# What to bundle: a directory to scan, or a single source file.
+input: "./docs"
+
+output:
+  # html | pdf | both. pdf and both need Chromium on the machine running the build.
+  format: "html"
+  path: "./dist/docs.html"
+`,
+  "init.pageTemplate": `# Documentation
+
+\`monodocs init\` wrote this page. Replace it with your own text, then add more Markdown
+or AsciiDoc files next to it: every file becomes a page, and the folder structure becomes
+the sidebar.
+
+## Building
+
+\`\`\`bash
+monodocs build
+\`\`\`
+
+The result is \`dist/docs.html\`, one self-contained file — styles, images, and the search
+index are all inside it — so it can be handed to someone as it is.
+`,
+
   // ---- CLI ----
   "cli.description": "Generate a single HTML / PDF from many Markdown / AsciiDoc files",
   "cli.opt.lang": "Language of monodocs' own messages: {supported} (env: MONODOCS_LANG)",
   "cli.arg.input": "Input directory, or a single source file (default: ./docs)",
   "cli.opt.config": "Config file (default: monodocs.config.yml when present)",
+  "cli.init.description": "Write a monodocs.config.yml and a first page to start from",
+  "cli.created": "✓ Created {files}",
   "cli.build.description": "Build the documents into a single HTML / PDF",
   "cli.build.opt.output":
     "Output target (html: file / pdf: file / both: directory. default: ./dist/docs.html)",
@@ -298,10 +344,52 @@ const JA: Record<MessageKey, string> = {
   "mermaid.prerendererMissing":
     "mermaid.mode: pre-render が指定されていますが pre-render 用レンダラが渡されていません。",
 
+  "init.exists":
+    "monodocs init は、作成するファイルがすでにある場合は何も書きません。見つかったもの: {paths}",
+  "init.configTemplate": `# monodocs の設定ファイル。
+#
+# すべてのキーに既定値があるため、ここには変更することの多いものだけを書いてあります。
+# 全キーの一覧（sidebar / assets / mermaid / html / pdf / search など）は
+# https://kuttsun.github.io/monodocs/ja/docs/configuration
+
+# 文書のタイトル。<title> と PDF のメタデータにも使われます。
+title: "ドキュメント"
+
+# 生成される文書の言語。<html lang> に入り、UI ラベル（検索ボックス、「このページの内容」、
+# 前後ナビ）の表を選びます。monodocs 自身のメッセージの言語（--lang / MONODOCS_LANG）とは
+# 別の設定です。
+lang: "ja"
+
+# 束ねる対象。走査するディレクトリ、または単一のソースファイル。
+input: "./docs"
+
+output:
+  # html | pdf | both。pdf と both はビルドするマシンに Chromium が必要です。
+  format: "html"
+  path: "./dist/docs.html"
+`,
+  "init.pageTemplate": `# ドキュメント
+
+このページは \`monodocs init\` が書きました。内容を書き換え、Markdown や AsciiDoc の
+ファイルを隣に足していってください。1 ファイルが 1 ページになり、フォルダ構成が
+そのままサイドバーになります。
+
+## ビルド
+
+\`\`\`bash
+monodocs build
+\`\`\`
+
+出力は \`dist/docs.html\` の 1 ファイルです。スタイルも画像も検索インデックスも中に
+入っているので、そのまま渡せます。
+`,
+
   "cli.description": "複数の Markdown / AsciiDoc から単一 HTML / PDF を生成する",
   "cli.opt.lang": "monodocs 自身のメッセージの言語: {supported}（環境変数: MONODOCS_LANG）",
   "cli.arg.input": "入力ディレクトリ、または単一のソースファイル（既定: ./docs）",
   "cli.opt.config": "設定ファイル（既定: monodocs.config.yml があれば使用）",
+  "cli.init.description": "monodocs.config.yml と最初のページを書き出す",
+  "cli.created": "✓ {files} を作成しました",
   "cli.build.description": "ドキュメントをビルドして単一 HTML / PDF を生成する",
   "cli.build.opt.output":
     "出力先（html: ファイル / pdf: ファイル / both: ディレクトリ。既定: ./dist/docs.html）",
