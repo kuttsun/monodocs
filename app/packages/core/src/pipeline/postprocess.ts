@@ -6,10 +6,11 @@ import rehypeStringify from "rehype-stringify";
 import { toText } from "hast-util-to-text";
 import { EXIT, SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
-import type { MermaidMode, OnLargeImage } from "../config.js";
+import type { MermaidMode, OnLargeImage, PdfPageBreakLevel } from "../config.js";
 import type { Page } from "../types.js";
 import { type MermaidPrerenderer } from "./mermaidPrerender.js";
 import { BrowserSetupError } from "./browser.js";
+import { markPageBreakHeadings } from "./pageBreakHeadings.js";
 import { t } from "../messages.js";
 
 /** コードハイライトに使う配色（shiki の dual theme。ダークは CSS で切替）。 */
@@ -57,6 +58,11 @@ export type PostprocessOptions = {
    */
   mermaidPrerenderer?: MermaidPrerenderer;
   codeHighlight: boolean;
+  /**
+   * `pdf.pageBreakLevel`。数値なら、そのレベルまでの見出しに改ページの印を付ける
+   * （{@link file://./pageBreakHeadings.ts}）。`false` なら何も印を付けない。
+   */
+  pdfPageBreakLevel: PdfPageBreakLevel;
 };
 
 export type PostprocessResult = {
@@ -743,6 +749,10 @@ export async function postprocessPages(
       new SourceLocationTracker(page, linkExtensions),
     );
     if (options.embedImages) await embedImages(tree, page, options, realRoot, warnings);
+    // 印は最後に付ける。見出しの前に何があるかは、リンク書き換えや画像埋め込みのあとの姿で決まる。
+    if (options.pdfPageBreakLevel !== false) {
+      markPageBreakHeadings(tree, options.pdfPageBreakLevel);
+    }
     page.html = serializer.stringify(tree);
   }
 

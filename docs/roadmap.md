@@ -2134,6 +2134,12 @@ is an h3. Post-processing marks the headings that will break with `data-monodocs
 and one rule matches the attribute. The name is namespaced because a custom theme and an AsciiDoc
 passthrough can both put attributes on a heading.
 
+**The space above a heading that starts a sheet is dropped.** Measured: the margin `pdf.density`
+sets survives a forced break — the same document puts the heading 15.8pt lower at `relaxed` than at
+`normal` — and at the top of a fresh sheet that space separates the heading from nothing. The rule
+writes `margin-top: 0`, the same property the density rule writes, so the cascade needs no reasoning
+about logical and physical longhands.
+
 **Both rules are emitted by core**, into the print stylesheet beside the density rules, rather than
 added to the default theme. A theme replaces `style.css` wholesale, and a theme should not be able
 to delete a syntax feature. They name `#content` and `.page` alike, for the reason 24.6 gives.

@@ -6,6 +6,7 @@ import {
   type ColorScheme,
   type ContentWidthDefault,
   type PdfDensity,
+  type PdfPageBreakLevel,
 } from "../config.js";
 import { DEFAULT_LANG, LABEL_KEYS, resolveLabels, type Labels } from "../labels.js";
 import { loadTheme } from "../themes/index.js";
@@ -33,6 +34,11 @@ export type RenderHtmlInput = {
    * 一致する項目は出力しない。画面表示には影響しない。
    */
   pdfDensity?: PdfDensity;
+  /**
+   * `pdf.pageBreakLevel`。数値なら、印の付いた見出しの前で改ページする規則を印刷用に出す。
+   * 印そのものは postprocess が付ける（{@link file://./pageBreakHeadings.ts}）。
+   */
+  pdfPageBreakLevel?: PdfPageBreakLevel;
   /** 読者向けの本文幅切替ボタンを表示するか。未指定は true。 */
   contentWidthToggle?: boolean;
   /** Initial state when the content-width toggle is shown. Defaults to standard. */
@@ -109,6 +115,9 @@ function styleWithOverrides(style: string, input: RenderHtmlInput): string {
     out = `${out}\n:root {\n${overrides.join("\n")}\n}\n`;
   }
   out = `${out}\n${PRINT_PAGE_BREAK_RULES}`;
+  if (input.pdfPageBreakLevel !== undefined && input.pdfPageBreakLevel !== false) {
+    out = `${out}\n${PRINT_HEADING_BREAK_RULES}`;
+  }
   const density = printDensityRules(input.pdfDensity);
   return density === "" ? out : `${out}\n${density}`;
 }
@@ -129,6 +138,29 @@ function styleWithOverrides(style: string, input: RenderHtmlInput): string {
  * blank sheet either way because that is what it asks for. Two markers in a row leave one blank
  * sheet between them, which is how a blank sheet is asked for.
  */
+/**
+ * The headings `pdf.pageBreakLevel` puts on a sheet of their own, matched by the attribute
+ * post-processing marked them with rather than by a selector for their level — which of them break
+ * depends on what precedes them, and on a nesting that differs between the two renderers.
+ *
+ * The space above the heading goes with it. Measured: the margin `pdf.density` sets survives a
+ * forced break — the same document at `relaxed` puts the heading 15.8pt lower on the new sheet than
+ * at `normal` — and at the top of a fresh sheet that space is separating the heading from nothing.
+ * `margin-top` rather than `margin-block-start`, so it is the same property the density rule writes
+ * and the cascade needs no reasoning about logical and physical longhands.
+ *
+ * Written only when the setting is on, so the default document carries no rule at all.
+ */
+const PRINT_HEADING_BREAK_RULES = `@media print {
+  #content [data-monodocs-pdf-break-before],
+  .page [data-monodocs-pdf-break-before] {
+    break-before: page;
+    page-break-before: always;
+    margin-top: 0;
+  }
+}
+`;
+
 const PRINT_PAGE_BREAK_RULES = `@media print {
   #content .page-break,
   .page .page-break {

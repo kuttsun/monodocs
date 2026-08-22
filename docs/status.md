@@ -231,21 +231,21 @@ and it, v0.9, and v0.10 are released.
 
 **`pdf.pageBreakLevel`** ([roadmap.md](roadmap.md) 24.7)
 
-- [ ] Takes `false` (the default) or 2–6, where the number is the deepest heading level that starts a new sheet: `2` is h2 only, `6` is h2 through h6. h1 is not a level here, because the file it titles has already broken. `false` rather than `"off"`, matching `pdf.header` / `pdf.footer`, which already use `false` to turn a feature off — `fontCheck: warn | error | off` is an enumeration of behaviours, which this is not
-- [ ] A heading breaks unless nothing renders before it, or the only thing that does is the page's h1. "The first heading of the page" is the wrong rule: a page opening with its title, an introduction, and then its first section must break before that section, because the introduction belongs on the title's sheet
-- [ ] Headings inside a block carrying `break-inside: avoid` — a table, a figure, a code block, an admonition, a blockquote ([roadmap.md](roadmap.md) 24.3.1) — are not candidates, so Chromium is never asked to keep a block together and split before something inside it at once
-- [ ] The headings that break are marked in post-processing with `data-monodocs-pdf-break-before`, and one rule matches the attribute. A CSS-only selector would have to enumerate both the flat body Markdown produces and the `.sect1`–`.sect5` nesting Asciidoctor produces, and would still misread a page whose h1 is missing or whose first heading is an h3. The attribute is namespaced because a custom theme and an AsciiDoc passthrough can both put attributes on a heading
+- [x] Takes `false` (the default) or 2–6, where the number is the deepest heading level that starts a new sheet: `2` is h2 only, `6` is h2 through h6. h1 is not a level here, because the file it titles has already broken. `false` rather than `"off"`, matching `pdf.header` / `pdf.footer`, which already use `false` to turn a feature off — `fontCheck: warn | error | off` is an enumeration of behaviours, which this is not
+- [x] A heading breaks unless nothing renders before it, or the only thing that does is the page's h1. "The first heading of the page" is the wrong rule: a page opening with its title, an introduction, and then its first section must break before that section, because the introduction belongs on the title's sheet
+- [x] Headings inside a block carrying `break-inside: avoid` — a table, a figure, a code block, an admonition, a blockquote ([roadmap.md](roadmap.md) 24.3.1) — are not candidates, so Chromium is never asked to keep a block together and split before something inside it at once
+- [x] The headings that break are marked in post-processing with `data-monodocs-pdf-break-before`, and one rule matches the attribute. A CSS-only selector would have to enumerate both the flat body Markdown produces and the `.sect1`–`.sect5` nesting Asciidoctor produces, and would still misread a page whose h1 is missing or whose first heading is an h3. The attribute is namespaced because a custom theme and an AsciiDoc passthrough can both put attributes on a heading
 
 **Where the rules live**
 
 - [x] The marker rule is emitted by core into the print stylesheet, beside the density rules, and names `#content` and `.page` alike, so replacing `style.css` cannot delete a syntax feature ([roadmap.md](roadmap.md) 24.6). The heading rule follows the same way
-- [ ] The heading rule is emitted the same way
-- [ ] The default `false` emits no heading rule at all, and neither rule reaches the screen stylesheet
+- [x] The heading rule is emitted the same way
+- [x] The default `false` emits no heading rule at all, and neither rule reaches the screen stylesheet
 
 **Measured rather than assumed**
 
-- [ ] A marker immediately followed by a heading that would break produces one break, not a blank sheet between them. Whether Chromium collapses two adjacent forced breaks is measured; if it does not, post-processing suppresses the second
-- [ ] The space above a heading that starts a sheet is measured against `pdf.density`, and the rule zeroes it only if Chromium keeps it — the standard [roadmap.md](roadmap.md) 24.6 set for a value that reaches the page
+- [x] A marker immediately followed by a heading that would break produces one break, not a blank sheet between them. Measured: Chromium does not collapse two adjacent forced breaks — two markers in a row leave a sheet between them — so post-processing does not mark a heading whose nearest preceding content is a marker
+- [x] The space above a heading that starts a sheet is measured against `pdf.density`: Chromium keeps it across a forced break, putting the heading 15.8pt lower at `relaxed` than at `normal`, so the rule zeroes it with `margin-top: 0` — the same property the density rule writes. The standard [roadmap.md](roadmap.md) 24.6 set for a value that reaches the page
 
 **Found while measuring** ([roadmap.md](roadmap.md) 24.3.4)
 
@@ -253,9 +253,9 @@ and it, v0.9, and v0.10 are released.
 
 **Tests and documentation**
 
-- [ ] The PDF assertions are page counts read from the produced PDF, the form the density tests already use. `h1 → h2 → body → h2` under `pageBreakLevel: 2` comes out as exactly two sheets — one sheet means the feature is dead, three means the leading-heading rule is wrong — and the same document under the default comes out as one. Both formats are covered
-- [ ] [syntax.md](syntax.md) stops saying that raw HTML in Markdown is dropped without exception, and says instead that the two page-break spellings are recognised as a control marker and normalised, with the input never reaching the output. [architecture.md](architecture.md) records the same boundary
-- [ ] The configuration reference and the syntax page on the documentation site document the marker and the key, with their Japanese mirrors, and [testing.md](testing.md) lists the new tests
+- [x] The PDF assertions are page counts read from the produced PDF, the form the density tests already use. `h1 → h2 → body → h2` under `pageBreakLevel: 2` comes out as exactly two sheets — one sheet means the feature is dead, three means the leading-heading rule is wrong — and the same document under the default comes out as one. Both formats are covered
+- [x] [syntax.md](syntax.md) stops saying that raw HTML in Markdown is dropped without exception, and says instead that the two page-break spellings are recognised as a control marker and normalised, with the input never reaching the output. [architecture.md](architecture.md) records the same boundary
+- [x] The configuration reference on the documentation site documents the marker and the key, with its Japanese mirror, and [testing.md](testing.md) lists the new tests. The site has no syntax page of its own — [syntax.md](syntax.md) is where the repository keeps that specification, and it is updated above
 
 ## Supported Syntax
 

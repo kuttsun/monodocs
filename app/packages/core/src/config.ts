@@ -116,6 +116,15 @@ export const PDF_DENSITY_PRESETS = {
   },
 } as const satisfies Record<string, PdfDensity>;
 
+/**
+ * `pdf.pageBreakLevel`: the deepest heading level that starts a new sheet, or `false` for none.
+ *
+ * Spelled out rather than `number` so that the public boundaries — the resolved configuration,
+ * `PostprocessOptions`, `RenderHtmlInput` — carry what the schema validates. A caller reaching
+ * core from TypeScript cannot hand them a 1 or a 7 that the configuration file could not.
+ */
+export type PdfPageBreakLevel = false | 2 | 3 | 4 | 5 | 6;
+
 /** Names accepted by `pdf.density`, and by `base` inside its object form. Loosest first. */
 export const PDF_DENSITY_NAMES = ["relaxed", "normal", "compact", "tight"] as const;
 export type PdfDensityName = (typeof PDF_DENSITY_NAMES)[number];
@@ -413,6 +422,28 @@ function buildConfigFileSchema() {
           header: z.union([z.literal(false), z.string().min(1)]).optional(),
           footer: z.union([z.literal(false), z.string().min(1)]).optional(),
           /**
+           * この深さまでの見出しの前で改ページする。`false`（既定）はどの見出しでも改ページ
+           * しない。数値は「新しい紙を始める最も深い見出しレベル」で、2 は h2 だけ、6 は h2〜h6。
+           * h1 はページタイトルであり、そのファイルは既に改ページ済みなので含めない。
+           * `"off"` ではなく `false` にしているのは、機能を無効化する値として header / footer が
+           * 既に `false` を使っているためで、`fontCheck` の warn|error|off は動作モードの列挙。
+           */
+          pageBreakLevel: z
+            .union(
+              [
+                z.literal(false),
+                z.literal(2),
+                z.literal(3),
+                z.literal(4),
+                z.literal(5),
+                z.literal(6),
+              ],
+              {
+                message: t("config.invalidPdfPageBreakLevelValue"),
+              },
+            )
+            .optional(),
+          /**
            * 版面の密度。プリセット名か、プリセットを土台に一部だけ差し替えるオブジェクト。
            * 値を 4 つ書き写させないために `base` を持たせている（写しは、後でプリセット側を
            * 調整したときに取り残される）。`html.labels` が lang の表に重なるのと同じ解決順。
@@ -547,6 +578,10 @@ export type ResolvedConfig = {
   pdfPrintBackground: boolean;
   /** PDF にしおり（サイドバーと同じ構造）を付与するか（既定 true）。 */
   pdfBookmarks: boolean;
+  /**
+   * 改ページする最も深い見出しレベル（2〜6）。`false` は見出しでは改ページしない（既定）。
+   */
+  pdfPageBreakLevel: PdfPageBreakLevel;
   /** 印刷時の版面の密度（解決済みの値。`normal` は既定テーマの値そのもの）。 */
   pdfDensity: PdfDensity;
   /** ページ上部の帯（解決済み HTML フラグメント。帯なしのときは空フラグメント）。 */
@@ -847,6 +882,7 @@ export async function loadConfig(
     pdfDensity: resolvePdfDensity(fileConfig.pdf?.density),
     pdfPrintBackground: fileConfig.pdf?.printBackground ?? true,
     pdfBookmarks: fileConfig.pdf?.bookmarks ?? true,
+    pdfPageBreakLevel: fileConfig.pdf?.pageBreakLevel ?? false,
     // ヘッダは既定で帯なし。フッタは既定でページ番号。
     pdfHeader: resolveBand(fileConfig.pdf?.header, EMPTY_PDF_BAND),
     pdfFooter: resolveBand(fileConfig.pdf?.footer, DEFAULT_PDF_FOOTER),

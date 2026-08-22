@@ -492,9 +492,10 @@ it with the same trust as your documentation sources.
 
 ### `pdf`
 
-Applies when the output format is `pdf` or `both` — with one exception.
-[`pdf.density`](#pdf-density) is written into the HTML as well, because printing that HTML from a
-browser is the same act of putting the document on paper.
+Applies when the output format is `pdf` or `both` — with two exceptions.
+[`pdf.density`](#pdf-density) and [`pdf.pageBreakLevel`](#pdf-page-break-level) are written into the
+HTML as well, because printing that HTML from a browser is the same act of putting the document on
+paper.
 
 | Key                   | Type              | Default   | Description |
 | --------------------- | ----------------- | --------- | ----------- |
@@ -502,6 +503,7 @@ browser is the same act of putting the document on paper.
 | `pdf.margin`          | map               | `20mm` / `15mm` / `20mm` / `15mm` | Page margins as CSS lengths, per side (`top`, `right`, `bottom`, `left`). An omitted side keeps its default. |
 | `pdf.printBackground` | boolean           | `true`    | Print background colours and images. |
 | `pdf.density`         | string / map      | `normal`  | How tightly the page is set: `relaxed`, `normal`, `compact`, `tight`, or an object. See below. |
+| `pdf.pageBreakLevel`  | `false` / 2–6     | `false`   | Start a new sheet before every heading down to this level: `2` is h2 only, `6` is h2 through h6. See below. |
 | `pdf.bookmarks`       | boolean           | `true`    | Add a bookmark outline with the same folder → page structure as the HTML sidebar. |
 | `pdf.header`          | `false` / string  | `false`   | The band at the top of every page. See below. |
 | `pdf.footer`          | `false` / string  | page number | The band at the bottom of every page. See below. |
@@ -636,6 +638,37 @@ Two things are easy to be caught by:
   fragment is not checked**: whether arbitrary HTML and CSS fit cannot be judged from the margin
   value alone, and a check that pretended otherwise would either warn falsely or promise something
   only measurement could keep.
+
+#### `pdf.pageBreakLevel` (a sheet per section) {#pdf-page-break-level}
+
+A source file already starts a new sheet. For a document whose sections each have to begin on one —
+a specification, a set of regulations, anything handed over on paper — this starts one before every
+heading down to the level you name:
+
+```yaml
+pdf:
+  pageBreakLevel: 2
+```
+
+`2` is h2 only, `3` is h2 and h3, `6` is h2 through h6. `false`, the default, breaks before no
+heading and leaves every existing document exactly as it is. h1 is not a level here: it is the page
+title, and the file it titles has already started a sheet.
+
+**A heading breaks unless nothing renders before it, or the only thing that does is the page title.**
+So a page that opens with its title and goes straight into `## Section` keeps them together — the
+alternative is a sheet holding one line — while a page whose title is followed by an introduction
+does break before the section, because the introduction belongs on the title's sheet.
+
+Two more things this rule implies:
+
+- **A heading inside a block that must not be split is left alone** — a table, a figure, a code
+  block, an admonition, a blockquote. Holding the block together and breaking inside it are not both
+  possible.
+- **A heading straight after a manual page-break marker is left alone**, since the marker has
+  already broken there. Two forced breaks in a row would leave a blank sheet between them.
+
+The space the density leaves above a heading goes with it: a heading that starts a sheet sits at the
+top margin rather than pushed down by the gap that separates sections in the middle of a page.
 
 #### Page breaks {#page-breaks}
 
