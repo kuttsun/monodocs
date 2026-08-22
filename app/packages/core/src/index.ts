@@ -21,7 +21,9 @@ export {
   type ConfigFile,
   type ResolvedConfig,
   type OnLargeImage,
+  type MermaidMode,
   type MermaidRuntime,
+  type ContentWidthDefault,
   type PdfMargin,
   type SidebarMode,
 } from "./config.js";
