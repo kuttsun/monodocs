@@ -229,12 +229,13 @@ describe("pdf.density in the generated stylesheet", () => {
     const plain = await buildHtml("relaxed", "pdf:\n  density: relaxed\n");
     const based = await buildHtml("relaxed-base", "pdf:\n  density:\n    base: relaxed\n");
 
-    // Not "no font-size line" but nothing appended whatsoever: the only `@media print` blocks in
-    // the document are the theme's own. Counting them is what says that, rather than naming a few
-    // strings the test hopes are the only ones.
+    // Not "no font-size line" but no density rules whatsoever: the only `@media print` blocks in
+    // the document are the theme's own plus the one core always appends for the page-break marker
+    // (roadmap 24.7), which is not a density rule and is there at every setting. Counting them is
+    // what says that, rather than naming a few strings the test hopes are the only ones.
     const { style } = await loadTheme("default");
     const blocks = (html: string) => html.split("@media print {").length - 1;
-    expect(blocks(plain)).toBe(blocks(style));
+    expect(blocks(plain)).toBe(blocks(style) + 1);
     expect(based).toBe(plain);
   });
 

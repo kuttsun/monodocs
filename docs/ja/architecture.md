@@ -139,7 +139,11 @@ PDF はシステムフォントを使います。開発イメージには Noto C
 
 `monodocs` は利用者または信頼できるチームが管理する文書を変換するものです。
 
-- Markdown の raw HTML は既定の remark-rehype 経路で破棄します。
+- Markdown の raw HTML は既定の remark-rehype 経路で破棄します。例外は改ページマーカー
+  （`<div class="page-break"></div>` と、その `style="page-break-after: always"` 綴り）だけで、
+  この経路より前に mdast の `html` ノードで一致させ、core が組み立てた要素（`div` ひとつ、
+  クラスひとつ、子は無し）に置き換えます。入力から出力へ届くものは無いので、境界に開いた穴では
+  なく、認識されたマーカーです。
 - AsciiDoc passthrough は未サニタイズの raw HTML を出力できるため、信頼できない入力は XSS の原因になります。
 - AsciiDoc `include::[]` は safe mode で実行し、入力ファイルのディレクトリ内へ制限します。
 - 画像は symlink 解決後の real path が入力ルート内にある場合だけ埋め込みます。

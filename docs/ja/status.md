@@ -223,11 +223,11 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **マーカー**（[roadmap.md](roadmap.md) 24.7）
 
-- [ ] AsciiDoc の `<<<` が新しい紙を始める。Asciidoctor はすでに `<div class="page-break"></div>` として出力しており、単一 HTML にも届いている。足りないのはそのクラスに一致する規則だけである
-- [ ] Markdown の `<div class="page-break"></div>` も同じように働く。`<div style="page-break-after: always"></div>` も同じマーカーとして受け、class 形へ正規化する。この綴りは Typora・各種 Markdown→PDF 変換器・MkDocs の PDF プラグイン・ブラウザの印刷がすでに理解するものであり、クラス名も monodocs が決めたものではなく Asciidoctor のものなので、規則 1 本で両形式に効く
-- [ ] Markdown が raw HTML を得るわけではない。`remark-rehype` の前に mdast の `html` ノードを 2 つの厳密な綴りと突き合わせ、出力へ届く要素は monodocs が組み立てる（`div` ひとつ、クラスひとつ、子は無し）。入力を出力し直さないので、属性やスクリプトが便乗して入ることはない
-- [ ] `<DIV>`、`class="page-break foo"`、2 つ目の属性、`<div class="page-break"/>`、タグの間の空白、それ以上を含む `style`、そして引用・リスト項目・表のセル・見出しの中のマーカーは、修復せずに拒否し、他の raw HTML と同じく破棄したままにする。`<script>` が引き続き破棄されることをテストで固定する
-- [ ] `break-after` ではなく `break-before: page` を使い、ページ末尾のマーカーが空白の紙を残さないようにする。ファイル境界が after ではなく before で改ページしているのと同じ理由である
+- [x] AsciiDoc の `<<<` が新しい紙を始める。Asciidoctor はすでに `<div class="page-break"></div>` として出力しており、単一 HTML にも届いている。足りないのはそのクラスに一致する規則だけである
+- [x] Markdown の `<div class="page-break"></div>` も同じように働く。`<div style="page-break-after: always"></div>` も同じマーカーとして受け、class 形へ正規化する。この綴りは Typora・各種 Markdown→PDF 変換器・MkDocs の PDF プラグイン・ブラウザの印刷がすでに理解するものであり、クラス名も monodocs が決めたものではなく Asciidoctor のものなので、規則 1 本で両形式に効く
+- [x] Markdown が raw HTML を得るわけではない。`remark-rehype` の前に mdast の `html` ノードを 2 つの厳密な綴りと突き合わせ、出力へ届く要素は monodocs が組み立てる（`div` ひとつ、クラスひとつ、子は無し）。入力を出力し直さないので、属性やスクリプトが便乗して入ることはない
+- [x] `<DIV>`、`class="page-break foo"`、2 つ目の属性、`<div class="page-break"/>`、タグの間の空白、それ以上を含む `style`、そして引用・リスト項目・表のセル・見出しの中のマーカーは、修復せずに拒否し、他の raw HTML と同じく破棄したままにする。`<script>` が引き続き破棄されることをテストで固定する
+- [x] `break-before` ではなく `break-after: page` を使う。実測による。マーカーは空のボックスなので、その手前で改ページするとボックス自身が新しい紙へ移り、1 ページ目の末尾にマーカーがある 2 ページの文書は `break-before` で 3 枚、`break-after` で 2 枚になる。それ以外の場合はどちらでも同じ枚数で、後ろに何も無いマーカーはどちらでも空白の紙を 1 枚残す——それがこのマーカーの求めているものである（[roadmap.md](roadmap.md) 24.7）
 
 **`pdf.pageBreakLevel`**（[roadmap.md](roadmap.md) 24.7）
 
@@ -238,13 +238,18 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **規則の置き場所**
 
-- [ ] 規則は両方とも core が印刷用スタイルシートに、密度の規則と並べて書き出し、`#content` と `.page` の両方を名指す。`style.css` の差し替えで構文機能が消えないようにするためである（[roadmap.md](roadmap.md) 24.6）
+- [x] マーカーの規則は core が印刷用スタイルシートに、密度の規則と並べて書き出し、`#content` と `.page` の両方を名指す。`style.css` の差し替えで構文機能が消えないようにするためである（[roadmap.md](roadmap.md) 24.6）
+- [ ] 見出しの規則も同じ形で書き出す
 - [ ] 既定の `false` では見出しの規則を 1 つも出力せず、どちらの規則も画面用スタイルシートへは漏れない
 
 **推測せず実測するもの**
 
 - [ ] マーカーの直後に改ページ対象の見出しが来ても、その間に空白の紙は生じない。隣接する 2 つの強制改ページを Chromium が畳むかどうかを実測し、畳まないなら post-process で 2 つ目を抑制する
 - [ ] 紙の先頭に来た見出しの上の空きを `pdf.density` と突き合わせて実測し、Chromium が残す場合に限り規則で 0 にする。紙に届く値は推測で決めないという [roadmap.md](roadmap.md) 24.6 の基準である
+
+**計測中に見つかったもの**（[roadmap.md](roadmap.md) 24.3.4）
+
+- [x] 1 枚に収まる文書が 1 枚で出る。以前は 2 枚になり、2 枚目はページ番号だけの空白だった。画面を埋めるための `html, body { height: 100% }` と `#app { min-height: 100vh }` が、`pdf.bookmarks` の差し込む宛先アンカーと紙の上で出会うためである。実測では、印刷時にどちらか一方を解除しても 2 枚のままで、両方を解除して初めて 1 枚になる。49 枚の文書は枚数が変わらず、これが「空白の紙が減った」のであって「内容が消えた」のではないことを示す
 
 **テストとドキュメント**
 

@@ -108,9 +108,35 @@ function styleWithOverrides(style: string, input: RenderHtmlInput): string {
   if (overrides.length > 0) {
     out = `${out}\n:root {\n${overrides.join("\n")}\n}\n`;
   }
+  out = `${out}\n${PRINT_PAGE_BREAK_RULES}`;
   const density = printDensityRules(input.pdfDensity);
   return density === "" ? out : `${out}\n${density}`;
 }
+
+/**
+ * The manual page-break marker, in print only.
+ *
+ * Emitted here rather than added to the default theme: a theme replaces `style.css` wholesale, and
+ * a theme should not be able to delete a syntax feature. `#content` and `.page` are both named for
+ * the reason the density rules name both — the first loses to nothing in the default theme, the
+ * second reaches a theme that lays the pages out somewhere else.
+ *
+ * `break-after`, not `break-before`, from measurement rather than by analogy with the page boundary
+ * above it. The marker is an empty box, so a forced break in front of it moves the box itself onto
+ * the new sheet: a two-page document whose first page ends with a marker comes out as three sheets
+ * under `break-before` and two under `break-after`. Every other case measured the same under both —
+ * mid-page, straight after the page title, and a marker with nothing behind it, which leaves one
+ * blank sheet either way because that is what it asks for. Two markers in a row leave one blank
+ * sheet between them, which is how a blank sheet is asked for.
+ */
+const PRINT_PAGE_BREAK_RULES = `@media print {
+  #content .page-break,
+  .page .page-break {
+    break-after: page;
+    page-break-after: always;
+  }
+}
+`;
 
 /**
  * Print-only rules for a density, carrying **only what differs from the screen**.

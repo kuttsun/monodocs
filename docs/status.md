@@ -223,11 +223,11 @@ and it, v0.9, and v0.10 are released.
 
 **The marker** ([roadmap.md](roadmap.md) 24.7)
 
-- [ ] `<<<` in AsciiDoc starts a new sheet. Asciidoctor already emits it as `<div class="page-break"></div>` and it already reaches the single HTML; what is missing is a rule that matches the class
-- [ ] `<div class="page-break"></div>` in Markdown does the same, with `<div style="page-break-after: always"></div>` accepted as the same marker and normalised to the class form. The spelling is the one Typora, the Markdown-to-PDF converters, the MkDocs PDF plugins, and a browser's print dialog already understand, and the class name is Asciidoctor's rather than one monodocs chose, so one rule serves both formats
-- [ ] Markdown does not gain raw HTML. The mdast `html` node is matched against the two exact spellings before `remark-rehype`, and the element that reaches the output is built by monodocs — a `div`, one class, no children — rather than re-emitted from the input, so no attribute or script can ride in on it
-- [ ] `<DIV>`, `class="page-break foo"`, a second attribute, `<div class="page-break"/>`, whitespace between the tags, a `style` carrying anything more, and a marker inside a blockquote, a list item, a table cell, or a heading are all rejected rather than repaired, and stay dropped as every other raw HTML in Markdown is. A test asserts that a `<script>` is still dropped
-- [ ] `break-before: page`, not `break-after`, so a marker at the end of a page leaves no blank sheet — the reason the file boundary already breaks before rather than after
+- [x] `<<<` in AsciiDoc starts a new sheet. Asciidoctor already emits it as `<div class="page-break"></div>` and it already reaches the single HTML; what is missing is a rule that matches the class
+- [x] `<div class="page-break"></div>` in Markdown does the same, with `<div style="page-break-after: always"></div>` accepted as the same marker and normalised to the class form. The spelling is the one Typora, the Markdown-to-PDF converters, the MkDocs PDF plugins, and a browser's print dialog already understand, and the class name is Asciidoctor's rather than one monodocs chose, so one rule serves both formats
+- [x] Markdown does not gain raw HTML. The mdast `html` node is matched against the two exact spellings before `remark-rehype`, and the element that reaches the output is built by monodocs — a `div`, one class, no children — rather than re-emitted from the input, so no attribute or script can ride in on it
+- [x] `<DIV>`, `class="page-break foo"`, a second attribute, `<div class="page-break"/>`, whitespace between the tags, a `style` carrying anything more, and a marker inside a blockquote, a list item, a table cell, or a heading are all rejected rather than repaired, and stay dropped as every other raw HTML in Markdown is. A test asserts that a `<script>` is still dropped
+- [x] `break-after: page`, not `break-before`, from measurement: the marker is an empty box, so a break in front of it moves the box itself onto the new sheet, and a two-page document whose first page ends with a marker costs three sheets under `break-before` and two under `break-after`. Every other case measured the same under both, and a marker with nothing behind it leaves one blank sheet either way — which is what it asks for ([roadmap.md](roadmap.md) 24.7)
 
 **`pdf.pageBreakLevel`** ([roadmap.md](roadmap.md) 24.7)
 
@@ -238,13 +238,18 @@ and it, v0.9, and v0.10 are released.
 
 **Where the rules live**
 
-- [ ] Both rules are emitted by core into the print stylesheet, beside the density rules, and name `#content` and `.page` alike, so replacing `style.css` cannot delete a syntax feature ([roadmap.md](roadmap.md) 24.6)
+- [x] The marker rule is emitted by core into the print stylesheet, beside the density rules, and names `#content` and `.page` alike, so replacing `style.css` cannot delete a syntax feature ([roadmap.md](roadmap.md) 24.6). The heading rule follows the same way
+- [ ] The heading rule is emitted the same way
 - [ ] The default `false` emits no heading rule at all, and neither rule reaches the screen stylesheet
 
 **Measured rather than assumed**
 
 - [ ] A marker immediately followed by a heading that would break produces one break, not a blank sheet between them. Whether Chromium collapses two adjacent forced breaks is measured; if it does not, post-processing suppresses the second
 - [ ] The space above a heading that starts a sheet is measured against `pdf.density`, and the rule zeroes it only if Chromium keeps it — the standard [roadmap.md](roadmap.md) 24.6 set for a value that reaches the page
+
+**Found while measuring** ([roadmap.md](roadmap.md) 24.3.4)
+
+- [x] A document short enough for one sheet comes out on one. It used to come out on two, the second empty but for the page number: `html, body { height: 100% }` and `#app { min-height: 100vh }` — two rules that exist to fill a screen — meeting the destination anchor `pdf.bookmarks` inserts. Measured, turning off either one in print leaves the document at two sheets and only turning off both brings it to one; a 49-sheet document is unchanged, which is what says a blank sheet was removed rather than a sheet of content
 
 **Tests and documentation**
 

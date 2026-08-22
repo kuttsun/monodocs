@@ -1885,6 +1885,19 @@ re-measuring the embedded SVG would not reproduce the font resolution that produ
 and footer fragments are a third context; they are checked in v0.10 only for the default fragment,
 whose content monodocs controls.
 
+### 24.3.4 A Blank Last Sheet (v0.11)
+
+A document short enough to fit on one sheet came out on two, the second empty but for the page
+number. Found while measuring page breaks, where every count was one higher than the document
+called for.
+
+The cause is two rules that exist to fill a screen — `html, body { height: 100% }` and
+`#app { min-height: 100vh }` — meeting the destination anchor that `pdf.bookmarks` inserts at the
+top of each page. Neither is enough on its own: measured, a one-sheet document with that anchor
+stays at two sheets when either rule is turned off in print and drops to one only when both are.
+Paper has no viewport, so the print block turns off both. A 49-sheet document is unchanged, which is
+what says the fix removes a blank sheet rather than a page's worth of content.
+
 ### 24.4 Display Mode for PDF
 
 Separately from the pseudo-page display of the HTML, a print mode that lays out all pages vertically is provided for PDF.
@@ -2120,8 +2133,12 @@ passthrough can both put attributes on a heading.
 added to the default theme. A theme replaces `style.css` wholesale, and a theme should not be able
 to delete a syntax feature. They name `#content` and `.page` alike, for the reason 24.6 gives.
 
-`break-before: page` rather than `break-after`: a marker at the end of a page would otherwise leave a
-blank sheet, which is why the file boundary already breaks before rather than after.
+`break-after: page` rather than `break-before`, which is what the file boundary uses. Measured: the
+marker is an empty box, so a break in front of it moves the box itself onto the new sheet, and a
+two-page document whose first page ends with a marker comes out as three sheets under `break-before`
+and two under `break-after`. Every other case measured the same under both. A marker with nothing
+behind it leaves one blank sheet either way — that is what asking for a break with nothing after it
+means — and so do two markers in a row, which is how a blank sheet is asked for.
 
 **What is deliberately not here.** No "keep together" marker: the print stylesheet already avoids
 splitting the blocks where it matters, and a general one is a second layout language. No per-file

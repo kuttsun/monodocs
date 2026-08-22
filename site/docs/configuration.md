@@ -637,6 +637,46 @@ Two things are easy to be caught by:
   value alone, and a check that pretended otherwise would either warn falsely or promise something
   only measurement could keep.
 
+#### Page breaks {#page-breaks}
+
+Where a sheet ends is a decision the document makes, not the configuration. A source file always
+starts a new sheet; inside a file, a marker of your own starts one:
+
+```markdown
+The last paragraph before the break.
+
+<div class="page-break"></div>
+
+The first paragraph of the new sheet.
+```
+
+```asciidoc
+The last paragraph before the break.
+
+<<<
+
+The first paragraph of the new sheet.
+```
+
+AsciiDoc's `<<<` is Asciidoctor's own page break. In Markdown the marker is the empty `<div>` that
+Markdown-to-PDF tools have settled on — `<div style="page-break-after: always"></div>` is accepted
+as the same thing — and it stays invisible where the source is read, because an empty `div` renders
+as nothing.
+
+Markdown raw HTML is otherwise dropped, and that has not changed: monodocs matches these two exact
+spellings and replaces them with an element it builds itself, so no attribute of yours reaches the
+output. A marker with anything else in it — a second attribute, an extra class, text between the
+tags — is dropped like any other raw HTML rather than repaired.
+
+Two things follow from a break being a break:
+
+- **A marker must be a block of its own.** One inside a blockquote, a list item, a table cell, or a
+  heading does nothing: those are the blocks the print layout keeps together.
+- **A marker with nothing after it leaves a blank sheet**, and so do two markers in a row. That is
+  how you ask for one.
+
+The rule is `@media print`, so it applies to `--format pdf` and to a reader printing the HTML.
+
 ## Page order and titles
 
 The order of pages in the sidebar and in the prev/next navigation is **independent of the display title**. `sidebar.titleFrom` and `sidebar.titleTransform` only change the **text shown on screen**; they never affect ordering. The order is decided in two steps:
