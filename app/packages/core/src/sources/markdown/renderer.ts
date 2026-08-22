@@ -28,6 +28,7 @@ import type {
 } from "../../types.js";
 import { toPageMeta } from "../meta.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
+import { remarkPageBreak } from "./pageBreak.js";
 
 function normalizeReferenceId(identifier: string): string {
   return identifier.trim().replace(/\s+/g, " ").toUpperCase();
@@ -116,6 +117,8 @@ export const markdownRenderer: SourceRenderer = {
       .use(() => (tree: MdastRoot) => {
         links = collectLinks(tree);
       })
+      // The page-break marker is picked up before remark-rehype, which is where raw HTML is dropped.
+      .use(remarkPageBreak)
       .use(remarkRehype)
       .use(rehypeSlug)
       // 見出しだけでなく脚注など全要素の ID を page id で prefix し、

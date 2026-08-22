@@ -242,7 +242,12 @@ machine's fonts into the SVG, which is why the setting is not part of `pdf`.
 
 `monodocs` converts trusted documents managed by the user's team.
 
-- Markdown raw HTML is discarded by the default remark-rehype path.
+- Markdown raw HTML is discarded by the default remark-rehype path. The one exception is the
+  page-break marker (`<div class="page-break"></div>` and the `style="page-break-after: always"`
+  spelling of it, in the quoting and ASCII-whitespace variants the configuration reference
+  enumerates), matched on the mdast `html` node before that path and replaced with an element core
+  builds — a `div`, one class, no children. Nothing from the input reaches the output, so this is a
+  recognised marker rather than a hole in the boundary.
 - AsciiDoc passthrough can emit raw HTML, which is embedded without sanitization. Converting untrusted AsciiDoc
   can therefore cause XSS.
 - AsciiDoc `include::[]` runs in safe mode and is jailed under the input file's directory.

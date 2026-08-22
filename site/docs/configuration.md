@@ -637,6 +637,63 @@ Two things are easy to be caught by:
   value alone, and a check that pretended otherwise would either warn falsely or promise something
   only measurement could keep.
 
+#### Page breaks {#page-breaks}
+
+Where a sheet ends is a decision the document makes, not the configuration. A source file always
+starts a new sheet; inside a file, a marker of your own starts one:
+
+```markdown
+The last paragraph before the break.
+
+<div class="page-break"></div>
+
+The first paragraph of the new sheet.
+```
+
+```asciidoc
+The last paragraph before the break.
+
+<<<
+
+The first paragraph of the new sheet.
+```
+
+AsciiDoc's `<<<` is Asciidoctor's own page break. In Markdown the marker is the empty `<div>` that
+Markdown-to-PDF tools have settled on — `<div style="page-break-after: always"></div>` is accepted
+as the same thing — and it stays invisible where the source is read, because an empty `div` renders
+as nothing.
+
+Markdown raw HTML is otherwise dropped, and that has not changed: monodocs matches the marker and
+replaces it with an element it builds itself, so no attribute of yours reaches the output. Anything
+else — a second attribute, an extra class, text between the tags — is dropped like any other raw
+HTML rather than repaired.
+
+**Exactly what counts as the marker** in Markdown, since 1.0 will freeze it:
+
+- The element is a lowercase `div`, and it carries exactly one attribute: `class="page-break"` or
+  `style="page-break-after: always"`.
+- Either quoting works: `"page-break"` and `'page-break'` are the same marker.
+- In the `style` spelling the colon may be followed by spaces or tabs, or by nothing, and a trailing
+  `;` is allowed — `style="page-break-after:always;"` is the same marker. Anything beyond that one
+  declaration is not.
+- ASCII whitespace — space, tab, carriage return, line feed — is allowed around the `=`,
+  before the `>`, and around the marker itself, and **at least one** is required after `<div`.
+  Nothing at all is allowed **between** `>` and `</div>`, not even a space.
+- Everything else is dropped: `<DIV>`, `class="page-break foo"`, a second attribute, a self-closing
+  `<div class="page-break"/>`, a newline between the colon and `always`, and any further declaration
+  inside `style`.
+
+Two more things follow from a break being a break:
+
+- **In Markdown, a marker must be a block of its own.** One inside a blockquote, a list item, a
+  table cell, or a heading is not recognised and is dropped: those are the blocks the print layout
+  keeps together. (In AsciiDoc, where `<<<` is Asciidoctor's own construct, the element lands
+  wherever Asciidoctor puts it — so keep `<<<` at the top level there too.)
+- **A marker with nothing after it leaves a blank sheet**, and so do two markers in a row. That is
+  how you ask for one.
+
+The rule is `@media print`, so it applies to `--format pdf` and to a reader printing the HTML.
+
 ## Page order and titles
 
 The order of pages in the sidebar and in the prev/next navigation is **independent of the display title**. `sidebar.titleFrom` and `sidebar.titleTransform` only change the **text shown on screen**; they never affect ordering. The order is decided in two steps:

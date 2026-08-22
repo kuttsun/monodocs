@@ -1116,6 +1116,16 @@ body.content-wide #content {
 
 /* ---- print: 全ページを縦に展開する ---- */
 @media print {
+  /* The two rules that fill a screen — `height: 100%` here and `min-height: 100vh` on `#app`
+     below — add a blank sheet at the end on paper. Measured: a one-sheet document carrying the
+     destination anchor `pdf.bookmarks` inserts stays at two sheets when either one alone is turned
+     off, and comes down to one only when both are. Paper has no viewport, so print turns off both.
+     They belong here rather than in a width media query: a document printed on A3 does not enter
+     one, and measured, that is exactly where the blank sheet came back. */
+  html,
+  body {
+    height: auto;
+  }
   #sidebar-show,
   #sidebar,
   #toc,
@@ -1127,6 +1137,8 @@ body.content-wide #content {
   }
   #app {
     display: block;
+    /* The other half of the pair above. */
+    min-height: 0;
   }
   #content {
     max-width: none;
