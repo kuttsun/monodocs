@@ -510,3 +510,40 @@ describe("loadConfig: unknown keys", () => {
     await expect(loadConfig({}, dir)).rejects.not.toThrow(/\[\s*\{/);
   });
 });
+
+describe("loadConfig: pdf.pageBreakLevel", () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "monodocs-config-"));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  async function writeConfig(yaml: string): Promise<void> {
+    await writeFile(join(dir, "monodocs.config.yml"), yaml);
+  }
+
+  it("defaults to breaking before no heading", async () => {
+    expect((await loadConfig({}, dir)).pdfPageBreakLevel).toBe(false);
+  });
+
+  it("takes false and 2 through 6", async () => {
+    for (const value of ["false", "2", "3", "6"]) {
+      await writeConfig(`pdf:\n  pageBreakLevel: ${value}\n`);
+      const expected = value === "false" ? false : Number(value);
+      expect((await loadConfig({}, dir)).pdfPageBreakLevel, value).toBe(expected);
+    }
+  });
+
+  it("rejects a level that is not one a heading can have here", async () => {
+    // 1 is the page title, whose file has already broken; 7 is not a heading; `true` and `"off"`
+    // are the shapes someone would guess from other keys, and are refused rather than coerced.
+    for (const value of ["1", "7", "2.5", "true", '"off"', '"2"']) {
+      await writeConfig(`pdf:\n  pageBreakLevel: ${value}\n`);
+      await expect(loadConfig({}, dir), value).rejects.toThrow();
+    }
+  });
+});

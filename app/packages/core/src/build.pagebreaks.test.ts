@@ -50,6 +50,69 @@ describe("the page-break rule in the generated stylesheet", () => {
   });
 });
 
+describe("the heading rule in the generated stylesheet", () => {
+  it("is written only when pdf.pageBreakLevel is set", async () => {
+    const off = join(dir, "off.html");
+    await buildSite({
+      inputDir: await writeDoc("off", "index.md", "# T\n\n## A\n"),
+      outputFile: off,
+      format: "html",
+    });
+    expect(await readFile(off, "utf8")).not.toContain("data-monodocs-pdf-break-before");
+
+    const on = join(dir, "on.html");
+    await buildSite({
+      inputDir: await writeDoc(
+        "on",
+        "index.md",
+        "# T\n\nintro\n\n## A\n",
+        "pdf:\n  pageBreakLevel: 2\n",
+      ),
+      outputFile: on,
+      format: "html",
+    });
+    const html = await readFile(on, "utf8");
+    // The whole block, as with the marker rule: "inside print" is part of the claim, and the space
+    // the density would leave above the heading goes with the heading to the top of the sheet.
+    expect(html).toContain(
+      "@media print {\n" +
+        "  #content [data-monodocs-pdf-break-before],\n" +
+        "  .page [data-monodocs-pdf-break-before] {\n" +
+        "    break-before: page;\n    page-break-before: always;\n    margin-top: 0;\n  }\n}\n",
+    );
+    expect(html).toContain("data-monodocs-pdf-break-before");
+  }, 60_000);
+
+  it("marks the headings post-processing chose, in both formats", async () => {
+    const level = "pdf:\n  pageBreakLevel: 2\n";
+    const md = join(dir, "md.html");
+    await buildSite({
+      inputDir: await writeDoc("md", "index.md", "# T\n\n## A\n\na\n\n## B\n", level),
+      outputFile: md,
+      format: "html",
+    });
+    const adoc = join(dir, "adoc.html");
+    await buildSite({
+      inputDir: await writeDoc("adoc", "index.adoc", "= T\n\n== A\n\na\n\n== B\n", level),
+      outputFile: adoc,
+      format: "html",
+    });
+
+    // One marked heading in each: the first section is the one only the page title precedes, and
+    // the flat body Markdown produces and the `.sect1` nesting Asciidoctor produces agree on it.
+    for (const [name, file] of [
+      ["markdown", md],
+      ["asciidoc", adoc],
+    ] as const) {
+      const html = await readFile(file, "utf8");
+      // The attribute with its value: the two bare ones belong to the rule's selector.
+      const marks = html.split('data-monodocs-pdf-break-before=""').length - 1;
+      expect(marks, name).toBe(1);
+      expect(html.slice(html.indexOf('data-monodocs-pdf-break-before=""')), name).toContain("B");
+    }
+  }, 60_000);
+});
+
 /**
  * The claim is a sheet count, and only a real print run produces one. Chromium only, like the other
  * PDF tests.
@@ -103,6 +166,32 @@ describe.skipIf(!chromium)("the page-break marker on paper", () => {
       await sheets("twice", "index.md", `# T\n\nA\n\n${MARKER}\n\n${MARKER}\n\nB\n`, noBranding),
     ).toBe(3);
   }, 120_000);
+
+  it("puts each section on its own sheet under pdf.pageBreakLevel", async () => {
+    // The assertion that fails in both directions: one sheet means the feature is dead, three means
+    // the heading only the page title precedes was marked and the title is alone on a sheet.
+    const body = "# T\n\n## A\n\na\n\n## B\n\nb\n";
+    expect(await sheets("level-off", "index.md", body)).toBe(1);
+    expect(await sheets("level-2", "index.md", body, "pdf:\n  pageBreakLevel: 2\n")).toBe(2);
+    // An introduction on the title's sheet means the first section starts its own.
+    expect(
+      await sheets(
+        "level-intro",
+        "index.md",
+        "# T\n\nintro\n\n## A\n\na\n",
+        "pdf:\n  pageBreakLevel: 2\n",
+      ),
+    ).toBe(2);
+    // AsciiDoc, and a deeper level: A is skipped, A1 and B each start a sheet.
+    expect(
+      await sheets(
+        "level-3-adoc",
+        "index.adoc",
+        "= T\n\n== A\n\na\n\n=== A1\n\na1\n\n== B\n\nb\n",
+        "pdf:\n  pageBreakLevel: 3\n",
+      ),
+    ).toBe(3);
+  }, 240_000);
 
   it("does not put a blank sheet between a marker ending a page and the page after it", async () => {
     // Measured: the marker is an empty box, so `break-before` moves the box itself onto the new

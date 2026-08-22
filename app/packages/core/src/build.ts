@@ -110,6 +110,7 @@ export async function preparePages(
     mermaidMode: opts.mermaidMode ?? config.mermaidMode,
     mermaidPrerenderer: opts.mermaidPrerenderer,
     codeHighlight: config.codeHighlight,
+    pdfPageBreakLevel: config.pdfPageBreakLevel,
   });
   // custom はサイドバーが閲覧順そのものになるため、ページの並びもそれに合わせる
   // （前後ナビ・PDF のページ順・初期表示ページが一致する）。
@@ -233,6 +234,7 @@ export async function buildSite(
     // 印刷時の密度は生成物そのものに書き込む。PDF はこの HTML を印刷して作るので、
     // ブラウザから同じ HTML を印刷したときも同じ版面になる。
     pdfDensity: config.pdfDensity,
+    pdfPageBreakLevel: config.pdfPageBreakLevel,
     contentWidthToggle: config.contentWidthToggle,
     contentWidthDefault: config.contentWidthDefault,
     imageLightbox: config.imageLightbox,
