@@ -663,15 +663,29 @@ Markdown-to-PDF tools have settled on — `<div style="page-break-after: always"
 as the same thing — and it stays invisible where the source is read, because an empty `div` renders
 as nothing.
 
-Markdown raw HTML is otherwise dropped, and that has not changed: monodocs matches these two exact
-spellings and replaces them with an element it builds itself, so no attribute of yours reaches the
-output. A marker with anything else in it — a second attribute, an extra class, text between the
-tags — is dropped like any other raw HTML rather than repaired.
+Markdown raw HTML is otherwise dropped, and that has not changed: monodocs matches the marker and
+replaces it with an element it builds itself, so no attribute of yours reaches the output. Anything
+else — a second attribute, an extra class, text between the tags — is dropped like any other raw
+HTML rather than repaired.
 
-Two things follow from a break being a break:
+**Exactly what counts as the marker** in Markdown, since 1.0 will freeze it:
 
-- **A marker must be a block of its own.** One inside a blockquote, a list item, a table cell, or a
-  heading does nothing: those are the blocks the print layout keeps together.
+- The element is a lowercase `div`, and it carries exactly one attribute: `class="page-break"` or
+  `style="page-break-after: always"`.
+- Either quoting works: `"page-break"` and `'page-break'` are the same marker.
+- In the `style` spelling the space after the colon is optional, and a trailing `;` is allowed —
+  `style="page-break-after:always;"` is the same marker.
+- ASCII spaces, tabs, and newlines are allowed after `<div`, around the `=`, before the `>`, and
+  around the marker itself. Nothing at all is allowed **between** `>` and `</div>`, not even a space.
+- Everything else is dropped: `<DIV>`, `class="page-break foo"`, a second attribute, a self-closing
+  `<div class="page-break"/>`, and any other declaration inside `style`.
+
+Two more things follow from a break being a break:
+
+- **In Markdown, a marker must be a block of its own.** One inside a blockquote, a list item, a
+  table cell, or a heading is not recognised and is dropped: those are the blocks the print layout
+  keeps together. (In AsciiDoc, where `<<<` is Asciidoctor's own construct, the element lands
+  wherever Asciidoctor puts it — so keep `<<<` at the top level there too.)
 - **A marker with nothing after it leaves a blank sheet**, and so do two markers in a row. That is
   how you ask for one.
 

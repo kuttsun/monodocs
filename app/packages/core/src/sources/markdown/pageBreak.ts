@@ -5,7 +5,9 @@ import type { Paragraph, Root as MdastRoot } from "mdast";
  *
  * Raw HTML in Markdown is dropped (roadmap 16.1), and this does not move that boundary. What is
  * recognised here is a marker that happens to be spelled like HTML: an `html` node matching one of
- * two exact spellings is replaced with an element **monodocs builds**, so nothing the author wrote
+ * two spellings — in the quoting and ASCII-whitespace variants the expression below spells out, and
+ * the configuration reference enumerates for the reader — is replaced with an element
+ * **monodocs builds**, so nothing the author wrote
  * reaches the output and an attribute or a script cannot ride in on it. Everything else stays
  * dropped.
  *

@@ -1060,7 +1060,6 @@ body.content-wide #content {
      交差サイズが本文の最大内容幅になる）、文書全体に横スクロールが出る。 */
   #app {
     display: block;
-    min-height: 0;
   }
   /* 狭い画面では、サイドバーを縦に積むと本文がナビ一覧の下へ押し出されて
      読み始められない。ドロワーとして重ね、既定では閉じておく。 */
@@ -1117,10 +1116,12 @@ body.content-wide #content {
 
 /* ---- print: 全ページを縦に展開する ---- */
 @media print {
-  /* 画面いっぱいに広げるための指定（html/body の height: 100% と #app の min-height: 100vh）は、
-     紙の上では末尾に空白の紙を 1 枚増やす。実測: しおり用の宛先アンカーを本文先頭に差し込んだ
-     1 枚分の文書が、この 2 つのどちらか一方だけを解除しても 2 枚のままで、両方を解除して初めて
-     1 枚になる。紙にビューポートは無いので、印刷では両方とも解除する。 */
+  /* The two rules that fill a screen — `height: 100%` here and `min-height: 100vh` on `#app`
+     below — add a blank sheet at the end on paper. Measured: a one-sheet document carrying the
+     destination anchor `pdf.bookmarks` inserts stays at two sheets when either one alone is turned
+     off, and comes down to one only when both are. Paper has no viewport, so print turns off both.
+     They belong here rather than in a width media query: a document printed on A3 does not enter
+     one, and measured, that is exactly where the blank sheet came back. */
   html,
   body {
     height: auto;
@@ -1136,6 +1137,8 @@ body.content-wide #content {
   }
   #app {
     display: block;
+    /* The other half of the pair above. */
+    min-height: 0;
   }
   #content {
     max-width: none;

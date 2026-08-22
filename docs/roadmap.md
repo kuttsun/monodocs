@@ -2083,7 +2083,7 @@ to choose — Asciidoctor emits it already, so one rule serves both formats.
 
 **Markdown does not gain raw HTML.** Raw HTML in Markdown is dropped (16.1), and that boundary does
 not move. What is recognised is a marker that happens to be spelled like HTML: the mdast `html` node
-is matched against two exact spellings before `remark-rehype` sees it, and a match is replaced with
+is matched against two spellings before `remark-rehype` sees it, and a match is replaced with
 an element monodocs builds — a `div`, one class, no children — rather than by re-emitting what the
 author wrote. Nothing from the input reaches the output, so this is not a way in for an attribute or
 a script. The accepted language is small enough to audit by eye:

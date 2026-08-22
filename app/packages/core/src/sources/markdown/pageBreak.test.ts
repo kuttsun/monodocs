@@ -23,6 +23,7 @@ describe("the page-break marker in Markdown", () => {
       '<div style="page-break-after:always"></div>',
       '<div style="page-break-after: always;"></div>',
       '<div  class = "page-break" ></div>',
+      '\n<div class="page-break"></div>\n',
     ]) {
       expect(isPageBreakMarker(marker), marker).toBe(true);
       // Every spelling normalises to the class form, which is the one Asciidoctor emits for `<<<`,

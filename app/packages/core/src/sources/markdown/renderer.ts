@@ -117,7 +117,7 @@ export const markdownRenderer: SourceRenderer = {
       .use(() => (tree: MdastRoot) => {
         links = collectLinks(tree);
       })
-      // 改ページマーカーは raw HTML が捨てられる remark-rehype より前で拾う。
+      // The page-break marker is picked up before remark-rehype, which is where raw HTML is dropped.
       .use(remarkPageBreak)
       .use(remarkRehype)
       .use(rehypeSlug)

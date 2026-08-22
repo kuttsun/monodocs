@@ -225,7 +225,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 - [x] AsciiDoc の `<<<` が新しい紙を始める。Asciidoctor はすでに `<div class="page-break"></div>` として出力しており、単一 HTML にも届いている。足りないのはそのクラスに一致する規則だけである
 - [x] Markdown の `<div class="page-break"></div>` も同じように働く。`<div style="page-break-after: always"></div>` も同じマーカーとして受け、class 形へ正規化する。この綴りは Typora・各種 Markdown→PDF 変換器・MkDocs の PDF プラグイン・ブラウザの印刷がすでに理解するものであり、クラス名も monodocs が決めたものではなく Asciidoctor のものなので、規則 1 本で両形式に効く
-- [x] Markdown が raw HTML を得るわけではない。`remark-rehype` の前に mdast の `html` ノードを 2 つの厳密な綴りと突き合わせ、出力へ届く要素は monodocs が組み立てる（`div` ひとつ、クラスひとつ、子は無し）。入力を出力し直さないので、属性やスクリプトが便乗して入ることはない
+- [x] Markdown が raw HTML を得るわけではない。`remark-rehype` の前に mdast の `html` ノードを 2 つの綴り（引用符と ASCII 空白の揺れは設定リファレンスに列挙する。1.0 が凍結するため）と突き合わせ、出力へ届く要素は monodocs が組み立てる（`div` ひとつ、クラスひとつ、子は無し）。入力を出力し直さないので、属性やスクリプトが便乗して入ることはない
 - [x] `<DIV>`、`class="page-break foo"`、2 つ目の属性、`<div class="page-break"/>`、タグの間の空白、それ以上を含む `style`、そして引用・リスト項目・表のセル・見出しの中のマーカーは、修復せずに拒否し、他の raw HTML と同じく破棄したままにする。`<script>` が引き続き破棄されることをテストで固定する
 - [x] `break-before` ではなく `break-after: page` を使う。実測による。マーカーは空のボックスなので、その手前で改ページするとボックス自身が新しい紙へ移り、1 ページ目の末尾にマーカーがある 2 ページの文書は `break-before` で 3 枚、`break-after` で 2 枚になる。それ以外の場合はどちらでも同じ枚数で、後ろに何も無いマーカーはどちらでも空白の紙を 1 枚残す——それがこのマーカーの求めているものである（[roadmap.md](roadmap.md) 24.7）
 

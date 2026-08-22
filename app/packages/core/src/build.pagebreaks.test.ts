@@ -16,10 +16,16 @@ afterEach(async () => {
 });
 
 /** One short page, small enough that only a forced break can put it on a second sheet. */
-async function writeDoc(name: string, file: string, body: string): Promise<string> {
+async function writeDoc(
+  name: string,
+  file: string,
+  body: string,
+  config?: string,
+): Promise<string> {
   const docs = join(dir, name);
   await mkdir(docs, { recursive: true });
   await writeFile(join(docs, file), body, "utf8");
+  if (config !== undefined) await writeFile(join(docs, "monodocs.config.yml"), config, "utf8");
   return docs;
 }
 
@@ -54,8 +60,8 @@ const chromium =
     existsSync(p),
   );
 
-async function sheets(name: string, file: string, body: string): Promise<number> {
-  const docs = await writeDoc(name, file, body);
+async function sheets(name: string, file: string, body: string, config?: string): Promise<number> {
+  const docs = await writeDoc(name, file, body, config);
   const out = join(dir, `${name}.pdf`);
   await buildSite({ inputDir: docs, outputFile: out, format: "pdf" });
   const { PDFDocument } = await import("pdf-lib");
@@ -65,10 +71,7 @@ async function sheets(name: string, file: string, body: string): Promise<number>
 describe.skipIf(!chromium)("the page-break marker on paper", () => {
   it("starts a new sheet in both formats", async () => {
     // The control is the same document without the marker: one sheet. Without it, a test that
-    // asserted two sheets would also pass on a document that needed two anyway. It is also the
-    // regression test for the blank sheet a short document used to end with — measured to come from
-    // the full-viewport-height rules meeting the bookmark destination anchor in paged media, and
-    // released by the print block turning both of them off.
+    // asserted two sheets would also pass on a document that needed two anyway.
     expect(await sheets("plain", "index.md", "# T\n\nA\n\nB\n")).toBe(1);
     expect(await sheets("md-class", "index.md", `# T\n\nA\n\n${MARKER}\n\nB\n`)).toBe(2);
     expect(
@@ -81,6 +84,26 @@ describe.skipIf(!chromium)("the page-break marker on paper", () => {
     // AsciiDoc has had this syntax all along; Asciidoctor emits the same class the rule matches.
     expect(await sheets("adoc", "index.adoc", "= T\n\nA\n\n<<<\n\nB\n")).toBe(2);
   }, 240_000);
+
+  it("puts a document that fits on one sheet on one sheet, whatever the paper", async () => {
+    // The blank sheet a short document used to end with came from the full-height rules meeting the
+    // destination anchor `pdf.bookmarks` inserts. A3 is here because the first fix for it sat in a
+    // width media query, which A4 enters in print emulation and A3 does not: measured, that version
+    // put this document on one sheet at A4 and two at A3.
+    expect(await sheets("a4", "index.md", "# T\n\nA\n\nB\n")).toBe(1);
+    expect(await sheets("a3", "index.md", "# T\n\nA\n\nB\n", "pdf:\n  pageSize: A3\n")).toBe(1);
+  }, 120_000);
+
+  it("leaves a blank sheet for a marker with nothing behind it, and for two in a row", async () => {
+    // Documented behaviour, so it is measured rather than assumed: a break with nothing after it is
+    // a blank sheet, which is how a blank sheet is asked for. `branding: false` removes the footer
+    // that would otherwise be the thing following the marker, so what is measured is the marker.
+    const noBranding = "html:\n  branding: false\n";
+    expect(await sheets("tail", "index.md", `# T\n\nA\n\n${MARKER}\n`, noBranding)).toBe(2);
+    expect(
+      await sheets("twice", "index.md", `# T\n\nA\n\n${MARKER}\n\n${MARKER}\n\nB\n`, noBranding),
+    ).toBe(3);
+  }, 120_000);
 
   it("does not put a blank sheet between a marker ending a page and the page after it", async () => {
     // Measured: the marker is an empty box, so `break-before` moves the box itself onto the new
