@@ -2039,6 +2039,96 @@ what the site shows is the artifact rather than a picture of a print preview. Th
 reference links the four sheets side by side. The sample document's own text says what to look at,
 which is also how it stays honest: it is set at the density it is describing.
 
+### 24.7 Page Breaks (v0.11)
+
+A source file already starts a new sheet — the print stylesheet breaks before every `.page` but the
+first — so the unit of a page break is the file. Inside a file there is none, and there is no way to
+say "break here" either. Splitting the input differently is not the answer: the split also decides
+the sidebar and the routes, and those are not the author's page-break decisions.
+
+Two things are added: a marker the author places anywhere, and a setting that breaks before headings
+down to a chosen level.
+
+**The marker is spelled the way the rest of the world spells it.** AsciiDoc already has one: `<<<` is
+Asciidoctor's page break, and it arrives in the single HTML as `<div class="page-break"></div>`,
+where it does nothing, because no rule has ever matched that class. Making it work is one rule.
+
+Markdown has no page break in CommonMark, and the spellings other tools settled on divide into three
+groups. An empty `<div>` — `<div style="page-break-after: always"></div>`, or
+`<div class="page-break"></div>` where a stylesheet is involved — is what Typora, the
+Markdown-to-PDF converters, the MkDocs PDF plugins, and a browser's own print dialog understand. A
+LaTeX command, `\newpage` or `\pagebreak` in a raw TeX block, is Pandoc's, and R Markdown's through
+it. A shortcode or a directive is Quarto's `{{< pagebreak >}}`, iA Writer's `+++`, and the
+generic-directive proposal's `::pagebreak`.
+
+monodocs takes the first, written `<div class="page-break"></div>`, with
+`<div style="page-break-after: always"></div>` accepted as the same thing and normalised to it. It
+is the only one of the three that is not a single tool's syntax: the same file breaks in the other
+converters and in a browser's print dialog. It is also invisible in a repository's Markdown preview,
+where `\newpage` and `{{< pagebreak >}}` show as literal text. And the class name is not monodocs'
+to choose — Asciidoctor emits it already, so one rule serves both formats.
+
+**Markdown does not gain raw HTML.** Raw HTML in Markdown is dropped (16.1), and that boundary does
+not move. What is recognised is a marker that happens to be spelled like HTML: the mdast `html` node
+is matched against two exact spellings before `remark-rehype` sees it, and a match is replaced with
+an element monodocs builds — a `div`, one class, no children — rather than by re-emitting what the
+author wrote. Nothing from the input reaches the output, so this is not a way in for an attribute or
+a script. The accepted language is small enough to audit by eye:
+
+- lowercase `div`, opening and closing tag inside one node
+- exactly one attribute: `class="page-break"` or `style="page-break-after: always"`, either quoting
+- nothing between the tags, whitespace included
+- a block node at the root of the document, so a marker inside a blockquote, a list item, a table
+  cell, or a heading is not one
+
+`<DIV>`, `class="page-break foo"`, a second attribute, `<div class="page-break"/>`, and a `style`
+carrying anything more are rejected rather than repaired. They stay what raw HTML in Markdown has
+always been: dropped.
+
+**`pdf.pageBreakLevel` breaks before headings.**
+
+```yaml
+pdf:
+  pageBreakLevel: 2
+```
+
+`false`, the default, breaks before no heading and leaves every existing document as it is. A number
+is the deepest level that starts a new sheet: `2` is h2 only, `3` is h2 and h3, `6` is h2 through h6.
+h1 is not a level here — it is the page title, and the file it belongs to has already broken.
+
+**Which heading is skipped needs a definition, not a phrase.** A heading with nothing but the page
+title in front of it must not break, or every page opens with a sheet holding one line. "The first
+heading of the page" is the wrong rule for that: a page that opens with its title, an introduction,
+and then its first `## Section` should break there, because the introduction belongs on the title's
+sheet. The rule is therefore about what precedes the heading rather than about which heading it is —
+a heading breaks unless nothing renders before it, or the only thing that does is the page's h1.
+
+**Headings inside blocks that must not be split are not candidates.** `break-inside: avoid` is set on
+tables, figures, code blocks, admonitions, and blockquotes (24.3.1), and a forced break before a
+heading inside one of those asks Chromium for both at once. Only headings at the page's own level
+are considered; for AsciiDoc that means walking the `.sect1`–`.sect5` wrappers, which are structure
+rather than content.
+
+**The decision is made in the pipeline, not in a selector.** Markdown produces a flat body and
+Asciidoctor a nested one, so a CSS rule expressing "unless the page title is all that precedes it"
+has to enumerate both shapes, and still cannot see a page whose h1 is missing or whose first heading
+is an h3. Post-processing marks the headings that will break with `data-monodocs-pdf-break-before`,
+and one rule matches the attribute. The name is namespaced because a custom theme and an AsciiDoc
+passthrough can both put attributes on a heading.
+
+**Both rules are emitted by core**, into the print stylesheet beside the density rules, rather than
+added to the default theme. A theme replaces `style.css` wholesale, and a theme should not be able
+to delete a syntax feature. They name `#content` and `.page` alike, for the reason 24.6 gives.
+
+`break-before: page` rather than `break-after`: a marker at the end of a page would otherwise leave a
+blank sheet, which is why the file boundary already breaks before rather than after.
+
+**What is deliberately not here.** No "keep together" marker: the print stylesheet already avoids
+splitting the blocks where it matters, and a general one is a second layout language. No per-file
+override of `pageBreakLevel`, because frontmatter that changes how the paper is set would make a
+document's sheet count depend on which files it happens to include. No arbitrary CSS hook, for the
+reason 24.6 gives — a closed key set is what 1.0 can freeze.
+
 ---
 
 ## 25. CLI Specification
@@ -2680,6 +2770,63 @@ checklist, and the two are kept in step):
   sheets without changing the type size; `relaxed` is the screen setting under a name and emits no
   rules at all. The documentation site shows the four built from one source, as PDFs with their own
   first pages as thumbnails
+
+## v0.11: Page Breaks
+
+Purpose:
+
+Give the author control of where a printed page ends. A source file already starts a new sheet and
+nothing inside a file does, so a document whose sections have to begin on their own sheet — a
+specification, a set of regulations, anything handed over on paper — cannot be produced at all, and
+neither can the older and simpler "break here". Both are page-setting decisions that belong to the
+person writing the document, and both change a surface that 1.0 freezes.
+
+Implementation scope:
+
+- Make the page-break marker work in both formats: AsciiDoc's `<<<`, which already reaches the
+  output as `<div class="page-break"></div>` and does nothing, and the same element in Markdown,
+  recognised as an exact spelling rather than by turning raw HTML back on (24.7)
+- Add `pdf.pageBreakLevel`, which breaks before every heading down to a chosen level, with the
+  heading that only the page title precedes left alone (24.7)
+- Emit both rules from core rather than from the default theme, so replacing `style.css` cannot
+  delete them
+- Update the syntax specification, the architecture document, and the configuration reference on the
+  documentation site, each with its Japanese mirror, since the raw-HTML boundary and the
+  configuration surface both change
+
+Completion criteria (this chapter defines the milestone; [status.md](status.md) tracks it as a
+checklist, and the two are kept in step):
+
+- `<<<` in AsciiDoc and `<div class="page-break"></div>` in Markdown each start a new sheet in the
+  PDF, and `<div style="page-break-after: always"></div>` is accepted as the same marker and
+  normalised to the class form
+- The Markdown marker is recognised on the mdast `html` node before `remark-rehype`, and the element
+  that reaches the output is built by monodocs rather than re-emitted from the input. `<DIV>`, an
+  extra class, a second attribute, a self-closing tag, a marker with whitespace between its tags, and
+  a marker inside a blockquote, a list item, a table cell, or a heading are all rejected and stay
+  dropped, as every other raw HTML in Markdown still is
+- `pdf.pageBreakLevel` takes `false` (the default) or 2–6, where the number is the deepest heading
+  level that starts a new sheet and h1 is not one, since the file it titles has already broken
+- A heading breaks unless nothing renders before it or the only thing that does is the page's h1, so
+  a page opening with a title and an introduction still breaks before its first section. Headings
+  inside a block carrying `break-inside: avoid` are not candidates
+- The headings that break are marked in post-processing with `data-monodocs-pdf-break-before` rather
+  than selected in CSS, so the flat body Markdown produces and the `.sect1`–`.sect5` nesting
+  Asciidoctor produces are handled by one rule, and a page whose h1 is missing or whose first heading
+  is an h3 behaves the same way
+- Both rules are emitted by core into the print stylesheet and name `#content` and `.page` alike, so
+  a theme replacing `style.css` keeps them; the default `false` emits no heading rule at all, and
+  neither rule reaches the screen stylesheet
+- A marker immediately followed by a heading that would break does not produce a blank sheet between
+  them. Whether Chromium collapses the two forced breaks is measured rather than assumed, and the
+  second is suppressed in post-processing if it does not
+- The space above a heading that starts a sheet is measured against `pdf.density`, and the rule zeroes
+  it only if the measurement shows Chromium keeping it — the same standard 24.6 set for a value that
+  reaches the page
+- The PDF assertions are page counts read from the produced PDF, the form the density tests already
+  use: `h1 → h2 → body → h2` under `pageBreakLevel: 2` comes out as exactly two sheets, which fails
+  at one sheet if the feature is dead and at three if the leading-heading rule is wrong, and the same
+  document under the default comes out as one
 
 ---
 
