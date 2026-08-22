@@ -85,12 +85,11 @@ describe.skipIf(!chromium)("the page-break marker on paper", () => {
     expect(await sheets("adoc", "index.adoc", "= T\n\nA\n\n<<<\n\nB\n")).toBe(2);
   }, 240_000);
 
-  it("puts a document that fits on one sheet on one sheet, whatever the paper", async () => {
+  it("puts a document that fits on one sheet on one sheet, on paper wider than the breakpoint", async () => {
     // The blank sheet a short document used to end with came from the full-height rules meeting the
-    // destination anchor `pdf.bookmarks` inserts. A3 is here because the first fix for it sat in a
-    // width media query, which A4 enters in print emulation and A3 does not: measured, that version
-    // put this document on one sheet at A4 and two at A3.
-    expect(await sheets("a4", "index.md", "# T\n\nA\n\nB\n")).toBe(1);
+    // destination anchor `pdf.bookmarks` inserts. A4 is the control in the test above; A3 is here
+    // because the first fix for it sat in a width media query, which A4 enters in print emulation
+    // and A3 does not — measured, that version put this document on one sheet at A4 and two at A3.
     expect(await sheets("a3", "index.md", "# T\n\nA\n\nB\n", "pdf:\n  pageSize: A3\n")).toBe(1);
   }, 120_000);
 

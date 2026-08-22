@@ -2090,13 +2090,18 @@ a script. The accepted language is small enough to audit by eye:
 
 - lowercase `div`, opening and closing tag inside one node
 - exactly one attribute: `class="page-break"` or `style="page-break-after: always"`, either quoting
+- in the `style` spelling, spaces or tabs after the colon or none at all, and an optional trailing
+  `;` — one declaration, no more
+- ASCII whitespace around the `=`, before the `>`, and around the marker, and at least one of it
+  after `<div`
 - nothing between the tags, whitespace included
 - a block node at the root of the document, so a marker inside a blockquote, a list item, a table
   cell, or a heading is not one
 
-`<DIV>`, `class="page-break foo"`, a second attribute, `<div class="page-break"/>`, and a `style`
-carrying anything more are rejected rather than repaired. They stay what raw HTML in Markdown has
-always been: dropped.
+`<DIV>`, `class="page-break foo"`, a second attribute, `<div class="page-break"/>`, a newline
+between the colon and `always`, and a `style` carrying a second declaration are rejected rather than
+repaired. They stay what raw HTML in Markdown has always been: dropped. The list above is what the
+configuration reference enumerates for the reader, because 1.0 freezes it.
 
 **`pdf.pageBreakLevel` breaks before headings.**
 

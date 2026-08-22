@@ -16,8 +16,13 @@ import type { Paragraph, Root as MdastRoot } from "mdast";
  * so one print rule serves both formats (roadmap 24.7).
  */
 
-/** ASCII whitespace, spelled out rather than `\s`, which also matches U+00A0 and friends. */
-const SPACE = "[ \\t\\r\\n\\f]";
+/**
+ * The whitespace an HTML block can carry, spelled out rather than `\s`, which also matches U+00A0
+ * and friends. Form feed is left out although HTML calls it ASCII whitespace: a `<div\fclass=…>`
+ * never opens an HTML block in CommonMark, so it reaches this file as a paragraph of text and
+ * accepting it here would only widen what the documentation has to promise.
+ */
+const SPACE = "[ \\t\\r\\n]";
 
 /**
  * Deliberately narrow, so that the accepted language can be read off this expression:

@@ -24,6 +24,12 @@ describe("the page-break marker in Markdown", () => {
       '<div style="page-break-after: always;"></div>',
       '<div  class = "page-break" ></div>',
       '\n<div class="page-break"></div>\n',
+      // Every boundary the configuration reference enumerates, since 1.0 freezes them: the ASCII
+      // whitespace set on both sides of the `=`, a tab after the colon, and the optional `;`.
+      '<div\tclass="page-break"></div>',
+      '<div\r\nclass="page-break"></div>',
+      '<div style="page-break-after:\talways"></div>',
+      "<div style='page-break-after: always;'></div>",
     ]) {
       expect(isPageBreakMarker(marker), marker).toBe(true);
       // Every spelling normalises to the class form, which is the one Asciidoctor emits for `<<<`,
@@ -48,10 +54,18 @@ describe("the page-break marker in Markdown", () => {
       '<div style="page-break-after: always; color: red"></div>',
       '<div style="break-after: page"></div>',
       "<!-- page-break -->",
+      // The other side of the same boundaries. A newline is ASCII whitespace, but not inside the
+      // declaration; and the space after `<div` is required rather than optional.
+      '<divclass="page-break"></div>',
+      '<div style="page-break-after:\nalways"></div>',
+      '<div style="page-break-after: always ;"></div>',
+      '<div class="page-break"></div><div class="page-break"></div>',
     ]) {
       expect(isPageBreakMarker(rejected), rejected).toBe(false);
       const out = await html(`A\n\n${rejected}\n\nB\n`);
-      expect(out, rejected).not.toContain("page-break");
+      // The element, not the string: a spelling CommonMark does not read as an HTML block comes
+      // through as escaped text, which contains `page-break` while being nothing of the kind.
+      expect(out, rejected).not.toContain('<div class="page-break">');
       expect(out, rejected).toContain("<p>A</p>");
     }
   });

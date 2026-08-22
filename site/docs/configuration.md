@@ -673,12 +673,15 @@ HTML rather than repaired.
 - The element is a lowercase `div`, and it carries exactly one attribute: `class="page-break"` or
   `style="page-break-after: always"`.
 - Either quoting works: `"page-break"` and `'page-break'` are the same marker.
-- In the `style` spelling the space after the colon is optional, and a trailing `;` is allowed —
-  `style="page-break-after:always;"` is the same marker.
-- ASCII spaces, tabs, and newlines are allowed after `<div`, around the `=`, before the `>`, and
-  around the marker itself. Nothing at all is allowed **between** `>` and `</div>`, not even a space.
+- In the `style` spelling the colon may be followed by spaces or tabs, or by nothing, and a trailing
+  `;` is allowed — `style="page-break-after:always;"` is the same marker. Anything beyond that one
+  declaration is not.
+- ASCII whitespace — space, tab, carriage return, line feed — is allowed around the `=`,
+  before the `>`, and around the marker itself, and **at least one** is required after `<div`.
+  Nothing at all is allowed **between** `>` and `</div>`, not even a space.
 - Everything else is dropped: `<DIV>`, `class="page-break foo"`, a second attribute, a self-closing
-  `<div class="page-break"/>`, and any other declaration inside `style`.
+  `<div class="page-break"/>`, a newline between the colon and `always`, and any further declaration
+  inside `style`.
 
 Two more things follow from a break being a break:
 
