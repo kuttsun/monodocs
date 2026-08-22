@@ -17,6 +17,7 @@ export {
   PDF_DENSITY_SCREEN,
   type PdfDensity,
   type PdfDensityName,
+  type PdfPageBreakLevel,
   type ConfigFile,
   type ResolvedConfig,
   type OnLargeImage,
