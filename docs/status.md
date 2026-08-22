@@ -19,6 +19,7 @@ Last updated: 2026-08-22
 | Advanced features (search, themes, binary)        | ✅ Done   | v0.8           |
 | Search finishing (kana folding, keyboard)         | ✅ Done   | v0.9           |
 | Language, `init`, PDF fonts and page numbers      | ✅ Done   | v0.10          |
+| Page breaks (marker, `pdf.pageBreakLevel`)        | 🚧 Planned| v0.11          |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
@@ -215,6 +216,41 @@ and it, v0.9, and v0.10 are released.
 - [x] Verify the release binaries through `verify-release-binaries.yml` on both platforms, and run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js — the environment a binary release makes its claim about, and the one no CI job in this repository provides ([maintenance.md](maintenance.md)). Sixteen checks pass: the asset gated on its `.sha256`, the CLI surface, `validate`, a build with `-o` omitted writing `dist/docs.html`, self-contained HTML, a build from a path containing spaces, PDF and Mermaid pre-render failing with the guidance to switch to the npm build, the NOTICES file, and the long-running `serve` / `watch` — live reload broadcast over SSE and a rebuild from an edit in a subdirectory included
 - [ ] Verify the Windows x64 release binary by hand with [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) on a host without Node.js, and finish the checks both scripts leave to a person: the browser pass over the generated HTML (sidebar, search, dark mode, the narrow-width drawer), `serve --open`, and Mark of the Web and SmartScreen on Windows
 - [x] Publish and verify the stable `0.10.0` release, and pin the CI guide on the documentation site to it: published from CI on the `v0.10.0` tag and carrying the `latest` dist-tag, verified through `verify-published.yml` and `verify-release-binaries.yml` on Linux x64 and Windows x64, with the CI guide on the site — English and Japanese alike — pinning `monodocs@0.10.0`
+
+### v0.11: Page Breaks
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**The marker** ([roadmap.md](roadmap.md) 24.7)
+
+- [ ] `<<<` in AsciiDoc starts a new sheet. Asciidoctor already emits it as `<div class="page-break"></div>` and it already reaches the single HTML; what is missing is a rule that matches the class
+- [ ] `<div class="page-break"></div>` in Markdown does the same, with `<div style="page-break-after: always"></div>` accepted as the same marker and normalised to the class form. The spelling is the one Typora, the Markdown-to-PDF converters, the MkDocs PDF plugins, and a browser's print dialog already understand, and the class name is Asciidoctor's rather than one monodocs chose, so one rule serves both formats
+- [ ] Markdown does not gain raw HTML. The mdast `html` node is matched against the two exact spellings before `remark-rehype`, and the element that reaches the output is built by monodocs — a `div`, one class, no children — rather than re-emitted from the input, so no attribute or script can ride in on it
+- [ ] `<DIV>`, `class="page-break foo"`, a second attribute, `<div class="page-break"/>`, whitespace between the tags, a `style` carrying anything more, and a marker inside a blockquote, a list item, a table cell, or a heading are all rejected rather than repaired, and stay dropped as every other raw HTML in Markdown is. A test asserts that a `<script>` is still dropped
+- [ ] `break-before: page`, not `break-after`, so a marker at the end of a page leaves no blank sheet — the reason the file boundary already breaks before rather than after
+
+**`pdf.pageBreakLevel`** ([roadmap.md](roadmap.md) 24.7)
+
+- [ ] Takes `false` (the default) or 2–6, where the number is the deepest heading level that starts a new sheet: `2` is h2 only, `6` is h2 through h6. h1 is not a level here, because the file it titles has already broken. `false` rather than `"off"`, matching `pdf.header` / `pdf.footer`, which already use `false` to turn a feature off — `fontCheck: warn | error | off` is an enumeration of behaviours, which this is not
+- [ ] A heading breaks unless nothing renders before it, or the only thing that does is the page's h1. "The first heading of the page" is the wrong rule: a page opening with its title, an introduction, and then its first section must break before that section, because the introduction belongs on the title's sheet
+- [ ] Headings inside a block carrying `break-inside: avoid` — a table, a figure, a code block, an admonition, a blockquote ([roadmap.md](roadmap.md) 24.3.1) — are not candidates, so Chromium is never asked to keep a block together and split before something inside it at once
+- [ ] The headings that break are marked in post-processing with `data-monodocs-pdf-break-before`, and one rule matches the attribute. A CSS-only selector would have to enumerate both the flat body Markdown produces and the `.sect1`–`.sect5` nesting Asciidoctor produces, and would still misread a page whose h1 is missing or whose first heading is an h3. The attribute is namespaced because a custom theme and an AsciiDoc passthrough can both put attributes on a heading
+
+**Where the rules live**
+
+- [ ] Both rules are emitted by core into the print stylesheet, beside the density rules, and name `#content` and `.page` alike, so replacing `style.css` cannot delete a syntax feature ([roadmap.md](roadmap.md) 24.6)
+- [ ] The default `false` emits no heading rule at all, and neither rule reaches the screen stylesheet
+
+**Measured rather than assumed**
+
+- [ ] A marker immediately followed by a heading that would break produces one break, not a blank sheet between them. Whether Chromium collapses two adjacent forced breaks is measured; if it does not, post-processing suppresses the second
+- [ ] The space above a heading that starts a sheet is measured against `pdf.density`, and the rule zeroes it only if Chromium keeps it — the standard [roadmap.md](roadmap.md) 24.6 set for a value that reaches the page
+
+**Tests and documentation**
+
+- [ ] The PDF assertions are page counts read from the produced PDF, the form the density tests already use. `h1 → h2 → body → h2` under `pageBreakLevel: 2` comes out as exactly two sheets — one sheet means the feature is dead, three means the leading-heading rule is wrong — and the same document under the default comes out as one. Both formats are covered
+- [ ] [syntax.md](syntax.md) stops saying that raw HTML in Markdown is dropped without exception, and says instead that the two page-break spellings are recognised as a control marker and normalised, with the input never reaching the output. [architecture.md](architecture.md) records the same boundary
+- [ ] The configuration reference and the syntax page on the documentation site document the marker and the key, with their Japanese mirrors, and [testing.md](testing.md) lists the new tests
 
 ## Supported Syntax
 

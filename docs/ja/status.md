@@ -19,6 +19,7 @@
 | 高度な機能（検索・テーマ・バイナリ）| ✅ 完了   | v0.8           |
 | 検索の仕上げ（仮名畳み込み・キー操作）| ✅ 完了   | v0.9           |
 | 言語 / `init` / PDF の仕上げ        | ✅ 完了   | v0.10          |
+| 改ページ（マーカー / `pdf.pageBreakLevel`）| 🚧 予定   | v0.11          |
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
 メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
@@ -215,6 +216,41 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証し、加えて Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する。バイナリ配布が主張しているのはまさにその環境であり、このリポジトリのどの CI ジョブも用意できないものである（[maintenance.md](maintenance.md)）。16 項目すべてが PASS: `.sha256` による資産の検証、CLI の表面、`validate`、`-o` を省いたビルドが `dist/docs.html` を書くこと、外部参照を持たない HTML、空白を含むパスからのビルド、PDF と Mermaid の pre-render が npm 版への切り替えを案内して失敗すること、NOTICES、そして長時間動作する `serve` / `watch`（SSE によるライブリロードの配信と、サブディレクトリの編集からの再ビルドを含む）
 - [ ] Windows x64 のリリースバイナリを、Node.js の無いホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) により手動で検証する。あわせて両スクリプトが人に委ねている確認を終える: 生成された HTML のブラウザ確認（サイドバー・検索・ダークモード・狭い幅のドロワー）、`serve --open`、Windows の Mark of the Web と SmartScreen
 - [x] stable `0.10.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる。`v0.10.0` タグから CI で公開して `latest` dist-tag が指し、`verify-published.yml` と `verify-release-binaries.yml` により Linux x64 / Windows x64 で検証済み。サイトの CI ガイドは英日とも `monodocs@0.10.0` を固定する
+
+### v0.11: 改ページ
+
+このマイルストーンは [roadmap.md](roadmap.md) が定義し、以下はその追跡である。
+
+**マーカー**（[roadmap.md](roadmap.md) 24.7）
+
+- [ ] AsciiDoc の `<<<` が新しい紙を始める。Asciidoctor はすでに `<div class="page-break"></div>` として出力しており、単一 HTML にも届いている。足りないのはそのクラスに一致する規則だけである
+- [ ] Markdown の `<div class="page-break"></div>` も同じように働く。`<div style="page-break-after: always"></div>` も同じマーカーとして受け、class 形へ正規化する。この綴りは Typora・各種 Markdown→PDF 変換器・MkDocs の PDF プラグイン・ブラウザの印刷がすでに理解するものであり、クラス名も monodocs が決めたものではなく Asciidoctor のものなので、規則 1 本で両形式に効く
+- [ ] Markdown が raw HTML を得るわけではない。`remark-rehype` の前に mdast の `html` ノードを 2 つの厳密な綴りと突き合わせ、出力へ届く要素は monodocs が組み立てる（`div` ひとつ、クラスひとつ、子は無し）。入力を出力し直さないので、属性やスクリプトが便乗して入ることはない
+- [ ] `<DIV>`、`class="page-break foo"`、2 つ目の属性、`<div class="page-break"/>`、タグの間の空白、それ以上を含む `style`、そして引用・リスト項目・表のセル・見出しの中のマーカーは、修復せずに拒否し、他の raw HTML と同じく破棄したままにする。`<script>` が引き続き破棄されることをテストで固定する
+- [ ] `break-after` ではなく `break-before: page` を使い、ページ末尾のマーカーが空白の紙を残さないようにする。ファイル境界が after ではなく before で改ページしているのと同じ理由である
+
+**`pdf.pageBreakLevel`**（[roadmap.md](roadmap.md) 24.7）
+
+- [ ] `false`（既定）または 2〜6 を取る。数値は新しい紙を始める最も深い見出しレベルで、`2` は h2 だけ、`6` は h2 から h6 まで。h1 が題するファイルはすでに改ページ済みなので h1 は含まない。`"off"` ではなく `false` にするのは、機能を無効化する値として `pdf.header` / `pdf.footer` が既に `false` を使っているからである（`fontCheck: warn | error | off` は動作モードの列挙であり、これはそれではない）
+- [ ] その見出しより前に描画されるものが何も無いか、あるのがページの h1 だけであるときだけ除外する。「そのページで最初の見出し」は誤った規則である。タイトル・導入文・最初のセクションと続くページでは、そのセクションの前で改ページしなければならない。導入文はタイトルの紙に載るものだからである
+- [ ] `break-inside: avoid` の付いたブロック——表・図・コードブロック・admonition・引用（[roadmap.md](roadmap.md) 24.3.1）——の中の見出しは対象にしない。「まとめて置け」と「その中で必ず割れ」を Chromium に同時に求めないためである
+- [ ] 改ページする見出しは post-process で `data-monodocs-pdf-break-before` を付けて示し、規則はその属性 1 つに一致させる。CSS だけのセレクタでは Markdown の平坦な本文と Asciidoctor の `.sect1`〜`.sect5` の入れ子を両方列挙することになり、それでも h1 の無いページや最初の見出しが h3 のページを読み違える。属性に名前空間を付けるのは、カスタムテーマも AsciiDoc の passthrough も見出しに属性を付けられるからである
+
+**規則の置き場所**
+
+- [ ] 規則は両方とも core が印刷用スタイルシートに、密度の規則と並べて書き出し、`#content` と `.page` の両方を名指す。`style.css` の差し替えで構文機能が消えないようにするためである（[roadmap.md](roadmap.md) 24.6）
+- [ ] 既定の `false` では見出しの規則を 1 つも出力せず、どちらの規則も画面用スタイルシートへは漏れない
+
+**推測せず実測するもの**
+
+- [ ] マーカーの直後に改ページ対象の見出しが来ても、その間に空白の紙は生じない。隣接する 2 つの強制改ページを Chromium が畳むかどうかを実測し、畳まないなら post-process で 2 つ目を抑制する
+- [ ] 紙の先頭に来た見出しの上の空きを `pdf.density` と突き合わせて実測し、Chromium が残す場合に限り規則で 0 にする。紙に届く値は推測で決めないという [roadmap.md](roadmap.md) 24.6 の基準である
+
+**テストとドキュメント**
+
+- [ ] PDF の検証は、生成した PDF から読み取った枚数で行う（密度のテストが既に採っている形）。`h1 → h2 → 本文 → h2` を `pageBreakLevel: 2` で組むとちょうど 2 枚になり、1 枚なら機能が死んでいること、3 枚なら先頭見出しの規則が誤っていることが同時に分かる。同じ文書を既定で組むと 1 枚になる。両形式について確認する
+- [ ] [syntax.md](syntax.md) の「Markdown の raw HTML は例外なく破棄する」という記述を改め、改ページの 2 綴りだけを制御構文として認識し正規化すること、入力そのものは出力へ届かないことを書く。[architecture.md](architecture.md) にも同じ境界を記録する
+- [ ] 公式サイトの設定リファレンスと記法のページが、マーカーとキーを日本語ミラーとともに記載し、[testing.md](testing.md) が新しいテストを載せる
 
 ## 対応記法
 
