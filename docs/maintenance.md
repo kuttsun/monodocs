@@ -97,11 +97,13 @@ item is looking for.
 - [ ] **Node.js and Chromium support range.** The floor is Node 22.12. Node 22 leaves LTS in April
       2027, so decide before then whether to raise it. Confirm the Chromium detection paths in
       [ci.md](../site/docs/ci.md) still match what the supported platforms install.
-- [ ] **dist-tags and EOL.** `latest` and `next` point where they should, and `next` is never older
-      than `latest` — publishing a stable version leaves `next` on the prerelease before it, so
-      moving it is a step in the release procedure ([oss-npm-roadmap.md](oss-npm-roadmap.md) 10.1)
-      and this is the backstop. Any minor that has fallen out of support per
-      [SECURITY.md](../SECURITY.md) has been announced as such in the release notes.
+- [ ] **dist-tags.** `latest` and `next` point where they should, and `next` is never older than
+      `latest` — publishing a stable version leaves `next` on the prerelease before it, so moving it
+      is a step in the release procedure ([oss-npm-roadmap.md](oss-npm-roadmap.md) 10.1) and this is
+      the backstop. `latest` is not merely a pointer here: it is what
+      [SECURITY.md](../SECURITY.md) defines the supported version as, so a stale `latest` is a stale
+      support statement. There is no separate EOL announcement to check, because with one supported
+      version the release itself is what moves support.
 - [ ] **Priorities.** Review open issues and npm download numbers, and let them, rather than the
       roadmap alone, decide what comes next.
 
@@ -115,4 +117,5 @@ item is looking for.
 3. Fix Critical and High before other work, per [SECURITY.md](../SECURITY.md).
 4. If no patched version exists yet, prefer a scoped `overrides` entry with a comment naming its
    removal condition, and add it to the quarterly re-check above.
-5. Release the fix as a patch. Do not rebuild an already-published version.
+5. Release the fix as a new patch on the current line. Do not rebuild an already-published version,
+   and do not backport it to an older one ([SECURITY.md](../SECURITY.md)).

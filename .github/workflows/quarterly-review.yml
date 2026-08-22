@@ -58,7 +58,7 @@ jobs:
           - [ ] **npm maintainers.** Only intended accounts can publish \`monodocs\`, and each has 2FA enabled.
           - [ ] **Trusted Publisher.** The npm setting still names this repository, \`release.yml\`, and the release environment.
           - [ ] **Node.js and Chromium support range.** Floor is Node 22.12; Node 22 leaves LTS in April 2027. Chromium detection paths in \`site/docs/ci.md\` still match the supported platforms.
-          - [ ] **dist-tags and EOL.** \`latest\` and \`next\` point where they should, \`next\` is not older than \`latest\`, and unsupported minors have been announced.
+          - [ ] **dist-tags.** \`latest\` and \`next\` point where they should, and \`next\` is not older than \`latest\`. \`latest\` is what SECURITY.md defines the supported version as, so a stale one is a stale support statement.
           - [ ] **Priorities.** Open issues and npm download numbers, rather than the roadmap alone, decide what comes next.
           EOF
 

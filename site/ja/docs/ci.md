@@ -16,6 +16,8 @@ monodocs は普通の npm CLI なので、専用の Action やプラグインは
 
 ビルドを再現可能にするため、バージョンは固定してください。devDependency として追加して（`npm install -D monodocs`）`npm exec` から呼ぶか、`npx` に厳密なバージョンを渡します。
 
+そのうえで、固定した値を更新し続けてください。セキュリティ修正は新しいバージョンとしてのみ公開されます。monodocs のサポート対象は npm の `latest` が指す版だけで、過去の版へバックポートすることはありません（[セキュリティポリシー](https://github.com/kuttsun/monodocs/blob/main/SECURITY.ja.md)）。固定値の更新は Dependabot や Renovate に提案させ、リポジトリのセキュリティアドバイザリを購読してください。これは見た目以上に重要です。monodocs は依存物を公開 CLI にバンドルしているため、あなたの lockfile を読むスキャナに見えるのは `monodocs` であって、その中のライブラリではありません。
+
 ## GitHub Actions
 
 ### Pull Request で検証する

@@ -16,6 +16,8 @@ monodocs is a plain npm CLI, so no dedicated action or plugin is required — in
 
 Pin the version so a build is reproducible. Either add monodocs as a devDependency (`npm install -D monodocs`) and call it through `npm exec`, or pass an exact version to `npx`.
 
+Then keep the pin moving. Security fixes are published only as a new version — monodocs supports the release that npm's `latest` points at, and does not backport to earlier ones ([security policy](https://github.com/kuttsun/monodocs/blob/main/SECURITY.md)). Let Dependabot or Renovate raise the pinned value for you, and watch the repository's security advisories. This matters more than it looks: monodocs bundles its dependencies into the published CLI, so a scanner reading your lockfile sees `monodocs`, not the libraries inside it.
+
 ## GitHub Actions
 
 ### Validate documents on pull requests
