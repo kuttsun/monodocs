@@ -79,6 +79,15 @@ describe("which headings start a new sheet", () => {
     expect(marked('<h1>T</h1><div class="page-break"></div><p>x</p><h2>A</h2>')).toEqual(["A"]);
   });
 
+  it("walks a document that is mostly headings in one pass", () => {
+    // The shape that made the first version quadratic: every heading asked what preceded it by
+    // slicing the flow. The claim here is the result rather than the timing — 199 of the 200
+    // sections break, the first being the one only the page title precedes.
+    const body =
+      "<h1>T</h1>" + Array.from({ length: 200 }, (_, i) => `<h2>S${i}</h2><p>p</p>`).join("");
+    expect(marked(body)).toHaveLength(199);
+  });
+
   it("marks with an empty attribute and touches nothing else", () => {
     const out = mark('<h1>T</h1><p>x</p><h2 id="a" class="k">A</h2>');
     expect(out).toContain(`<h2 id="a" class="k" ${PAGE_BREAK_ATTRIBUTE}="">A</h2>`);

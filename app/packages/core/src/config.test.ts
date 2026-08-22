@@ -538,12 +538,16 @@ describe("loadConfig: pdf.pageBreakLevel", () => {
     }
   });
 
-  it("rejects a level that is not one a heading can have here", async () => {
+  it("rejects a level that is not one a heading can have here, and says what is allowed", async () => {
     // 1 is the page title, whose file has already broken; 7 is not a heading; `true` and `"off"`
     // are the shapes someone would guess from other keys, and are refused rather than coerced.
+    // The message is part of the contract for a key 1.0 freezes: a bare "Invalid input" would
+    // leave the reader to guess the range, so the accepted values are named in it.
     for (const value of ["1", "7", "2.5", "true", '"off"', '"2"']) {
       await writeConfig(`pdf:\n  pageBreakLevel: ${value}\n`);
-      await expect(loadConfig({}, dir), value).rejects.toThrow();
+      await expect(loadConfig({}, dir), value).rejects.toThrow(
+        /must be false, or a heading level from 2 to 6/,
+      );
     }
   });
 });

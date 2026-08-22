@@ -6,7 +6,7 @@ import rehypeStringify from "rehype-stringify";
 import { toText } from "hast-util-to-text";
 import { EXIT, SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
-import type { MermaidMode, OnLargeImage } from "../config.js";
+import type { MermaidMode, OnLargeImage, PdfPageBreakLevel } from "../config.js";
 import type { Page } from "../types.js";
 import { type MermaidPrerenderer } from "./mermaidPrerender.js";
 import { BrowserSetupError } from "./browser.js";
@@ -62,7 +62,7 @@ export type PostprocessOptions = {
    * `pdf.pageBreakLevel`。数値なら、そのレベルまでの見出しに改ページの印を付ける
    * （{@link file://./pageBreakHeadings.ts}）。`false` なら何も印を付けない。
    */
-  pdfPageBreakLevel: false | number;
+  pdfPageBreakLevel: PdfPageBreakLevel;
 };
 
 export type PostprocessResult = {

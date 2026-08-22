@@ -492,9 +492,10 @@ it with the same trust as your documentation sources.
 
 ### `pdf`
 
-Applies when the output format is `pdf` or `both` — with one exception.
-[`pdf.density`](#pdf-density) is written into the HTML as well, because printing that HTML from a
-browser is the same act of putting the document on paper.
+Applies when the output format is `pdf` or `both` — with two exceptions.
+[`pdf.density`](#pdf-density) and [`pdf.pageBreakLevel`](#pdf-page-break-level) are written into the
+HTML as well, because printing that HTML from a browser is the same act of putting the document on
+paper.
 
 | Key                   | Type              | Default   | Description |
 | --------------------- | ----------------- | --------- | ----------- |

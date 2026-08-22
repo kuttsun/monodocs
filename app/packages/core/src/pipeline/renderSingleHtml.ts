@@ -6,6 +6,7 @@ import {
   type ColorScheme,
   type ContentWidthDefault,
   type PdfDensity,
+  type PdfPageBreakLevel,
 } from "../config.js";
 import { DEFAULT_LANG, LABEL_KEYS, resolveLabels, type Labels } from "../labels.js";
 import { loadTheme } from "../themes/index.js";
@@ -37,7 +38,7 @@ export type RenderHtmlInput = {
    * `pdf.pageBreakLevel`。数値なら、印の付いた見出しの前で改ページする規則を印刷用に出す。
    * 印そのものは postprocess が付ける（{@link file://./pageBreakHeadings.ts}）。
    */
-  pdfPageBreakLevel?: false | number;
+  pdfPageBreakLevel?: PdfPageBreakLevel;
   /** 読者向けの本文幅切替ボタンを表示するか。未指定は true。 */
   contentWidthToggle?: boolean;
   /** Initial state when the content-width toggle is shown. Defaults to standard. */

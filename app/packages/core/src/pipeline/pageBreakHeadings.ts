@@ -71,18 +71,25 @@ function pageFlow(nodes: ElementContent[]): (Element | Text)[] {
  * forced breaks, so marking it would put a blank sheet between the two.
  */
 export function markPageBreakHeadings(tree: HastRoot, level: number): void {
-  const flow = pageFlow(tree.children as ElementContent[]);
-  flow.forEach((node, index) => {
-    if (node.type !== "element") return;
-    const heading = headingLevel(node);
-    if (heading < 2 || heading > level) return;
+  // One pass, carrying the two things the rule asks about: how much has rendered before this node,
+  // and what the last of it was. Slicing the flow at every heading would make a document that is
+  // mostly headings quadratic in both time and garbage.
+  let seen = 0;
+  let previous: Element | Text | undefined;
 
-    const before = flow.slice(0, index);
-    const previous = before[before.length - 1];
-    if (previous === undefined) return;
-    if (previous.type === "element" && isMarker(previous)) return;
-    if (before.length === 1 && previous.type === "element" && headingLevel(previous) === 1) return;
+  for (const node of pageFlow(tree.children as ElementContent[])) {
+    const heading = node.type === "element" ? headingLevel(node) : 0;
+    const breaks =
+      heading >= 2 &&
+      heading <= level &&
+      previous !== undefined &&
+      !(previous.type === "element" && isMarker(previous)) &&
+      !(seen === 1 && previous.type === "element" && headingLevel(previous) === 1);
 
-    node.properties = { ...node.properties, [PAGE_BREAK_ATTRIBUTE]: "" };
-  });
+    if (breaks && node.type === "element") {
+      node.properties = { ...node.properties, [PAGE_BREAK_ATTRIBUTE]: "" };
+    }
+    seen += 1;
+    previous = node;
+  }
 }

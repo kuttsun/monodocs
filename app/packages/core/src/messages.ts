@@ -46,6 +46,8 @@ const EN = {
   "config.invalidLanguageTag": "must be a syntactically valid BCP 47 language tag",
   "config.invalidPdfLengthValue":
     "must be a CSS length: a number and a unit (px, pt, mm, cm, in, rem, em), or 0",
+  "config.invalidPdfPageBreakLevelValue":
+    "must be false, or a heading level from 2 to 6 (1 is the page title, whose file already breaks)",
   "config.invalidPdfLineHeightValue": "must be a positive number, without a unit",
   "config.invalidPdfCellPaddingValue": 'must be one or two CSS lengths, as in "0.3rem 0.5rem"',
   "config.invalidPdfLength": 'Invalid pdf.density {key}: "{value}" is not a CSS length.',
@@ -276,6 +278,8 @@ const JA: Record<MessageKey, string> = {
   "config.invalidLanguageTag": "構文的に妥当な BCP 47 言語タグである必要があります",
   "config.invalidPdfLengthValue":
     "CSS の長さ（数値と単位 px / pt / mm / cm / in / rem / em、または 0）である必要があります",
+  "config.invalidPdfPageBreakLevelValue":
+    "false か、2〜6 の見出しレベルである必要があります（1 はページタイトルで、そのファイルは既に改ページします）",
   "config.invalidPdfLineHeightValue": "単位の無い正の数である必要があります",
   "config.invalidPdfCellPaddingValue":
     'CSS の長さ 1 つ、または 2 つ（"0.3rem 0.5rem" のように）である必要があります',

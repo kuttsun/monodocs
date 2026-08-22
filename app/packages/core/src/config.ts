@@ -116,6 +116,15 @@ export const PDF_DENSITY_PRESETS = {
   },
 } as const satisfies Record<string, PdfDensity>;
 
+/**
+ * `pdf.pageBreakLevel`: the deepest heading level that starts a new sheet, or `false` for none.
+ *
+ * Spelled out rather than `number` so that the public boundaries — the resolved configuration,
+ * `PostprocessOptions`, `RenderHtmlInput` — carry what the schema validates. A caller reaching
+ * core from TypeScript cannot hand them a 1 or a 7 that the configuration file could not.
+ */
+export type PdfPageBreakLevel = false | 2 | 3 | 4 | 5 | 6;
+
 /** Names accepted by `pdf.density`, and by `base` inside its object form. Loosest first. */
 export const PDF_DENSITY_NAMES = ["relaxed", "normal", "compact", "tight"] as const;
 export type PdfDensityName = (typeof PDF_DENSITY_NAMES)[number];
@@ -419,7 +428,21 @@ function buildConfigFileSchema() {
            * `"off"` ではなく `false` にしているのは、機能を無効化する値として header / footer が
            * 既に `false` を使っているためで、`fontCheck` の warn|error|off は動作モードの列挙。
            */
-          pageBreakLevel: z.union([z.literal(false), z.number().int().min(2).max(6)]).optional(),
+          pageBreakLevel: z
+            .union(
+              [
+                z.literal(false),
+                z.literal(2),
+                z.literal(3),
+                z.literal(4),
+                z.literal(5),
+                z.literal(6),
+              ],
+              {
+                message: t("config.invalidPdfPageBreakLevelValue"),
+              },
+            )
+            .optional(),
           /**
            * 版面の密度。プリセット名か、プリセットを土台に一部だけ差し替えるオブジェクト。
            * 値を 4 つ書き写させないために `base` を持たせている（写しは、後でプリセット側を
@@ -558,7 +581,7 @@ export type ResolvedConfig = {
   /**
    * 改ページする最も深い見出しレベル（2〜6）。`false` は見出しでは改ページしない（既定）。
    */
-  pdfPageBreakLevel: false | number;
+  pdfPageBreakLevel: PdfPageBreakLevel;
   /** 印刷時の版面の密度（解決済みの値。`normal` は既定テーマの値そのもの）。 */
   pdfDensity: PdfDensity;
   /** ページ上部の帯（解決済み HTML フラグメント。帯なしのときは空フラグメント）。 */
