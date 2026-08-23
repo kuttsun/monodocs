@@ -200,6 +200,26 @@ docs/
     faq.md
 ```
 
+### 6.4 Math (decided in v0.15)
+
+Math is unsupported, and syntax.md gives the reason: keeping the HTML self-contained means not
+introducing a MathJax or KaTeX dependency. The reason is out of date rather than wrong. KaTeX can
+render to **MathML only** at build time, which puts no JavaScript and no stylesheet in the output —
+the browser draws the formula, and Chromium has implemented MathML Core since version 109, so it
+reaches the PDF as well.
+
+What does not go away is the font. MathML is drawn with an OpenType MATH font, so a machine without
+one produces the wrong glyphs, and the check for exactly that already exists (24.3.3) and would need
+to cover formulas. And the harder half was never the rendering: it is choosing what an author
+writes. `$...$` collides with prose about currency, `$$...$$` is a convention rather than a
+standard, `\(...\)` is unambiguous and unfamiliar, and whatever is chosen has to have an AsciiDoc
+counterpart (`stem`, `latexmath`), agree with what search indexes, and produce something sensible
+when a reader copies it.
+
+v0.15 answers this with a measurement rather than an opinion: a sample document of real formulas,
+built to HTML and PDF, on both supported platforms, looked at. If the result is good, math is a 1.x
+feature with a notation chosen in the open; if it is not, the limitation stays and syntax.md records
+this reason instead of the one that has stopped being true.
 ---
 
 ## 7. Output Formats
@@ -700,6 +720,10 @@ monodocs.config.yml
 
 ### 12.1 Configuration Example
 
+This example is the configuration **as the current release accepts it**, with every key at its default.
+A key specified in this document but not yet implemented does not appear here; it appears in the section
+that specifies it, marked with the version that introduces it.
+
 ```yaml
 title: "Internal Documentation"
 
@@ -719,24 +743,18 @@ output:
   path: "./dist/docs.html"
 
 sources:
+  # GitHub Flavored Markdown and frontmatter are always on; there is no key to turn either off.
   markdown:
-    enabled: true
     extensions:
       - ".md"
       - ".markdown"
-    gfm: true
-    frontmatter: true
-
+  # Asciidoctor runs in safe mode with the input file's directory as its base. Neither is
+  # configurable (17.5).
   asciidoc:
-    enabled: true
     extensions:
       - ".adoc"
       - ".asciidoc"
       - ".asc"
-    safeMode: "safe"
-    attributes:
-      sectnums: true
-      icons: font
   # Patterns that never become pages, added to the built-in list rather than replacing it (12.3).
   # exclude:
   #   - "drafts/**"
@@ -748,10 +766,11 @@ sidebar:
   # Source for obtaining titles. "heading" (default) = frontmatter → heading (H1 / = Title) → filename.
   # "filename" = use the filename as the title even if there is a heading (an explicit title always takes top priority).
   titleFrom: "heading"
-  collapsible: true
   # Collapse directories deeper than this level by default (it only folds them without hiding, so reachability is not lost).
   # 0 = fold all directories / unspecified = no collapsing (fully expanded). The top level is depth 1.
-  collapseDepth: 2
+  # collapseDepth: 2
+  # Pull a directory holding exactly one page and no subfolders up to its parent.
+  flattenSingleChild: false
   # Display-title transformation for anything other than explicit titles (frontmatter title / :sd-title:).
   # page applies to page display titles derived from headings/filenames, directory applies to folder display names.
   # type: none (default) / stripNumberPrefix / regex. route/page id are unchanged.
@@ -779,11 +798,17 @@ assets:
 mermaid:
   enabled: true
   mode: "client"
+  # client mode only: inline (default, self-contained) / cdn (small file, needs the network).
+  runtime: "inline"
+
+highlight:
+  enabled: true
 
 html:
-  selfContained: true
-  routeMode: "hash"
   theme: "default"
+  # Search and the dark-mode toggle are always present; neither has a key that removes it.
+  # Colour scheme a document opens in: light (default) / dark / auto. A reader's own choice wins.
+  colorScheme: "light"
   # Maximum width of the body area. e.g.: "860px" / "1100px" / "72rem" / full
   contentWidth: "860px"
   # Show the reader-facing standard/wide content toggle
@@ -794,14 +819,12 @@ html:
   imageLightbox: true
   # Show the generator name and version at the end of HTML and PDF output
   branding: true
-  darkMode: true
   # Replaces individual UI labels on top of the table chosen by lang (v0.10).
   # An unknown key is rejected; the key set is part of the frozen configuration surface.
   labels:
     tocTitle: "On this page"
 
 pdf:
-  enabled: false
   pageSize: "A4"
   margin:
     top: "20mm"
@@ -812,15 +835,24 @@ pdf:
   # How tightly the printed page is set (v0.10): relaxed / normal (default) / compact / tight, or an object
   # taking base plus any of fontSize / lineHeight / headingSpacing / tableCellPadding (24.6).
   density: "normal"
+  # Start a new sheet before every heading down to this level (v0.11): false (default) or 2–6 (24.7).
+  pageBreakLevel: false
+  # Bookmark outline with the same folder → page structure as the HTML sidebar.
+  bookmarks: true
   # Page numbers, on by default (v0.10). false removes the band; an HTML fragment replaces it, using
   # Chromium's own pageNumber / totalPages / title / date / url classes (24.5). There is no {{token}}
   # syntax: the fragment is handed to Chromium as written.
   footer: '<span class="pageNumber"></span> / <span class="totalPages"></span>'
   header: false
-
-search:
-  enabled: true
 ```
+
+**This example is a test fixture (v0.12).** Until then it was prose, and it drifted: it carried
+`sources.markdown.enabled`, `gfm`, `frontmatter`, `sources.asciidoc.enabled`, `safeMode`, `attributes`,
+`sidebar.collapsible`, `html.selfContained`, `routeMode`, `darkMode`, `pdf.enabled`, and
+`search.enabled` — twelve keys the schema does not have. Since 12.2 made every object strict, this
+document's own example had stopped being a configuration monodocs would load: copying it produced
+`Unrecognized key`. The fix that holds is not a careful re-read but a test that extracts this block
+and runs it through `loadConfig`, so the example cannot describe a tool that does not exist.
 
 ### 12.2 Unknown Keys (v0.10)
 
@@ -858,6 +890,88 @@ honoured, merged the same way, and warns that it moved. A file named directly on
 bundled whatever the patterns say (25.2) — naming a file is a choice, and the patterns only decide
 what a directory scan picks up.
 
+### 12.4 What 1.0 Freezes (v0.12)
+
+"1.0 freezes the user-visible surfaces" has been the reason given for doing a dozen things before
+1.0 rather than after. It was never written down, and read literally it says nothing may be added
+afterwards — which would make 1.0 the last release that can grow, and would push every idea in this
+document into a milestone before it. That is not the intent, and the intent has to be written before
+the number is claimed rather than discovered afterwards from what someone assumed.
+
+What 1.0 promises:
+
+- A configuration key, a CLI command or option, or a piece of markup that 1.0 accepts is not
+  **removed, renamed, or given a different meaning** in any 1.x release
+- A **default value** does not change in a minor release. A change of default is a major release,
+  because it changes an existing document without the author touching anything
+- A new optional key, a new command, a new option, and a piece of markup that no existing document
+  could already contain **may be added in a minor release**. Additions are how 1.x continues; they
+  cannot break a configuration that does not use them
+- A machine-readable format — the diagnostics JSON (27.3) above all — carries its **own schema
+  version**, and that version, not the monodocs version, is what a consumer pins
+
+What 1.0 does not do:
+
+- It does not introduce keys that are **accepted and ignored** ahead of the release that implements
+  them. 12.2 chose the opposite rule for the whole file and gave the reason: a key that is read,
+  validated, and dropped produces a configuration that looks right and an output that says otherwise
+- It does not freeze a **warning's wording**. Messages are translated (25.6) and rewritten; a script
+  that greps stderr is reading something this project never promised to hold still. The diagnostics
+  JSON exists so that CI has something that is promised
+- It does not promise **byte-identical output** across versions. The generated HTML carries a
+  generator version, a Shiki release changes a class, a template gains an element. What it does
+  promise is that **one input, one configuration, and one monodocs version produce the same bytes**,
+  which is what makes a committed artifact reviewable in a diff — and the reason the build embeds no
+  timestamp of its own (13.5)
+
+**Deprecation has a shape.** `sidebar.exclude` moved to `sources.exclude` and still builds while
+saying where it went (12.3), which is the pattern: the old spelling keeps working, warns, names its
+replacement, and is removed no earlier than the next major release. Nothing is removed in a minor
+release, and nothing is removed without having warned in a release before it.
+
+### 12.5 The Input Root and What It Selects (v0.13)
+
+`input` names one directory, or since v0.10 one file (25.2). A repository whose `README.md` sits at
+its root and whose pages sit in `docs/` cannot be built as one document, and that arrangement is not
+unusual — it is what most repositories look like.
+
+The obvious fix is to let `input` take a list. It is the wrong one, and the reason is worth writing
+down because the same reasoning applies whenever a tool's single root becomes several. One root
+answers four questions at once: where `monodocs.config.yml` is looked for, what a route is relative
+to, which directory an image may be read from (20.2), and where an AsciiDoc `include::` may reach
+(17.3). With `["./README.md", "./docs"]` every one of those becomes ambiguous — `README.md` and
+`docs/index.md` both want to be `/`, an image at `./assets/logo.png` is inside one root and outside
+the other, and two files with the same basename produce the same page ID from different roots.
+
+So the root stays single and the **selection** becomes configurable:
+
+```yaml
+root: "."
+sources:
+  include:
+    - "README.md"
+    - "docs/**"
+```
+
+`root` is the directory everything is relative to and defaults to `input`'s value, so every existing
+configuration keeps its meaning: `input: ./docs` is `root: ./docs` with everything under it included.
+`sources.include` is a list of globs relative to `root`; when it is absent, everything under `root`
+is a candidate, which is today's behaviour. `sources.exclude` (12.3) still subtracts, and it
+subtracts last, so a pattern that keeps drafts out is not undone by an include that happens to cover
+them.
+
+Routes come from the path relative to `root` unchanged, which means adding `README.md` to a `docs/`
+tree changes the routes of every page in it — `docs/index.md` becomes `/docs/` rather than `/`. That
+is a real cost and it is the honest one: the document now contains two trees, and pretending
+otherwise would mean inventing a per-include route base, which is the multi-root ambiguity again
+wearing a different name. `sidebar.mode: custom` (14.2) already orders such a document, and route
+aliases (15.5) keep the old links working.
+
+`input` is not renamed and not deprecated. It is what a single-directory document uses, and it is
+the spelling in every existing configuration, the CLI argument, and every example in this
+repository. `root` is what a document that spans more than one directory sets, and the two are the
+same key seen from different distances — setting both, with `input` naming something outside `root`,
+is a configuration error rather than a merge.
 ---
 
 ## 13. Metadata
@@ -918,6 +1032,40 @@ Explicit metadata (1) always takes top priority regardless of `titleFrom`.
 4. Filename order
 ```
 
+### 13.5 Document Metadata (v0.12)
+
+13.1 through 13.4 are a page's metadata. A document has its own, and monodocs has had exactly one
+piece of it: `title`. A specification handed to someone carries a version and a date, and often the
+people responsible for it; a reader holding `docs.html` six months later has no way to tell what it
+is a version of, or when it was true.
+
+```yaml
+title: "Internal Documentation"
+document:
+  version: "1.2"
+  date: "2026-08-22"
+  authors:
+    - "Documentation Team"
+```
+
+Every field is optional and every field is a string monodocs does not interpret — `date` is not
+parsed into a calendar, and `version` is not compared to anything. What they do is reach three
+places: the PDF's document properties (24.3.2), where `setAuthor`, `setSubject`, and `setKeywords`
+sit unused beside the `setTitle` already written; the branding footer at the end of the HTML and the
+PDF (23.2), which today says only which version of monodocs built the file; and, when there is one,
+the cover (24.8).
+
+**The build does not stamp its own date.** The obvious version of this feature fills the footer with
+the moment the build ran, and that is exactly what must not happen: it makes the same input produce
+different bytes on every run, so a committed `docs.html` shows a diff whenever anyone rebuilds it,
+and a reproducible build stops being reproducible for a line of text nobody asked for (12.4). A date
+in the output is a date the author wrote. A CI job that wants the build date sets it — `document.date`
+takes a value from the workflow like every other key — and then the date is a decision rather than
+an accident.
+
+`title` stays where it is rather than moving into `document`. It is in every existing configuration
+and in every example, and moving it would buy consistency at the price of the one thing 12.4
+promises not to do.
 ---
 
 ## 14. Sidebar
@@ -1047,6 +1195,52 @@ function showPage(route) {
 }
 ```
 
+### 15.5 Route Aliases (v0.13)
+
+A hash route is a link a reader can copy. That is the point of it — `docs.html#/setup/install` is
+how one person tells another where to look, and in a document that travels as a single file it is
+the only way, since there is no server to redirect and no page to leave a note on. It is also
+therefore a link that outlives the file: it sits in a chat log, a ticket, another document. Renaming
+`setup/install.md` breaks every one of them, silently, and the reader who follows one lands on a
+document that looks fine and shows the wrong page.
+
+```md
+---
+title: Installation
+aliases:
+  - /setup/install
+  - /getting-started/install
+---
+```
+
+```adoc
+= Installation
+:sd-aliases: /setup/install, /getting-started/install
+```
+
+An alias is an old route that now resolves to this page. The table travels in `siteDataJson`, and
+the client consults it when a hash matches no page: it replaces the hash with the current route and
+renders the page, so the address bar ends up holding the link that will still work next time. A
+route with an anchor (`#/setup/install#configuration`) keeps the anchor across the substitution,
+because the anchor belongs to the heading rather than to the path.
+
+The rules are the ones any redirect table needs, and they are checked at build time rather than
+discovered by a reader:
+
+- An alias is matched after every real route, so an alias can never shadow a page. A page that
+  arrives later at a route some other page claims as an alias wins, and the alias warns that it has
+  been shadowed rather than silently taking precedence
+- Two pages claiming the same alias is an error, like two pages claiming the same route (27.1). One
+  of them would win by scan order, which is not something an author can reason about
+- An alias is normalised the way a route is — leading slash, no extension, `index` meaning the
+  directory — so `setup/install.md`, `/setup/install`, and `setup/install` are one alias, not three
+- An alias does not appear in the sidebar, the search index, or the previous/next order. It is not a
+  page; it is a name a page answers to
+
+**No alias is generated automatically.** monodocs could record every route a file has ever had by
+reading the repository's history, and a document's link table would then depend on which clone built
+it — a shallow checkout in CI produces a different file from a full one. An alias is a line the
+author wrote.
 ---
 
 ## 16. Markdown Processing
@@ -1149,6 +1343,53 @@ Output:
 <a href="#/guide/usage">Usage</a>
 ```
 
+### 17.5 Attributes and the Read Boundary (v0.13)
+
+Asciidoctor is configured by attributes, and monodocs sets three: `safe: "safe"`, a `base_dir` of
+the input file's own directory, and `showtitle`. An author cannot set any others through
+monodocs — `:sectnums:` in the document works, but a document set that wants numbering has to repeat
+it in every file, and a value shared across files has nowhere to live at all. This document has
+promised `sources.asciidoc.attributes` since before 1.0 and never had it (12.1).
+
+The naive form is a map handed to Asciidoctor. It cannot be that, for a reason that is not obvious
+from the outside: attributes set through the API are **locked** — they override what the document
+says rather than defaulting it — and some of them move the boundary monodocs relies on. `allow-uri-read`
+lets `include::` fetch a URL, which turns a build into an HTTP client; `data-uri`, `imagesdir`, and
+`backend` move where files are read from and what is produced. Safe mode does not stop the first of
+these: it is exactly the attribute that safe mode consults, and setting it through the API is how it
+is turned on.
+
+So the key exists and its contents are classified rather than passed through:
+
+- **Allowed**, and settable per build: presentational and structural attributes such as `sectnums`,
+  `sectnumlevels`, `experimental`, `idprefix`, `idseparator`, `tabsize`, `toclevels`
+- **Author-defined**, for the values a document set shares — a product name, a release, a customer.
+  These are the reason most authors want the key at all, and they are recognised by shape rather
+  than enumerated: an attribute name that is not in the built-in vocabulary is the author's own
+- **Refused**, naming the attribute and why: `allow-uri-read`, `docinfo`, `backend`, `data-uri`,
+  `imagesdir`, `source-highlighter`, and the `sd-*` namespace (13.2), which belongs to monodocs.
+  Refused rather than ignored, on 12.2's rule
+- **Not configurable at all**: `safe` and `base_dir`. They are the sandbox, and a sandbox a
+  configuration file can widen is a sandbox in name
+
+An attribute set here is a **default**, not a lock, so a document that sets its own wins. That is
+the opposite of Asciidoctor's API default and it is the behaviour an author expects from a
+configuration file: the file states what every document gets unless it says otherwise.
+
+**What safe mode does and does not do.** Asciidoctor's SAFE mode confines `include::` to the base
+directory, and monodocs relies on that (17.3). It does not resolve symbolic links, which Asciidoctor
+documents: a link inside the tree pointing outside it is followed. The architecture document's claim
+that safe mode "prevents external access" is therefore too strong. v0.13 makes it true instead of
+softening it — an included file's real path is checked against the input root, and one that resolves
+outside it is refused with the path it resolved to. The same check covers images (20.2), where the
+identical hole exists.
+
+**Markdown gets no equivalent.** A `vars:` map substituted into Markdown text is a template language:
+it needs an escape for the literal spelling, a rule for an undefined name, a rule for code blocks
+and for `<pre>`, and a decision about recursion — and every one of those is a specification and a
+test. AsciiDoc has attributes because AsciiDoc has attributes; Markdown does not, and monodocs is
+not the place to invent them. A document set that needs shared values is a document set that can
+write its shared pages in AsciiDoc, which is what mixing formats (6.3) is for.
 ---
 
 ## 18. Link Conversion
@@ -1261,6 +1502,47 @@ setup/install.md + ## Overview
 
 Heading IDs originating from AsciiDoc are also prefixed in the same way to avoid collisions.
 
+### 19.1 Section Numbering (v0.15)
+
+A specification refers to itself. "See 3.2" is how a clause points at another clause, and it is what
+a reviewer writes in a comment and what a regulation cites from outside. monodocs can produce no
+such number. AsciiDoc's `:sectnums:` numbers one file's sections and restarts in the next, which in
+a bundle of files is not a numbering but a set of them; Markdown has nothing at all, so a mixed
+document could not agree with itself even if each half were numbered.
+
+Numbering therefore belongs where the two formats have already been made one — the `Page[]` model
+after rendering, not either renderer:
+
+```yaml
+numbering:
+  sections: 3 # false (default), or the deepest heading level numbered (2–6)
+```
+
+The document's structure decides the numbers. The first-level number comes from the page's position
+in the sidebar order (14.1), which is the order the reader moves through the document, so a page is
+a chapter and its `h2`s are `1.1`, `1.2`, and so on. A directory that holds pages contributes its
+own level, so `guide/usage.md` under a numbered `guide/` is `2.3` rather than restarting. `h1` is
+not numbered as a heading — it is the page title, and the page's own number is what precedes it.
+
+Where a number appears is a decision per surface, not one switch:
+
+- **In the heading**, in a `<span>` of its own, so a stylesheet can suppress it and so copying a
+  heading copies the number with it
+- **In the sidebar and the in-page table of contents**, because a table of contents whose numbers
+  disagree with the body is worse than one with no numbers
+- **In the search index**, not as a separate token: a reader searching `3.2` is looking for a
+  section, and a reader searching `usage` should not be outscored by digits
+- **Not in the route, the page ID, or the heading ID.** Those are addresses (15.1, 19), and an
+  address that changes when a page is reordered breaks every link that was ever copied — the exact
+  failure 15.5 exists to prevent. A number is a label
+
+**`:sectnums:` in a document is refused** once numbering is on, naming the configuration key,
+because two numbering schemes over one document produce two different numbers for the same heading
+and no way to tell which one a cross-reference meant.
+
+This is the smallest of the printed-document features and the one the others lean on: 24.9's table
+of contents lists numbered sections, and a cross-reference that says "3.2" is only useful in a
+document where 3.2 is written on the page.
 ---
 
 ## 20. Image Embedding
@@ -1323,6 +1605,57 @@ error
 external
 ```
 
+### 20.5 Output Size (v0.14)
+
+33.3 records the risk that the single HTML becomes huge, and monodocs has one control for it —
+`maxInlineSize` and `onLargeImage`, which judge one image at a time. Nothing measures the file. A
+build prints the number of pages and where it wrote them, so the author who has just embedded
+fourteen screenshots learns the result from an email bouncing.
+
+```text
+docs.html  8.4 MB
+  images        7.9 MB  (12 files, largest: guide/setup.png 2.1 MB)
+  mermaid       0.9 MB  (inline runtime)
+  page data     0.4 MB  (siteDataJson: text, headings, search)
+  document      0.2 MB
+```
+
+The breakdown is what can be measured honestly rather than a full accounting: the embedded images,
+the Mermaid runtime when `mermaid.runtime: inline` put it there (21.1), the `siteDataJson` payload
+that carries the searchable text, and everything else as one line. Shiki does not appear, because it
+has no runtime in the output — highlighting happens at build time and leaves spans in the body,
+which are part of the document.
+
+```yaml
+assets:
+  budget: "10MB" # unset by default; warn when the output exceeds it
+  onBudget: "warn" # warn / error
+```
+
+A budget is what makes the measurement act. `warn` is the default so that adding the key cannot
+break a build that was already over; `error` is for the CI job of a document that has to fit an
+email attachment or a wiki upload limit, which is a real constraint and one that is invisible until
+it is breached.
+
+**Images are not re-encoded, and this is a decision rather than an omission.** Downscaling a 4 MB
+screenshot to 200 KB is the largest single saving available here, and monodocs will not do it:
+
+- The libraries that do it well are native (`sharp`/libvips). The published CLI is a single CJS
+  bundle and a SEA binary (8.5), and neither takes a native addon — the feature would exist in one
+  distribution and not the other, which is the split PDF output already has and does not need a
+  second of
+- Doing it in the browser instead would make an HTML-only build require Chromium, which is today the
+  line between what the binary can do and what it cannot
+- An encoder's output depends on its version and its platform, so the same input would stop
+  producing the same bytes on a different machine — the reproducibility 12.4 promises, spent on
+  convenience
+- Quality, colour space, EXIF orientation, animation, and SVG each need a rule, and a wrong one
+  silently degrades the author's picture
+
+`onLargeImage: external` remains the answer for a document whose images are genuinely too big: the
+image stays a file beside the HTML, which is a document that is no longer single-file and says so.
+An author who wants smaller images has tools that specialise in exactly that, and running one is a
+step in their build rather than a promise in this one.
 ---
 
 ## 21. Mermaid
@@ -2157,6 +2490,117 @@ override of `pageBreakLevel`, because frontmatter that changes how the paper is 
 document's sheet count depend on which files it happens to include. No arbitrary CSS hook, for the
 reason 24.6 gives — a closed key set is what 1.0 can freeze.
 
+### 24.8 The Cover (v0.15)
+
+A PDF handed to someone begins with a cover: the title, what version it is, when it was true, and
+who is answerable for it. monodocs begins with the first page of content. An author can write a page
+that looks like a cover, and it is then a page — it appears in the sidebar of the HTML, it is
+searchable, it is numbered, and it is followed by the same content as everything else.
+
+```yaml
+pdf:
+  cover:
+    enabled: false # true generates a cover from document (13.5)
+```
+
+The cover is **generated from `document`**, not authored. Everything on it — title, version, date,
+authors — is already configured for other reasons (13.5), and a generated cover means the PDF cannot
+disagree with the PDF's own properties. It is a fixed layout with no options: a document that needs
+a logo and a customer's house style needs a designer, not eleven more configuration keys, and 24.6
+already recorded that a closed key set is what 1.0 can freeze.
+
+`pdf.cover.enabled` is an object rather than `pdf.cover: true | "./cover.md"`, because an
+author-written cover is the obvious next request and a polymorphic key cannot grow a second field.
+The object can: `source` is where a `cover.md` would go when there is a reason to add it.
+
+**Numbering starts after the cover, and that is the hard half.** Chromium's footer knows the
+physical sheet it is drawn on; it has no offset, so a cover makes every number one too high and the
+total one too many. What can be done on the finished bytes is where this is solved: the cover is one
+sheet monodocs itself produced, so the footer is suppressed on it and the numbers on the remaining
+sheets are the ones the document should show. PDF page labels (the numbering a reader sees in a
+viewer's page box) are set the same way, so the viewer agrees with the paper.
+
+Whether the footer can be suppressed on one sheet without a second render is what v0.15 measures. If
+it cannot, the cover is rendered as its own single-page PDF with no header or footer band and
+concatenated — the outline and metadata passes already run on finished bytes (24.3.2), so the
+machinery for that is the machinery already there.
+
+The HTML gets no cover. A cover is a sheet of paper; on screen the same information belongs where a
+reader can see it without scrolling past it, which is the branding footer 13.5 already fills.
+
+### 24.9 A Table of Contents on Paper (v0.15)
+
+`pdf.bookmarks` produces an outline a viewer shows in a side panel. Paper has no side panel. A
+printed specification opens with a table of contents that lists each section and the page it starts
+on, and monodocs cannot produce one, because nothing in the pipeline knows what page anything is on
+until Chromium has already produced the PDF.
+
+```yaml
+pdf:
+  toc:
+    enabled: false
+    depth: 2 # deepest heading level listed (2–6)
+```
+
+**This is the most expensive feature in this document, and it is specified with the way it fails.**
+The shape is two renders:
+
+1. Every heading that could be listed gets a named destination, the way pages already get one
+   (24.3.2 injects `page-{id}`; this adds `h-{id}`)
+2. The table of contents is rendered into the document with its page-number column filled by a
+   fixed-width placeholder, and Chromium produces the first PDF
+3. Each destination's `pageRef` is resolved to a page index by matching it against the document's
+   page tree — `pdf-lib` already reads the `/Dests` dictionary for the outline (24.3.2)
+4. The numbers are substituted into the table of contents and Chromium produces the second PDF
+5. The destinations are read **again**, from the second PDF, and compared against the numbers it
+   prints. A mismatch means the substitution moved something across a page boundary
+
+Step 5 is the feature. Without it this is a table of contents that is usually right, and a page
+number that is usually right is worse than none: a reader who finds one wrong number cannot trust
+the rest of the list, and cannot tell which ones to check. So the numbers are verified against the
+document that will be delivered, a bounded number of further passes is allowed for a document that
+has not settled, and **a build that has not converged fails** rather than shipping a plausible list.
+
+Convergence is helped rather than hoped for. The placeholder reserves the width of the largest page
+number the document could have, the column is set in tabular figures so that 9 and 10 occupy the
+same width, and the table of contents is laid out so that its own length changes only when an entry
+wraps — which is why `depth` exists and why it defaults to 2.
+
+The cost is a second Chromium render: roughly twice the PDF stage, including a second run of
+client-mode Mermaid, more memory, and an intermediate PDF. That is why it is off by default, and why
+the density work's standard applies — the timing is measured on a real document of a hundred-odd
+sheets, on both supported platforms, before this is called done.
+
+**Running headers are not part of this.** "The current chapter's name at the top of every sheet" is
+the next thing anyone asks for, and it is not the same mechanism: a table of contents writes numbers
+into the body, where a second render can put them, while a running header writes a different string
+into each physical sheet's margin. CSS has `string-set` and `string()` for exactly this, and
+Chromium does not implement them; Chromium's own header template substitutes only its fixed classes
+(24.5). What remains is rendering the document in chapter-sized pieces and concatenating them, which
+is a different feature with a different cost, and it is not scheduled.
+
+### 24.10 Watermark (v0.14)
+
+A document that is a draft, or that is not to leave the building, says so on every sheet. Today an
+author who needs that edits the theme, which is a stylesheet replacement (23.3) that then owns every
+other print rule as well.
+
+```yaml
+pdf:
+  watermark: false # false (default), or the text to print
+```
+
+Text, one line, diagonal, behind the content, on every sheet including the cover, at a weight that
+photocopies without hiding what it covers. No image, no per-page control, no font or angle or
+opacity: those are the keys that turn one feature into a layout language, and the text is what the
+feature is for.
+
+It is emitted by core into the print stylesheet, beside the density and page-break rules and for the
+same reason 24.7 gives — a theme replacing `style.css` must not be able to delete "CONFIDENTIAL"
+from a document that asked for it. The text is escaped rather than inserted, because a configuration
+value that reaches the output as markup is a way in for markup. It appears in PDF output and when
+the HTML is printed from a browser; on screen it does not, since a watermark's purpose is to survive
+being printed and handed on.
 ---
 
 ## 25. CLI Specification
@@ -2234,6 +2678,12 @@ which is the same relationship an input directory has to what it contains. The e
 (12.3) do not apply: naming a file is an explicit choice, so `_draft.md` is a page when it is asked
 for by name. A file whose extension no renderer claims is refused, naming the extensions that work.
 
+
+**More than one directory (v0.13).** The input argument still names one path, and a document that
+spans several sets `root` and `sources.include` in the configuration instead (12.5). The CLI is not
+given a variadic input list: two paths on a command line would have to answer where the
+configuration is, what routes are relative to, and which directory an image may be read from, and a
+command line is the wrong place to settle a question the configuration file already answers.
 ### 25.3 watch
 
 ```bash
@@ -2266,6 +2716,46 @@ Validation targets:
 - Invalid configuration file
 - Basic validation of Mermaid blocks
 
+
+**What `validate` is (v0.12).** It is a build that writes nothing: it runs the same `preparePages`
+as `build`, so what it reports is what a build reports, and nothing is checked twice in two places
+(architecture.md). Mermaid `pre-render` is forced to `client` so that no browser starts, which means
+diagram syntax errors are outside its scope and it says so rather than implying a check it does not
+run.
+
+It already exits non-zero when anything is found, warnings included, so there is no `--strict` to
+add. What it lacks is a form a machine can read: today a CI job that wants to annotate a pull
+request has to parse translated prose, which changes with the language and with any rewording
+(12.4).
+
+```bash
+monodocs validate --format json
+```
+
+The JSON is the diagnostics model (27.3) serialised, versioned by its own schema version. Three
+checks are added at the same time, chosen because each one is decidable from what the pipeline
+already holds:
+
+- **A heading level skipped** — an `h2` followed by an `h4`. It breaks the in-page table of contents
+  (22) and every assistive technology that navigates by heading level
+- **An image with no `alt` attribute at all.** An explicitly empty `alt=""` is not a finding: it is
+  how an author marks a decorative image, and the lightbox already honours that distinction (23.2)
+- **A cross-file link whose anchor does not exist**, which today warns during a build and is
+  therefore already known — it appears in the report as a diagnostic with a code rather than a line
+  of prose
+
+**External links are not checked.** A link checker that reaches the network makes the result depend
+on when it ran and on what the network between the runner and the site was doing: a rate limit, a
+site that refuses `HEAD`, a login wall, and a redirect chain all look like a broken link, and a CI
+job that fails for those reasons teaches everyone to ignore it. It would also turn a build into a
+process that fetches URLs written by whoever wrote the document, from inside a CI runner, which is
+not a capability this tool should acquire. Tools that specialise in link checking exist, they run
+next to monodocs in the same workflow, and they own that problem's failure modes.
+
+**"Orphan pages" are not checked either.** Every page is reachable from the sidebar — that is an
+invariant of the output (architecture.md), not a property to test — so the only thing such a check
+could mean is "no other page links to it", which is true of most pages in most documents and would
+report a finding for each.
 ### 25.6 Message Language (v0.10)
 
 Every string the CLI printed — `--help`, each error, each warning — was Japanese only, while the
@@ -2362,6 +2852,41 @@ The following are treated as warnings.
 - Conversion of a Mermaid block failed
 - A file that appears to be for include has become a target for page generation
 
+### 27.3 Diagnostics (v0.12)
+
+Errors and warnings are strings. `validateSite` returns `errors: string[]` and
+`warnings: string[]`, the CLI prints them with a prefix, and that is the whole model. It has worked
+because the only consumer is a person reading a terminal.
+
+A machine-readable report (25.5) cannot be built on it. Serialising a translated sentence produces a
+format whose fields change when the language changes and whose contents change whenever a message is
+reworded — and 12.4 promises the opposite of that for anything a CI job pins. What the wording
+carries has to be carried by something else first:
+
+```ts
+type Diagnostic = {
+  code: string; // stable identifier, e.g. "link/unresolved"
+  severity: "error" | "warning";
+  path?: string; // source file, relative to the input root
+  line?: number;
+  column?: number;
+  message: string; // the translated sentence, for a person
+};
+```
+
+The `code` is the promise; the `message` is the courtesy. A code is added when a check is added and
+is not renamed afterwards, so a job that ignores `image/large` keeps ignoring exactly that. The
+translated sentence stays in the report because the report is also read by people, and a report that
+made a person look a code up would be worse than the strings it replaces.
+
+The pipeline already knows more than it says. `formatSourceRef` composes a file and a position into
+prose for several warnings, which means the position exists and is being flattened on the way out —
+so this is a matter of not discarding it rather than of finding it.
+
+**Message catalogue and codes are separate things.** 25.6 made every string translatable, and this
+adds a second identity beside the translation: a message key selects the wording, a diagnostic code
+identifies the finding. Two messages can share a code — the same finding worded for two contexts —
+and a message may have no code at all, since not everything printed is a diagnostic.
 ---
 
 ## 28. Testing Policy
@@ -2855,6 +3380,225 @@ checklist, and the two are kept in step):
   use: `h1 → h2 → body → h2` under `pageBreakLevel: 2` comes out as exactly two sheets, which fails
   at one sheet if the feature is dead and at three if the leading-heading rule is wrong, and the same
   document under the default comes out as one
+
+---
+
+## v0.12: The 1.0 Contract
+
+Purpose:
+
+Make this document true again, and say what 1.0 actually promises before the number is claimed.
+v0.11 shipped a feature whose specification was written first and matched — while, elsewhere in the
+same file, the configuration example had been describing keys the schema does not have, and
+architecture.md had been describing a link behaviour the code stopped having. A specification that
+is wrong in places nobody checks is worse than a shorter one: every later decision cites it.
+
+The other half is the model everything after this milestone needs. Diagnostics are strings today,
+which is why `validate` has nothing to give a CI job, and why "add JSON output" is not a small
+change but a data model that has to exist first.
+
+Implementation scope:
+
+- Synchronise the specification with the code: the configuration example (12.1), architecture.md's
+  cross-file anchor paragraph, and status.md's own summary table, which still calls v0.11 planned
+  after every one of its boxes is ticked
+- Make the configuration example a test fixture, so it cannot drift again (12.1)
+- Write down what 1.0 freezes and what it does not, including the deprecation shape `sidebar.exclude`
+  already follows (12.4)
+- Introduce the `Diagnostic` model and stable diagnostic codes (27.3)
+- Add `validate --format json`, versioned by its own schema version, and three checks that are
+  decidable from what the pipeline already holds (25.5)
+- Add `document.version` / `date` / `authors`, reaching the PDF's properties and the branding footer,
+  with no build timestamp anywhere (13.5)
+
+Completion criteria (this chapter defines the milestone; [status.md](status.md) tracks it as a
+checklist, and the two are kept in step):
+
+- A test extracts the YAML from 12.1 and runs it through `loadConfig`; the example that ships is one
+  monodocs loads without a warning. The twelve phantom keys are gone from it, and the two behaviours
+  that were never configurable — GFM and frontmatter always on, safe mode fixed — say so where the
+  keys used to be
+- architecture.md describes the cross-file anchor behaviour the code has: resolved to the target
+  page's prefixed element ID, falling back to the page top with a warning when the anchor does not
+  exist. syntax.md already described it, and the two now agree
+- 12.4 states, in this document, that a 1.x release does not remove, rename, or redefine a key, a
+  command, an option, or a piece of markup that 1.0 accepted; that a default changes only in a major
+  release; that additions are allowed in a minor release; and that no key is ever accepted and
+  ignored ahead of the release that implements it
+- Every error and warning monodocs emits carries a `code` and, where the pipeline knows it, a `path`
+  and a position. A test fails when a diagnostic is added without a code
+- `monodocs validate --format json` prints an object carrying a schema version and an array of
+  diagnostics, and the schema version is documented as the thing to pin. Human output is unchanged
+- A skipped heading level, an image with no `alt` attribute, and an unresolved cross-file anchor are
+  reported as diagnostics. `alt=""` is not reported, and a test asserts that it is not
+- `document.version` / `date` / `authors` reach the PDF's Author, Subject, and Keywords, and the
+  branding footer of both HTML and PDF. The same input built twice produces identical bytes, and a
+  test asserts it — the build writes no date of its own
+- The site's configuration reference and its Japanese mirror carry `document` and the JSON output
+
+---
+
+## v0.13: Input and Routes
+
+Purpose:
+
+Let a document be built from a repository shaped the way repositories are shaped, and stop the
+links inside it from dying when a file is renamed. Both are route decisions, which is why they are
+one milestone: `README.md` at the root and pages under `docs/` cannot be one document today, and
+making them one moves every route in that document — so the mechanism that keeps old links working
+has to arrive with it, not after it.
+
+The AsciiDoc half is here for the same reason. `sources.asciidoc.attributes` has been promised since
+before 1.0, and the attributes an author wants are the ones that change how a document reads; the
+attributes monodocs must refuse are the ones that change where files are read from. That boundary is
+the same boundary `include::` and images already depend on, and it turns out to be weaker than
+architecture.md claims.
+
+Implementation scope:
+
+- Add `root` and `sources.include`, keeping `input` as the single-directory spelling (12.5)
+- Add route aliases in both formats, with the collision, shadowing, and normalisation rules checked
+  at build time (15.5)
+- Add `sources.asciidoc.attributes` as a classified set — allowed, author-defined, refused, and not
+  configurable at all — set as defaults rather than locked (17.5)
+- Check the real path of an included file and of an image against the input root, since safe mode
+  does not resolve symbolic links, and correct architecture.md's claim that it prevents external
+  access (17.5)
+
+Completion criteria:
+
+- `root: .` with `sources.include: ["README.md", "docs/**"]` builds one document from both, resolving
+  images, links, and the configuration file against `root`. `sources.exclude` subtracts last
+- A configuration with neither `root` nor `include` behaves exactly as it does today, and a test
+  builds an existing fixture unchanged to prove it. `input` naming a path outside `root` is an error
+  rather than a merge
+- `aliases:` in frontmatter and `:sd-aliases:` in AsciiDoc make an old hash route render the page and
+  replace the hash with the current route; an anchor survives the substitution
+- Two pages claiming one alias is an error; an alias colliding with a real route warns and the real
+  route wins; aliases are normalised before any of that is decided. None of them reach the sidebar,
+  the search index, or the previous/next order
+- `sources.asciidoc.attributes` sets `sectnums` and an author's own attribute; the document's own
+  value wins over the configured one; `allow-uri-read`, `docinfo`, `backend`, `data-uri`,
+  `imagesdir`, `source-highlighter`, and `sd-*` are refused, naming the attribute and the reason;
+  `safe` and `base_dir` are not accepted at all
+- An `include::` or an image whose real path resolves outside the input root is refused, naming the
+  path it resolved to, and a test uses an actual symbolic link. architecture.md says what safe mode
+  does and what this check does
+
+---
+
+## v0.14: The Single-File Budget
+
+Purpose:
+
+Give the author the number that decides whether the document can be delivered. Everything in this
+project follows from the output being one file, and nothing in it measures that file — 33.3 names
+the risk and `maxInlineSize` judges one image at a time, which is a rule about a part rather than a
+fact about the whole. An author learns the size from a mail server rejecting it.
+
+Implementation scope:
+
+- Report the output size and an honest breakdown at the end of a build (20.5)
+- Add `assets.budget` and `assets.onBudget`, unset by default (20.5)
+- Record why images are not re-encoded, so the question is answered rather than reopened (20.5)
+- Add `pdf.watermark`, emitted from core so a theme cannot delete it (24.10)
+
+Completion criteria:
+
+- A build prints the output size and a breakdown of embedded images, the inline Mermaid runtime, the
+  `siteDataJson` payload, and everything else. The breakdown's parts sum to the file, and a test
+  asserts that they do. Shiki has no line, because it leaves no runtime in the output
+- The largest embedded image is named with its size, since the breakdown exists to be acted on
+- `assets.budget: 10MB` warns when the output exceeds it and `onBudget: error` fails the build.
+  Unset, nothing changes, and no existing build starts warning
+- Both numbers are the bytes written to disk, measured after the file is complete, not an estimate
+  summed while building
+- `pdf.watermark: "DRAFT"` prints one line of text diagonally behind the content on every sheet of
+  the PDF and of a browser print, and nothing on screen. The text is escaped; a value containing
+  markup appears as that text
+- The watermark rule is emitted by core into the print stylesheet, and a document built with a theme
+  that replaces `style.css` still carries it
+- The decision not to re-encode images is recorded with its reasons — the native dependency the
+  binary cannot take, the Chromium dependency an HTML build must not acquire, and the reproducibility
+  it would cost — as Docker and Homebrew were before it
+
+---
+
+## v0.15: Setting the Printed Page
+
+Purpose:
+
+Finish the document that is handed over on paper. v0.10 gave it page numbers and a density, v0.11
+let the author decide where a sheet ends, and what is still missing is what a specification is: a
+cover that says what version it is, sections that can be cited by number, and a table of contents
+that says which page to turn to. The three arrive together because they depend on each other — a
+table of contents lists numbered sections, and it counts sheets that a cover has shifted.
+
+This milestone also answers the math question rather than repeating a reason that has expired.
+
+Implementation scope:
+
+- Add `numbering.sections`, decided over the whole document in the shared `Page` model rather than
+  per file in either renderer (19.1)
+- Add `pdf.cover.enabled`, generating a cover from `document` and starting the numbering after it
+  (24.8)
+- Add `pdf.toc`, produced by a verified two-pass render that fails rather than printing a number it
+  has not checked (24.9)
+- Measure whether math through KaTeX's MathML output is good enough to adopt, and record the answer
+  either way (6.4)
+
+Completion criteria:
+
+- `numbering.sections: 3` numbers headings continuously across the whole document, in the sidebar
+  order, with a directory contributing a level and `h1` carrying the page's own number. Routes, page
+  IDs, and heading IDs are unchanged, and a test asserts that they are
+- The number is an element inside the heading, appears in the sidebar and the in-page table of
+  contents, and does not outweigh a word in search. `:sectnums:` in a document is refused while
+  numbering is on, naming the configuration key
+- `pdf.cover.enabled: true` produces a first sheet carrying the title, version, date, and authors
+  from `document`, with no page number on it, and the following sheet numbered 1. The PDF's page
+  labels agree with the printed numbers
+- Whether the footer can be suppressed on one sheet in a single render is measured; if it cannot,
+  the cover is produced as its own PDF and concatenated, on the pass that already rewrites the
+  finished bytes
+- `pdf.toc.enabled: true` prints a table of contents whose page numbers are read from the delivered
+  PDF, not from the first pass. After substitution the destinations are read again and compared to
+  the numbers printed; a mismatch retries within a fixed bound, and a document that does not converge
+  fails with a message saying so
+- The placeholder reserves the width of the largest possible page number and the column is set in
+  tabular figures, so that a number growing a digit cannot move the page it points at
+- The second render's cost is measured on a document of a hundred-odd sheets, on Linux and Windows,
+  with CJK text and with client-mode Mermaid, and the numbers are recorded. `pdf.toc` stays off by
+  default
+- A document with `pageBreakLevel`, a cover, a table of contents, and numbering on comes out with the
+  four agreeing: the number in the table of contents is the sheet the section starts on
+- Running headers are not implemented, and 24.9 records why the two-pass machinery does not reach
+  them
+- A sample document of real formulas is built to HTML and PDF on both platforms with KaTeX's MathML
+  output, and either math becomes a 1.x feature with a notation chosen in the open, or syntax.md
+  records the measured reason for the limitation in place of the dependency argument that no longer
+  holds
+
+---
+
+## 1.0
+
+Purpose:
+
+Claim the number, on the terms 12.4 wrote down. 1.0 is not a feature milestone: it is the release
+that says the surfaces are stable, which is only worth saying once everything that would have
+changed them has been done.
+
+What it contains:
+
+- The frozen surfaces enumerated in one place: every configuration key with its default, every
+  command and option, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc
+- The diagnostics JSON schema version at 1, documented as the thing a CI job pins
+- `sidebar.exclude` — deprecated since v0.10 — removed, as the first exercise of the deprecation
+  shape 12.4 defines
+- Documentation, in both languages, that describes the tool as it is: no key in the reference that
+  the schema does not have, and no behaviour in architecture.md that the code does not do. v0.12
+  makes this true; 1.0 is where it is checked again, because that is what the number claims
 
 ---
 

@@ -57,8 +57,9 @@ Multiple source files share one HTML document, so every element ID must be globa
 - Store an `encodeURI`-encoded value in `href` and the raw route in `data-route`. The client decodes the route
   with `decodeURI` before matching so Japanese characters and spaces remain supported.
 - Rewrite links equivalent to `.md`, `.adoc`, and `.html`, plus AsciiDoc xrefs, to hash routes.
-- Cross-file heading links such as `file.md#heading` currently resolve only to the target page. Drop the anchor
-  and emit a warning. Same-page anchors remain supported.
+- Rewrite a cross-file heading link such as `file.md#heading` to the target page's prefixed element ID
+  (`{page-id}-heading`), so it lands on the heading in the HTML and in the PDF alike. When the target has no
+  such anchor, fall back to the top of that page and emit a warning. Same-page anchors remain supported.
 
 Document supported, unsupported, and intentionally constrained syntax in [syntax.md](syntax.md). Update it
 whenever syntax support changes.

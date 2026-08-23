@@ -42,7 +42,7 @@ loadConfig (config.ts)
 - 疑似ページ遷移には `#/setup/install` のような hash route を使います。
 - `href` には `encodeURI` 済みの値、`data-route` には生のルートを保存します。クライアントは照合前に `decodeURI` し、日本語や空白を扱います。
 - `.md`、`.adoc`、`.html` 相当のリンクと AsciiDoc xref を hash route へ変換します。
-- `file.md#heading` のような別ファイルの見出しリンクは、現在は対象ページだけへ移動します。アンカーを除去して警告し、同一ページのアンカーは維持します。
+- `file.md#heading` のような別ファイルの見出しリンクは、対象ページの接頭辞付き要素 ID（`{page-id}-heading`）へ書き換えます。HTML でも PDF でも見出しに着地します。対象にそのアンカーが存在しない場合は、そのページの先頭へ落として警告します。同一ページのアンカーは維持します。
 
 対応・非対応・意図的に制限する記法は [syntax.md](syntax.md) に記録し、記法対応の変更時に更新します。
 

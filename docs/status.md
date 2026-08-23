@@ -19,7 +19,12 @@ Last updated: 2026-08-22
 | Advanced features (search, themes, binary)        | ✅ Done   | v0.8           |
 | Search finishing (kana folding, keyboard)         | ✅ Done   | v0.9           |
 | Language, `init`, PDF fonts and page numbers      | ✅ Done   | v0.10          |
-| Page breaks (marker, `pdf.pageBreakLevel`)        | 🚧 Planned| v0.11          |
+| Page breaks (marker, `pdf.pageBreakLevel`)        | ✅ Done   | v0.11          |
+| Specification sync, diagnostics, `document`       | 🚧 Planned| v0.12          |
+| Input root, route aliases, AsciiDoc attributes    | 🚧 Planned| v0.13          |
+| Output size and budget, watermark                 | 🚧 Planned| v0.14          |
+| Section numbering, cover, printed table of contents | 🚧 Planned| v0.15        |
+| Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
@@ -256,6 +261,136 @@ and it, v0.9, and v0.10 are released.
 - [x] The PDF assertions are page counts read from the produced PDF, the form the density tests already use. `h1 → h2 → body → h2` under `pageBreakLevel: 2` comes out as exactly two sheets — one sheet means the feature is dead, three means the leading-heading rule is wrong — and the same document under the default comes out as one. Both formats are covered
 - [x] [syntax.md](syntax.md) stops saying that raw HTML in Markdown is dropped without exception, and says instead that the two page-break spellings are recognised as a control marker and normalised, with the input never reaching the output. [architecture.md](architecture.md) records the same boundary
 - [x] The configuration reference on the documentation site documents the marker and the key, with its Japanese mirror, and [testing.md](testing.md) lists the new tests. The site has no syntax page of its own — [syntax.md](syntax.md) is where the repository keeps that specification, and it is updated above
+
+### v0.12: The 1.0 Contract
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**The specification says what the code does** ([roadmap.md](roadmap.md) 12.1)
+
+- [ ] A test extracts the YAML from [roadmap.md](roadmap.md) 12.1 and runs it through `loadConfig`, so the example cannot describe a tool that does not exist. It had drifted to twelve keys the schema does not have — `sources.markdown.enabled`, `gfm`, `frontmatter`, `sources.asciidoc.enabled`, `safeMode`, `attributes`, `sidebar.collapsible`, `html.selfContained`, `routeMode`, `darkMode`, `pdf.enabled`, `search.enabled` — which since [roadmap.md](roadmap.md) 12.2 made every object strict means copying this project's own example produced `Unrecognized key`
+- [ ] The two behaviours that were never configurable say so where the keys used to be: GFM and frontmatter are always on, and Asciidoctor's safe mode and base directory are fixed
+- [x] [architecture.md](architecture.md) describes the cross-file anchor behaviour the code has — resolved to the target page's prefixed element ID, falling back to the page top with a warning when the anchor does not exist — rather than the earlier "drop the anchor and warn". [syntax.md](syntax.md) already described it, and the two now agree
+- [x] This table stops calling v0.11 planned after every one of its boxes is ticked
+
+**What 1.0 freezes** ([roadmap.md](roadmap.md) 12.4)
+
+- [ ] The promise is written down: a 1.x release does not remove, rename, or redefine a configuration key, a command, an option, or a piece of markup that 1.0 accepted; a default value changes only in a major release; a new optional key, command, option, or piece of markup that no existing document could contain may be added in a minor release
+- [ ] What it does not promise is written down as well: not a warning's wording, which is translated and rewritten, and not byte-identical output across versions — only that one input, one configuration, and one version produce the same bytes
+- [ ] A machine-readable format carries its own schema version, and that is what a consumer pins
+- [ ] Deprecation has the shape `sidebar.exclude` already follows: the old spelling keeps working, warns, names its replacement, and is removed no earlier than the next major release
+
+**Diagnostics** ([roadmap.md](roadmap.md) 27.3)
+
+- [ ] Every error and warning carries a stable `code` and, where the pipeline knows it, a `path` and a position. `formatSourceRef` already composes a file and a position into prose, so the position exists and is being flattened on the way out
+- [ ] A test fails when a diagnostic is added without a code
+- [ ] The message catalogue and the code set stay separate: a message key selects wording, a code identifies a finding, two messages may share a code, and a message may have none
+
+**`validate`** ([roadmap.md](roadmap.md) 25.5)
+
+- [ ] `monodocs validate --format json` prints an object carrying a schema version and an array of diagnostics. Human output is unchanged, and there is no `--strict`, because a warning already exits non-zero
+- [ ] A skipped heading level (an `h2` followed by an `h4`) is reported
+- [ ] An image with no `alt` attribute is reported, and an explicitly empty `alt=""` is not. A test asserts the second half, since that is how an author marks a decorative image
+- [ ] An unresolved cross-file anchor, which already warns during a build, appears as a diagnostic with a code
+- [ ] External links are not checked and orphan pages are not reported, each with its reason recorded ([roadmap.md](roadmap.md) 25.5)
+
+**Document metadata** ([roadmap.md](roadmap.md) 13.5)
+
+- [ ] `document.version` / `date` / `authors` reach the PDF's Author, Subject, and Keywords — beside the `setTitle` already written — and the branding footer of both HTML and PDF
+- [ ] The build embeds no date of its own. The same input built twice produces identical bytes, and a test asserts it
+- [ ] `title` stays at the top level rather than moving into `document`
+
+**Documentation**
+
+- [ ] The site's configuration reference and its Japanese mirror carry `document` and the JSON output, and [testing.md](testing.md) lists the new tests
+
+### v0.13: Input and Routes
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**The input root** ([roadmap.md](roadmap.md) 12.5)
+
+- [ ] `root: .` with `sources.include: ["README.md", "docs/**"]` builds one document from a repository shaped the way repositories are shaped, resolving images, links, and `monodocs.config.yml` against `root`
+- [ ] `sources.exclude` subtracts last, so a pattern that keeps drafts out is not undone by an include that covers them
+- [ ] A configuration with neither key behaves exactly as it does today, and a test builds an existing fixture unchanged to prove it
+- [ ] `input` is neither renamed nor deprecated; naming a path outside `root` is an error rather than a merge
+- [ ] The CLI gains no variadic input list. Two paths on a command line would have to answer where the configuration is, what routes are relative to, and which directory an image may be read from ([roadmap.md](roadmap.md) 25.2)
+
+**Route aliases** ([roadmap.md](roadmap.md) 15.5)
+
+- [ ] `aliases:` in frontmatter and `:sd-aliases:` in AsciiDoc make an old hash route render the page and replace the hash with the current route, so the address bar ends up holding the link that still works
+- [ ] An anchor survives the substitution, because the anchor belongs to the heading rather than to the path
+- [ ] Two pages claiming one alias is an error; an alias colliding with a real route warns and the real route wins; aliases are normalised — leading slash, no extension, `index` meaning the directory — before either is decided
+- [ ] An alias reaches neither the sidebar, the search index, nor the previous/next order
+- [ ] No alias is generated from repository history, so a document's link table does not depend on which clone built it
+
+**AsciiDoc attributes and the read boundary** ([roadmap.md](roadmap.md) 17.5)
+
+- [ ] `sources.asciidoc.attributes` sets presentational attributes such as `sectnums` and an author's own attributes, as **defaults** rather than locked values, so a document that sets its own wins — the opposite of Asciidoctor's API behaviour and what a configuration file should mean
+- [ ] `allow-uri-read`, `docinfo`, `backend`, `data-uri`, `imagesdir`, `source-highlighter`, and `sd-*` are refused, naming the attribute and the reason. `safe` and `base_dir` are not accepted at all, because a sandbox a configuration file can widen is a sandbox in name
+- [ ] An `include::` or an image whose real path resolves outside the input root is refused, naming the path it resolved to. A test uses an actual symbolic link, since Asciidoctor's safe mode does not resolve them
+- [ ] [architecture.md](architecture.md) says what safe mode does and what this check does, instead of claiming safe mode prevents external access
+- [ ] Markdown gains no variable substitution, and [roadmap.md](roadmap.md) 17.5 records why: it is a template language, with an escape, an undefined-name rule, a code-block rule, and a recursion decision behind it
+
+### v0.14: The Single-File Budget
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**Measuring the output** ([roadmap.md](roadmap.md) 20.5)
+
+- [ ] A build prints the output size and a breakdown: embedded images, the inline Mermaid runtime, the `siteDataJson` payload, and everything else. The parts sum to the file, and a test asserts that they do
+- [ ] Shiki has no line in the breakdown, because it leaves no runtime in the output — highlighting happens at build time
+- [ ] The largest embedded image is named with its size, since the breakdown exists to be acted on
+- [ ] Both numbers are the bytes written to disk, measured after the file is complete, rather than an estimate summed while building
+
+**The budget** ([roadmap.md](roadmap.md) 20.5)
+
+- [ ] `assets.budget: 10MB` warns when the output exceeds it, and `assets.onBudget: error` fails the build. `warn` is the default so that adding the key cannot break a build that was already over
+- [ ] Unset, nothing changes and no existing build starts warning
+- [ ] The decision not to re-encode images is recorded with its reasons — the native dependency the CJS bundle and the SEA binary cannot take, the Chromium dependency an HTML-only build must not acquire, the reproducibility it would cost, and the rules quality, colour space, EXIF orientation, animation, and SVG would each need. `onLargeImage: external` remains the answer for a document whose images are genuinely too big
+
+**Watermark** ([roadmap.md](roadmap.md) 24.10)
+
+- [ ] `pdf.watermark: "DRAFT"` prints one line of text diagonally behind the content on every sheet of the PDF and of a browser print, and nothing on screen
+- [ ] The text is escaped rather than inserted, so a value containing markup appears as that text
+- [ ] The rule is emitted by core into the print stylesheet, and a document built with a theme that replaces `style.css` still carries it — a theme must not be able to delete "CONFIDENTIAL" from a document that asked for it
+- [ ] There is no image, no per-page control, and no font, angle, or opacity key, on the reason [roadmap.md](roadmap.md) 24.6 gives for a closed key set
+
+### v0.15: Setting the Printed Page
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**Section numbering** ([roadmap.md](roadmap.md) 19.1)
+
+- [ ] `numbering.sections: 3` numbers headings continuously across the whole document, decided in the shared `Page` model rather than per file in either renderer — AsciiDoc's `:sectnums:` restarts in every file, and Markdown has nothing at all
+- [ ] The number follows the sidebar order, a directory contributes a level, and `h1` carries the page's own number rather than a heading number
+- [ ] Routes, page IDs, and heading IDs are unchanged, and a test asserts it. An address that changes when a page is reordered would break every link ever copied
+- [ ] The number is an element inside the heading, appears in the sidebar and the in-page table of contents, and does not outweigh a word in search
+- [ ] `:sectnums:` in a document is refused while numbering is on, naming the configuration key
+
+**The cover** ([roadmap.md](roadmap.md) 24.8)
+
+- [ ] `pdf.cover.enabled: true` produces a first sheet carrying the title, version, date, and authors from `document`, generated rather than authored, so the cover cannot disagree with the PDF's own properties
+- [ ] No page number on the cover, the following sheet numbered 1, and the PDF's page labels agreeing with the printed numbers
+- [ ] Whether the footer can be suppressed on one sheet in a single render is measured; if it cannot, the cover is produced as its own PDF and concatenated on the pass that already rewrites the finished bytes
+- [ ] The key is an object rather than `true | "./cover.md"`, so an author-written cover can be added later as a second field
+- [ ] The HTML gets no cover
+
+**A table of contents on paper** ([roadmap.md](roadmap.md) 24.9)
+
+- [ ] Every heading that can be listed gets a named destination (`h-{id}`), the way pages already get `page-{id}`
+- [ ] `pdf.toc.enabled: true` prints a table of contents whose page numbers are read from the delivered PDF, not from the first pass
+- [ ] After substitution the destinations are read again and compared against the numbers printed. A mismatch retries within a fixed bound, and a document that does not converge **fails** rather than shipping a plausible list — a page number that is usually right is worse than none
+- [ ] The placeholder reserves the width of the largest possible page number and the column is set in tabular figures, so a number growing a digit cannot move the page it points at
+- [ ] The cost of the second render is measured on a document of a hundred-odd sheets, on Linux and Windows, with CJK text and with client-mode Mermaid, and recorded. `pdf.toc` stays off by default
+- [ ] A document with `pageBreakLevel`, a cover, a table of contents, and numbering on comes out with the four agreeing: the number in the table of contents is the sheet the section starts on
+- [ ] Running headers are not implemented, and [roadmap.md](roadmap.md) 24.9 records why the two-pass machinery does not reach them: Chromium implements neither `string-set` nor `string()`, and its own header template substitutes only its fixed classes
+
+**Math** ([roadmap.md](roadmap.md) 6.4)
+
+- [ ] A sample document of real formulas is built to HTML and PDF on both supported platforms with KaTeX's MathML-only output, which puts no JavaScript and no stylesheet in the output
+- [ ] Either math becomes a 1.x feature with a notation chosen in the open, or [syntax.md](syntax.md) records the measured reason for the limitation in place of the dependency argument that no longer holds
+- [ ] Whichever way it goes, the font dependency is stated rather than glossed: MathML is drawn with an OpenType MATH font, which the missing-font check ([roadmap.md](roadmap.md) 24.3.3) would have to cover
 
 ## Supported Syntax
 
