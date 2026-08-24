@@ -1059,7 +1059,9 @@ document:
 ```
 
 Every field is optional and every field is a string monodocs does not interpret — `date` is not
-parsed into a calendar, and `version` is not compared to anything. What they do is reach three
+parsed into a calendar, and `version` is not compared to anything. The one thing done to the text is
+trimming the space around it, so a value that is only whitespace counts as unset rather than as an
+empty line in the footer. What they do is reach three
 places: the PDF's document properties (24.3.2), where `setAuthor`, `setSubject`, and `setKeywords`
 sit unused beside the `setTitle` already written; the branding footer at the end of the HTML and the
 PDF (23.2), which today says only which version of monodocs built the file; and, when there is one,
@@ -2774,8 +2776,10 @@ checks arrived with it, chosen because each one is decidable from what the pipel
 Markdown's `![](x.png)` comes out as `alt=""`, which is the decorative spelling and deliberately not
 a finding, and Asciidoctor derives an alt from the file's basename, so `image::x.png[]` comes out as
 `alt="x"`. An image with no attribute at all therefore reaches the output only from an AsciiDoc
-passthrough block or a fragment a theme produced — which is where the check fires, and it is the one
-path no converter is guarding. Reporting `alt="x"` as "derived from the filename" is not an option:
+passthrough block — which is where the check fires, and it is the one path neither converter is
+guarding. A theme's own markup is not covered, and saying it was would have been the drift this
+milestone exists to remove: the checks run over each page's body, and the template is applied after
+them. Reporting `alt="x"` as "derived from the filename" is not an option:
 nothing in the output says whether the author wrote it. So the check is narrower than the sentence
 that specified it, and this is what it covers.
 
@@ -3426,7 +3430,7 @@ Implementation scope:
 - Add `validate --format json`, versioned by its own schema version, and three checks that are
   decidable from what the pipeline already holds (25.5)
 - Add `document.version` / `date` / `authors`, reaching the PDF's properties and the branding footer,
-  with no build timestamp anywhere (13.5)
+  with no timestamp of monodocs' own anywhere in them (13.5)
 
 Completion criteria (this chapter defines the milestone; [status.md](status.md) tracks it as a
 checklist, and the two are kept in step):

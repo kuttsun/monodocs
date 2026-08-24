@@ -318,16 +318,23 @@ function toValidateResult(diagnostics: Diagnostic[], pages: number): ValidateRes
  */
 export async function validateSite(options: BuildOptions = {}): Promise<ValidateResult> {
   const cwd = process.cwd();
+  // What was found before the run stopped is still found. A deprecated key is still deprecated
+  // when a route collision ends the build, and dropping it would make the report depend on which
+  // problem happened to be fatal.
+  const found: Diagnostic[] = [];
   try {
     const config = await loadConfig(options, cwd);
+    found.push(...config.warnings);
     // validate は出力を書き出さないため format（html/pdf/both）に関わらず同じ検証を行う。
     // また pre-render の実描画（Chromium 起動）は行わない。mermaidMode を "client" に上書き
     // してクラス付与のみに留める（pre-render の描画/構文エラーは対象外）。
+    // `preparePages` returns the configuration's warnings with its own, so the list it hands back
+    // is the whole report on the path where nothing threw.
     const { pages, warnings } = await preparePages(config, cwd, { mermaidMode: "client" });
     return toValidateResult(warnings, pages.length);
   } catch (error) {
-    // A build that could not run at all is one diagnostic: the error that stopped it, carrying the
-    // code it was thrown with (27.3).
-    return toValidateResult([toDiagnostic(error)], 0);
+    // The error that stopped the run is one more diagnostic, carrying the code it was thrown with
+    // (27.3), reported after what had already been found.
+    return toValidateResult([...found, toDiagnostic(error)], 0);
   }
 }

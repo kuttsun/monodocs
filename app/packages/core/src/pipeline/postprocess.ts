@@ -508,30 +508,51 @@ class SourceLocationTracker {
     return this.consumeLinkLocation(href) ?? this.consumeRawLocation(href);
   }
 
+  /**
+   * The key a cursor and a candidate list are kept under: the link's **target**, not its spelling.
+   *
+   * `other.md` and `other.html` are the same target — `resolveHref` and `hrefMatches` both say so —
+   * and keying by the raw href gave each of them a cursor starting at zero, so a page linking to
+   * both reported the second one at the first one's line. Anything after the path goes too: two
+   * links to different headings of one page are still two links, and the source holds them in the
+   * order they were written.
+   */
+  private keyOf(href: string): string {
+    const pathPart = href.split("#")[0]?.split("?")[0] ?? href;
+    return stripExtension(safeDecodeUri(pathPart) ?? pathPart);
+  }
+
+  /** Every spelling of that target a source file might carry, plus the href as written. */
+  private needlesFor(href: string): string[] {
+    const stem = this.keyOf(href);
+    const needles = new Set<string>([href, ...sourceHrefVariants(href, this.linkExtensions)]);
+    for (const extension of this.linkExtensions) needles.add(`${stem}${extension}`);
+    return [...needles].filter((needle) => needle.length > 0);
+  }
+
   private consumeLinkLocation(href: string): SourceLocation | undefined {
     const matches = this.page.links
       .filter((link) => link.line != null && hrefMatches(link.href, href, this.linkExtensions))
       .map((link) => ({ line: link.line!, column: link.column ?? 1 }));
     if (matches.length === 0) return undefined;
 
-    const cursor = this.linkCursors.get(href) ?? 0;
-    this.linkCursors.set(href, cursor + 1);
+    const key = this.keyOf(href);
+    const cursor = this.linkCursors.get(key) ?? 0;
+    this.linkCursors.set(key, cursor + 1);
     return matches[Math.min(cursor, matches.length - 1)];
   }
 
   private consumeRawLocation(href: string): SourceLocation | undefined {
-    let locations = this.rawCache.get(href);
+    const key = this.keyOf(href);
+    let locations = this.rawCache.get(key);
     if (!locations) {
-      locations = findRawSourceLocations(
-        this.page.rawSource,
-        sourceHrefVariants(href, this.linkExtensions),
-      );
-      this.rawCache.set(href, locations);
+      locations = findRawSourceLocations(this.page.rawSource, this.needlesFor(href));
+      this.rawCache.set(key, locations);
     }
     if (locations.length === 0) return undefined;
 
-    const cursor = this.rawCursors.get(href) ?? 0;
-    this.rawCursors.set(href, cursor + 1);
+    const cursor = this.rawCursors.get(key) ?? 0;
+    this.rawCursors.set(key, cursor + 1);
     return locations[Math.min(cursor, locations.length - 1)];
   }
 }
