@@ -512,6 +512,16 @@ function findRawSourceLocations(rawSource: string, needles: string[]): SourceLoc
   return locations.sort((a, b) => a.line - b.line || a.column - b.column);
 }
 
+/**
+ * Where each link to a target sits in the source, handed out in the order the links are visited.
+ *
+ * Two lists answer that: the positions the Markdown parser recorded, and — for a page whose links
+ * carry none, an AsciiDoc page above all — the occurrences of the target found by reading the source
+ * text. Reading text is a heuristic and stays one: a mention of `guide.md` in prose or in a code
+ * span is an occurrence too, and on a page that has one, the lines handed out after it are the lines
+ * of the following occurrences. The alternative is a position from the converter for every link in
+ * both formats, which is a change to make in the renderers rather than here.
+ */
 class SourceLocationTracker {
   private readonly linkCursors = new Map<string, number>();
   private readonly rawCursors = new Map<string, number>();
@@ -522,8 +532,18 @@ class SourceLocationTracker {
     private readonly linkExtensions: Set<string>,
   ) {}
 
+  /**
+   * The next place this target appears, for the link being visited now.
+   *
+   * Both lists advance on every call, even the one that did not answer. They describe the same
+   * thing — the occurrences of this target, in the order they were written — so letting one run
+   * ahead of the other means a page whose links are only partly positioned starts handing out the
+   * first line again halfway down.
+   */
   consume(href: string): SourceLocation | undefined {
-    return this.consumeLinkLocation(href) ?? this.consumeRawLocation(href);
+    const fromParser = this.consumeLinkLocation(href);
+    const fromSource = this.consumeRawLocation(href);
+    return fromParser ?? fromSource;
   }
 
   /**
@@ -666,8 +686,14 @@ function rewriteLinks(
     const href = node.properties.href;
     if (typeof href !== "string") return;
     const resolved = resolveHref(href, page.relativePath, targetMap, linkExtensions);
+    // Anything that is not a link to a document — an external URL, an in-page anchor — takes no
+    // place in the order.
+    if (resolved === undefined) return;
+    // Every link to a document does take one, whether or not it is reported. A page that links to
+    // `guide.md` correctly and then to `guide.md#gone` has two links to one target, and reading the
+    // position only when something is wrong made the second one answer with the first one's line.
+    const source = sourceRefOf(page, href, locations);
     if (resolved === null) {
-      const source = sourceRefOf(page, href, locations);
       warnings.push(
         warn(
           "link/unresolved",
@@ -677,10 +703,8 @@ function rewriteLinks(
       );
       return;
     }
-    if (resolved === undefined) return;
     node.properties.href = resolved.href;
     if (resolved.unresolvedAnchor !== undefined) {
-      const source = sourceRefOf(page, href, locations);
       warnings.push(
         warn(
           "link/unresolved-anchor",
