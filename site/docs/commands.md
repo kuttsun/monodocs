@@ -152,7 +152,7 @@ Press `Ctrl+C` to stop.
 
 ## `validate`
 
-Checks for broken links, missing images, and missing titles **without writing any output**. Intended for CI: it exits non-zero when errors are found.
+Checks for broken links, missing images, missing titles, skipped heading levels, and images with no `alt` attribute — **without writing any output**. Intended for CI: it exits non-zero when anything is found.
 
 ```bash
 monodocs validate [input] [options]
@@ -162,12 +162,42 @@ monodocs validate [input] [options]
 | --------------------- | ------------- | --------------------------------------------------- |
 | `[input]`             | `./docs`      | Input directory, or a single source file, to validate. |
 | `-c, --config <file>` | auto-detected | Config file. Uses `monodocs.config.yml` if present. |
+| `--format <format>`   | `human`       | Report format: `human` or `json`.                   |
 
 ```bash
 monodocs validate ./docs
 ```
 
-Errors and warnings are printed to stderr. The process exits with code `1` if any **error** is found (warnings alone do not fail). Mermaid diagrams are validated without a browser, so pre-render rendering and diagram syntax errors are not checked here.
+Errors and warnings are printed to stderr. The process exits with code `1` if **anything** is found, warnings included, so there is no separate strict mode. Mermaid diagrams are validated without a browser, so pre-render rendering and diagram syntax errors are not checked here.
+
+`validate` runs the same pipeline a build runs, so what it reports is what a build reports; a build prints the same warnings and writes its output anyway.
+
+### A report a job can read {#json-report}
+
+`--format json` prints one JSON object on stdout and nothing else, so a workflow can parse the stream without skipping prose:
+
+```bash
+monodocs validate ./docs --format json
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "diagnostics": [
+    {
+      "code": "link/unresolved",
+      "severity": "warning",
+      "message": "Unresolved link \"nope.md\" in \"index.md:3\".",
+      "path": "index.md",
+      "line": 3
+    }
+  ]
+}
+```
+
+Pin `schemaVersion`, not the monodocs version. The two move for different reasons: a release adds checks and codes without changing the shape a job parses, and `schemaVersion` moves only when that shape does.
+
+`code` is the stable part of a finding — `link/unresolved` keeps meaning exactly that, so a job filtering on it keeps filtering on it. `message` is the sentence a person reads: it is translated by [`--lang`](#message-language) and reworded between releases, so a job must not match on it. `path` is relative to the input directory, and `line` is present where monodocs knows it.
 
 ## See also
 

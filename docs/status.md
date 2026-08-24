@@ -288,11 +288,11 @@ the two ship as one release rather than as two — the reasoning is under v0.11 
 
 **`validate`** ([roadmap.md](roadmap.md) 25.5)
 
-- [ ] `monodocs validate --format json` prints an object carrying a schema version and an array of diagnostics. Human output is unchanged, and there is no `--strict`, because a warning already exits non-zero
-- [ ] A skipped heading level (an `h2` followed by an `h4`) is reported
-- [ ] An image with no `alt` attribute is reported, and an explicitly empty `alt=""` is not. A test asserts the second half, since that is how an author marks a decorative image
-- [ ] An unresolved cross-file anchor, which already warns during a build, appears as a diagnostic with a code
-- [ ] External links are not checked and orphan pages are not reported, each with its reason recorded ([roadmap.md](roadmap.md) 25.5)
+- [x] `monodocs validate --format json` prints an object carrying a schema version and an array of diagnostics. Human output is unchanged, and there is no `--strict`, because a warning already exits non-zero
+- [x] A skipped heading level (an `h2` followed by an `h4`) is reported
+- [x] An image with no `alt` attribute is reported, and an explicitly empty `alt=""` is not. A test asserts the second half, since that is how an author marks a decorative image
+- [x] An unresolved cross-file anchor, which already warns during a build, appears as a diagnostic with a code
+- [x] External links are not checked and orphan pages are not reported, each with its reason recorded ([roadmap.md](roadmap.md) 25.5)
 
 **Document metadata** ([roadmap.md](roadmap.md) 13.5)
 

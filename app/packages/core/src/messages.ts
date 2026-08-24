@@ -114,6 +114,12 @@ const EN = {
   "post.imageLeftAsIs": "Image too large, left as-is: {detail}",
   "post.largeImageEmbedded": "Large image embedded: {detail}",
 
+  // ---- page checks (25.5) ----
+  "check.headingLevelSkipped":
+    'Heading level skipped: "{title}" is an h{to} after an h{from} in "{path}".',
+  "check.imageNoAlt":
+    'Image has no alt attribute: "{src}" in "{path}". Write alt="" if it is decorative.',
+
   // ---- labels (23.4) ----
   "labels.noTable":
     'No UI label table ships for lang "{lang}"; using the {fallback} labels. Tables ship for ' +
@@ -236,6 +242,7 @@ index are all inside it — so it can be handed to someone as it is.
   "cli.serve.opt.open": "Open the default browser on start",
   "cli.validate.description":
     "Detect broken links, missing images, and missing titles (writes no output)",
+  "cli.validate.opt.format": "Report format: {supported} (default: human)",
   "cli.help.usage": "Usage:",
   "cli.help.options": "Options:",
   "cli.help.commands": "Commands:",
@@ -249,6 +256,7 @@ index are all inside it — so it can be handed to someone as it is.
   "cli.serving": "Serving at {url} (Ctrl+C to stop)",
   "cli.noIssues": "✓ No issues found ({pages} page(s)).",
   "cli.issues": "✗ {errors} error(s), {warnings} warning(s) in {pages} page(s).",
+  "cli.invalidReportFormat": 'Invalid report format: "{value}" (expected {supported}).',
   "cli.browserOpenFailed": "could not open browser ({command}).",
   "cli.browserOpenFailedNoCommand": "could not open browser.",
   "cli.unknownOption": "unknown option '{value}'",
@@ -343,6 +351,11 @@ const JA: Record<MessageKey, string> = {
   "post.imageExceedsLimit": "画像が maxInlineSize を超えています: {detail}",
   "post.imageLeftAsIs": "画像が大きいためそのままにしました: {detail}",
   "post.largeImageEmbedded": "大きな画像を埋め込みました: {detail}",
+
+  "check.headingLevelSkipped":
+    '見出しレベルが飛んでいます: "{title}" は h{from} の次の h{to} です（"{path}"）。',
+  "check.imageNoAlt":
+    'alt 属性の無い画像です: "{src}"（"{path}"）。装飾目的なら alt="" と書いてください。',
 
   "labels.noTable":
     '言語 "{lang}" 向けの UI ラベル表は同梱していません。{fallback} のラベルを使います。' +
@@ -455,6 +468,7 @@ monodocs build
   "cli.serve.opt.open": "起動時に既定のブラウザで開く",
   "cli.validate.description":
     "リンク切れ・画像欠落・タイトル欠落などを検出する（出力は書き出さない）",
+  "cli.validate.opt.format": "報告の形式: {supported}（既定: human）",
   "cli.help.usage": "使い方:",
   "cli.help.options": "オプション:",
   "cli.help.commands": "コマンド:",
@@ -468,6 +482,7 @@ monodocs build
   "cli.serving": "{url} で配信しています (Ctrl+C で停止)",
   "cli.noIssues": "✓ 問題は見つかりませんでした（{pages} ページ）。",
   "cli.issues": "✗ エラー {errors} 件、警告 {warnings} 件（{pages} ページ）。",
+  "cli.invalidReportFormat": '報告の形式が不正です: "{value}"（{supported} のいずれか）。',
   "cli.browserOpenFailed": "ブラウザを開けませんでした（{command}）。",
   "cli.browserOpenFailedNoCommand": "ブラウザを開けませんでした。",
   "cli.unknownOption": "不明なオプションです '{value}'",

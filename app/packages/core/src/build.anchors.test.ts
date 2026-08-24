@@ -75,5 +75,9 @@ describe("validateSite (cross-file heading anchors)", () => {
     expect(result.warnings.map((w) => w.message)).toContain(
       'Unresolved anchor "#nope" in "guide.md#nope"; linked to page top in "index.md:6".',
     );
+    // The same finding a build warns about, reported with a code a CI job can filter on (25.5).
+    const anchor = result.diagnostics.find((d) => d.code === "link/unresolved-anchor");
+    expect(anchor?.path).toBe("index.md");
+    expect(anchor?.line).toBe(6);
   });
 });

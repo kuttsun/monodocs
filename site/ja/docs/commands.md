@@ -140,7 +140,7 @@ monodocs serve ./docs --host 0.0.0.0 --open
 
 ## `validate`
 
-リンク切れ・画像欠落・タイトル欠落などを **出力を書き出さずに** 検出します。CI 向けで、エラーがあると非ゼロ終了します。
+リンク切れ・画像欠落・タイトル欠落・見出しレベルの飛び・`alt` 属性の無い画像を、**出力を書き出さずに** 検出します。CI 向けで、何か見つかれば非ゼロ終了します。
 
 ```bash
 monodocs validate [input] [options]
@@ -150,12 +150,42 @@ monodocs validate [input] [options]
 | --------------------- | -------- | -------------------------------------------------- |
 | `[input]`             | `./docs` | 検証する入力ディレクトリ、または単一のソースファイル。 |
 | `-c, --config <file>` | 自動検出 | 設定ファイル。`monodocs.config.yml` があれば使用。 |
+| `--format <format>`   | `human`  | 報告の形式。`human` または `json`。                |
 
 ```bash
 monodocs validate ./docs
 ```
 
-エラーと警告は標準エラー出力に表示されます。**エラー** が 1 件でもあると終了コード `1` で終了します（警告だけでは失敗しません）。Mermaid はブラウザなしで検証するため、pre-render の実描画や図の構文エラーはここでは検査されません。
+エラーと警告は標準エラー出力に表示されます。**何か 1 件でも** 見つかれば終了コード `1` で終了します（警告だけの場合も含みます）。そのため strict モードのようなオプションはありません。Mermaid はブラウザなしで検証するため、pre-render の実描画や図の構文エラーはここでは検査されません。
+
+`validate` はビルドと同じパイプラインを走らせます。したがって報告する内容はビルドが報告する内容と同じです。ビルドも同じ警告を出したうえで、出力は書き出します。
+
+### ジョブが読める報告 {#json-report}
+
+`--format json` は JSON オブジェクトを 1 つだけ標準出力に出します。ほかには何も出さないので、ワークフローは散文を読み飛ばさずにそのまま解析できます。
+
+```bash
+monodocs validate ./docs --format json
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "diagnostics": [
+    {
+      "code": "link/unresolved",
+      "severity": "warning",
+      "message": "Unresolved link \"nope.md\" in \"index.md:3\".",
+      "path": "index.md",
+      "line": 3
+    }
+  ]
+}
+```
+
+固定するのは monodocs のバージョンではなく `schemaVersion` です。両者が動く理由は別で、リリースは検査とコードを増やしますがジョブが解析する形は変えません。`schemaVersion` はその形が変わったときだけ動きます。
+
+所見のうち安定しているのは `code` です。`link/unresolved` はこれからもまさにそれを指すので、それで絞っているジョブは絞り続けられます。`message` は人が読む文で、[`--lang`](#message-language) で翻訳され、リリースをまたいで書き直されます。ジョブがこれに一致させてはいけません。`path` は入力ディレクトリからの相対パス、`line` は monodocs が知っている場合に入ります。
 
 ## 関連
 

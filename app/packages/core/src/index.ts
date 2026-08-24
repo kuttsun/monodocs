@@ -30,6 +30,9 @@ export {
 export {
   bySeverity,
   DIAGNOSTIC_CODES,
+  DIAGNOSTICS_SCHEMA_VERSION,
+  toDiagnosticsReport,
+  type DiagnosticsReport,
   messagesOf,
   MonodocsError,
   toDiagnostic,
