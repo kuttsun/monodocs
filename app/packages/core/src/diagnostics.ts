@@ -27,8 +27,10 @@ export const DIAGNOSTIC_CODES = [
   "config/not-found",
   "font/missing",
   "font/unchecked",
+  "heading/level-skipped",
   "image/embedded-for-pdf",
   "image/large",
+  "image/no-alt",
   "image/not-found",
   "image/outside-input",
   "image/too-large",
@@ -135,6 +137,26 @@ export function toDiagnostic(error: unknown): Diagnostic {
   if (error instanceof MonodocsError) return fail(error.code, error.message, error.source);
   const message = error instanceof Error ? error.message : String(error);
   return fail("internal/unexpected", message);
+}
+
+/**
+ * The schema version of the machine-readable report.
+ *
+ * This is what a consumer pins — not the monodocs version. The two move for different reasons: a
+ * release adds checks and codes without changing the shape a job parses, and this number moves only
+ * when that shape does (roadmap.md 12.4, 25.5). Adding a code, or a field nothing required before,
+ * is not a change of shape.
+ */
+export const DIAGNOSTICS_SCHEMA_VERSION = 1;
+
+/** What `monodocs validate --format json` prints. */
+export type DiagnosticsReport = {
+  schemaVersion: number;
+  diagnostics: Diagnostic[];
+};
+
+export function toDiagnosticsReport(diagnostics: readonly Diagnostic[]): DiagnosticsReport {
+  return { schemaVersion: DIAGNOSTICS_SCHEMA_VERSION, diagnostics: [...diagnostics] };
 }
 
 /** The messages of a set of diagnostics, in order. For a caller that only prints them. */

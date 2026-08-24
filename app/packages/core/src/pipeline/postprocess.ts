@@ -12,6 +12,7 @@ import { type Diagnostic, type DiagnosticSource, MonodocsError, warn } from "../
 import { type MermaidPrerenderer } from "./mermaidPrerender.js";
 import { BrowserSetupError } from "./browser.js";
 import { markPageBreakHeadings } from "./pageBreakHeadings.js";
+import { checkHeadingLevels, checkImageAlt } from "./pageChecks.js";
 import { t } from "../messages.js";
 
 /** コードハイライトに使う配色（shiki の dual theme。ダークは CSS で切替）。 */
@@ -793,6 +794,9 @@ export async function postprocessPages(
       warnings,
       new SourceLocationTracker(page, linkExtensions),
     );
+    // 著者向けの検査は画像埋め込みより前に行う。あとにすると、報告する src が data URI になる。
+    checkHeadingLevels(tree, page, warnings);
+    checkImageAlt(tree, page, warnings);
     if (options.embedImages) await embedImages(tree, page, options, realRoot, warnings);
     // 印は最後に付ける。見出しの前に何があるかは、リンク書き換えや画像埋め込みのあとの姿で決まる。
     if (options.pdfPageBreakLevel !== false) {

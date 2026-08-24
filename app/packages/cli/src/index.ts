@@ -16,6 +16,7 @@ import {
   type OutputFormat,
 } from "@monodocs/core";
 import packageJson from "../package.json" with { type: "json" };
+import { REPORT_FORMATS, renderReport, resolveReportFormat } from "./report.js";
 
 declare const __MONODOCS_VERSION__: string;
 
@@ -240,25 +241,23 @@ program
   .description(t("cli.validate.description"))
   .argument("[input]", t("cli.arg.input"))
   .option("-c, --config <file>", t("cli.opt.config"))
+  .option(
+    "--format <format>",
+    t("cli.validate.opt.format", { supported: REPORT_FORMATS.join(" | ") }),
+  )
   .helpOption("-h, --help", t("cli.help.helpOption"))
-  .action(async (input: string | undefined, options: { config?: string }) => {
+  .action(async (input: string | undefined, options: { config?: string; format?: string }) => {
+    const format = resolveReportFormat(options.format);
     const result = await validateSite({ inputDir: input, configFile: options.config });
-    for (const error of result.errors) printError(error.message);
-    for (const warning of result.warnings) printWarning(warning.message);
-
-    const total = result.errors.length + result.warnings.length;
-    if (total === 0) {
-      console.log(t("cli.noIssues", { pages: result.pages }));
-      return;
+    // The exit code is the same in either format: `validate` already exits non-zero on a warning,
+    // so there is no `--strict` to add.
+    const report = renderReport(result, format);
+    for (const line of report.lines) {
+      if (line.channel === "out") console.log(line.text);
+      else if (line.channel === "warn") console.warn(line.text);
+      else console.error(line.text);
     }
-    console.error(
-      t("cli.issues", {
-        errors: result.errors.length,
-        warnings: result.warnings.length,
-        pages: result.pages,
-      }),
-    );
-    process.exitCode = 1;
+    if (report.failed) process.exitCode = 1;
   });
 
 /**

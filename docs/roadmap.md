@@ -2723,26 +2723,34 @@ as `build`, so what it reports is what a build reports, and nothing is checked t
 diagram syntax errors are outside its scope and it says so rather than implying a check it does not
 run.
 
-It already exits non-zero when anything is found, warnings included, so there is no `--strict` to
-add. What it lacks is a form a machine can read: today a CI job that wants to annotate a pull
-request has to parse translated prose, which changes with the language and with any rewording
-(12.4).
+It exits non-zero when anything is found, warnings included, so there is no `--strict` to add. What
+it lacked was a form a machine can read: a CI job that wanted to annotate a pull request had to
+parse translated prose, which changes with the language and with any rewording (12.4).
 
 ```bash
 monodocs validate --format json
 ```
 
-The JSON is the diagnostics model (27.3) serialised, versioned by its own schema version. Three
-checks are added at the same time, chosen because each one is decidable from what the pipeline
-already holds:
+The JSON is the diagnostics model (27.3) serialised, versioned by its own schema version, and it is
+alone on stdout — not even the summary line goes with it, because a stream that is sometimes JSON
+and sometimes JSON with a sentence after it is not a format. `schemaVersion` is what a consumer
+pins: it moves when the shape moves, and adding a check or a code does not move the shape. Three
+checks arrived with it, chosen because each one is decidable from what the pipeline already holds:
 
 - **A heading level skipped** — an `h2` followed by an `h4`. It breaks the in-page table of contents
   (22) and every assistive technology that navigates by heading level
 - **An image with no `alt` attribute at all.** An explicitly empty `alt=""` is not a finding: it is
   how an author marks a decorative image, and the lightbox already honours that distinction (23.2)
-- **A cross-file link whose anchor does not exist**, which today warns during a build and is
+- **A cross-file link whose anchor does not exist**, which already warned during a build and was
   therefore already known — it appears in the report as a diagnostic with a code rather than a line
   of prose
+
+The first two run in post-processing, beside every other finding, so a build reports them too: what
+`validate` reports is what a build reports, and a check that lived only in `validate` would break
+that. Neither carries a line, because the tree they walk is the rendered HTML and a position in it
+describes the generated document rather than the file the author edits. Neither reports the first
+heading of a page whatever its level, since a page whose title comes from frontmatter legitimately
+opens at `h2`.
 
 **External links are not checked.** A link checker that reaches the network makes the result depend
 on when it ran and on what the network between the runner and the site was doing: a rate limit, a
