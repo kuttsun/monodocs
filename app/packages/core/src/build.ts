@@ -11,6 +11,7 @@ import type {
 } from "./types.js";
 import { loadConfig, type MermaidMode, type OnLargeImage, type ResolvedConfig } from "./config.js";
 import { bySeverity, type Diagnostic, MonodocsError, toDiagnostic, warn } from "./diagnostics.js";
+import { documentAuthor, documentKeywords, documentSubject } from "./documentMeta.js";
 import { resolveLabels } from "./labels.js";
 import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
@@ -226,6 +227,7 @@ export async function buildSite(
 
   const html = await renderSingleHtml({
     title: config.title,
+    documentMetadata: config.documentMetadata,
     pages,
     sidebar,
     lang: config.lang,
@@ -269,6 +271,10 @@ export async function buildSite(
         outline: config.pdfBookmarks ? sidebarToOutline(sidebar) : undefined,
         title: config.title,
         generator: options.generatorVersion ? `monodocs v${options.generatorVersion}` : "monodocs",
+        // 13.5: 書き手が書いた値がビューアの文書情報へ届く。
+        author: documentAuthor(config.documentMetadata),
+        subject: documentSubject(config.documentMetadata, resolvedLabels.labels),
+        keywords: documentKeywords(config.documentMetadata),
         header: config.pdfHeader,
         footer: config.pdfFooter,
         fontCheck: config.fontCheck,

@@ -41,6 +41,13 @@ export {
   type DiagnosticSeverity,
   type DiagnosticSource,
 } from "./diagnostics.js";
+export {
+  documentAuthor,
+  documentFooterLine,
+  documentKeywords,
+  documentSubject,
+  type DocumentMetadata,
+} from "./documentMeta.js";
 export { initSite, type InitResult } from "./init.js";
 export { readSourceFile, scanSourceFiles, type ScanOptions } from "./scan.js";
 export { detectFormat, FORMAT_EXTENSIONS } from "./sources/detectFormat.js";

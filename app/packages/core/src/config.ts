@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { type Diagnostic, MonodocsError, warn } from "./diagnostics.js";
+import type { DocumentMetadata } from "./documentMeta.js";
 import { z } from "zod";
 import {
   DEFAULT_LANG,
@@ -282,6 +283,20 @@ function buildConfigFileSchema() {
        * `pdf.fontCheck` ではなくトップレベルに置く（24.3.3）。
        */
       fontCheck: z.enum(FONT_CHECK_MODES).optional(),
+      /**
+       * What the document says about itself (13.5). Every field is optional and every field is a
+       * string monodocs does not interpret. `title` stays at the top level rather than moving in
+       * here: it is in every existing configuration, and moving it would buy consistency at the
+       * price of the one thing 12.4 promises not to do.
+       */
+      document: z
+        .object({
+          version: z.string().min(1).optional(),
+          date: z.string().min(1).optional(),
+          authors: z.array(z.string().min(1)).optional(),
+        })
+        .strict()
+        .optional(),
       input: z.string().optional(),
       output: z
         .object({
@@ -521,6 +536,8 @@ export type ResolvedConfig = {
    */
   warnings: Diagnostic[];
   title: string;
+  /** What the document says about itself: version, date, authors (13.5). */
+  documentMetadata: DocumentMetadata;
   /** 生成した文書の言語（BCP 47）。`<html lang>` を埋め、UI ラベルの表を選ぶ。 */
   lang: string;
   /** `lang` が選んだ表の上に重ねる UI ラベルの差し替え。 */
@@ -861,6 +878,7 @@ export async function loadConfig(
     configFilePath: configPath,
     warnings,
     title: fileConfig.title ?? DEFAULT_TITLE,
+    documentMetadata: fileConfig.document ?? {},
     lang: fileConfig.lang ?? DEFAULT_LANG,
     labelOverrides: fileConfig.html?.labels ?? {},
     // 既定は warn。検査は Chromium のフォールバック連鎖に対するヒューリスティックなので、

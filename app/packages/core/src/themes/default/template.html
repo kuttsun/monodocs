@@ -69,16 +69,23 @@
       <main id="content">
 {{pages}}
         <nav id="page-nav" aria-label="{{labelPageNavLabel}}"></nav>
-{{#branding}}
+{{#documentFooter}}
         <footer class="document-footer">
-          {{labelGeneratedBy}}
-          <a
-            href="https://github.com/kuttsun/monodocs"
-            target="_blank"
-            rel="noopener"
-          >monodocs{{#generatorVersion}} v{{generatorVersion}}{{/generatorVersion}}</a>
-        </footer>
+{{#documentMeta}}
+          <p class="document-meta">{{documentMeta}}</p>
+{{/documentMeta}}
+{{#branding}}
+          <p class="document-generator">
+            {{labelGeneratedBy}}
+            <a
+              href="https://github.com/kuttsun/monodocs"
+              target="_blank"
+              rel="noopener"
+            >monodocs{{#generatorVersion}} v{{generatorVersion}}{{/generatorVersion}}</a>
+          </p>
 {{/branding}}
+        </footer>
+{{/documentFooter}}
       </main>
       <aside id="toc" aria-label="{{labelTocLabel}}">
         <div class="toc-title">{{labelTocTitle}}</div>

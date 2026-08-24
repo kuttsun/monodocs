@@ -295,13 +295,13 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **文書のメタデータ**（[roadmap.md](roadmap.md) 13.5）
 
-- [ ] `document.version` / `date` / `authors` が、既に書いている `setTitle` の隣で PDF の Author / Subject / Keywords へ、そして HTML・PDF 双方の branding フッタへ届く
-- [ ] ビルドは自前の日付を埋め込まない。同じ入力を 2 回ビルドすると同一のバイト列になり、それをテストが主張する
-- [ ] `title` は `document` へ移さずトップレベルに残る
+- [x] `document.version` / `date` / `authors` が、既に書いている `setTitle` の隣で PDF の Author / Subject / Keywords へ、そして HTML・PDF 双方の branding フッタへ届く
+- [x] ビルドは自前の日付を埋め込まない。同じ入力を 2 回ビルドすると同一のバイト列になり、それをテストが主張する
+- [x] `title` は `document` へ移さずトップレベルに残る
 
 **ドキュメント**
 
-- [ ] 公式サイトの設定リファレンスと日本語ミラーが `document` と JSON 出力を載せ、[testing.md](testing.md) が新しいテストを列挙する
+- [x] 公式サイトの設定リファレンスと日本語ミラーが `document` と JSON 出力を載せ、[testing.md](testing.md) が新しいテストを列挙する
 
 **リリース**
 
