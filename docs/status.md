@@ -268,17 +268,17 @@ the two ship as one release rather than as two — the reasoning is under v0.11 
 
 **The specification says what the code does** ([roadmap.md](roadmap.md) 12.1)
 
-- [ ] A test extracts the YAML from [roadmap.md](roadmap.md) 12.1 and runs it through `loadConfig`, so the example cannot describe a tool that does not exist. It had drifted to twelve keys the schema does not have — `sources.markdown.enabled`, `gfm`, `frontmatter`, `sources.asciidoc.enabled`, `safeMode`, `attributes`, `sidebar.collapsible`, `html.selfContained`, `routeMode`, `darkMode`, `pdf.enabled`, `search.enabled` — which since [roadmap.md](roadmap.md) 12.2 made every object strict means copying this project's own example produced `Unrecognized key`
-- [ ] The two behaviours that were never configurable say so where the keys used to be: GFM and frontmatter are always on, and Asciidoctor's safe mode and base directory are fixed
+- [x] A test extracts the YAML from [roadmap.md](roadmap.md) 12.1 and runs it through `loadConfig`, so the example cannot describe a tool that does not exist. It had drifted to twelve keys the schema does not have — `sources.markdown.enabled`, `gfm`, `frontmatter`, `sources.asciidoc.enabled`, `safeMode`, `attributes`, `sidebar.collapsible`, `html.selfContained`, `routeMode`, `darkMode`, `pdf.enabled`, `search.enabled` — which since [roadmap.md](roadmap.md) 12.2 made every object strict means copying this project's own example produced `Unrecognized key`
+- [x] The two behaviours that were never configurable say so where the keys used to be: GFM and frontmatter are always on, and Asciidoctor's safe mode and base directory are fixed
 - [x] [architecture.md](architecture.md) describes the cross-file anchor behaviour the code has — resolved to the target page's prefixed element ID, falling back to the page top with a warning when the anchor does not exist — rather than the earlier "drop the anchor and warn". [syntax.md](syntax.md) already described it, and the two now agree
 - [x] This table stops calling v0.11 planned after every one of its boxes is ticked
 
 **What 1.0 freezes** ([roadmap.md](roadmap.md) 12.4)
 
-- [ ] The promise is written down: a 1.x release does not remove, rename, or redefine a configuration key, a command, an option, or a piece of markup that 1.0 accepted; a default value changes only in a major release; a new optional key, command, option, or piece of markup that no existing document could contain may be added in a minor release
-- [ ] What it does not promise is written down as well: not a warning's wording, which is translated and rewritten, and not byte-identical output across versions — only that one input, one configuration, and one version produce the same bytes
-- [ ] A machine-readable format carries its own schema version, and that is what a consumer pins
-- [ ] Deprecation has the shape `sidebar.exclude` already follows: the old spelling keeps working, warns, names its replacement, and is removed no earlier than the next major release
+- [x] The promise is written down: a 1.x release does not remove, rename, or redefine a configuration key, a command, an option, or a piece of markup that 1.0 accepted; a default value changes only in a major release; a new optional key, command, option, or piece of markup that no existing document could contain may be added in a minor release
+- [x] What it does not promise is written down as well: not a warning's wording, which is translated and rewritten, and not byte-identical output across versions — only that one input, one configuration, and one version produce the same bytes
+- [x] A machine-readable format carries its own schema version, and that is what a consumer pins
+- [x] Deprecation has the shape `sidebar.exclude` already follows: the old spelling keeps working, warns, names its replacement, and is removed no earlier than the next major release
 
 **Diagnostics** ([roadmap.md](roadmap.md) 27.3)
 

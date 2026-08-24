@@ -267,17 +267,17 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **仕様がコードの言うことを言う**（[roadmap.md](roadmap.md) 12.1）
 
-- [ ] [roadmap.md](roadmap.md) 12.1 の YAML を取り出して `loadConfig` に通すテストがあり、存在しないツールを説明した例はそこで落ちる。実際にずれていた——`sources.markdown.enabled` / `gfm` / `frontmatter`、`sources.asciidoc.enabled` / `safeMode` / `attributes`、`sidebar.collapsible`、`html.selfContained` / `routeMode` / `darkMode`、`pdf.enabled`、`search.enabled` の 12 個はスキーマに無く、[roadmap.md](roadmap.md) 12.2 が全オブジェクトを strict にした以上、このプロジェクト自身の例を写すと `Unrecognized key` になる
-- [ ] そもそも設定できなかった 2 つの挙動が、キーのあった場所でそう述べる。GFM と frontmatter は常時有効、Asciidoctor の safe mode と base ディレクトリは固定である
+- [x] [roadmap.md](roadmap.md) 12.1 の YAML を取り出して `loadConfig` に通すテストがあり、存在しないツールを説明した例はそこで落ちる。実際にずれていた——`sources.markdown.enabled` / `gfm` / `frontmatter`、`sources.asciidoc.enabled` / `safeMode` / `attributes`、`sidebar.collapsible`、`html.selfContained` / `routeMode` / `darkMode`、`pdf.enabled`、`search.enabled` の 12 個はスキーマに無く、[roadmap.md](roadmap.md) 12.2 が全オブジェクトを strict にした以上、このプロジェクト自身の例を写すと `Unrecognized key` になる
+- [x] そもそも設定できなかった 2 つの挙動が、キーのあった場所でそう述べる。GFM と frontmatter は常時有効、Asciidoctor の safe mode と base ディレクトリは固定である
 - [x] [architecture.md](architecture.md) が、別ファイルのアンカーについてコードが持つ挙動——対象ページの接頭辞付き要素 ID へ解決し、存在しなければ警告してページ先頭へ落とす——を述べる。以前の「アンカーを除去して警告する」ではない。[syntax.md](syntax.md) は既にそう書いており、両者が一致する
 - [x] v0.11 のチェックが全部埋まったあとも planned と言い続けている、この表を直す
 
 **1.0 が凍結するもの**（[roadmap.md](roadmap.md) 12.4）
 
-- [ ] 約束を書き下す。1.x のリリースは、1.0 が受理した設定キー・コマンド・オプション・記法を削除も改名も再定義もしない。既定値の変更はメジャーのみ。新しい任意キー・コマンド・オプション・既存の文書には現れ得ない記法の追加はマイナーで許される
-- [ ] 約束しないことも書き下す。翻訳され書き直される警告の文言は凍結しない。バージョン間のバイト同一も約束しない——約束するのは、同じ入力・同じ設定・同じバージョンなら同じバイト列になることだけである
-- [ ] 機械可読な形式は自身のスキーマバージョンを持ち、利用側が固定するのはそれである
-- [ ] 非推奨化は `sidebar.exclude` が既に従っている形を取る。古い綴りは動き続け、警告し、置き換え先を名指し、削除は早くても次のメジャーである
+- [x] 約束を書き下す。1.x のリリースは、1.0 が受理した設定キー・コマンド・オプション・記法を削除も改名も再定義もしない。既定値の変更はメジャーのみ。新しい任意キー・コマンド・オプション・既存の文書には現れ得ない記法の追加はマイナーで許される
+- [x] 約束しないことも書き下す。翻訳され書き直される警告の文言は凍結しない。バージョン間のバイト同一も約束しない——約束するのは、同じ入力・同じ設定・同じバージョンなら同じバイト列になることだけである
+- [x] 機械可読な形式は自身のスキーマバージョンを持ち、利用側が固定するのはそれである
+- [x] 非推奨化は `sidebar.exclude` が既に従っている形を取る。古い綴りは動き続け、警告し、置き換え先を名指し、削除は早くても次のメジャーである
 
 **診断**（[roadmap.md](roadmap.md) 27.3）
 

@@ -32,12 +32,12 @@ docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 
 Inside a devcontainer, or when you are in the container's shell, you can run `pnpm test` directly in `app/`.
 
-## Test Results (as of 2026-07-28)
+## Test Results (as of 2026-08-24)
 
 | Item           | Result     |
 | -------------- | ---------- |
-| Test Files     | 31 passed  |
-| Tests          | 287 passed |
+| Test Files     | 47 passed  |
+| Tests          | 476 passed |
 | typecheck      | passed     |
 | format:check   | passed     |
 | package:verify | passed     |
@@ -86,3 +86,4 @@ Main test targets:
 - `pipeline/pdfMetadata.test.ts` … PDF document information (title and monodocs as Creator/Producer replacing the browser and pdf-lib defaults, the DisplayDocTitle viewer preference, pages preserved, no-op when nothing is set. pdf-lib only, browserless)
 - `pipeline/pdfOutline.test.ts` … PDF bookmarks (`sidebarToOutline` tree conversion, `collectDests`/`remapDests`, `addOutline` referencing `/Dests` to build folder→page `/Outlines` and set `/UseOutlines`. Destinations absent / empty tree returns the original PDF. pdf-lib only, browserless)
 - `config.test.ts` … configuration resolution (including content-width, image-lightbox, and branding defaults/toggles, `pdf` schema defaults, completion of missing margins, rejection of invalid `--format`, and default output paths per format). It also covers what is excluded from the bundle — `sources.exclude` adding to the built-in list rather than replacing it, `sources.excludeDefaults: false` dropping that list, the deprecated `sidebar.exclude` still honoured and merged with a warning, and both spellings at once refused — and unknown keys at every depth, including the top level, with the error naming the key and the object holding it rather than dumping the validator's issue array
+- `config.example.test.ts` … the configuration example in [roadmap.md](roadmap.md) 12.1 (v0.11). The block is extracted from the document itself and loaded, in both language versions, so the example cannot go on describing a tool that does not exist: it had drifted to twelve keys the schema does not have, and once every object became strict, copying this project's own example produced `Unrecognized key`. What is asserted is that it loads with no warning as well as no error, since a warning would teach a spelling the tool is asking authors to leave. The premises are checked rather than assumed — the section is bounded by the next heading and required to hold exactly one YAML block, the resolved title is compared against the block's own so that an extraction returning nothing cannot pass, and the same block with one phantom key appended is required to be refused. The two mirrors are compared by key path, because a key added to one language and not the other is drift that the other language's reader would be the last to find
