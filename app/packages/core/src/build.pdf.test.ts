@@ -263,6 +263,26 @@ describe.skipIf(!chromium)("buildSite - PDF（実 Chromium）", () => {
     expect(doc.getProducer()).toBe("monodocs v1.2.3");
   }, 60_000);
 
+  it("carries what the document says about itself into its properties (13.5)", async () => {
+    // The whole chain, in the only place it can be seen: a configuration file, a real Chromium,
+    // and the delivered bytes read back.
+    const root = join(dir, "real-document");
+    await mkdir(root, { recursive: true });
+    const configFile = join(root, "monodocs.config.yml");
+    await writeFile(
+      configFile,
+      'title: "Spec"\ndocument:\n  version: "1.2"\n  date: "2026-08-22"\n  authors:\n    - "Docs Team"\n',
+    );
+    const out = join(root, "docs.pdf");
+    await buildSite({ inputDir: docs, configFile, outputFile: out, format: "pdf" });
+    const { PDFDocument } = await import("pdf-lib");
+    const doc = await PDFDocument.load(await readFile(out), { updateMetadata: false });
+    expect(doc.getTitle()).toBe("Spec");
+    expect(doc.getAuthor()).toBe("Docs Team");
+    expect(doc.getSubject()).toBe("Version 1.2 (2026-08-22)");
+    expect(doc.getKeywords()).toContain("1.2");
+  }, 60_000);
+
   it("makes in-content cross-page links clickable (internal link annotation)", async () => {
     const ldir = await mkdtemp(join(tmpdir(), "monodocs-pdf-links-"));
     const ldocs = join(ldir, "docs");

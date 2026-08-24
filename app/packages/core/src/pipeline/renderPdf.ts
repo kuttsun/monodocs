@@ -30,6 +30,12 @@ export type PdfRenderOptions = {
   title?: string;
   /** 生成ツール名（PDF の Creator / Producer）。 */
   generator?: string;
+  /** 著者（PDF の Author。`document.authors`）。 */
+  author?: string;
+  /** 何のどのバージョンか（PDF の Subject）。 */
+  subject?: string;
+  /** バージョンと日付そのもの（PDF の Keywords）。 */
+  keywords?: string[];
   /** ページ上部の帯（HTML フラグメント）。未指定は帯なし扱い。 */
   header?: string;
   /** ページ下部の帯（同上）。未指定は帯なし扱い。 */
@@ -271,7 +277,13 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
           ? await addOutline(pdf, remapDests(options.outline, surrogate))
           : pdf;
       // 文書情報は最後に入れる（しおり付与でも pdf-lib が Producer を書き戻すため）。
-      return setPdfMetadata(withOutline, { title: options.title, generator: options.generator });
+      return setPdfMetadata(withOutline, {
+        title: options.title,
+        generator: options.generator,
+        author: options.author,
+        subject: options.subject,
+        keywords: options.keywords,
+      });
     },
     async close() {
       if (browser) {

@@ -736,6 +736,14 @@ lang: "en"
 # warn / error / off. Top-level because it covers PDF output and mermaid pre-render alike (24.3.3).
 fontCheck: "warn"
 
+# What the document says about itself (v0.11). Every field is optional and none is interpreted:
+# the date is not parsed and the version is not compared to anything (13.5). Unset by default.
+# document:
+#   version: "1.2"
+#   date: "2026-08-22"
+#   authors:
+#     - "Documentation Team"
+
 input: "./docs"
 
 output:
@@ -920,9 +928,11 @@ What 1.0 does not do:
   JSON exists so that CI has something that is promised
 - It does not promise **byte-identical output** across versions. The generated HTML carries a
   generator version, a Shiki release changes a class, a template gains an element. What it does
-  promise is that **one input, one configuration, and one monodocs version produce the same bytes**,
-  which is what makes a committed artifact reviewable in a diff — and the reason the build embeds no
-  timestamp of its own (13.5)
+  promise is that **one input, one configuration, and one monodocs version produce the same HTML
+  bytes**, which is what makes a committed artifact reviewable in a diff — and the reason the build
+  embeds no timestamp of its own (13.5). The PDF is outside that promise, measured: Chromium writes
+  its own creation and modification dates into the file, and monodocs neither adds a date nor
+  removes Chromium's
 
 **Deprecation has a shape.** `sidebar.exclude` moved to `sources.exclude` and still builds while
 saying where it went (12.3), which is the pattern: the old spelling keeps working, warns, names its
@@ -1066,6 +1076,21 @@ an accident.
 `title` stays where it is rather than moving into `document`. It is in every existing configuration
 and in every example, and moving it would buy consistency at the price of the one thing 12.4
 promises not to do.
+
+**Where each field lands.** The footer carries one line — `Version 1.2 · 2026-08-22 · Documentation
+Team` — and the word in front of the version comes from the label table `lang` selects, so it follows
+the document's language and `html.labels` can replace it. The PDF's properties take the authors as
+`Author`, the version and the date as `Subject`, and both values as the author wrote them as
+`Keywords`: a search over a folder of PDFs matches `1.2`, not `Version 1.2`. The footer element
+survives `html.branding: false`, which removes monodocs' line and not the author's — the two are
+separate claims that happened to share a footer.
+
+**What reproducibility measured out to be.** The generated HTML is byte-identical across builds of
+the same input, and a test asserts it. The PDF is not, and monodocs is not the reason: Chromium
+writes its own `CreationDate` and `ModDate` into the file, inside a compressed stream, and monodocs
+neither adds a date nor removes those. So 12.4's promise holds for the artifact it was written about
+— a committed `docs.html` reviewable in a diff — and a PDF differing in a timestamp is recorded here
+rather than discovered later.
 ---
 
 ## 14. Sidebar

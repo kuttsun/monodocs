@@ -11,6 +11,7 @@ import {
 import { DEFAULT_LANG, LABEL_KEYS, resolveLabels, type Labels } from "../labels.js";
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, escapeLabel, renderTemplate } from "../util/html.js";
+import { documentFooterLine, type DocumentMetadata } from "../documentMeta.js";
 
 export type RenderHtmlInput = {
   title: string;
@@ -47,6 +48,8 @@ export type RenderHtmlInput = {
   imageLightbox?: boolean;
   /** Whether the monodocs branding footer is shown. Defaults to true. */
   branding?: boolean;
+  /** What the document says about itself: version, date, authors (13.5). */
+  documentMetadata?: DocumentMetadata;
   /** monodocs version shown in the branding footer. Omitted when unavailable. */
   generatorVersion?: string;
   /**
@@ -318,6 +321,8 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   const labels = input.labels ?? resolveLabels(lang).labels;
   const contentWidthState = contentWidthToggleState(contentWidthDefault, labels);
   const generatorVersion = input.generatorVersion?.trim();
+  // The document's own line, composed here so that the HTML footer and the PDF's Subject agree.
+  const documentMeta = documentFooterLine(input.documentMetadata ?? {}, labels);
 
   const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth);
   const pagesHtml = input.pages.map(renderArticle).join("\n");
@@ -343,6 +348,14 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     input.contentWidthToggle !== false,
   );
   html = renderConditionalBlock(html, "imageLightbox", input.imageLightbox !== false);
+  // The footer element survives if either half has something to say: an author who turns the
+  // branding off is removing monodocs' line, not their own version and date.
+  html = renderConditionalBlock(
+    html,
+    "documentFooter",
+    input.branding !== false || documentMeta !== "",
+  );
+  html = renderConditionalBlock(html, "documentMeta", documentMeta !== "");
   html = renderConditionalBlock(html, "branding", input.branding !== false);
   html = renderConditionalBlock(
     html,
@@ -363,6 +376,7 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     // `"` を含む html.labels の値が title 属性から抜け出して属性を足せてしまう。
     contentWidthToggleTitle: escapeLabel(contentWidthState.title),
     generatorVersion: escapeHtml(generatorVersion ?? ""),
+    documentMeta: escapeHtml(documentMeta),
     title: escapeHtml(input.title),
     style: styleWithOverrides(theme.style, input),
     sidebar: sidebarHtml,

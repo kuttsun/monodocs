@@ -296,13 +296,13 @@ the two ship as one release rather than as two — the reasoning is under v0.11 
 
 **Document metadata** ([roadmap.md](roadmap.md) 13.5)
 
-- [ ] `document.version` / `date` / `authors` reach the PDF's Author, Subject, and Keywords — beside the `setTitle` already written — and the branding footer of both HTML and PDF
-- [ ] The build embeds no date of its own. The same input built twice produces identical bytes, and a test asserts it
-- [ ] `title` stays at the top level rather than moving into `document`
+- [x] `document.version` / `date` / `authors` reach the PDF's Author, Subject, and Keywords — beside the `setTitle` already written — and the branding footer of both HTML and PDF
+- [x] The build embeds no date of its own. The same input built twice produces identical bytes, and a test asserts it
+- [x] `title` stays at the top level rather than moving into `document`
 
 **Documentation**
 
-- [ ] The site's configuration reference and its Japanese mirror carry `document` and the JSON output, and [testing.md](testing.md) lists the new tests
+- [x] The site's configuration reference and its Japanese mirror carry `document` and the JSON output, and [testing.md](testing.md) lists the new tests
 
 **Release**
 

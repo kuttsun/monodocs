@@ -935,6 +935,15 @@ body.content-wide #content {
   color: inherit;
 }
 
+.document-footer p {
+  margin: 0.2rem 0;
+}
+
+/* 文書自身のバージョン・日付・著者。生成ツールの行より先に、少し強く出す（13.5）。 */
+.document-meta {
+  color: var(--color-text);
+}
+
 .page-nav-item {
   /* 枠は付けずテキストだけで見せる（Vue ドキュメント風）。上段に「← Prev / Next →」の
      小さなラベル、下段にページタイトルのリンクを縦に並べる。 */
