@@ -87,6 +87,31 @@ describe("postprocessPages - link rewriting", () => {
     );
   });
 
+  it("counts every link to a page, not only the ones it reports", async () => {
+    // A page that links to `guide.md` correctly and then twice to anchors it does not have has
+    // three links to one target. Taking a position only when something is wrong made the first
+    // finding answer with the working link's line.
+    const raw = "# H\n\n[ok](guide.md)\n\n[one](guide.html#bad)\n\n[two](guide.md#alsobad)\n";
+    const result = await postprocessPages(
+      [
+        page({
+          relativePath: "index.md",
+          route: "/",
+          html:
+            '<a href="guide.md">ok</a><a href="guide.html#bad">one</a>' +
+            '<a href="guide.md#alsobad">two</a>',
+          rawSource: raw,
+        }),
+        page({ relativePath: "guide.md", route: "/guide", html: "<h1>G</h1>", id: "guide" }),
+      ],
+      baseOptions,
+    );
+    expect(result.warnings.map((w) => [w.code, w.line])).toEqual([
+      ["link/unresolved-anchor", 5],
+      ["link/unresolved-anchor", 7],
+    ]);
+  });
+
   it("keeps a query or an anchor apart while sharing the target", async () => {
     // The cursor has to count exactly what its candidate list holds. These four links share a
     // target but the parser gives each spelling its own list, so a cursor shared across the
