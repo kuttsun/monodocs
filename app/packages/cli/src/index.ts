@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { Command, CommanderError } from "commander";
 import {
   buildSite,
+  type Diagnostic,
   initSite,
   MESSAGE_LANGS,
   resolveMessageLang,
@@ -47,7 +48,7 @@ function applyMessageLang(argv: string[]): void {
   } catch (error) {
     // Commander が引数を読む前なので、その入口には乗らない。ここで monodocs のエラーとして
     // 出して終える。素通しにすると Node のスタックトレースになり、対応する値も読み取れない。
-    fail((error as Error).message);
+    printError((error as Error).message);
     process.exit(1);
   }
 }
@@ -60,25 +61,25 @@ function openBrowser(url: string): void {
   try {
     const child = spawn(command, args, { stdio: "ignore", detached: true });
     child.on("error", () => {
-      warn(t("cli.browserOpenFailed", { command }));
+      printWarning(t("cli.browserOpenFailed", { command }));
     });
     child.unref();
   } catch {
-    warn(t("cli.browserOpenFailedNoCommand"));
+    printWarning(t("cli.browserOpenFailedNoCommand"));
   }
 }
 
-function warn(message: string): void {
+function printWarning(message: string): void {
   console.warn(t("cli.warningPrefix", { message }));
 }
 
-function fail(message: string): void {
+function printError(message: string): void {
   console.error(t("cli.errorPrefix", { message }));
 }
 
 /** ビルド結果の警告とサマリを標準出力へ表示する共通処理。 */
-function reportBuild(result: { pages: number; outputs: string[]; warnings: string[] }): void {
-  for (const warning of result.warnings) warn(warning);
+function reportBuild(result: { pages: number; outputs: string[]; warnings: Diagnostic[] }): void {
+  for (const warning of result.warnings) printWarning(warning.message);
   console.log(t("cli.generated", { pages: result.pages, outputs: result.outputs.join(", ") }));
 }
 
@@ -123,7 +124,7 @@ program
       const result = await initSite();
       console.log(t("cli.created", { files: result.created.join(", ") }));
     } catch (error) {
-      fail((error as Error).message);
+      printError((error as Error).message);
       process.exitCode = 1;
     }
   });
@@ -151,7 +152,7 @@ program
         });
         reportBuild(result);
       } catch (error) {
-        fail((error as Error).message);
+        printError((error as Error).message);
         process.exitCode = 1;
       }
     },
@@ -174,11 +175,11 @@ program
     try {
       await watchSite(opts, {
         onRebuild: reportBuild,
-        onError: (error) => fail(error.message),
+        onError: (error) => printError(error.message),
       });
       console.log(t("cli.watching"));
     } catch (error) {
-      fail((error as Error).message);
+      printError((error as Error).message);
       process.exitCode = 1;
     }
   });
@@ -216,10 +217,10 @@ program
           },
           {
             onRebuild: (result) => {
-              for (const warning of result.warnings) warn(warning);
+              for (const warning of result.warnings) printWarning(warning.message);
               console.log(t("cli.rebuilt", { pages: result.pages }));
             },
-            onError: (error) => fail(error.message),
+            onError: (error) => printError(error.message),
           },
         );
         console.log(t("cli.serving", { url: handle.url }));
@@ -228,7 +229,7 @@ program
           void handle.close().then(() => process.exit(0));
         });
       } catch (error) {
-        fail((error as Error).message);
+        printError((error as Error).message);
         process.exitCode = 1;
       }
     },
@@ -242,8 +243,8 @@ program
   .helpOption("-h, --help", t("cli.help.helpOption"))
   .action(async (input: string | undefined, options: { config?: string }) => {
     const result = await validateSite({ inputDir: input, configFile: options.config });
-    for (const error of result.errors) fail(error);
-    for (const warning of result.warnings) warn(warning);
+    for (const error of result.errors) printError(error.message);
+    for (const warning of result.warnings) printWarning(warning.message);
 
     const total = result.errors.length + result.warnings.length;
     if (total === 0) {
@@ -283,7 +284,7 @@ function handleCommanderError(error: CommanderError): never {
   if (error.exitCode === 0) process.exit(0);
   const key = COMMANDER_MESSAGES[error.code];
   const target = /'([^']*)'/.exec(error.message)?.[1];
-  fail(key && target !== undefined ? t(key, { value: target }) : error.message);
+  printError(key && target !== undefined ? t(key, { value: target }) : error.message);
   process.exit(error.exitCode || 1);
 }
 
@@ -292,6 +293,6 @@ for (const command of [program, ...program.commands]) command.exitOverride();
 // トップレベル await は使わない（単一実行ファイル化のため CJS バンドルにする都合）。
 program.parseAsync(process.argv).catch((error) => {
   if (error instanceof CommanderError) handleCommanderError(error);
-  fail((error as Error).message);
+  printError((error as Error).message);
   process.exit(1);
 });

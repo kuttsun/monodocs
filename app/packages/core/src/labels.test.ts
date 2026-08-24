@@ -53,16 +53,16 @@ describe("resolveLabels", () => {
     // 拒否すると、フランス語の文書がビルドを通すためだけに自分を英語だと偽ることになる。
     const { labels, warning } = resolveLabels("fr");
     expect(labels.tocTitle).toBe("On this page");
-    expect(warning).toContain('"fr"');
-    expect(warning).toContain("en");
+    expect(warning?.message).toContain('"fr"');
+    expect(warning?.message).toContain("en");
   });
 
   it("falls back for a tag that has no primary subtag to match", () => {
     // 私用のみのタグにも grandfathered の i-* にも、照合先の主言語サブタグが無い。
-    expect(resolveLabels("x-klingon").warning).toContain("x-klingon");
-    expect(resolveLabels("i-klingon").warning).toContain("i-klingon");
+    expect(resolveLabels("x-klingon").warning?.message).toContain("x-klingon");
+    expect(resolveLabels("i-klingon").warning?.message).toContain("i-klingon");
     // 主言語サブタグはあるが表が無いもの。ここも同じ扱い。
-    expect(resolveLabels("sgn-BE-FR").warning).toContain("sgn-BE-FR");
+    expect(resolveLabels("sgn-BE-FR").warning?.message).toContain("sgn-BE-FR");
   });
 
   it("applies overrides on top of the chosen table, leaving the rest of it alone", () => {

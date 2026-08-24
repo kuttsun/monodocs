@@ -95,7 +95,7 @@ describe("buildCustomSidebar", () => {
   it("warns about pages that the sidebar does not list", () => {
     const { warnings } = buildCustomSidebar(PAGES, ITEMS);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain("faq.md");
+    expect(warnings[0]?.message).toContain("faq.md");
   });
 
   it("skips a hidden page with a warning", () => {
@@ -117,9 +117,13 @@ describe("buildCustomSidebar", () => {
     expect(sidebar.map((node) => (node.type === "page" ? node.pageId : node.title))).toEqual([
       "index",
     ]);
-    expect(warnings.some((w) => w.includes("hidden") && w.includes("draft.md"))).toBe(true);
+    expect(
+      warnings.some((w) => w.message.includes("hidden") && w.message.includes("draft.md")),
+    ).toBe(true);
     // hidden ページは「未掲載」の警告には数えない（意図的に隠しているため）。
-    expect(warnings.some((w) => w.includes("draft.md") && w.includes("Not listed"))).toBe(false);
+    expect(
+      warnings.some((w) => w.message.includes("draft.md") && w.message.includes("Not listed")),
+    ).toBe(false);
   });
 
   it("keeps only the first of a duplicated page and warns", () => {
@@ -129,7 +133,7 @@ describe("buildCustomSidebar", () => {
     ]);
 
     expect(sidebar).toHaveLength(1);
-    expect(warnings.some((w) => w.includes("more than once"))).toBe(true);
+    expect(warnings.some((w) => w.message.includes("more than once"))).toBe(true);
   });
 
   it("drops a group whose pages all disappear", () => {
@@ -148,7 +152,9 @@ describe("buildCustomSidebar", () => {
     ]);
 
     expect(sidebar).toHaveLength(0);
-    expect(warnings.some((w) => w.includes("Sidebar group has no visible pages"))).toBe(true);
+    expect(warnings.some((w) => w.message.includes("Sidebar group has no visible pages"))).toBe(
+      true,
+    );
   });
 });
 

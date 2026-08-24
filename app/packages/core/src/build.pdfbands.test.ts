@@ -258,10 +258,10 @@ describe.skipIf(!chromium)("PDF bands（実 Chromium）", () => {
       outputFile: join(root, "docs.pdf"),
       format: "pdf",
     });
-    const warning = result.warnings.find((w) => w.includes("pdf.margin.bottom"));
+    const warning = result.warnings.find((w) => w.message.includes("pdf.margin.bottom"));
     expect(warning).toBeDefined();
     // しきい値は測った高さ。決め打ちの数値ではないので、mm 表記が入る。
-    expect(warning).toMatch(/\d+\.\d+mm/);
+    expect(warning?.message).toMatch(/\d+\.\d+mm/);
   }, 120_000);
 
   it("stays silent when the margin fits, and for a replacement fragment", async () => {
@@ -274,7 +274,7 @@ describe.skipIf(!chromium)("PDF bands（実 Chromium）", () => {
       outputFile: join(roomy, "docs.pdf"),
       format: "pdf",
     });
-    expect(fits.warnings.filter((w) => w.includes("pdf.margin.bottom"))).toHaveLength(0);
+    expect(fits.warnings.filter((w) => w.message.includes("pdf.margin.bottom"))).toHaveLength(0);
 
     // 置き換えフラグメントは検査しない。任意の HTML と CSS が収まるかは余白の値だけでは
     // 判断できず、判断したふりをすれば誤警告か、測定でしか守れない約束になる。
@@ -291,7 +291,9 @@ describe.skipIf(!chromium)("PDF bands（実 Chromium）", () => {
       outputFile: join(custom, "docs.pdf"),
       format: "pdf",
     });
-    expect(unchecked.warnings.filter((w) => w.includes("pdf.margin.bottom"))).toHaveLength(0);
+    expect(unchecked.warnings.filter((w) => w.message.includes("pdf.margin.bottom"))).toHaveLength(
+      0,
+    );
   }, 180_000);
 
   it("centres the default footer in the band", async () => {
@@ -352,10 +354,10 @@ describe.skipIf(!chromium)("PDF bands（実 Chromium）", () => {
         outputFile: join(root, "docs.pdf"),
         format: "pdf",
       });
-      const warning = result.warnings.find((w) => w.includes("pdf.margin.bottom"));
+      const warning = result.warnings.find((w) => w.code === "pdf/margin-too-small");
       expect(warning, name).toBeDefined();
       // 最初の括弧は余白の値。閾値のほうを名指しで拾う。
-      return /needs \(([\d.]+mm)\)/.exec(warning!)![1]!;
+      return /needs \(([\d.]+mm)\)/.exec(warning!.message)![1]!;
     }
 
     const plain = await thresholdWith("iso-plain", "/* nothing */");

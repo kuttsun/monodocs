@@ -1,4 +1,5 @@
 import type { PdfMargin } from "../config.js";
+import { type Diagnostic, warn } from "../diagnostics.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
 import { runFontCheck, type FontCheckMode } from "./fontCheck.js";
 import { DEFAULT_PDF_FOOTER, DEFAULT_PDF_FOOTER_PROBE, EMPTY_PDF_BAND } from "./pdfBands.js";
@@ -40,7 +41,7 @@ export type PdfRenderOptions = {
    */
   fontCheck?: FontCheckMode;
   /** 余白・フォントの検査で問題が出たときの通知先。ビルドの警告へ流す。 */
-  onWarning?: (message: string) => void;
+  onWarning?: (diagnostic: Diagnostic) => void;
 };
 
 // 各ページ dest（`page-{id}`）位置へ ASCII サロゲート id のアンカーを差し込み、それへの内部
@@ -182,7 +183,10 @@ async function warnIfFooterDoesNotFit(page: PageLike, options: PdfRenderOptions)
   const bandPx = measured.bandPx as number;
   if (bandPx <= 0 || marginPx >= bandPx) return;
   options.onWarning(
-    t("pdf.footerMarginTooSmall", { margin: options.margin.bottom, needed: pxToMm(bandPx) }),
+    warn(
+      "pdf/margin-too-small",
+      t("pdf.footerMarginTooSmall", { margin: options.margin.bottom, needed: pxToMm(bandPx) }),
+    ),
   );
 }
 

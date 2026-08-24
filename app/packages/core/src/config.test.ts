@@ -454,7 +454,7 @@ describe("loadConfig: what is excluded from the bundle", () => {
     const config = await loadConfig({}, dir);
     expect(config.exclude).toEqual([...DEFAULT_EXCLUDE, "skip.md"]);
     expect(config.warnings).toHaveLength(1);
-    expect(config.warnings[0]).toMatch(/sources\.exclude/);
+    expect(config.warnings[0]?.message).toMatch(/sources\.exclude/);
   });
 
   it("refuses a configuration that excludes from both places", async () => {

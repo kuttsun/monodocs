@@ -6,13 +6,14 @@ import type {
   TitleFrom,
   TitleTransform,
 } from "../types.js";
+import { type Diagnostic, MonodocsError, warn } from "../diagnostics.js";
 import { toPageId, toRoute } from "../route.js";
 import { applyTitleTransform, DEFAULT_TITLE_TRANSFORM } from "./titleTransform.js";
 import { t } from "../messages.js";
 
 export type BuildPagesResult = {
   pages: Page[];
-  warnings: string[];
+  warnings: Diagnostic[];
 };
 
 export type BuildPagesOptions = {
@@ -74,14 +75,22 @@ export async function buildPages(
 ): Promise<BuildPagesResult> {
   const rendererByFormat = new Map(renderers.map((r) => [r.format, r]));
   const pages: Page[] = [];
-  const warnings: string[] = [];
+  const warnings: Diagnostic[] = [];
   const seenRoutes = new Map<string, string>();
   const seenPageIds = new Map<string, string>();
 
   for (const source of sources) {
     const renderer = rendererByFormat.get(source.format);
     if (!renderer) {
-      warnings.push(t("pages.noRenderer", { path: source.relativePath, format: source.format }));
+      warnings.push(
+        warn(
+          "page/no-renderer",
+          t("pages.noRenderer", { path: source.relativePath, format: source.format }),
+          {
+            path: source.relativePath,
+          },
+        ),
+      );
       continue;
     }
 
@@ -90,7 +99,8 @@ export async function buildPages(
 
     const existing = seenRoutes.get(route);
     if (existing) {
-      throw new Error(
+      throw new MonodocsError(
+        "page/duplicate-route",
         t("pages.routeCollision", {
           route,
           first: existing,
@@ -104,7 +114,8 @@ export async function buildPages(
     // どちらも "a-b"）。見出し ID prefix の衝突を防ぐため検知してエラーにする。
     const existingPageId = seenPageIds.get(id);
     if (existingPageId) {
-      throw new Error(
+      throw new MonodocsError(
+        "page/duplicate-id",
         t("pages.pageIdCollision", {
           id,
           first: existingPageId,
@@ -123,7 +134,11 @@ export async function buildPages(
     // ファイル名へフォールバックしたら警告する。ただし titleFrom: "filename" のときは
     // ファイル名が指定された取得元なので「タイトル欠落」ではなく、警告しない。
     if (fromFilename && (options.titleFrom ?? "heading") !== "filename") {
-      warnings.push(t("pages.noTitle", { path: source.relativePath, title }));
+      warnings.push(
+        warn("page/no-title", t("pages.noTitle", { path: source.relativePath, title }), {
+          path: source.relativePath,
+        }),
+      );
     }
 
     pages.push({

@@ -10,6 +10,7 @@ import type {
   SourceFormat,
 } from "./types.js";
 import { loadConfig, type MermaidMode, type OnLargeImage, type ResolvedConfig } from "./config.js";
+import { bySeverity, type Diagnostic, MonodocsError, toDiagnostic, warn } from "./diagnostics.js";
 import { resolveLabels } from "./labels.js";
 import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
@@ -48,7 +49,7 @@ type PreparePagesOptions = {
 type PreparedSite = {
   pages: Page[];
   sidebar: SidebarNode[];
-  warnings: string[];
+  warnings: Diagnostic[];
   hasMermaid: boolean;
 };
 
@@ -63,7 +64,7 @@ export async function preparePages(
 ): Promise<PreparedSite> {
   const inputPath = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);
   if (!existsSync(inputPath)) {
-    throw new Error(t("build.inputNotFound", { path: config.inputDir }));
+    throw new MonodocsError("input/not-found", t("build.inputNotFound", { path: config.inputDir }));
   }
 
   const extensions = new Map<string, SourceFormat>();
@@ -81,7 +82,8 @@ export async function preparePages(
   if (inputIsFile) {
     const file = await readSourceFile(inputPath, { extensions });
     if (file === undefined) {
-      throw new Error(
+      throw new MonodocsError(
+        "input/unsupported-file",
         t("build.inputUnsupportedFile", {
           path: config.inputDir,
           extensions: [...extensions.keys()].sort().join(", "),
@@ -92,7 +94,7 @@ export async function preparePages(
   } else {
     sources = await scanSourceFiles(inputDir, { extensions, exclude: config.exclude });
     if (sources.length === 0) {
-      throw new Error(t("build.noSources", { path: config.inputDir }));
+      throw new MonodocsError("input/no-sources", t("build.noSources", { path: config.inputDir }));
     }
   }
 
@@ -211,7 +213,7 @@ export async function buildSite(
   }
   const { pages, sidebar, warnings, hasMermaid } = prepared;
   if (forceEmbed || forceLargeEmbed) {
-    warnings.unshift(t("build.pdfImagesEmbedded"));
+    warnings.unshift(warn("image/embedded-for-pdf", t("build.pdfImagesEmbedded")));
   }
 
   // pre-render は静的 SVG なのでランタイム JS を注入しない（client mode のときだけ注入）。
@@ -285,10 +287,23 @@ export async function buildSite(
 
 /** {@link validateSite} の結果。 */
 export type ValidateResult = {
-  errors: string[];
-  warnings: string[];
+  /** Everything found, errors and warnings alike, in the order they were reported. */
+  diagnostics: Diagnostic[];
+  /** The errors among them. Derived, so that the two can never disagree. */
+  errors: Diagnostic[];
+  /** The warnings among them. Derived the same way. */
+  warnings: Diagnostic[];
   pages: number;
 };
+
+function toValidateResult(diagnostics: Diagnostic[], pages: number): ValidateResult {
+  return {
+    diagnostics,
+    errors: bySeverity(diagnostics, "error"),
+    warnings: bySeverity(diagnostics, "warning"),
+    pages,
+  };
+}
 
 /**
  * 出力を書き出さずに、ビルド時と同じ処理を実行して問題点を収集する。
@@ -303,8 +318,10 @@ export async function validateSite(options: BuildOptions = {}): Promise<Validate
     // また pre-render の実描画（Chromium 起動）は行わない。mermaidMode を "client" に上書き
     // してクラス付与のみに留める（pre-render の描画/構文エラーは対象外）。
     const { pages, warnings } = await preparePages(config, cwd, { mermaidMode: "client" });
-    return { errors: [], warnings, pages: pages.length };
+    return toValidateResult(warnings, pages.length);
   } catch (error) {
-    return { errors: [(error as Error).message], warnings: [], pages: 0 };
+    // A build that could not run at all is one diagnostic: the error that stopped it, carrying the
+    // code it was thrown with (27.3).
+    return toValidateResult([toDiagnostic(error)], 0);
   }
 }

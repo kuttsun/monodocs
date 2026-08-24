@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildSite } from "./build";
+import type { Diagnostic } from "./diagnostics";
 import { loadConfig } from "./config";
 import type { PageLike } from "./pipeline/browser";
 import {
@@ -231,7 +232,7 @@ async function buildPdf(
   name: string,
   page: string,
   config = "",
-): Promise<{ warnings: string[] } | Error> {
+): Promise<{ warnings: Diagnostic[] } | Error> {
   const root = join(dir, name);
   const docs = join(root, "docs");
   await mkdir(docs, { recursive: true });
@@ -253,20 +254,15 @@ async function buildPdf(
 /**
  * ビルドが成功したことを確かめたうえで、フォント検査由来の警告だけを取り出す。
  *
- * 失敗したビルドを黙って「警告なし」と読むと沈黙の検証が素通りする。所見の文言だけで絞るのも
- * 同じ穴を作る（基準が不成立・打ち切りの警告が出ていても「静かだった」と読めてしまう）ので、
- * この検査が出しうる 3 通りをカタログから組み立てて照合する。
+ * 失敗したビルドを黙って「警告なし」と読むと沈黙の検証が素通りする。文言の先頭で絞るのも
+ * 同じ穴を作りかけていた（訳が変われば一致しなくなる）。この検査が出す 2 つのコードで絞る
+ * ——所見の `font/missing` と、検査が答えを出さなかった `font/unchecked`——ので、基準が
+ * 不成立・打ち切りの警告が出ていれば「静かだった」とは読めない。
  */
-function fontWarnings(result: { warnings: string[] } | Error): string[] {
+function fontWarnings(result: { warnings: Diagnostic[] } | Error): Diagnostic[] {
   expect(result).not.toBeInstanceOf(Error);
-  const marks = [
-    describeFontCheck({ status: "missing", clusters: ["x"], truncated: false }, "pdf")!,
-    describeFontCheck({ status: "missing", clusters: ["x"], truncated: false }, "prerender")!,
-    describeFontCheck({ status: "unusable" }, "pdf")!,
-    describeFontCheck({ status: "ok", truncated: true }, "pdf")!,
-  ].map((message) => message.slice(0, 30));
-  return (result as { warnings: string[] }).warnings.filter((w) =>
-    marks.some((mark) => w.startsWith(mark)),
+  return (result as { warnings: Diagnostic[] }).warnings.filter(
+    (w) => w.code === "font/missing" || w.code === "font/unchecked",
   );
 }
 
@@ -277,7 +273,7 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     expect(fontWarnings(result)).toEqual([]);
     // この文書はほかに警告の出る要素を持たない。全体が空であることまで見ておくと、
     // 別種の警告が紛れ込んだときにここで気づける。
-    expect((result as { warnings: string[] }).warnings).toEqual([]);
+    expect((result as { warnings: Diagnostic[] }).warnings).toEqual([]);
   }, 120_000);
 
   // 日本語と絵文字で黙ることは、そのフォントがある環境でしか主張できない。GitHub の Linux
@@ -295,7 +291,8 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     const result = await buildPdf("real-missing", `# Home\n\nUnassigned: ${UNASSIGNED}\n`);
     const warning = fontWarnings(result)[0];
     expect(warning).toBeDefined();
-    expect(warning).toContain("U+50000");
+    expect(warning?.code).toBe("font/missing");
+    expect(warning?.message).toContain("U+50000");
   }, 120_000);
 
   it("fails the build for error, and says nothing for off", async () => {
@@ -353,9 +350,9 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
       configFile,
       outputFile: join(root, "docs.html"),
     });
-    const warning = result.warnings.find((w) => /tofu/.test(w));
+    const warning = result.warnings.find((w) => w.code === "font/missing");
     expect(warning).toBeDefined();
-    expect(warning).toMatch(/pre-render/);
-    expect(warning).toContain("U+50000");
+    expect(warning?.message).toMatch(/pre-render/);
+    expect(warning?.message).toContain("U+50000");
   }, 180_000);
 });

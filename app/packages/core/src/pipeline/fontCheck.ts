@@ -1,3 +1,4 @@
+import { type Diagnostic, MonodocsError, warn } from "../diagnostics.js";
 import { t } from "../messages.js";
 import type { PageLike } from "./browser.js";
 
@@ -24,9 +25,9 @@ export type FontCheckMode = (typeof FONT_CHECK_MODES)[number];
 export type FontCheckContext = "pdf" | "prerender";
 
 /** Thrown for `fontCheck: error`, which stops the build and exits non-zero. */
-export class FontCheckError extends Error {
+export class FontCheckError extends MonodocsError {
   constructor(message: string) {
-    super(message);
+    super("font/missing", message);
     this.name = "FontCheckError";
   }
 }
@@ -416,7 +417,7 @@ export async function runFontCheck(
   options: {
     mode: FontCheckMode;
     context: FontCheckContext;
-    onWarning: (message: string) => void;
+    onWarning: (diagnostic: Diagnostic) => void;
     /** HTML fragments to measure besides the document, each in a context of its own. */
     probes?: string[];
   },
@@ -436,5 +437,9 @@ export async function runFontCheck(
   const message = describeFontCheck(outcome, options.context);
   if (message === undefined) return;
   if (outcome.status === "missing" && options.mode === "error") throw new FontCheckError(message);
-  options.onWarning(message);
+  // Two messages, one code: an unusable reference and a walk that hit its ceiling are both the
+  // check declining to answer, and a job that ignores one has no reason to hear the other.
+  options.onWarning(
+    warn(outcome.status === "missing" ? "font/missing" : "font/unchecked", message),
+  );
 }

@@ -41,7 +41,7 @@ describe("document language and UI labels", () => {
     expect(html).toContain('<html lang="en"');
     expect(html).toContain(">On this page<");
     expect(siteData(html).labels.noResults).toBe("No results");
-    expect(warnings.join("\n")).not.toContain("label table");
+    expect(warnings.map((w) => w.message).join("\n")).not.toContain("label table");
   });
 
   it("declares ja and shows Japanese labels under lang: ja", async () => {
@@ -53,7 +53,7 @@ describe("document language and UI labels", () => {
     expect(html).toContain('placeholder="検索…"');
     // 動的に書かれる文言も同じ表から来る。
     expect(siteData(html).labels.noResults).toBe("該当なし");
-    expect(warnings.join("\n")).not.toContain("label table");
+    expect(warnings.map((w) => w.message).join("\n")).not.toContain("label table");
   });
 
   it("declares a tag with no shipped table, falls back to English, and warns once naming it", async () => {
@@ -61,9 +61,9 @@ describe("document language and UI labels", () => {
     // 属性は書いたとおり。ラベルだけ落とす。
     expect(html).toContain('<html lang="fr"');
     expect(html).toContain(">On this page<");
-    const matching = warnings.filter((w) => w.includes("label table"));
+    const matching = warnings.filter((w) => w.code === "lang/no-label-table");
     expect(matching).toHaveLength(1);
-    expect(matching[0]).toContain('"fr"');
+    expect(matching[0]?.message).toContain('"fr"');
   });
 
   it("replaces individual labels through html.labels", async () => {

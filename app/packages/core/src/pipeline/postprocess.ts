@@ -8,6 +8,7 @@ import { EXIT, SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
 import type { MermaidMode, OnLargeImage, PdfPageBreakLevel } from "../config.js";
 import type { Page } from "../types.js";
+import { type Diagnostic, type DiagnosticSource, MonodocsError, warn } from "../diagnostics.js";
 import { type MermaidPrerenderer } from "./mermaidPrerender.js";
 import { BrowserSetupError } from "./browser.js";
 import { markPageBreakHeadings } from "./pageBreakHeadings.js";
@@ -66,7 +67,7 @@ export type PostprocessOptions = {
 };
 
 export type PostprocessResult = {
-  warnings: string[];
+  warnings: Diagnostic[];
   /** いずれかのページに Mermaid ブロックが含まれていたか。 */
   hasMermaid: boolean;
 };
@@ -292,7 +293,7 @@ async function processMermaidPrerender(
   page: Page,
   renderer: MermaidPrerenderer,
   nextId: () => string,
-  warnings: string[],
+  warnings: Diagnostic[],
 ): Promise<boolean> {
   const blocks: MermaidBlock[] = [];
   visit(tree, "element", (node, index, parent) => {
@@ -328,10 +329,14 @@ async function processMermaidPrerender(
       if (error instanceof BrowserSetupError) throw error;
       // 図単位の描画エラー（構文エラー等）は警告してソース表示にフォールバックする。
       warnings.push(
-        t("post.mermaidPrerenderFailed", {
-          path: page.relativePath,
-          detail: (error as Error).message,
-        }),
+        warn(
+          "mermaid/render-failed",
+          t("post.mermaidPrerenderFailed", {
+            path: page.relativePath,
+            detail: (error as Error).message,
+          }),
+          { path: page.relativePath },
+        ),
       );
       block.parent.children[block.index] = {
         type: "element",
@@ -530,9 +535,21 @@ class SourceLocationTracker {
   }
 }
 
-function formatSourceRef(page: Page, href: string, locations: SourceLocationTracker): string {
+/**
+ * Where a link is in the source, as far as the tracker knows.
+ *
+ * The prose form has always existed; what a diagnostic needs is the same fact before it is
+ * flattened into a sentence, so the position is taken once and then used for both.
+ */
+function sourceRefOf(page: Page, href: string, locations: SourceLocationTracker): DiagnosticSource {
   const location = locations.consume(href);
-  return location ? `${page.relativePath}:${location.line}` : page.relativePath;
+  const source: DiagnosticSource = { path: page.relativePath };
+  if (location) source.line = location.line;
+  return source;
+}
+
+function formatSourceRef(source: DiagnosticSource): string {
+  return source.line === undefined ? `${source.path}` : `${source.path}:${source.line}`;
 }
 
 /**
@@ -583,7 +600,7 @@ function rewriteLinks(
   page: Page,
   targetMap: Map<string, LinkTarget>,
   linkExtensions: Set<string>,
-  warnings: string[],
+  warnings: Diagnostic[],
   locations: SourceLocationTracker,
 ): void {
   visit(tree, "element", (node) => {
@@ -592,20 +609,30 @@ function rewriteLinks(
     if (typeof href !== "string") return;
     const resolved = resolveHref(href, page.relativePath, targetMap, linkExtensions);
     if (resolved === null) {
+      const source = sourceRefOf(page, href, locations);
       warnings.push(
-        t("post.unresolvedLink", { href, where: formatSourceRef(page, href, locations) }),
+        warn(
+          "link/unresolved",
+          t("post.unresolvedLink", { href, where: formatSourceRef(source) }),
+          source,
+        ),
       );
       return;
     }
     if (resolved === undefined) return;
     node.properties.href = resolved.href;
     if (resolved.unresolvedAnchor !== undefined) {
+      const source = sourceRefOf(page, href, locations);
       warnings.push(
-        t("post.unresolvedAnchor", {
-          anchor: resolved.unresolvedAnchor,
-          href,
-          where: formatSourceRef(page, href, locations),
-        }),
+        warn(
+          "link/unresolved-anchor",
+          t("post.unresolvedAnchor", {
+            anchor: resolved.unresolvedAnchor,
+            href,
+            where: formatSourceRef(source),
+          }),
+          source,
+        ),
       );
     }
   });
@@ -631,7 +658,7 @@ async function embedImages(
   page: Page,
   options: PostprocessOptions,
   realRoot: string,
-  warnings: string[],
+  warnings: Diagnostic[],
 ): Promise<void> {
   const images: Element[] = [];
   visit(tree, "element", (node) => {
@@ -647,7 +674,11 @@ async function embedImages(
     const ext = posix.extname(pathPart).toLowerCase();
     const mime = IMAGE_MIME[ext];
     if (!mime) {
-      warnings.push(t("post.unsupportedImage", { src, path: page.relativePath }));
+      warnings.push(
+        warn("image/unsupported", t("post.unsupportedImage", { src, path: page.relativePath }), {
+          path: page.relativePath,
+        }),
+      );
       continue;
     }
 
@@ -656,11 +687,19 @@ async function embedImages(
     try {
       real = await realpath(resolve(baseDir, pathPart));
     } catch {
-      warnings.push(t("post.imageNotFound", { src, path: page.relativePath }));
+      warnings.push(
+        warn("image/not-found", t("post.imageNotFound", { src, path: page.relativePath }), {
+          path: page.relativePath,
+        }),
+      );
       continue;
     }
     if (!isInside(realRoot, real)) {
-      warnings.push(t("post.imageOutside", { src, path: page.relativePath }));
+      warnings.push(
+        warn("image/outside-input", t("post.imageOutside", { src, path: page.relativePath }), {
+          path: page.relativePath,
+        }),
+      );
       continue;
     }
 
@@ -668,13 +707,19 @@ async function embedImages(
     if (size > options.maxInlineSize) {
       const detail = `"${src}" (${formatBytes(size)} > ${formatBytes(options.maxInlineSize)}) in "${page.relativePath}"`;
       if (options.onLargeImage === "error") {
-        throw new Error(t("post.imageExceedsLimit", { detail }));
+        throw new MonodocsError("image/too-large", t("post.imageExceedsLimit", { detail }), {
+          path: page.relativePath,
+        });
       }
       if (options.onLargeImage === "external") {
-        warnings.push(t("post.imageLeftAsIs", { detail }));
+        warnings.push(
+          warn("image/large", t("post.imageLeftAsIs", { detail }), { path: page.relativePath }),
+        );
         continue;
       }
-      warnings.push(t("post.largeImageEmbedded", { detail }));
+      warnings.push(
+        warn("image/large", t("post.largeImageEmbedded", { detail }), { path: page.relativePath }),
+      );
     }
 
     const data = await readFile(real);
@@ -702,7 +747,7 @@ export async function postprocessPages(
   // （入力はパース済み hast で raw ノードを含まないため、既存要素の出力挙動は変わらない）。
   const serializer = unified().use(rehypeStringify, { allowDangerousHtml: true });
 
-  const warnings: string[] = [];
+  const warnings: Diagnostic[] = [];
   let hasMermaid = false;
   // pre-render SVG の id を全 HTML で一意にするグローバルカウンタ（CSS/SVG セーフな ASCII）。
   let mermaidIdSeq = 0;
@@ -713,7 +758,7 @@ export async function postprocessPages(
     options.mermaidMode === "pre-render" &&
     !options.mermaidPrerenderer
   ) {
-    throw new Error(t("mermaid.prerendererMissing"));
+    throw new MonodocsError("mermaid/prerenderer-missing", t("mermaid.prerendererMissing"));
   }
 
   for (const page of pages) {

@@ -282,9 +282,9 @@ the two ship as one release rather than as two — the reasoning is under v0.11 
 
 **Diagnostics** ([roadmap.md](roadmap.md) 27.3)
 
-- [ ] Every error and warning carries a stable `code` and, where the pipeline knows it, a `path` and a position. `formatSourceRef` already composes a file and a position into prose, so the position exists and is being flattened on the way out
-- [ ] A test fails when a diagnostic is added without a code
-- [ ] The message catalogue and the code set stay separate: a message key selects wording, a code identifies a finding, two messages may share a code, and a message may have none
+- [x] Every error and warning carries a stable `code` and, where the pipeline knows it, a `path` and a position. `formatSourceRef` already composes a file and a position into prose, so the position exists and is being flattened on the way out
+- [x] A test fails when a diagnostic is added without a code
+- [x] The message catalogue and the code set stay separate: a message key selects wording, a code identifies a finding, two messages may share a code, and a message may have none
 
 **`validate`** ([roadmap.md](roadmap.md) 25.5)
 
