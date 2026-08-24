@@ -20,7 +20,7 @@ Last updated: 2026-08-24
 | Search finishing (kana folding, keyboard)         | ✅ Done   | v0.9           |
 | Language, `init`, PDF fonts and page numbers      | ✅ Done   | v0.10          |
 | Page breaks (marker, `pdf.pageBreakLevel`)        | ✅ Done   | v0.11          |
-| Specification sync, diagnostics, `document`       | 🚧 Planned| v0.11          |
+| Specification sync, diagnostics, `document`       | ✅ Done   | v0.11          |
 | Input root, route aliases, AsciiDoc attributes    | 🚧 Planned| v0.12          |
 | Output size and budget, watermark                 | 🚧 Planned| v0.13          |
 | Section numbering, cover, printed table of contents | 🚧 Planned| v0.14        |
@@ -31,8 +31,8 @@ disproportionate for a single maintainer, and the boundary between the extension
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
 and it, v0.9, and v0.10 are released.
 
-0.11.0 has not been released. Its page-break half is implemented and its 1.0-contract half is not, and
-the two ship as one release rather than as two — the reasoning is under v0.11 in
+0.11.0 has not been released yet. Both halves of it are implemented — the page breaks and the 1.0
+contract — and they ship as one release rather than as two; the reasoning is under v0.11 in
 [roadmap.md](roadmap.md).
 
 ## Completion Criteria Status
