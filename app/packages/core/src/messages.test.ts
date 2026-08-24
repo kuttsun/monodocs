@@ -101,7 +101,7 @@ const CLI_SRC = join(SRC, "../../cli/src");
  * 独自の派生を取りこぼさないため。名前を列挙する形にすると、次に増えた 1 つを見逃す。
  */
 const FIRST_ARG_EMITTERS = [
-  "throw new \\w*Error\\(",
+  "throw new (?!MonodocsError\\b)\\w*Error\\(",
   "warnings\\.(?:push|unshift)\\(",
   "errors\\.push\\(",
   "console\\.\\w+\\(",
@@ -112,8 +112,17 @@ const FIRST_ARG_EMITTERS = [
 /**
  * 第 2 引数が説明文になるもの。Commander の `.option("-o, --output <path>", "説明")` では
  * 第 1 引数のフラグ表記は文字列リテラルで正しいので、そこを咎めてはいけない。
+ *
+ * 診断（{@link file://./diagnostics.ts}）も同じ形である。第 1 引数はコードで、リテラルで
+ * 正しい。文言は第 2 引数なので、そこがリテラルなら未カタログである。`warn(` / `fail(` の前に
+ * ドットや語を許さないのは、`console.warn(` を二重に拾わないため。
  */
-const SECOND_ARG_EMITTERS = ["\\.(?:option|argument|helpOption|helpCommand|addHelpText)\\("];
+const SECOND_ARG_EMITTERS = [
+  "\\.(?:option|argument|helpOption|helpCommand|addHelpText)\\(",
+  "throw new MonodocsError\\(",
+  "(?<![.\\w])warn\\(",
+  "(?<![.\\w])fail\\(",
+];
 
 const STRING_LITERAL = "(?:\"[^\"]*\"|'[^']*'|`[^`]*`)";
 

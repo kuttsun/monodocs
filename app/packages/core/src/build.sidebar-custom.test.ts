@@ -63,9 +63,9 @@ describe("buildSite (custom sidebar)", () => {
     // ただしページ自体は生成され、route で到達できる。
     expect(html).toContain('data-route="/faq"');
 
-    expect(result.warnings.some((w) => w.includes("Not listed") && w.includes("faq.md"))).toBe(
-      true,
-    );
+    expect(
+      result.warnings.some((w) => w.message.includes("Not listed") && w.message.includes("faq.md")),
+    ).toBe(true);
   });
 
   it("makes the page order follow the sidebar", async () => {
@@ -93,6 +93,8 @@ describe("buildSite (custom sidebar)", () => {
     );
 
     const result = await validateSite({ inputDir: broken });
-    expect(result.errors.some((e) => e.includes("Sidebar item not found: missing.md"))).toBe(true);
+    expect(
+      result.errors.some((e) => e.message.includes("Sidebar item not found: missing.md")),
+    ).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { type Diagnostic, MonodocsError, warn } from "./diagnostics.js";
 import { z } from "zod";
 import {
   DEFAULT_LANG,
@@ -518,7 +519,7 @@ export type ResolvedConfig = {
    * key, for one. The build surfaces them alongside its own warnings, because a configuration
    * that is quietly half-honoured is the failure this is here to prevent.
    */
-  warnings: string[];
+  warnings: Diagnostic[];
   title: string;
   /** 生成した文書の言語（BCP 47）。`<html lang>` を埋め、UI ラベルの表を選ぶ。 */
   lang: string;
@@ -598,20 +599,26 @@ export function parseSize(value: string | number | undefined, fallback: number):
   if (value === undefined) return fallback;
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value <= 0) {
-      throw new Error(t("config.invalidMaxInlineSize", { value }));
+      throw new MonodocsError("config/invalid", t("config.invalidMaxInlineSize", { value }));
     }
     return value;
   }
   const match = value.trim().match(/^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB)?$/i);
   if (!match) {
-    throw new Error(t("config.invalidMaxInlineSize", { value: `"${value}"` }));
+    throw new MonodocsError(
+      "config/invalid",
+      t("config.invalidMaxInlineSize", { value: `"${value}"` }),
+    );
   }
   const amount = Number(match[1]);
   const unit = (match[2] ?? "B").toUpperCase();
   const factor = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3 }[unit] ?? 1;
   const bytes = Math.round(amount * factor);
   if (bytes <= 0) {
-    throw new Error(t("config.invalidMaxInlineSize", { value: `"${value}"` }));
+    throw new MonodocsError(
+      "config/invalid",
+      t("config.invalidMaxInlineSize", { value: `"${value}"` }),
+    );
   }
   return bytes;
 }
@@ -658,18 +665,28 @@ export function validatePdfDensity(density: PdfDensity): PdfDensity {
   const headingSpacing = density.headingSpacing.trim();
   const tableCellPadding = density.tableCellPadding.trim().replace(/\s+/g, " ");
   if (!isCssLength(fontSize)) {
-    throw new Error(t("config.invalidPdfLength", { key: "fontSize", value: density.fontSize }));
+    throw new MonodocsError(
+      "config/invalid",
+      t("config.invalidPdfLength", { key: "fontSize", value: density.fontSize }),
+    );
   }
   if (!isCssNumberAboveZero(lineHeight)) {
-    throw new Error(t("config.invalidPdfLineHeight", { value: density.lineHeight }));
+    throw new MonodocsError(
+      "config/invalid",
+      t("config.invalidPdfLineHeight", { value: density.lineHeight }),
+    );
   }
   if (!isCssLength(headingSpacing)) {
-    throw new Error(
+    throw new MonodocsError(
+      "config/invalid",
       t("config.invalidPdfLength", { key: "headingSpacing", value: density.headingSpacing }),
     );
   }
   if (!isCssLengthPair(tableCellPadding)) {
-    throw new Error(t("config.invalidPdfCellPadding", { value: density.tableCellPadding }));
+    throw new MonodocsError(
+      "config/invalid",
+      t("config.invalidPdfCellPadding", { value: density.tableCellPadding }),
+    );
   }
   return { fontSize, lineHeight, headingSpacing, tableCellPadding };
 }
@@ -685,7 +702,7 @@ export function parseContentWidth(
   if (value === undefined) return fallback;
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value <= 0) {
-      throw new Error(t("config.invalidContentWidth", { value }));
+      throw new MonodocsError("config/invalid", t("config.invalidContentWidth", { value }));
     }
     return `${value}px`;
   }
@@ -697,16 +714,25 @@ export function parseContentWidth(
 
   const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*(px|rem|em|ch|vw|%)$/i);
   if (!match) {
-    throw new Error(t("config.invalidContentWidth", { value: `"${value}"` }));
+    throw new MonodocsError(
+      "config/invalid",
+      t("config.invalidContentWidth", { value: `"${value}"` }),
+    );
   }
   const rawAmount = match[1];
   const rawUnit = match[2];
   if (rawAmount === undefined || rawUnit === undefined) {
-    throw new Error(t("config.invalidContentWidth", { value: `"${value}"` }));
+    throw new MonodocsError(
+      "config/invalid",
+      t("config.invalidContentWidth", { value: `"${value}"` }),
+    );
   }
   const amount = Number(rawAmount);
   if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error(t("config.invalidContentWidth", { value: `"${value}"` }));
+    throw new MonodocsError(
+      "config/invalid",
+      t("config.invalidContentWidth", { value: `"${value}"` }),
+    );
   }
   return `${amount}${rawUnit.toLowerCase()}`;
 }
@@ -784,25 +810,27 @@ export async function loadConfig(
     try {
       parsed = parseYaml(await readFile(configPath, "utf8"));
     } catch (error) {
-      throw new Error(
+      throw new MonodocsError(
+        "config/invalid",
         t("config.parseFailed", { path: configPath, detail: (error as Error).message }),
       );
     }
     const result = buildConfigFileSchema().safeParse(parsed ?? {});
     if (!result.success) {
-      throw new Error(
+      throw new MonodocsError(
+        "config/invalid",
         t("config.invalid", { path: configPath, detail: formatConfigIssues(result.error) }),
       );
     }
     fileConfig = result.data;
   } else if (options.configFile) {
     // 明示指定された設定ファイルが存在しない場合はエラー。
-    throw new Error(t("config.notFound", { path: String(configPath) }));
+    throw new MonodocsError("config/not-found", t("config.notFound", { path: String(configPath) }));
   }
 
   const configBaseDir = configPath ? dirname(configPath) : cwd;
 
-  const warnings: string[] = [];
+  const warnings: Diagnostic[] = [];
 
   // `sidebar.exclude` moved to `sources.exclude`, which is where it acts: a match never becomes a
   // page, so it leaves the bundle rather than just the sidebar. The old key still works — a 0.9
@@ -811,9 +839,11 @@ export async function loadConfig(
   const sidebarExclude = fileConfig.sidebar?.exclude;
   const sourcesExclude = fileConfig.sources?.exclude;
   if (sidebarExclude !== undefined && sourcesExclude !== undefined) {
-    throw new Error(t("config.excludeInBothPlaces"));
+    throw new MonodocsError("config/invalid", t("config.excludeInBothPlaces"));
   }
-  if (sidebarExclude !== undefined) warnings.push(t("config.sidebarExcludeMoved"));
+  if (sidebarExclude !== undefined) {
+    warnings.push(warn("config/deprecated-key", t("config.sidebarExcludeMoved")));
+  }
   const excludeDefaults = fileConfig.sources?.excludeDefaults ?? true;
   const exclude = [
     ...(excludeDefaults ? DEFAULT_EXCLUDE : []),
@@ -824,7 +854,7 @@ export async function loadConfig(
   // ここで検証する（不正値が resolveOutputs の both 分岐へ落ちるのを防ぐ）。
   const format = options.format ?? fileConfig.output?.format ?? "html";
   if (format !== "html" && format !== "pdf" && format !== "both") {
-    throw new Error(t("config.invalidFormat", { value: String(format) }));
+    throw new MonodocsError("config/invalid", t("config.invalidFormat", { value: String(format) }));
   }
 
   return {

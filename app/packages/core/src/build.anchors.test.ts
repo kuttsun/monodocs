@@ -64,7 +64,7 @@ describe("buildSite (cross-file heading anchors)", () => {
 
     // 存在しないアンカーはページ先頭へ落として警告する。
     expect(html).toContain('href="#/guide"');
-    expect(result.warnings.some((w) => w.includes('Unresolved anchor "#nope"'))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes('Unresolved anchor "#nope"'))).toBe(true);
   });
 });
 
@@ -72,7 +72,7 @@ describe("validateSite (cross-file heading anchors)", () => {
   it("reports an unresolved anchor with its source location", async () => {
     const result = await validateSite({ inputDir: docs });
     expect(result.errors).toHaveLength(0);
-    expect(result.warnings).toContain(
+    expect(result.warnings.map((w) => w.message)).toContain(
       'Unresolved anchor "#nope" in "guide.md#nope"; linked to page top in "index.md:6".',
     );
   });

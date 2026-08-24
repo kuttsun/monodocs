@@ -115,7 +115,7 @@ describe("a single file as the input", () => {
 
     expect(result.errors).toEqual([]);
     expect(result.pages).toBe(1);
-    expect(result.warnings.join("\n")).toMatch(/missing\.md/);
+    expect(result.warnings.map((w) => w.message).join("\n")).toMatch(/missing\.md/);
   });
 
   it("says what is wrong when the file is not a source it can read", async () => {

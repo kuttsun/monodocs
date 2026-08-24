@@ -65,7 +65,7 @@ describe("postprocessPages - link rewriting", () => {
     expect(pages[0]!.html).toContain('href="#/setup/install"');
     expect(pages[0]!.html).toContain('href="https://example.com"');
     expect(pages[0]!.html).toContain('href="#frag"');
-    expect(result.warnings.some((w) => w.includes("missing.md"))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes("missing.md"))).toBe(true);
   });
 
   it("includes the source line in unresolved link warnings", async () => {
@@ -80,7 +80,9 @@ describe("postprocessPages - link rewriting", () => {
 
     const result = await postprocessPages(pages, baseOptions);
 
-    expect(result.warnings).toContain('Unresolved link "missing.md" in "index.md:3".');
+    expect(result.warnings.map((w) => w.message)).toContain(
+      'Unresolved link "missing.md" in "index.md:3".',
+    );
   });
 
   it("resolves percent-encoded Japanese path links", async () => {
@@ -209,7 +211,9 @@ describe("postprocessPages - link rewriting", () => {
     ];
     const result = await postprocessPages(pages, baseOptions);
     expect(pages[0]!.html).toContain('href="#/a"');
-    expect(result.warnings.some((w) => w.includes('Unresolved anchor "#b-sec"'))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes('Unresolved anchor "#b-sec"'))).toBe(
+      true,
+    );
   });
 
   it("falls back to the page top with a warning when the anchor does not exist", async () => {
@@ -224,8 +228,8 @@ describe("postprocessPages - link rewriting", () => {
     ];
     const result = await postprocessPages(pages, baseOptions);
     expect(pages[0]!.html).toContain('href="#/g"');
-    expect(result.warnings.some((w) => w.includes('Unresolved anchor "#sec"'))).toBe(true);
-    expect(result.warnings.some((w) => w.includes('"index.md:3"'))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes('Unresolved anchor "#sec"'))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes('"index.md:3"'))).toBe(true);
   });
 
   it("treats an empty fragment as a plain page link", async () => {
@@ -387,7 +391,7 @@ describe("postprocessPages - mermaid pre-render", () => {
     });
     expect(result.hasMermaid).toBe(true);
     expect(pages[0]!.html).toContain('<pre class="mermaid">bad diagram</pre>');
-    expect(result.warnings.some((w) => w.includes("pre-render"))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes("pre-render"))).toBe(true);
   });
 
   it("throws when pre-render mode is set but no renderer is injected", async () => {
@@ -623,7 +627,7 @@ describe("postprocessPages - image embedding", () => {
       inputDir: docs,
       embedImages: true,
     });
-    expect(result.warnings.some((w) => w.includes("outside input directory"))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes("outside input directory"))).toBe(true);
     expect(pages[0]!.html).not.toContain("data:image");
   });
 
@@ -641,7 +645,7 @@ describe("postprocessPages - image embedding", () => {
       inputDir: docs,
       embedImages: true,
     });
-    expect(result.warnings.some((w) => w.includes("nope.png"))).toBe(true);
+    expect(result.warnings.some((w) => w.message.includes("nope.png"))).toBe(true);
     expect(pages[0]!.html).toContain('src="https://x/y.png"');
   });
 });

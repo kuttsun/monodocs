@@ -6,6 +6,8 @@
  * 最終的に共通の {@link Page} モデルへ正規化する。
  */
 
+import type { Diagnostic } from "./diagnostics.js";
+
 /** 対応するソース形式。将来 "html" / "rst" などを追加できる。 */
 export type SourceFormat = "markdown" | "asciidoc";
 
@@ -183,6 +185,6 @@ export type BuildResult = {
   outputs: string[];
   /** 生成したページ数。 */
   pages: number;
-  /** ビルド中に発生した警告。 */
-  warnings: string[];
+  /** What the build found, each carrying the code a report identifies it by (27.3). */
+  warnings: Diagnostic[];
 };

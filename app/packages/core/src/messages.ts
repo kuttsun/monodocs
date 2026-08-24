@@ -21,6 +21,8 @@
  */
 
 /** 同梱するメッセージ言語。 */
+import { MonodocsError } from "./diagnostics.js";
+
 export const MESSAGE_LANGS = ["en", "ja"] as const;
 export type MessageLang = (typeof MESSAGE_LANGS)[number];
 
@@ -506,7 +508,8 @@ export function resolveMessageLang(options: { flag?: string; env?: string }): Me
   const found = MESSAGE_LANGS.find((lang) => lang === value.toLowerCase());
   if (found) return found;
   // ここだけは翻訳前に出す必要がある（どの言語を使うかを決めている最中なので）。
-  throw new Error(
+  throw new MonodocsError(
+    "lang/unsupported",
     format(EN["config.unsupportedMessageLang"], {
       value,
       supported: MESSAGE_LANGS.join(", "),

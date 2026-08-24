@@ -166,12 +166,20 @@ Preserve these display and reachability invariants:
   every warning — goes through one catalogue, English by default and Japanese under `--lang ja` or
   `MONODOCS_LANG=ja`, with the flag winning over the variable. `LANG` and `LC_ALL` are deliberately
   not consulted: a build log must not depend on the machine that produced it. Core holds the current
-  language rather than returning codes, so the published `warnings: string[]` and `Error.message`
-  keep their shape. A message that reaches the user unwrapped from a dependency is out of scope, except
+  language rather than returning message keys, so a caller reads the sentence rather than looking one
+  up. A message that reaches the user unwrapped from a dependency is out of scope, except
   the argument errors a reader actually hits — unknown option, unknown command, missing argument —
   which are intercepted and translated; the parser exits on its own otherwise, so nothing downstream
   can reach them. A test fails when a new string is emitted outside the catalogue rather than
   leaving the gap to be found later. This is not the document's `lang`, which describes the pages rather than the terminal.
+- Every error and warning monodocs reports is a `Diagnostic`: a stable `code`, a severity, the
+  translated `message`, and the source path and position wherever the pipeline knows them. The
+  message catalogue and the code set are separate identities — a message key selects wording, a code
+  identifies a finding — so translating or rewording a warning cannot change what a consumer pinned,
+  and two messages may share one code. Everything monodocs throws is a `MonodocsError` carrying its
+  code, so an error caught at the top is reported as the finding it was; anything else reaching that
+  boundary is reported as `internal/unexpected` rather than as a finding with no code at all. A code
+  is never renamed or given a different meaning once released.
 - Every PDF page carries its number and the total, centred at the foot. The band is an HTML fragment
   handed to Chromium and substituted through Chromium's own classes, not a monodocs template
   language, and it holds digits and a separator so the one thing added to every page needs no

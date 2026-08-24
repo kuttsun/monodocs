@@ -27,6 +27,17 @@ export {
   type PdfMargin,
   type SidebarMode,
 } from "./config.js";
+export {
+  bySeverity,
+  DIAGNOSTIC_CODES,
+  messagesOf,
+  MonodocsError,
+  toDiagnostic,
+  type Diagnostic,
+  type DiagnosticCode,
+  type DiagnosticSeverity,
+  type DiagnosticSource,
+} from "./diagnostics.js";
 export { initSite, type InitResult } from "./init.js";
 export { readSourceFile, scanSourceFiles, type ScanOptions } from "./scan.js";
 export { detectFormat, FORMAT_EXTENSIONS } from "./sources/detectFormat.js";

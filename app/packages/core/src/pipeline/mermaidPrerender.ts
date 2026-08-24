@@ -1,4 +1,5 @@
 import type { ColorScheme } from "../config.js";
+import type { Diagnostic } from "../diagnostics.js";
 import { loadMermaidInline } from "../themes/mermaid.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
 import { runFontCheck, type FontCheckMode } from "./fontCheck.js";
@@ -18,7 +19,7 @@ export interface MermaidPrerenderer {
    */
   checkFonts?(options: {
     mode: FontCheckMode;
-    onWarning: (message: string) => void;
+    onWarning: (diagnostic: Diagnostic) => void;
   }): Promise<void>;
   close(): Promise<void>;
 }

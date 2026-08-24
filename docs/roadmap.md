@@ -2854,14 +2854,14 @@ The following are treated as warnings.
 
 ### 27.3 Diagnostics (v0.11)
 
-Errors and warnings are strings. `validateSite` returns `errors: string[]` and
-`warnings: string[]`, the CLI prints them with a prefix, and that is the whole model. It has worked
-because the only consumer is a person reading a terminal.
+Errors and warnings were strings. `validateSite` returned `errors: string[]` and
+`warnings: string[]`, the CLI printed them with a prefix, and that was the whole model. It worked
+because the only consumer was a person reading a terminal.
 
-A machine-readable report (25.5) cannot be built on it. Serialising a translated sentence produces a
-format whose fields change when the language changes and whose contents change whenever a message is
-reworded — and 12.4 promises the opposite of that for anything a CI job pins. What the wording
-carries has to be carried by something else first:
+A machine-readable report (25.5) cannot be built on that. Serialising a translated sentence produces
+a format whose fields change when the language changes and whose contents change whenever a message
+is reworded — and 12.4 promises the opposite of that for anything a CI job pins. What the wording
+carries is carried by something else first:
 
 ```ts
 type Diagnostic = {
@@ -2879,9 +2879,18 @@ is not renamed afterwards, so a job that ignores `image/large` keeps ignoring ex
 translated sentence stays in the report because the report is also read by people, and a report that
 made a person look a code up would be worse than the strings it replaces.
 
-The pipeline already knows more than it says. `formatSourceRef` composes a file and a position into
-prose for several warnings, which means the position exists and is being flattened on the way out —
-so this is a matter of not discarding it rather than of finding it.
+The pipeline already knew more than it said. `formatSourceRef` composed a file and a position into
+prose for several warnings, which means the position existed and was being flattened on the way out;
+it is now taken once and used for both, so an unresolved link reports its line as a number as well as
+inside its sentence.
+
+**Every error carries one too.** Everything monodocs throws is a `MonodocsError` with a code, so the
+error that stopped a build is reported as the finding it is rather than as a sentence with no
+identity — `BrowserSetupError` and `FontCheckError` are that class with a code of their own. An error
+from somewhere else that reaches the same boundary is reported as `internal/unexpected`: a consumer
+filtering on codes must not be able to lose a finding by it having none. `validateSite` returns the
+diagnostics and the two severities split out of them, so a caller reading either half reads no
+less.
 
 **Message catalogue and codes are separate things.** 25.6 made every string translatable, and this
 adds a second identity beside the translation: a message key selects the wording, a diagnostic code

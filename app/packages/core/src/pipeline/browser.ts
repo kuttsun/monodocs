@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { MonodocsError } from "../diagnostics.js";
 import { t } from "../messages.js";
 
 /**
@@ -49,9 +50,9 @@ export function chromiumCandidates(
  * 基底型。Mermaid pre-render の {@link file://./mermaidPrerender.ts MermaidPrerenderSetupError}
  * はこれを継承する。
  */
-export class BrowserSetupError extends Error {
+export class BrowserSetupError extends MonodocsError {
   constructor(message: string) {
-    super(message);
+    super("browser/setup", message);
     this.name = "BrowserSetupError";
   }
 }

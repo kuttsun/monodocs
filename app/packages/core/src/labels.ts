@@ -1,3 +1,4 @@
+import { type Diagnostic, warn } from "./diagnostics.js";
 import { t } from "./messages.js";
 /**
  * 生成した文書の UI ラベル（chrome）。
@@ -181,8 +182,8 @@ function primarySubtag(tag: string): string | undefined {
 
 export type ResolvedLabels = {
   labels: Labels;
-  /** 同梱の表が無く en へ落とした場合の警告文（無ければ undefined）。 */
-  warning?: string;
+  /** The finding reported when no shipped table matched and English was used instead. */
+  warning?: Diagnostic;
 };
 
 /**
@@ -199,10 +200,13 @@ export function resolveLabels(lang: string, overrides: Partial<Labels> = {}): Re
   if (table !== undefined) return { labels };
   return {
     labels,
-    warning: t("labels.noTable", {
-      lang,
-      fallback: DEFAULT_LANG,
-      shipped: Object.keys(TABLES).join(", "),
-    }),
+    warning: warn(
+      "lang/no-label-table",
+      t("labels.noTable", {
+        lang,
+        fallback: DEFAULT_LANG,
+        shipped: Object.keys(TABLES).join(", "),
+      }),
+    ),
   };
 }

@@ -1,4 +1,5 @@
 import type { Page, SidebarItem, SidebarNode, TitleTransform } from "../types.js";
+import { type Diagnostic, MonodocsError, warn } from "../diagnostics.js";
 import { applyTitleTransform, DEFAULT_TITLE_TRANSFORM } from "./titleTransform.js";
 import { t } from "../messages.js";
 
@@ -57,7 +58,7 @@ export function buildSidebar(pages: Page[], options: BuildSidebarOptions = {}): 
 /** {@link buildCustomSidebar} の結果。警告は validate / build のログへ流す。 */
 export type CustomSidebarResult = {
   sidebar: SidebarNode[];
-  warnings: string[];
+  warnings: Diagnostic[];
   /** items に現れた順のページ（重複は最初の 1 回のみ）。閲覧順の並べ替えに使う。 */
   orderedPages: Page[];
 };
@@ -81,7 +82,7 @@ export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomS
   const byPath = new Map<string, Page>();
   for (const page of pages) byPath.set(page.relativePath, page);
 
-  const warnings: string[] = [];
+  const warnings: Diagnostic[] = [];
   const orderedPages: Page[] = [];
   const seen = new Set<string>();
 
@@ -90,7 +91,9 @@ export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomS
       const children = item.children.map(convert).filter((node) => node !== undefined);
       // 子がすべて落ちた（hidden のみ等）グループは見出しだけが残るため出さない。
       if (children.length === 0) {
-        warnings.push(t("sidebar.groupEmpty", { title: item.title ?? "" }));
+        warnings.push(
+          warn("sidebar/group-empty", t("sidebar.groupEmpty", { title: item.title ?? "" })),
+        );
         return undefined;
       }
       // path はフォルダ構造由来の識別子。custom では対応するフォルダが無いので空にする。
@@ -102,14 +105,26 @@ export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomS
     if (!page) {
       // ファイル自体はあっても sidebar.exclude や対象拡張子の設定でページ化されていない
       // ことがあるため、探す場所を示す。
-      throw new Error(t("sidebar.itemNotFound", { path: item.path ?? "" }));
+      throw new MonodocsError(
+        "sidebar/item-not-found",
+        t("sidebar.itemNotFound", { path: item.path ?? "" }),
+        { path: relativePath },
+      );
     }
     if (page.hidden) {
-      warnings.push(t("sidebar.itemHidden", { path: item.path ?? "" }));
+      warnings.push(
+        warn("sidebar/item-hidden", t("sidebar.itemHidden", { path: item.path ?? "" }), {
+          path: page.relativePath,
+        }),
+      );
       return undefined;
     }
     if (seen.has(page.id)) {
-      warnings.push(t("sidebar.itemDuplicate", { path: item.path ?? "" }));
+      warnings.push(
+        warn("sidebar/item-duplicate", t("sidebar.itemDuplicate", { path: item.path ?? "" }), {
+          path: page.relativePath,
+        }),
+      );
       return undefined;
     }
     seen.add(page.id);
@@ -122,7 +137,10 @@ export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomS
   const missing = pages.filter((page) => !page.hidden && !seen.has(page.id));
   if (missing.length > 0) {
     warnings.push(
-      t("sidebar.notListed", { paths: missing.map((page) => page.relativePath).join(", ") }),
+      warn(
+        "sidebar/page-unlisted",
+        t("sidebar.notListed", { paths: missing.map((page) => page.relativePath).join(", ") }),
+      ),
     );
   }
 

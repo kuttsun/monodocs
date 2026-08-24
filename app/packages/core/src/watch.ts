@@ -4,6 +4,7 @@ import { buildSite, resolveOutputs } from "./build.js";
 import { loadConfig } from "./config.js";
 import type { BuildOptions, BuildResult } from "./types.js";
 import { t } from "./messages.js";
+import { MonodocsError } from "./diagnostics.js";
 
 /** 連続したファイルイベントをまとめる待ち時間。 */
 const DEBOUNCE_MS = 150;
@@ -44,7 +45,7 @@ export async function watchSite(
   // 入力が無ければ監視を確立できないため、ここで失敗させる
   // （CLI 側で「Watching…」と表示したまま無反応になるのを防ぐ）。
   if (!existsSync(inputPath)) {
-    throw new Error(t("build.inputNotFound", { path: config.inputDir }));
+    throw new MonodocsError("input/not-found", t("build.inputNotFound", { path: config.inputDir }));
   }
   const inputIsFile = statSync(inputPath).isFile();
 

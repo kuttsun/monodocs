@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { DEFAULT_CONFIG_FILE } from "./config.js";
 import { t } from "./messages.js";
+import { MonodocsError } from "./diagnostics.js";
 
 /**
  * The first page, at the path the default `input` already points at. Written with forward slashes
@@ -36,7 +37,10 @@ export async function initSite(cwd: string = process.cwd()): Promise<InitResult>
 
   const found = targets.filter((target) => existsSync(resolve(cwd, target.path)));
   if (found.length > 0) {
-    throw new Error(t("init.exists", { paths: found.map((target) => target.path).join(", ") }));
+    throw new MonodocsError(
+      "init/exists",
+      t("init.exists", { paths: found.map((target) => target.path).join(", ") }),
+    );
   }
 
   for (const target of targets) {
