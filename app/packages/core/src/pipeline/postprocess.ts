@@ -470,6 +470,24 @@ function hrefMatches(
   );
 }
 
+/**
+ * Whether an occurrence is the path itself rather than the tail of a longer one.
+ *
+ * The search is a substring search over the source, and the needles cover every extension the
+ * target could be written with, so `gone.adoc` was being found inside a sentence mentioning
+ * `notgone.adoc` and the link was reported at that line. A letter, a digit, or a hyphen on either
+ * side means the match is part of a longer name. `/` and `.` are not boundaries — `./gone.md` and
+ * `sub/gone.md` are how a path is written — so a match after one of those still counts.
+ */
+function isWholePath(line: string, at: number, needle: string): boolean {
+  const before = line[at - 1];
+  const after = line[at + needle.length];
+  const wordish = /[A-Za-z0-9_-]/;
+  if (before !== undefined && wordish.test(before)) return false;
+  if (after !== undefined && wordish.test(after)) return false;
+  return true;
+}
+
 function findRawSourceLocations(rawSource: string, needles: string[]): SourceLocation[] {
   if (!rawSource || needles.length === 0) return [];
   const seen = new Set<string>();
@@ -482,7 +500,7 @@ function findRawSourceLocations(rawSource: string, needles: string[]): SourceLoc
       let columnIdx = line.indexOf(needle);
       while (columnIdx !== -1) {
         const key = `${i + 1}:${columnIdx + 1}`;
-        if (!seen.has(key)) {
+        if (!seen.has(key) && isWholePath(line, columnIdx, needle)) {
           seen.add(key);
           locations.push({ line: i + 1, column: columnIdx + 1 });
         }
@@ -509,22 +527,40 @@ class SourceLocationTracker {
   }
 
   /**
-   * The key a cursor and a candidate list are kept under: the link's **target**, not its spelling.
+   * The key a cursor is kept under, for the candidate list the parser gave us.
    *
-   * `other.md` and `other.html` are the same target — `resolveHref` and `hrefMatches` both say so —
-   * and keying by the raw href gave each of them a cursor starting at zero, so a page linking to
-   * both reported the second one at the first one's line. Anything after the path goes too: two
-   * links to different headings of one page are still two links, and the source holds them in the
-   * order they were written.
+   * A cursor has to count exactly what its candidate list holds, or it walks past the end of one
+   * list while another is still on its first entry. This list is the links whose href matches, and
+   * matching ignores the extension — `other.md` and `other.html` are the same target — but not the
+   * query or the anchor, so those stay in the key. Keying by the raw href instead gave `other.md`
+   * and `other.html` a cursor each, both starting at zero, and reported the second link at the
+   * first one's line.
    */
-  private keyOf(href: string): string {
+  private linkKeyOf(href: string): string {
+    const hashAt = href.indexOf("#");
+    const beforeHash = hashAt === -1 ? href : href.slice(0, hashAt);
+    const hash = hashAt === -1 ? "" : href.slice(hashAt);
+    const queryAt = beforeHash.indexOf("?");
+    const pathPart = queryAt === -1 ? beforeHash : beforeHash.slice(0, queryAt);
+    const query = queryAt === -1 ? "" : beforeHash.slice(queryAt);
+    return `${stripExtension(safeDecodeUri(pathPart) ?? pathPart)}${query}${hash}`;
+  }
+
+  /**
+   * The key for the candidate list found by reading the source.
+   *
+   * That list is every occurrence of the target under any extension, and a needle like `other.md`
+   * is found inside `other.md?v=2` and `other.md#top` as well — so the query and the anchor are
+   * dropped here, and every link to the target shares one cursor over one list.
+   */
+  private rawKeyOf(href: string): string {
     const pathPart = href.split("#")[0]?.split("?")[0] ?? href;
     return stripExtension(safeDecodeUri(pathPart) ?? pathPart);
   }
 
   /** Every spelling of that target a source file might carry, plus the href as written. */
   private needlesFor(href: string): string[] {
-    const stem = this.keyOf(href);
+    const stem = this.rawKeyOf(href);
     const needles = new Set<string>([href, ...sourceHrefVariants(href, this.linkExtensions)]);
     for (const extension of this.linkExtensions) needles.add(`${stem}${extension}`);
     return [...needles].filter((needle) => needle.length > 0);
@@ -536,14 +572,14 @@ class SourceLocationTracker {
       .map((link) => ({ line: link.line!, column: link.column ?? 1 }));
     if (matches.length === 0) return undefined;
 
-    const key = this.keyOf(href);
+    const key = this.linkKeyOf(href);
     const cursor = this.linkCursors.get(key) ?? 0;
     this.linkCursors.set(key, cursor + 1);
     return matches[Math.min(cursor, matches.length - 1)];
   }
 
   private consumeRawLocation(href: string): SourceLocation | undefined {
-    const key = this.keyOf(href);
+    const key = this.rawKeyOf(href);
     let locations = this.rawCache.get(key);
     if (!locations) {
       locations = findRawSourceLocations(this.page.rawSource, this.needlesFor(href));

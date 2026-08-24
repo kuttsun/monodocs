@@ -105,7 +105,7 @@ monodocs build ./docs -c ./monodocs.config.yml
 monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 ```
 
-On success it prints the number of pages generated and the output path. Warnings (e.g. broken links, missing titles) are printed but do not fail the build — use `validate` to fail on issues. The one setting that changes this is [`fontCheck: error`](/docs/configuration#font-check), which stops a build whose output would carry characters this machine has no font for.
+On success it prints the number of pages generated and the output path. Warnings (e.g. broken links, missing titles) are printed but do not fail the build — use [`validate`](#validate) to fail on an error, and `validate --strict` to fail on a warning as well. The one setting that changes this is [`fontCheck: error`](/docs/configuration#font-check), which stops a build whose output would carry characters this machine has no font for.
 
 ## `watch`
 

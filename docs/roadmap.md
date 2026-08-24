@@ -2745,8 +2745,10 @@ Validation targets:
 
 
 **What `validate` is (v0.11).** It is a build that writes nothing: it runs the same `preparePages`
-as `build`, so what it reports is what a build reports, and nothing is checked twice in two places
-(architecture.md). Mermaid `pre-render` is forced to `client` so that no browser starts, which means
+as `build`, so every check it reports is a check a build reports too, and nothing is checked twice in
+two places (architecture.md). The other direction does not hold, and saying it did was sloppy: a
+build that writes a PDF also reports what only that work can find — a margin too small for the
+page-number band, a character no font on the machine can draw, a diagram that failed to pre-render. Mermaid `pre-render` is forced to `client` so that no browser starts, which means
 diagram syntax errors are outside its scope and it says so rather than implying a check it does not
 run.
 
