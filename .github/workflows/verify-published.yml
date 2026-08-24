@@ -58,22 +58,26 @@ jobs:
           monodocs --help
 
       # The version decides which surface exists to be verified: this workflow takes any dist-tag or
-      # version as input, and `init`, the message language, and PDF page numbers all arrive in 0.10.
-      # Verifying 0.9 must stay possible, so those steps ask rather than assume.
+      # version as input, and `init`, the message language, and PDF page numbers all arrive in 0.10,
+      # while the diagnostics JSON and `document` arrive in 0.11. Verifying an older release must
+      # stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
           version="$(monodocs --version | tr -d '\r')"
           echo "verifying monodocs $version"
           # A version this cannot read fails the step rather than answering "false": that answer
           # would skip every check below and still report a green verification run.
-          supports="$(node -e "
+          gate="$(node -e "
             const raw = process.argv[1].trim().replace(/^v/, '');
             const m = /^(\d+)\.(\d+)\.(\d+)/.exec(raw);
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
-            process.stdout.write(Number(m[1]) > 0 || Number(m[2]) >= 10 ? 'true' : 'false');
+            const major = Number(m[1]), minor = Number(m[2]);
+            const atLeast = (n) => major > 0 || minor >= n;
+            process.stdout.write([atLeast(10), atLeast(11)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
-          echo "SUPPORTS_V010=$supports" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V011=$(echo "$gate" | cut -d' ' -f2)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -216,4 +220,97 @@ jobs:
           node -e "
             const log = require('node:fs').readFileSync('fontcheck/log.txt', 'utf8');
             if (!log.includes('U+50000')) throw new Error('the font check did not report the undrawable character');
+          "
+
+      # v0.11. A report a CI job can read is only worth having if it is the whole of stdout, so the
+      # stream is parsed rather than searched: anything printed beside the JSON fails `JSON.parse`.
+      # The finding is asserted by code, path, and line — the parts 12.4 promises to hold still —
+      # rather than by the sentence, which is translated and rewritten.
+      - name: Diagnostics JSON
+        if: env.SUPPORTS_V011 == 'true'
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            fs.mkdirSync('diagnostics/docs', { recursive: true });
+            fs.writeFileSync('diagnostics/docs/index.md', '# Home\n\nA line.\n\nA [broken link](nope.md) here.\n');
+          "
+          if monodocs validate diagnostics/docs --format json > diagnostics/report.json 2> diagnostics/stderr.txt; then
+            echo "validate should have exited non-zero for a document with a finding"; exit 1
+          fi
+          cat diagnostics/report.json
+          node -e "
+            const fs = require('node:fs');
+            const report = JSON.parse(fs.readFileSync('diagnostics/report.json', 'utf8'));
+            if (report.schemaVersion !== 1) throw new Error('unexpected schema version: ' + report.schemaVersion);
+            const link = report.diagnostics.find((d) => d.code === 'link/unresolved');
+            if (!link) throw new Error('the unresolved link is not in the report: ' + JSON.stringify(report));
+            if (link.severity !== 'warning') throw new Error('unexpected severity: ' + link.severity);
+            if (link.path !== 'index.md' || link.line !== 5) throw new Error('the finding lost its position: ' + JSON.stringify(link));
+          "
+          # The human report is what every earlier release printed, and it is not JSON.
+          if monodocs validate diagnostics/docs > diagnostics/human.txt 2>&1; then
+            echo "validate should have exited non-zero for a document with a finding"; exit 1
+          fi
+          node -e "
+            const human = require('node:fs').readFileSync('diagnostics/human.txt', 'utf8');
+            if (human.trimStart().startsWith('{')) throw new Error('the default report is JSON: ' + human);
+            if (!human.includes('nope.md')) throw new Error('the default report does not name the finding: ' + human);
+          "
+          if monodocs validate diagnostics/docs --format yaml > diagnostics/bad-format.txt 2>&1; then
+            echo "an unknown report format should have been rejected"; exit 1
+          fi
+          node -e "
+            const out = require('node:fs').readFileSync('diagnostics/bad-format.txt', 'utf8');
+            if (!out.includes('human | json')) throw new Error('the refusal does not name the formats that work: ' + out);
+          "
+
+      # v0.11. What a document says about itself has to survive being packaged and delivered: the
+      # footer is read out of the HTML, and the PDF's properties out of the bytes, since the two are
+      # written by different halves of the pipeline.
+      - name: Document metadata
+        if: env.SUPPORTS_V011 == 'true'
+        run: |
+          npm install --no-save --no-package-lock pdf-lib
+          node -e "
+            const fs = require('node:fs');
+            fs.mkdirSync('docmeta/docs', { recursive: true });
+            fs.writeFileSync('docmeta/docs/index.md', '# Home\n\nA line.\n');
+            fs.writeFileSync('docmeta/config.yml', 'title: \"Spec\"\ndocument:\n  version: \"1.2\"\n  date: \"2026-08-22\"\n  authors:\n    - \"Docs Team\"\n');
+          "
+          monodocs build docmeta/docs -c docmeta/config.yml -o docmeta/docs.html
+          monodocs build docmeta/docs -c docmeta/config.yml --format pdf -o docmeta/docs.pdf
+          node -e "
+            const html = require('node:fs').readFileSync('docmeta/docs.html', 'utf8');
+            if (!html.includes('Version 1.2')) throw new Error('the footer does not carry the version');
+            if (!html.includes('2026-08-22') || !html.includes('Docs Team')) throw new Error('the footer does not carry the date and authors');
+          "
+          node -e "
+            const fs = require('node:fs');
+            const { PDFDocument } = require('pdf-lib');
+            // updateMetadata: false, or pdf-lib rewrites the fields being read.
+            PDFDocument.load(fs.readFileSync('docmeta/docs.pdf'), { updateMetadata: false })
+              .then((doc) => {
+                const fail = (m) => { throw new Error(m); };
+                if (doc.getTitle() !== 'Spec') fail('unexpected PDF title: ' + doc.getTitle());
+                if (doc.getAuthor() !== 'Docs Team') fail('unexpected PDF author: ' + doc.getAuthor());
+                if (!String(doc.getSubject()).includes('1.2')) fail('unexpected PDF subject: ' + doc.getSubject());
+                if (!String(doc.getKeywords()).includes('2026-08-22')) fail('unexpected PDF keywords: ' + doc.getKeywords());
+              })
+              // An unhandled rejection would fail the step with a stack; one line says what broke.
+              .catch((error) => { console.error(String(error && error.message ? error.message : error)); process.exit(1); });
+          "
+
+      # v0.11. Two builds of one input produce one artifact: the footer carries the date the author
+      # wrote and never the moment the build ran (13.5). Asserted on the HTML, which is what a
+      # repository commits and reviews in a diff — the PDF carries Chromium's own timestamps.
+      - name: Reproducible HTML
+        if: env.SUPPORTS_V011 == 'true'
+        run: |
+          monodocs build docmeta/docs -c docmeta/config.yml -o docmeta/first.html
+          monodocs build docmeta/docs -c docmeta/config.yml -o docmeta/second.html
+          node -e "
+            const fs = require('node:fs');
+            const a = fs.readFileSync('docmeta/first.html');
+            const b = fs.readFileSync('docmeta/second.html');
+            if (!a.equals(b)) throw new Error('the same input produced different bytes');
           "

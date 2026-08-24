@@ -2770,6 +2770,15 @@ checks arrived with it, chosen because each one is decidable from what the pipel
   therefore already known — it appears in the report as a diagnostic with a code rather than a line
   of prose
 
+**What the `alt` check can actually see.** Measured against both formats after implementing it:
+Markdown's `![](x.png)` comes out as `alt=""`, which is the decorative spelling and deliberately not
+a finding, and Asciidoctor derives an alt from the file's basename, so `image::x.png[]` comes out as
+`alt="x"`. An image with no attribute at all therefore reaches the output only from an AsciiDoc
+passthrough block or a fragment a theme produced — which is where the check fires, and it is the one
+path no converter is guarding. Reporting `alt="x"` as "derived from the filename" is not an option:
+nothing in the output says whether the author wrote it. So the check is narrower than the sentence
+that specified it, and this is what it covers.
+
 The first two run in post-processing, beside every other finding, so a build reports them too: what
 `validate` reports is what a build reports, and a check that lived only in `validate` would break
 that. Neither carries a line, because the tree they walk is the rendered HTML and a position in it

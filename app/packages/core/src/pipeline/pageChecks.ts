@@ -58,6 +58,11 @@ export function checkHeadingLevels(tree: HastRoot, page: Page, diagnostics: Diag
  * already honours that distinction (23.2). Reporting it would push authors towards writing
  * something — anything — into the attribute, which is worse for a reader using a screen reader than
  * the empty string that says "skip me".
+ *
+ * Measured, this is narrower than it sounds: Markdown always writes the attribute (`![](x.png)` is
+ * `alt=""`) and Asciidoctor derives one from the file's basename, so what reaches here with no
+ * attribute at all comes from an AsciiDoc passthrough block or a theme's own fragment — the one
+ * path no converter is guarding (roadmap.md 25.5).
  */
 export function checkImageAlt(tree: HastRoot, page: Page, diagnostics: Diagnostic[]): void {
   visit(tree, "element", (node) => {
