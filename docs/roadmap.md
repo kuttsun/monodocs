@@ -200,7 +200,7 @@ docs/
     faq.md
 ```
 
-### 6.4 Math (decided in v0.15)
+### 6.4 Math (decided in v0.14)
 
 Math is unsupported, and syntax.md gives the reason: keeping the HTML self-contained means not
 introducing a MathJax or KaTeX dependency. The reason is out of date rather than wrong. KaTeX can
@@ -216,7 +216,7 @@ standard, `\(...\)` is unambiguous and unfamiliar, and whatever is chosen has to
 counterpart (`stem`, `latexmath`), agree with what search indexes, and produce something sensible
 when a reader copies it.
 
-v0.15 answers this with a measurement rather than an opinion: a sample document of real formulas,
+v0.14 answers this with a measurement rather than an opinion: a sample document of real formulas,
 built to HTML and PDF, on both supported platforms, looked at. If the result is good, math is a 1.x
 feature with a notation chosen in the open; if it is not, the limitation stays and syntax.md records
 this reason instead of the one that has stopped being true.
@@ -846,7 +846,7 @@ pdf:
   header: false
 ```
 
-**This example is a test fixture (v0.12).** Until then it was prose, and it drifted: it carried
+**This example is a test fixture (v0.11).** Until then it was prose, and it drifted: it carried
 `sources.markdown.enabled`, `gfm`, `frontmatter`, `sources.asciidoc.enabled`, `safeMode`, `attributes`,
 `sidebar.collapsible`, `html.selfContained`, `routeMode`, `darkMode`, `pdf.enabled`, and
 `search.enabled` — twelve keys the schema does not have. Since 12.2 made every object strict, this
@@ -890,7 +890,7 @@ honoured, merged the same way, and warns that it moved. A file named directly on
 bundled whatever the patterns say (25.2) — naming a file is a choice, and the patterns only decide
 what a directory scan picks up.
 
-### 12.4 What 1.0 Freezes (v0.12)
+### 12.4 What 1.0 Freezes (v0.11)
 
 "1.0 freezes the user-visible surfaces" has been the reason given for doing a dozen things before
 1.0 rather than after. It was never written down, and read literally it says nothing may be added
@@ -929,7 +929,7 @@ saying where it went (12.3), which is the pattern: the old spelling keeps workin
 replacement, and is removed no earlier than the next major release. Nothing is removed in a minor
 release, and nothing is removed without having warned in a release before it.
 
-### 12.5 The Input Root and What It Selects (v0.13)
+### 12.5 The Input Root and What It Selects (v0.12)
 
 `input` names one directory, or since v0.10 one file (25.2). A repository whose `README.md` sits at
 its root and whose pages sit in `docs/` cannot be built as one document, and that arrangement is not
@@ -1032,7 +1032,7 @@ Explicit metadata (1) always takes top priority regardless of `titleFrom`.
 4. Filename order
 ```
 
-### 13.5 Document Metadata (v0.12)
+### 13.5 Document Metadata (v0.11)
 
 13.1 through 13.4 are a page's metadata. A document has its own, and monodocs has had exactly one
 piece of it: `title`. A specification handed to someone carries a version and a date, and often the
@@ -1195,7 +1195,7 @@ function showPage(route) {
 }
 ```
 
-### 15.5 Route Aliases (v0.13)
+### 15.5 Route Aliases (v0.12)
 
 A hash route is a link a reader can copy. That is the point of it — `docs.html#/setup/install` is
 how one person tells another where to look, and in a document that travels as a single file it is
@@ -1343,7 +1343,7 @@ Output:
 <a href="#/guide/usage">Usage</a>
 ```
 
-### 17.5 Attributes and the Read Boundary (v0.13)
+### 17.5 Attributes and the Read Boundary (v0.12)
 
 Asciidoctor is configured by attributes, and monodocs sets three: `safe: "safe"`, a `base_dir` of
 the input file's own directory, and `showtitle`. An author cannot set any others through
@@ -1379,7 +1379,7 @@ configuration file: the file states what every document gets unless it says othe
 **What safe mode does and does not do.** Asciidoctor's SAFE mode confines `include::` to the base
 directory, and monodocs relies on that (17.3). It does not resolve symbolic links, which Asciidoctor
 documents: a link inside the tree pointing outside it is followed. The architecture document's claim
-that safe mode "prevents external access" is therefore too strong. v0.13 makes it true instead of
+that safe mode "prevents external access" is therefore too strong. v0.12 makes it true instead of
 softening it — an included file's real path is checked against the input root, and one that resolves
 outside it is refused with the path it resolved to. The same check covers images (20.2), where the
 identical hole exists.
@@ -1502,7 +1502,7 @@ setup/install.md + ## Overview
 
 Heading IDs originating from AsciiDoc are also prefixed in the same way to avoid collisions.
 
-### 19.1 Section Numbering (v0.15)
+### 19.1 Section Numbering (v0.14)
 
 A specification refers to itself. "See 3.2" is how a clause points at another clause, and it is what
 a reviewer writes in a comment and what a regulation cites from outside. monodocs can produce no
@@ -1605,7 +1605,7 @@ error
 external
 ```
 
-### 20.5 Output Size (v0.14)
+### 20.5 Output Size (v0.13)
 
 33.3 records the risk that the single HTML becomes huge, and monodocs has one control for it —
 `maxInlineSize` and `onLargeImage`, which judge one image at a time. Nothing measures the file. A
@@ -2490,7 +2490,7 @@ override of `pageBreakLevel`, because frontmatter that changes how the paper is 
 document's sheet count depend on which files it happens to include. No arbitrary CSS hook, for the
 reason 24.6 gives — a closed key set is what 1.0 can freeze.
 
-### 24.8 The Cover (v0.15)
+### 24.8 The Cover (v0.14)
 
 A PDF handed to someone begins with a cover: the title, what version it is, when it was true, and
 who is answerable for it. monodocs begins with the first page of content. An author can write a page
@@ -2520,7 +2520,7 @@ sheet monodocs itself produced, so the footer is suppressed on it and the number
 sheets are the ones the document should show. PDF page labels (the numbering a reader sees in a
 viewer's page box) are set the same way, so the viewer agrees with the paper.
 
-Whether the footer can be suppressed on one sheet without a second render is what v0.15 measures. If
+Whether the footer can be suppressed on one sheet without a second render is what v0.14 measures. If
 it cannot, the cover is rendered as its own single-page PDF with no header or footer band and
 concatenated — the outline and metadata passes already run on finished bytes (24.3.2), so the
 machinery for that is the machinery already there.
@@ -2528,7 +2528,7 @@ machinery for that is the machinery already there.
 The HTML gets no cover. A cover is a sheet of paper; on screen the same information belongs where a
 reader can see it without scrolling past it, which is the branding footer 13.5 already fills.
 
-### 24.9 A Table of Contents on Paper (v0.15)
+### 24.9 A Table of Contents on Paper (v0.14)
 
 `pdf.bookmarks` produces an outline a viewer shows in a side panel. Paper has no side panel. A
 printed specification opens with a table of contents that lists each section and the page it starts
@@ -2579,7 +2579,7 @@ Chromium does not implement them; Chromium's own header template substitutes onl
 (24.5). What remains is rendering the document in chapter-sized pieces and concatenating them, which
 is a different feature with a different cost, and it is not scheduled.
 
-### 24.10 Watermark (v0.14)
+### 24.10 Watermark (v0.13)
 
 A document that is a draft, or that is not to leave the building, says so on every sheet. Today an
 author who needs that edits the theme, which is a stylesheet replacement (23.3) that then owns every
@@ -2679,7 +2679,7 @@ which is the same relationship an input directory has to what it contains. The e
 for by name. A file whose extension no renderer claims is refused, naming the extensions that work.
 
 
-**More than one directory (v0.13).** The input argument still names one path, and a document that
+**More than one directory (v0.12).** The input argument still names one path, and a document that
 spans several sets `root` and `sources.include` in the configuration instead (12.5). The CLI is not
 given a variadic input list: two paths on a command line would have to answer where the
 configuration is, what routes are relative to, and which directory an image may be read from, and a
@@ -2717,7 +2717,7 @@ Validation targets:
 - Basic validation of Mermaid blocks
 
 
-**What `validate` is (v0.12).** It is a build that writes nothing: it runs the same `preparePages`
+**What `validate` is (v0.11).** It is a build that writes nothing: it runs the same `preparePages`
 as `build`, so what it reports is what a build reports, and nothing is checked twice in two places
 (architecture.md). Mermaid `pre-render` is forced to `client` so that no browser starts, which means
 diagram syntax errors are outside its scope and it says so rather than implying a check it does not
@@ -2852,7 +2852,7 @@ The following are treated as warnings.
 - Conversion of a Mermaid block failed
 - A file that appears to be for include has become a target for page generation
 
-### 27.3 Diagnostics (v0.12)
+### 27.3 Diagnostics (v0.11)
 
 Errors and warnings are strings. `validateSite` returns `errors: string[]` and
 `warnings: string[]`, the CLI prints them with a prefix, and that is the whole model. It has worked
@@ -3324,7 +3324,7 @@ checklist, and the two are kept in step):
   rules at all. The documentation site shows the four built from one source, as PDFs with their own
   first pages as thumbnails
 
-## v0.11: Page Breaks
+## v0.11: Page Breaks and the 1.0 Contract
 
 Purpose:
 
@@ -3333,6 +3333,25 @@ nothing inside a file does, so a document whose sections have to begin on their 
 specification, a set of regulations, anything handed over on paper — cannot be produced at all, and
 neither can the older and simpler "break here". Both are page-setting decisions that belong to the
 person writing the document, and both change a surface that 1.0 freezes.
+
+The second half is unrelated to the first, and shares a release with it because 0.11.0 was never
+published: the page-break work was merged, and the milestone after it was defined, before anything
+reached npm — so the number is still free. Cutting a release now for work that is already in main,
+and another for the milestone that follows it, spends two verification cycles
+([maintenance.md](maintenance.md)) where one does, and leaves every `(v0.11)` annotation in this
+repository naming a version nobody can install. A milestone number and a release number are the same
+number here, which is what lets an annotation be read as the release a feature arrived in, and the
+milestones after this one move down by one so that they stay the same number.
+
+Make this document true again, and say what 1.0 actually promises before the number is claimed. The
+page-break half was specified first and the implementation matched it — while, elsewhere in the same
+file, the configuration example had been describing keys the schema does not have, and
+architecture.md had been describing a link behaviour the code stopped having. A specification that
+is wrong in places nobody checks is worse than a shorter one: every later decision cites it.
+
+The rest of it is the model everything after this milestone needs. Diagnostics are strings today,
+which is why `validate` has nothing to give a CI job, and why "add JSON output" is not a small
+change but a data model that has to exist first.
 
 Implementation scope:
 
@@ -3346,6 +3365,17 @@ Implementation scope:
 - Update the syntax specification, the architecture document, and the configuration reference on the
   documentation site, each with its Japanese mirror, since the raw-HTML boundary and the
   configuration surface both change
+- Synchronise the specification with the code: the configuration example (12.1), architecture.md's
+  cross-file anchor paragraph, and status.md's own summary table, which called the page-break work
+  planned after every one of its boxes was ticked
+- Make the configuration example a test fixture, so it cannot drift again (12.1)
+- Write down what 1.0 freezes and what it does not, including the deprecation shape `sidebar.exclude`
+  already follows (12.4)
+- Introduce the `Diagnostic` model and stable diagnostic codes (27.3)
+- Add `validate --format json`, versioned by its own schema version, and three checks that are
+  decidable from what the pipeline already holds (25.5)
+- Add `document.version` / `date` / `authors`, reaching the PDF's properties and the branding footer,
+  with no build timestamp anywhere (13.5)
 
 Completion criteria (this chapter defines the milestone; [status.md](status.md) tracks it as a
 checklist, and the two are kept in step):
@@ -3380,40 +3410,6 @@ checklist, and the two are kept in step):
   use: `h1 → h2 → body → h2` under `pageBreakLevel: 2` comes out as exactly two sheets, which fails
   at one sheet if the feature is dead and at three if the leading-heading rule is wrong, and the same
   document under the default comes out as one
-
----
-
-## v0.12: The 1.0 Contract
-
-Purpose:
-
-Make this document true again, and say what 1.0 actually promises before the number is claimed.
-v0.11 shipped a feature whose specification was written first and matched — while, elsewhere in the
-same file, the configuration example had been describing keys the schema does not have, and
-architecture.md had been describing a link behaviour the code stopped having. A specification that
-is wrong in places nobody checks is worse than a shorter one: every later decision cites it.
-
-The other half is the model everything after this milestone needs. Diagnostics are strings today,
-which is why `validate` has nothing to give a CI job, and why "add JSON output" is not a small
-change but a data model that has to exist first.
-
-Implementation scope:
-
-- Synchronise the specification with the code: the configuration example (12.1), architecture.md's
-  cross-file anchor paragraph, and status.md's own summary table, which still calls v0.11 planned
-  after every one of its boxes is ticked
-- Make the configuration example a test fixture, so it cannot drift again (12.1)
-- Write down what 1.0 freezes and what it does not, including the deprecation shape `sidebar.exclude`
-  already follows (12.4)
-- Introduce the `Diagnostic` model and stable diagnostic codes (27.3)
-- Add `validate --format json`, versioned by its own schema version, and three checks that are
-  decidable from what the pipeline already holds (25.5)
-- Add `document.version` / `date` / `authors`, reaching the PDF's properties and the branding footer,
-  with no build timestamp anywhere (13.5)
-
-Completion criteria (this chapter defines the milestone; [status.md](status.md) tracks it as a
-checklist, and the two are kept in step):
-
 - A test extracts the YAML from 12.1 and runs it through `loadConfig`; the example that ships is one
   monodocs loads without a warning. The twelve phantom keys are gone from it, and the two behaviours
   that were never configurable — GFM and frontmatter always on, safe mode fixed — say so where the
@@ -3438,7 +3434,7 @@ checklist, and the two are kept in step):
 
 ---
 
-## v0.13: Input and Routes
+## v0.12: Input and Routes
 
 Purpose:
 
@@ -3487,7 +3483,7 @@ Completion criteria:
 
 ---
 
-## v0.14: The Single-File Budget
+## v0.13: The Single-File Budget
 
 Purpose:
 
@@ -3524,7 +3520,7 @@ Completion criteria:
 
 ---
 
-## v0.15: Setting the Printed Page
+## v0.14: Setting the Printed Page
 
 Purpose:
 
@@ -3597,7 +3593,7 @@ What it contains:
 - `sidebar.exclude` — deprecated since v0.10 — removed, as the first exercise of the deprecation
   shape 12.4 defines
 - Documentation, in both languages, that describes the tool as it is: no key in the reference that
-  the schema does not have, and no behaviour in architecture.md that the code does not do. v0.12
+  the schema does not have, and no behaviour in architecture.md that the code does not do. v0.11
   makes this true; 1.0 is where it is checked again, because that is what the number claims
 
 ---
