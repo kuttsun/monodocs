@@ -152,7 +152,7 @@ Press `Ctrl+C` to stop.
 
 ## `validate`
 
-Checks for broken links, missing images, missing titles, skipped heading levels, and images with no `alt` attribute — **without writing any output**. Intended for CI: it exits non-zero when anything is found.
+Checks for broken links, missing images, missing titles, skipped heading levels, and images with no `alt` attribute — **without writing any output**. Intended for CI: it exits non-zero when an error is found, and `--strict` makes a warning enough.
 
 ```bash
 monodocs validate [input] [options]
@@ -163,12 +163,20 @@ monodocs validate [input] [options]
 | `[input]`             | `./docs`      | Input directory, or a single source file, to validate. |
 | `-c, --config <file>` | auto-detected | Config file. Uses `monodocs.config.yml` if present. |
 | `--format <format>`   | `human`       | Report format: `human` or `json`.                   |
+| `--strict`            | off           | Fail on warnings as well as errors.                 |
 
 ```bash
 monodocs validate ./docs
 ```
 
-Errors and warnings are printed to stderr. The process exits with code `1` if **anything** is found, warnings included, so there is no separate strict mode. Mermaid diagrams are validated without a browser, so pre-render rendering and diagram syntax errors are not checked here.
+Errors and warnings are printed to stderr. The process exits with code `1` when an **error** is found; a warning alone leaves it at `0` and prints `⚠ 2 warning(s) in 20 page(s); no errors.`. `--strict` makes a warning fail the command too:
+
+```bash
+monodocs validate ./docs           # errors fail, warnings are reported
+monodocs validate ./docs --strict  # a warning fails it as well
+```
+
+The exit code follows the `severity` the report publishes, which is what lets a release add a check without turning a green job red for a finding nobody has read yet. If you want warnings to be a release gate, `--strict` says so once, in the workflow. Mermaid diagrams are validated without a browser, so pre-render rendering and diagram syntax errors are not checked here.
 
 `validate` runs the same pipeline a build runs, so every check it reports is a check a build reports too — a build prints the same warnings and writes its output anyway. The other direction does not hold: a build that writes a PDF also reports what only that work can find, such as a bottom margin too small for the page-number band or a character no font on the machine can draw.
 

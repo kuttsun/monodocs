@@ -245,20 +245,26 @@ program
     "--format <format>",
     t("cli.validate.opt.format", { supported: REPORT_FORMATS.join(" | ") }),
   )
+  .option("--strict", t("cli.validate.opt.strict"))
   .helpOption("-h, --help", t("cli.help.helpOption"))
-  .action(async (input: string | undefined, options: { config?: string; format?: string }) => {
-    const format = resolveReportFormat(options.format);
-    const result = await validateSite({ inputDir: input, configFile: options.config });
-    // The exit code is the same in either format: `validate` already exits non-zero on a warning,
-    // so there is no `--strict` to add.
-    const report = renderReport(result, format);
-    for (const line of report.lines) {
-      if (line.channel === "out") console.log(line.text);
-      else if (line.channel === "warn") console.warn(line.text);
-      else console.error(line.text);
-    }
-    if (report.failed) process.exitCode = 1;
-  });
+  .action(
+    async (
+      input: string | undefined,
+      options: { config?: string; format?: string; strict?: boolean },
+    ) => {
+      const format = resolveReportFormat(options.format);
+      const result = await validateSite({ inputDir: input, configFile: options.config });
+      // The same exit code in either format: an error fails the command, and a warning fails it
+      // only under `--strict`.
+      const report = renderReport(result, format, { strict: options.strict === true });
+      for (const line of report.lines) {
+        if (line.channel === "out") console.log(line.text);
+        else if (line.channel === "warn") console.warn(line.text);
+        else console.error(line.text);
+      }
+      if (report.failed) process.exitCode = 1;
+    },
+  );
 
 /**
  * Commander 自身が出す解析エラーを訳す。

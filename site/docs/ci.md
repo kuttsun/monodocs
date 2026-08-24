@@ -115,7 +115,7 @@ The `node` images contain no browser, so add Chromium and the fonts when the job
 - **Chromium discovery.** `PUPPETEER_EXECUTABLE_PATH` always wins. Without it, monodocs searches the standard install locations on Linux and Windows (Chromium-based Microsoft Edge is a Windows fallback). Set the variable explicitly in container images and on macOS.
 - **PDF fonts come from the runner.** A character with no installed font renders as tofu (□) in the PDF. Japanese text needs `fonts-noto-cjk` and emoji need `fonts-noto-color-emoji`. HTML output is unaffected because it uses the reader's fonts. The build warns when it finds a character the runner cannot draw, and [`fontCheck: error`](/docs/configuration#font-check) turns that warning into a failed job.
 - **Offline builds.** `mermaid.mode: client` defaults to loading the runtime from a CDN. Use `inline` or `pre-render` when the runner has no outbound network access.
-- **Warnings do not fail `build`.** Broken links and missing titles are reported but still produce output. Run `validate` when you want the job to fail.
+- **Warnings do not fail `build`, and they do not fail `validate` either.** Broken links and missing titles are reported and the output is still produced. `validate` fails the job on an **error**; add [`--strict`](/docs/commands#validate) when you want a warning to be a gate too.
 
 ## See also
 
