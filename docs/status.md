@@ -29,11 +29,10 @@ Last updated: 2026-08-24
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
-and it, v0.9, and v0.10 are released.
+and it, v0.9, v0.10, and v0.11 are released.
 
-0.11.0 has not been released yet. Both halves of it are implemented — the page breaks and the 1.0
-contract — and they ship as one release rather than as two; the reasoning is under v0.11 in
-[roadmap.md](roadmap.md).
+0.11.0 is released. Both halves of it — the page breaks and the 1.0 contract — went out as one
+release rather than as two; the reasoning is under v0.11 in [roadmap.md](roadmap.md).
 
 ## Completion Criteria Status
 
@@ -312,7 +311,7 @@ contract — and they ship as one release rather than as two; the reasoning is u
 - [x] Run both host scripts on machines without Node.js — the environment a binary release makes its claim about, and the one no CI job in this repository provides ([maintenance.md](maintenance.md)). [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) and [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) each pass all sixteen checks against the published `v0.11.0-beta.1` assets, Windows included a build from a path carrying spaces and Japanese characters
 - [x] The browser pass over the generated HTML, driven rather than eyeballed: the artifact the released Linux binary produced was opened in Chromium and put through twelve checks — the sidebar rendering and navigating, previous/next, search returning results and highlighting them in the page it opens, `Escape` clearing the box and restoring the tree, dark mode, and the drawer at 375px opening from the toggle and closing after a link. The footer of that artifact reads `monodocs v0.11.0-beta.1`, so it is the release under test rather than a local build
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser rather than through a script. The binary is unsigned by policy ([roadmap.md](roadmap.md) 8.5), so a warning is the expected outcome; v0.8 and v0.10 left the same reservation open
-- [ ] Publish and verify the stable `0.11.0` release, and pin the CI guide on the documentation site — English and Japanese alike — to it
+- [x] Publish and verify the stable `0.11.0` release, and pin the CI guide on the documentation site — English and Japanese alike — to it: published from CI on the `v0.11.0` tag with provenance, carrying the `latest` dist-tag, verified through `verify-published.yml` and `verify-release-binaries.yml` on Linux x64 and Windows x64, with the CI guide pinning `monodocs@0.11.0`
 
 ### v0.12: Input and Routes
 

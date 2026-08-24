@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npx --yes monodocs@0.10.0 validate ./docs
+      - run: npx --yes monodocs@0.11.0 validate ./docs
 ```
 
 ### Build the single HTML and PDF
@@ -65,7 +65,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk fonts-noto-color-emoji
 
       - name: Build HTML and PDF
-        run: npx --yes monodocs@0.10.0 build ./docs --format both -o ./dist
+        run: npx --yes monodocs@0.11.0 build ./docs --format both -o ./dist
 
       - uses: actions/upload-artifact@v4
         with:
@@ -94,8 +94,8 @@ The single HTML is self-contained, so publishing it is a matter of copying one f
 docs:
   image: node:22-bookworm-slim
   script:
-    - npx --yes monodocs@0.10.0 validate ./docs
-    - npx --yes monodocs@0.10.0 build ./docs -o ./dist/docs.html
+    - npx --yes monodocs@0.11.0 validate ./docs
+    - npx --yes monodocs@0.11.0 build ./docs -o ./dist/docs.html
   artifacts:
     paths: [dist/]
 ```
