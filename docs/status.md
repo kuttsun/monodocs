@@ -307,8 +307,8 @@ contract — and they ship as one release rather than as two; the reasoning is u
 
 **Release**
 
-- [ ] Publish `0.11.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`, with the steps that need 0.11 gated on the installed version so that 0.10 can still be verified
-- [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms, and run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
+- [x] Publish `0.11.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`, with the steps that need 0.11 gated on the installed version so that 0.10 can still be verified. Published from CI on the `v0.11.0-beta.1` tag with provenance; the run reports `SUPPORTS_V011: true`, so the diagnostics JSON, the exit codes, `document`, and byte-identical HTML were all exercised against the registry install on both platforms
+- [x] Verify the release binaries through `verify-release-binaries.yml` on both platforms: sixteen checks pass on each, the asset gated on its `.sha256`, and the long-running `serve` / `watch` included. What remains is [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js, which no CI job in this repository can stand in for ([maintenance.md](maintenance.md))
 - [ ] Verify the Windows x64 release binary by hand with [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) on a host without Node.js, and finish the checks both scripts leave to a person — the same pass v0.10 above still has open, done once for the release that supersedes it
 - [ ] Publish and verify the stable `0.11.0` release, and pin the CI guide on the documentation site — English and Japanese alike — to it
 

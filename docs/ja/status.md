@@ -306,8 +306,8 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **リリース**
 
-- [ ] `next` tag で `0.11.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。0.11 を必要とする手順はインストールされたバージョンで切り替え、0.10 の検証も従来どおり行えるようにする
-- [ ] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証し、加えて Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）
+- [x] `next` tag で `0.11.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。0.11 を必要とする手順はインストールされたバージョンで切り替え、0.10 の検証も従来どおり行えるようにする。`v0.11.0-beta.1` タグから CI で provenance 付きで公開し、実行ログの `SUPPORTS_V011: true` が示すとおり、診断 JSON・終了コード・`document`・HTML のバイト再現性を、レジストリからインストールしたパッケージに対して両プラットフォームで確認した
+- [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証した。各 16 項目が PASS し、`.sha256` による資産の検証と、長時間動作する `serve` / `watch` を含む。残るのは Node.js の無い Linux x64 ホストでの [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) で、これはこのリポジトリのどの CI ジョブも代われない（[maintenance.md](maintenance.md)）
 - [ ] Windows x64 のリリースバイナリを、Node.js の無いホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) により手動で検証し、両スクリプトが人に委ねている確認を終える。v0.10 に未了のまま残っているのと同じ確認であり、それを置き換えるリリースで 1 度行う
 - [ ] stable `0.11.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンを英日とも `0.11.0` に合わせる
 
