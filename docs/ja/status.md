@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-08-22
+最終更新: 2026-08-24
 
 ## 対応状況
 
@@ -20,16 +20,19 @@
 | 検索の仕上げ（仮名畳み込み・キー操作）| ✅ 完了   | v0.9           |
 | 言語 / `init` / PDF の仕上げ        | ✅ 完了   | v0.10          |
 | 改ページ（マーカー / `pdf.pageBreakLevel`）| ✅ 完了   | v0.11          |
-| 仕様の同期 / 診断 / `document`      | 🚧 予定   | v0.12          |
-| 入力ルート / route の別名 / AsciiDoc 属性 | 🚧 予定   | v0.13          |
-| 出力サイズと予算 / 透かし           | 🚧 予定   | v0.14          |
-| 見出し番号 / 表紙 / 紙の目次        | 🚧 予定   | v0.15          |
+| 仕様の同期 / 診断 / `document`      | 🚧 予定   | v0.11          |
+| 入力ルート / route の別名 / AsciiDoc 属性 | 🚧 予定   | v0.12          |
+| 出力サイズと予算 / 透かし           | 🚧 予定   | v0.13          |
+| 見出し番号 / 表紙 / 紙の目次        | 🚧 予定   | v0.14          |
 | 表面の凍結 / JSON スキーマ v1       | 🚧 予定   | 1.0            |
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
 メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
 [roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9・v0.10 は
 いずれもリリース済みである。
+
+0.11.0 は未リリースである。改ページの半分は実装済み、1.0 の契約の半分は未実装であり、2 回に分けず
+1 つのリリースとして出す。理由は [roadmap.md](roadmap.md) の v0.11 に記録している。
 
 ## 完了条件の達成状況
 
@@ -222,7 +225,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [ ] Windows x64 のリリースバイナリを、Node.js の無いホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) により手動で検証する。あわせて両スクリプトが人に委ねている確認を終える: 生成された HTML のブラウザ確認（サイドバー・検索・ダークモード・狭い幅のドロワー）、`serve --open`、Windows の Mark of the Web と SmartScreen
 - [x] stable `0.10.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンをそれに合わせる。`v0.10.0` タグから CI で公開して `latest` dist-tag が指し、`verify-published.yml` と `verify-release-binaries.yml` により Linux x64 / Windows x64 で検証済み。サイトの CI ガイドは英日とも `monodocs@0.10.0` を固定する
 
-### v0.11: 改ページ
+### v0.11: 改ページと 1.0 の契約
 
 このマイルストーンは [roadmap.md](roadmap.md) が定義し、以下はその追跡である。
 
@@ -262,10 +265,6 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] [syntax.md](syntax.md) の「Markdown の raw HTML は例外なく破棄する」という記述を改め、改ページの 2 綴りだけを制御構文として認識し正規化すること、入力そのものは出力へ届かないことを書く。[architecture.md](architecture.md) にも同じ境界を記録する
 - [x] 公式サイトの設定リファレンスが、マーカーとキーを日本語ミラーとともに記載し、[testing.md](testing.md) が新しいテストを載せる。サイトに記法のページは無く、その仕様はリポジトリの [syntax.md](syntax.md) が持つ（上で更新済み）
 
-### v0.12: 1.0 の契約
-
-[roadmap.md](roadmap.md) がこのマイルストーンを定義し、以下がそれを追跡する。
-
 **仕様がコードの言うことを言う**（[roadmap.md](roadmap.md) 12.1）
 
 - [ ] [roadmap.md](roadmap.md) 12.1 の YAML を取り出して `loadConfig` に通すテストがあり、存在しないツールを説明した例はそこで落ちる。実際にずれていた——`sources.markdown.enabled` / `gfm` / `frontmatter`、`sources.asciidoc.enabled` / `safeMode` / `attributes`、`sidebar.collapsible`、`html.selfContained` / `routeMode` / `darkMode`、`pdf.enabled`、`search.enabled` の 12 個はスキーマに無く、[roadmap.md](roadmap.md) 12.2 が全オブジェクトを strict にした以上、このプロジェクト自身の例を写すと `Unrecognized key` になる
@@ -304,7 +303,14 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 - [ ] 公式サイトの設定リファレンスと日本語ミラーが `document` と JSON 出力を載せ、[testing.md](testing.md) が新しいテストを列挙する
 
-### v0.13: 入力と route
+**リリース**
+
+- [ ] `next` tag で `0.11.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。0.11 を必要とする手順はインストールされたバージョンで切り替え、0.10 の検証も従来どおり行えるようにする
+- [ ] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証し、加えて Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）
+- [ ] Windows x64 のリリースバイナリを、Node.js の無いホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) により手動で検証し、両スクリプトが人に委ねている確認を終える。v0.10 に未了のまま残っているのと同じ確認であり、それを置き換えるリリースで 1 度行う
+- [ ] stable `0.11.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンを英日とも `0.11.0` に合わせる
+
+### v0.12: 入力と route
 
 [roadmap.md](roadmap.md) がこのマイルストーンを定義し、以下がそれを追跡する。
 
@@ -332,7 +338,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [ ] [architecture.md](architecture.md) が、safe mode がすることとこの検査がすることを書き分ける。safe mode が外部アクセスを防ぐとは主張しない
 - [ ] Markdown には変数展開を足さない。理由は [roadmap.md](roadmap.md) 17.5 に記録する——エスケープ、未定義の名前、コードブロック、再帰の決定を背負うテンプレート言語だからである
 
-### v0.14: 単一ファイルの予算
+### v0.13: 単一ファイルの予算
 
 [roadmap.md](roadmap.md) がこのマイルストーンを定義し、以下がそれを追跡する。
 
@@ -356,7 +362,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [ ] 規則は core が印刷用スタイルシートへ出し、`style.css` を差し替えたテーマでビルドしても残る。テーマが、文書の要求した「社外秘」を消せてはならない
 - [ ] 画像もページごとの制御もフォント・角度・不透明度のキーも無い。閉じたキー集合について [roadmap.md](roadmap.md) 24.6 が述べた理由による
 
-### v0.15: 紙の版面を仕上げる
+### v0.14: 紙の版面を仕上げる
 
 [roadmap.md](roadmap.md) がこのマイルストーンを定義し、以下がそれを追跡する。
 

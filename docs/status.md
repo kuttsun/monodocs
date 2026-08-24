@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-08-22
+Last updated: 2026-08-24
 
 ## Support Status
 
@@ -20,16 +20,20 @@ Last updated: 2026-08-22
 | Search finishing (kana folding, keyboard)         | ✅ Done   | v0.9           |
 | Language, `init`, PDF fonts and page numbers      | ✅ Done   | v0.10          |
 | Page breaks (marker, `pdf.pageBreakLevel`)        | ✅ Done   | v0.11          |
-| Specification sync, diagnostics, `document`       | 🚧 Planned| v0.12          |
-| Input root, route aliases, AsciiDoc attributes    | 🚧 Planned| v0.13          |
-| Output size and budget, watermark                 | 🚧 Planned| v0.14          |
-| Section numbering, cover, printed table of contents | 🚧 Planned| v0.15        |
+| Specification sync, diagnostics, `document`       | 🚧 Planned| v0.11          |
+| Input root, route aliases, AsciiDoc attributes    | 🚧 Planned| v0.12          |
+| Output size and budget, watermark                 | 🚧 Planned| v0.13          |
+| Section numbering, cover, printed table of contents | 🚧 Planned| v0.14        |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
 and it, v0.9, and v0.10 are released.
+
+0.11.0 has not been released. Its page-break half is implemented and its 1.0-contract half is not, and
+the two ship as one release rather than as two — the reasoning is under v0.11 in
+[roadmap.md](roadmap.md).
 
 ## Completion Criteria Status
 
@@ -222,7 +226,7 @@ and it, v0.9, and v0.10 are released.
 - [ ] Verify the Windows x64 release binary by hand with [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) on a host without Node.js, and finish the checks both scripts leave to a person: the browser pass over the generated HTML (sidebar, search, dark mode, the narrow-width drawer), `serve --open`, and Mark of the Web and SmartScreen on Windows
 - [x] Publish and verify the stable `0.10.0` release, and pin the CI guide on the documentation site to it: published from CI on the `v0.10.0` tag and carrying the `latest` dist-tag, verified through `verify-published.yml` and `verify-release-binaries.yml` on Linux x64 and Windows x64, with the CI guide on the site — English and Japanese alike — pinning `monodocs@0.10.0`
 
-### v0.11: Page Breaks
+### v0.11: Page Breaks and the 1.0 Contract
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
@@ -262,10 +266,6 @@ and it, v0.9, and v0.10 are released.
 - [x] [syntax.md](syntax.md) stops saying that raw HTML in Markdown is dropped without exception, and says instead that the two page-break spellings are recognised as a control marker and normalised, with the input never reaching the output. [architecture.md](architecture.md) records the same boundary
 - [x] The configuration reference on the documentation site documents the marker and the key, with its Japanese mirror, and [testing.md](testing.md) lists the new tests. The site has no syntax page of its own — [syntax.md](syntax.md) is where the repository keeps that specification, and it is updated above
 
-### v0.12: The 1.0 Contract
-
-[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
-
 **The specification says what the code does** ([roadmap.md](roadmap.md) 12.1)
 
 - [ ] A test extracts the YAML from [roadmap.md](roadmap.md) 12.1 and runs it through `loadConfig`, so the example cannot describe a tool that does not exist. It had drifted to twelve keys the schema does not have — `sources.markdown.enabled`, `gfm`, `frontmatter`, `sources.asciidoc.enabled`, `safeMode`, `attributes`, `sidebar.collapsible`, `html.selfContained`, `routeMode`, `darkMode`, `pdf.enabled`, `search.enabled` — which since [roadmap.md](roadmap.md) 12.2 made every object strict means copying this project's own example produced `Unrecognized key`
@@ -304,7 +304,14 @@ and it, v0.9, and v0.10 are released.
 
 - [ ] The site's configuration reference and its Japanese mirror carry `document` and the JSON output, and [testing.md](testing.md) lists the new tests
 
-### v0.13: Input and Routes
+**Release**
+
+- [ ] Publish `0.11.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`, with the steps that need 0.11 gated on the installed version so that 0.10 can still be verified
+- [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms, and run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
+- [ ] Verify the Windows x64 release binary by hand with [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) on a host without Node.js, and finish the checks both scripts leave to a person — the same pass v0.10 above still has open, done once for the release that supersedes it
+- [ ] Publish and verify the stable `0.11.0` release, and pin the CI guide on the documentation site — English and Japanese alike — to it
+
+### v0.12: Input and Routes
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
@@ -332,7 +339,7 @@ and it, v0.9, and v0.10 are released.
 - [ ] [architecture.md](architecture.md) says what safe mode does and what this check does, instead of claiming safe mode prevents external access
 - [ ] Markdown gains no variable substitution, and [roadmap.md](roadmap.md) 17.5 records why: it is a template language, with an escape, an undefined-name rule, a code-block rule, and a recursion decision behind it
 
-### v0.14: The Single-File Budget
+### v0.13: The Single-File Budget
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
@@ -356,7 +363,7 @@ and it, v0.9, and v0.10 are released.
 - [ ] The rule is emitted by core into the print stylesheet, and a document built with a theme that replaces `style.css` still carries it — a theme must not be able to delete "CONFIDENTIAL" from a document that asked for it
 - [ ] There is no image, no per-page control, and no font, angle, or opacity key, on the reason [roadmap.md](roadmap.md) 24.6 gives for a closed key set
 
-### v0.15: Setting the Printed Page
+### v0.14: Setting the Printed Page
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
