@@ -75,6 +75,37 @@ describe("a heading level skipped", () => {
     const found = await check("<h1>a</h1><h3>b</h3><h4>c</h4><h6>d</h6>");
     expect(codes(found)).toEqual(["heading/level-skipped", "heading/level-skipped"]);
   });
+
+  it("counts the page's own flow and not a heading inside a block", async () => {
+    // Both directions of the same mistake. A quoted `h4` is not a skip in the document's outline,
+    // and a quoted `h3` must not hide the `h2` → `h4` around it. Tables, admonitions and figures
+    // are the same case — `pdf.pageBreakLevel` already treats them as one closed block (24.7).
+    expect(await check("<h1>a</h1><h2>b</h2><blockquote><h4>quoted</h4></blockquote>")).toEqual([]);
+    expect(
+      codes(await check("<h1>a</h1><h2>b</h2><blockquote><h3>q</h3></blockquote><h4>c</h4>")),
+    ).toEqual(["heading/level-skipped"]);
+    expect(await check("<h2>a</h2><table><tr><td><h4>cell</h4></td></tr></table>")).toEqual([]);
+    expect(await check('<h2>a</h2><div class="admonition"><h4>note</h4></div>')).toEqual([]);
+    expect(await check("<h2>a</h2><figure><h4>caption</h4></figure>")).toEqual([]);
+  });
+
+  it("passes through the section wrappers Asciidoctor produces", async () => {
+    // Those are structure rather than content, so a document nested in them is one sequence.
+    const flat = "<h1>a</h1><h2>b</h2><h4>c</h4>";
+    const nested =
+      '<h1>a</h1><div class="sect1"><h2>b</h2><div class="sectionbody"><h4>c</h4></div></div>';
+    expect(codes(await check(nested))).toEqual(codes(await check(flat)));
+    expect(codes(await check(nested))).toEqual(["heading/level-skipped"]);
+  });
+
+  it("starts again on the next page", async () => {
+    // A page opening at `h4` after a page ending at `h2` is two documents' outlines, not a skip.
+    const result = await postprocessPages(
+      [page("a.md", "<h1>a</h1><h2>b</h2>"), page("b.md", "<h4>first heading here</h4>")],
+      baseOptions,
+    );
+    expect(result.warnings).toEqual([]);
+  });
 });
 
 describe("an image with no alt attribute", () => {

@@ -85,6 +85,30 @@ describe("postprocessPages - link rewriting", () => {
     );
   });
 
+  it("gives two links to the same target the two lines they are on", async () => {
+    // `missing.md` and `missing.html` are the same link written twice — the resolver treats them
+    // as one target — so a cursor kept per raw href started twice at zero and reported both at the
+    // first one's line.
+    const raw = "# H\n\ntext\n\n[a](missing.md)\n\ntext\n\n[b](missing.html)\n";
+    const result = await postprocessPages(
+      [
+        page({
+          relativePath: "index.md",
+          route: "/",
+          html: '<a href="missing.md">a</a><a href="missing.html">b</a>',
+          rawSource: raw,
+        }),
+      ],
+      baseOptions,
+    );
+    const lines = result.warnings
+      .filter((w) => w.code === "link/unresolved")
+      .map((w) => [w.message.match(/"([^"]+\.html?|[^"]+\.md)"/)?.[1], w.line]);
+    expect(lines).toEqual([
+      ["missing.md", 5],
+      ["missing.html", 9],
+    ]);
+  });
   it("resolves percent-encoded Japanese path links", async () => {
     const pages: Page[] = [
       page({

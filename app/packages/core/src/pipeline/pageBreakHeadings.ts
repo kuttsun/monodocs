@@ -28,7 +28,7 @@ function isTransparent(node: Element): boolean {
 }
 
 /** The heading level, or 0 for anything else. */
-function headingLevel(node: Element): number {
+export function headingLevel(node: Element): number {
   const match = /^h([1-6])$/.exec(node.tagName);
   return match ? Number(match[1]) : 0;
 }
@@ -46,7 +46,7 @@ function isMarker(node: Element): boolean {
  * (roadmap 24.3.1) is never a candidate. Asking Chromium to hold a block together and to break
  * inside it at once is not a request with an answer.
  */
-function pageFlow(nodes: ElementContent[]): (Element | Text)[] {
+export function pageFlow(nodes: ElementContent[]): (Element | Text)[] {
   const out: (Element | Text)[] = [];
   for (const node of nodes) {
     if (node.type === "text") {

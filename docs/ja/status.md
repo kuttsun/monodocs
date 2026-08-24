@@ -296,7 +296,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 **文書のメタデータ**（[roadmap.md](roadmap.md) 13.5）
 
 - [x] `document.version` / `date` / `authors` が、既に書いている `setTitle` の隣で PDF の Author / Subject / Keywords へ、そして HTML・PDF 双方の branding フッタへ届く
-- [x] ビルドは自前の日付を埋め込まない。同じ入力を 2 回ビルドすると同一のバイト列になり、それをテストが主張する
+- [x] ビルドは自前の日付を埋め込まない。同じ入力を 2 回ビルドすると HTML は同一のバイト列になり、それをテストが主張する。PDF はその外である（実測）。Chromium が自分の作成日時と更新日時を書き、monodocs は日付を足しもせず、それを削りもしない（[roadmap.md](roadmap.md) 12.4）
 - [x] `title` は `document` へ移さずトップレベルに残る
 
 **ドキュメント**

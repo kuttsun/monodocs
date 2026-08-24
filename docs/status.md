@@ -297,7 +297,7 @@ the two ship as one release rather than as two — the reasoning is under v0.11 
 **Document metadata** ([roadmap.md](roadmap.md) 13.5)
 
 - [x] `document.version` / `date` / `authors` reach the PDF's Author, Subject, and Keywords — beside the `setTitle` already written — and the branding footer of both HTML and PDF
-- [x] The build embeds no date of its own. The same input built twice produces identical bytes, and a test asserts it
+- [x] The build embeds no date of its own. The same input built twice produces identical HTML bytes, and a test asserts it. The PDF is outside that, measured: Chromium writes its own creation and modification dates, and monodocs neither adds a date nor removes those ([roadmap.md](roadmap.md) 12.4)
 - [x] `title` stays at the top level rather than moving into `document`
 
 **Documentation**

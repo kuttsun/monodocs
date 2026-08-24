@@ -8,7 +8,8 @@ import type { Labels } from "./labels.js";
  * version of, or when it was true.
  *
  * Every field is a string monodocs does not interpret: `date` is not parsed into a calendar and
- * `version` is not compared to anything. **The build stamps no date of its own.** Filling this in
+ * `version` is not compared to anything. The one thing done to the text is trimming the space around
+ * it, so a value that is only whitespace counts as unset rather than as an empty line in the footer. **The build stamps no date of its own.** Filling this in
  * with the moment the build ran is the obvious version of the feature and exactly what must not
  * happen: it would make the same input produce different bytes on every run, so a committed
  * `docs.html` would show a diff whenever anyone rebuilt it (12.4). A date in the output is a date

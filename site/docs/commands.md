@@ -78,7 +78,7 @@ The scaffold follows the [message language](#message-language) throughout: its c
 
 ## `build`
 
-Builds the documentation into a single self-contained HTML file.
+Builds the documentation into a single self-contained file: HTML, PDF, or both (`--format`).
 
 ```bash
 monodocs build [input] [options]
@@ -170,7 +170,7 @@ monodocs validate ./docs
 
 Errors and warnings are printed to stderr. The process exits with code `1` if **anything** is found, warnings included, so there is no separate strict mode. Mermaid diagrams are validated without a browser, so pre-render rendering and diagram syntax errors are not checked here.
 
-`validate` runs the same pipeline a build runs, so what it reports is what a build reports; a build prints the same warnings and writes its output anyway.
+`validate` runs the same pipeline a build runs, so every check it reports is a check a build reports too — a build prints the same warnings and writes its output anyway. The other direction does not hold: a build that writes a PDF also reports what only that work can find, such as a bottom margin too small for the page-number band or a character no font on the machine can draw.
 
 ### A report a job can read {#json-report}
 

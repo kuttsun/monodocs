@@ -71,7 +71,9 @@ describe("every error monodocs raises carries a code", () => {
     const offenders: string[] = [];
     for (const file of files) {
       const scannable = withoutComments(await readFile(file, "utf8"));
-      const pattern = /throw new Error\(/g;
+      // `new` is optional and rejecting a promise is throwing with extra steps; both spellings
+      // produce a finding with no identity, so both are caught.
+      const pattern = /(?:throw\s+(?:new\s+)?Error\(|reject\(\s*(?:new\s+)?Error\()/g;
       let match: RegExpExecArray | null;
       while ((match = pattern.exec(scannable)) !== null) {
         const line = scannable.slice(0, match.index).split("\n").length;
@@ -126,6 +128,14 @@ describe("every error monodocs raises carries a code", () => {
   });
 });
 
+/** Order two diagnostics the same way whichever list they came from. */
+function byCode(
+  a: { code: string; message: string },
+  b: { code: string; message: string },
+): number {
+  return a.code.localeCompare(b.code) || a.message.localeCompare(b.message);
+}
+
 describe("what a build reports", () => {
   let dir: string;
 
@@ -152,8 +162,11 @@ describe("what a build reports", () => {
       expect(["error", "warning"], diagnostic.message).toContain(diagnostic.severity);
       expect(diagnostic.message, diagnostic.code).not.toBe("");
     }
-    // The two halves are the same set, split — a caller reading one of them reads no less.
-    expect([...result.errors, ...result.warnings]).toHaveLength(result.diagnostics.length);
+    // The two halves are the same set, split — a caller reading one of them reads no less. Compared
+    // as sets rather than counted: dropping one finding and duplicating another keeps the count.
+    expect([...result.errors, ...result.warnings].sort(byCode)).toEqual(
+      [...result.diagnostics].sort(byCode),
+    );
   });
 
   it("keeps the position it already knew instead of flattening it into prose", async () => {
@@ -177,5 +190,26 @@ describe("what a build reports", () => {
     expect(result.errors[0]?.code).toBe("input/not-found");
     expect(result.warnings).toEqual([]);
     expect(result.pages).toBe(0);
+  });
+
+  it("keeps what it had found when something later stops the run", async () => {
+    // A deprecated key is still deprecated when a route collision ends the build. Dropping it
+    // would make the report depend on which problem happened to be the fatal one.
+    const root = await mkdtemp(join(tmpdir(), "monodocs-diagnostics-fatal-"));
+    const docs = join(root, "docs");
+    await mkdir(join(docs, "a"), { recursive: true });
+    await writeFile(join(docs, "a.md"), "# A\n");
+    await writeFile(join(docs, "a", "index.md"), "# Also A\n");
+    const configFile = join(root, "monodocs.config.yml");
+    await writeFile(configFile, "sidebar:\n  exclude:\n    - nothing-matches.md\n");
+    try {
+      const result = await validateSite({ inputDir: docs, configFile });
+      expect(result.diagnostics.map((d) => d.code)).toEqual([
+        "config/deprecated-key",
+        "page/duplicate-route",
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

@@ -1,6 +1,7 @@
 import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
-import type { Root as HastRoot } from "hast";
+import type { ElementContent, Root as HastRoot } from "hast";
+import { headingLevel, pageFlow } from "./pageBreakHeadings.js";
 import { type Diagnostic, warn } from "../diagnostics.js";
 import { t } from "../messages.js";
 import type { Page } from "../types.js";
@@ -18,8 +19,6 @@ import type { Page } from "../types.js";
  * document is worse than none.
  */
 
-const HEADINGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
-
 /**
  * A heading level skipped, an `h2` followed by an `h4`.
  *
@@ -27,12 +26,19 @@ const HEADINGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
  * level. The comparison is between consecutive headings only: the first heading of a page is never
  * a finding, because a page whose title comes from frontmatter legitimately opens at `h2`, and
  * calling that a skip would report most well-formed documents.
+ *
+ * The sequence is the page's own flow (24.7), not every `h1`–`h6` in the tree. A heading inside a
+ * quotation, a table cell, an admonition, or a figure belongs to that block rather than to the
+ * document's outline, and counting it does damage in both directions: an `h4` inside a blockquote
+ * reports a skip the reader cannot see, and an `h3` inside one hides the real `h2` → `h4` around it.
+ * `pdf.pageBreakLevel` already draws this line, and the two now draw it in the same place.
  */
 export function checkHeadingLevels(tree: HastRoot, page: Page, diagnostics: Diagnostic[]): void {
   let previous: number | undefined;
-  visit(tree, "element", (node) => {
-    if (!HEADINGS.has(node.tagName)) return;
-    const level = Number(node.tagName.slice(1));
+  for (const node of pageFlow(tree.children as ElementContent[])) {
+    if (node.type !== "element") continue;
+    const level = headingLevel(node);
+    if (level === 0) continue;
     if (previous !== undefined && level > previous + 1) {
       diagnostics.push(
         warn(
@@ -48,7 +54,7 @@ export function checkHeadingLevels(tree: HastRoot, page: Page, diagnostics: Diag
       );
     }
     previous = level;
-  });
+  }
 }
 
 /**
@@ -61,8 +67,9 @@ export function checkHeadingLevels(tree: HastRoot, page: Page, diagnostics: Diag
  *
  * Measured, this is narrower than it sounds: Markdown always writes the attribute (`![](x.png)` is
  * `alt=""`) and Asciidoctor derives one from the file's basename, so what reaches here with no
- * attribute at all comes from an AsciiDoc passthrough block or a theme's own fragment — the one
- * path no converter is guarding (roadmap.md 25.5).
+ * attribute at all comes from an AsciiDoc passthrough block — the one path neither converter is
+ * guarding. A theme's own markup is not covered: the checks run over each page's body, and the
+ * template is applied afterwards (roadmap.md 25.5).
  */
 export function checkImageAlt(tree: HastRoot, page: Page, diagnostics: Diagnostic[]): void {
   visit(tree, "element", (node) => {

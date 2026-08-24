@@ -175,8 +175,9 @@ document:
 | `date`    | string   | Date as you write it. Not parsed into a calendar.   |
 | `authors` | string[] | The people responsible for the document.            |
 
-Every field is optional and every field is a string monodocs does not interpret. What they do is
-reach three places:
+Every field is optional and every field is a string monodocs does not interpret — the one thing it
+does to the text is trim the space around it, so a value that is only whitespace counts as unset.
+What they do is reach three places:
 
 - The **footer** at the end of the HTML and the PDF, as one line: `Version 1.2 · 2026-08-22 ·
   Documentation Team`. The word `Version` comes from the label table `lang` selects, so it follows
