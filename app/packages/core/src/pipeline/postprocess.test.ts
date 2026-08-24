@@ -16,6 +16,8 @@ function page(p: {
   id?: string;
   /** そのページに実在する要素 ID（アンカー解決の検証対象）。 */
   anchors?: string[];
+  /** ソース上のリンク位置。パーサが渡してくるものを模す。 */
+  links?: Page["links"];
 }): Page {
   return {
     id: p.id ?? p.route.replace(/\W+/g, "-"),
@@ -29,7 +31,7 @@ function page(p: {
     text: "",
     headings: [],
     anchors: p.anchors ?? [],
-    links: [],
+    links: p.links ?? [],
     assets: [],
   };
 }
@@ -83,6 +85,51 @@ describe("postprocessPages - link rewriting", () => {
     expect(result.warnings.map((w) => w.message)).toContain(
       'Unresolved link "missing.md" in "index.md:3".',
     );
+  });
+
+  it("keeps a query or an anchor apart while sharing the target", async () => {
+    // The cursor has to count exactly what its candidate list holds. These four links share a
+    // target but the parser gives each spelling its own list, so a cursor shared across the
+    // spellings walked past the end of one while another was still on its first entry.
+    const raw = "# H\n\n[1](gone.md?a)\n\n[2](gone.md?b)\n\n[3](gone.md?b)\n\n[4](gone.md?a)\n";
+    const result = await postprocessPages(
+      [
+        page({
+          relativePath: "index.md",
+          route: "/",
+          html:
+            '<a href="gone.md?a">1</a><a href="gone.md?b">2</a>' +
+            '<a href="gone.md?b">3</a><a href="gone.md?a">4</a>',
+          rawSource: raw,
+          links: [
+            { href: "gone.md?a", line: 3, column: 1 },
+            { href: "gone.md?b", line: 5, column: 1 },
+            { href: "gone.md?b", line: 7, column: 1 },
+            { href: "gone.md?a", line: 9, column: 1 },
+          ],
+        }),
+      ],
+      baseOptions,
+    );
+    expect(result.warnings.map((w) => w.line)).toEqual([3, 5, 7, 9]);
+  });
+
+  it("does not read a longer name as the path it ends with", async () => {
+    // The search is a substring search and the needles cover every extension the target could be
+    // written with, so a sentence mentioning `notgone.adoc` was answering for a link to `gone.md`.
+    const raw = "# H\n\nSee notgone.adoc for context.\n\n[x](gone.md)\n";
+    const result = await postprocessPages(
+      [
+        page({
+          relativePath: "index.md",
+          route: "/",
+          html: '<a href="gone.md">x</a>',
+          rawSource: raw,
+        }),
+      ],
+      baseOptions,
+    );
+    expect(result.warnings.map((w) => w.line)).toEqual([5]);
   });
 
   it("gives two links to the same target the two lines they are on", async () => {
