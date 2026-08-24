@@ -307,8 +307,10 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 **リリース**
 
 - [x] `next` tag で `0.11.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。0.11 を必要とする手順はインストールされたバージョンで切り替え、0.10 の検証も従来どおり行えるようにする。`v0.11.0-beta.1` タグから CI で provenance 付きで公開し、実行ログの `SUPPORTS_V011: true` が示すとおり、診断 JSON・終了コード・`document`・HTML のバイト再現性を、レジストリからインストールしたパッケージに対して両プラットフォームで確認した
-- [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証した。各 16 項目が PASS し、`.sha256` による資産の検証と、長時間動作する `serve` / `watch` を含む。残るのは Node.js の無い Linux x64 ホストでの [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) で、これはこのリポジトリのどの CI ジョブも代われない（[maintenance.md](maintenance.md)）
-- [ ] Windows x64 のリリースバイナリを、Node.js の無いホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) により手動で検証し、両スクリプトが人に委ねている確認を終える。v0.10 に未了のまま残っているのと同じ確認であり、それを置き換えるリリースで 1 度行う
+- [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証した。各 16 項目が PASS し、`.sha256` による資産の検証と、長時間動作する `serve` / `watch` を含む
+- [x] Node.js の無い実機で両方のスクリプトを実行した。バイナリ配布が主張しているのはまさにその環境であり、このリポジトリのどの CI ジョブも用意できないものである（[maintenance.md](maintenance.md)）。公開済みの `v0.11.0-beta.1` の資産に対して [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) と [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) がそれぞれ 16 項目すべて PASS。Windows では空白と日本語を含むパスからのビルドも含む
+- [x] 生成 HTML のブラウザ確認を、目視ではなく操作して行った。Linux のリリースバイナリが出力した成果物を Chromium で開き、12 項目を確認した——サイドバーの描画と遷移、前後ナビ、検索が結果を返し開いたページで本文をハイライトすること、`Escape` で検索が消えてツリーが戻ること、ダークモード、375px でドロワーがトグルから開きリンク追従で閉じること。その成果物のフッタは `monodocs v0.11.0-beta.1` であり、ローカルビルドではなく検証対象のリリースそのものである
+- [ ] 人にしか答えられない部分（Windows）: 生成 HTML が Edge でどう見えるか（とりわけ日本語）、`serve --open` が既定のブラウザを起動すること、スクリプト経由ではなくブラウザで取得した資産に対する Mark of the Web と SmartScreen。バイナリは方針として未署名なので（[roadmap.md](roadmap.md) 8.5）警告が出るのが想定どおりである。v0.8 と v0.10 も同じ留保を残している
 - [ ] stable `0.11.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンを英日とも `0.11.0` に合わせる
 
 ### v0.12: 入力と route
