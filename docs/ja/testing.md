@@ -32,12 +32,12 @@ docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 
 devcontainer 内、またはコンテナのシェルに入っている場合は `app/` で `pnpm test` を直接実行できる。
 
-## テスト結果（2026-07-28 時点）
+## テスト結果（2026-08-24 時点）
 
 | 項目           | 結果       |
 | -------------- | ---------- |
-| Test Files     | 31 passed  |
-| Tests          | 287 passed |
+| Test Files     | 47 passed  |
+| Tests          | 476 passed |
 | typecheck      | 通過       |
 | format:check   | 通過       |
 | package:verify | 通過       |
@@ -86,3 +86,4 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `pipeline/pdfMetadata.test.ts` … PDF の文書情報（タイトルと monodocs を Creator/Producer に設定してブラウザ・pdf-lib の既定値を置き換える、ビューア設定の DisplayDocTitle、ページを壊さない、設定が無ければ何もしない。pdf-lib のみ・browserless）
 - `pipeline/pdfOutline.test.ts` … PDF しおり（`sidebarToOutline` のツリー変換・`collectDests`/`remapDests`・`addOutline` が `/Dests` を参照して フォルダ→ページ の `/Outlines` を構築し `/UseOutlines` を設定。宛先が無い/空ツリーは元 PDF を返す。pdf-lib のみで browserless）
 - `config.test.ts` … 設定解決（本文幅、画像 lightbox、ブランディングの既定値と切替・`pdf` スキーマの既定値・欠落余白の補完・不正 `--format` の拒否・format 別の既定出力パスを含む）。あわせて束から何が外れるか（`sources.exclude` が既定リストを置き換えず追加すること、`sources.excludeDefaults: false` がその既定リストを外すこと、非推奨の `sidebar.exclude` が警告付きで同じく追加として効くこと、両方同時の指定を拒否すること）と、トップレベルを含むどの深さの未知キーも拒否し、エラーが検証ライブラリの issue 配列ではなくキーとそれを含むオブジェクトを名指しすることを確認する
+- `config.example.test.ts` … [roadmap.md](roadmap.md) 12.1 の設定例（v0.11）。文書からその YAML ブロックを抽出し、英語版と日本語版の両方を実際に読み込む。例が存在しないツールを説明し続けられないようにするためである。実際、例はスキーマに無い 12 個のキーへドリフトしており、全オブジェクトが strict になって以降、このプロジェクト自身の例をコピーすると `Unrecognized key` になっていた。確認するのはエラーが出ないことに加えて警告も出ないことで、警告が出る例は「やめてほしい綴り」を教えていることになるからである。前提そのものも確かめる。節は次の見出しで区切り、YAML ブロックがちょうど 1 つあることを要求し、解決後のタイトルをブロック自身の値と突き合わせて抽出が空でも通ることがないようにし、同じブロックに幻のキーを 1 つ足したものが拒否されることを要求する。2 つのミラーはキーパスで比較する。片方の言語にだけ増えたキーは、もう一方の言語の読み手が最後まで気づけないドリフトだからである
