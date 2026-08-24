@@ -2750,9 +2750,19 @@ as `build`, so what it reports is what a build reports, and nothing is checked t
 diagram syntax errors are outside its scope and it says so rather than implying a check it does not
 run.
 
-It exits non-zero when anything is found, warnings included, so there is no `--strict` to add. What
-it lacked was a form a machine can read: a CI job that wanted to annotate a pull request had to
-parse translated prose, which changes with the language and with any rewording (12.4).
+**What fails the command.** An error fails it; a warning does not, unless `--strict` says so. This
+reverses the decision recorded here before v0.11 shipped — "it exits non-zero when anything is
+found, so there is no `--strict` to add" — and the reason is 12.4. A minor release may add a check,
+and additions "cannot break a configuration that does not use them"; but a new warning, on a
+document nobody has touched, turned a green job red. Flattening the two severities in the exit code
+also contradicted the report, which publishes `severity` for a consumer to act on: a job that reads
+`warning` and then finds the process dead has been told two different things. A warning gate is
+worth having and is now a decision — `--strict` — rather than the only behaviour. Taken before 1.0
+because a default only changes in a major release (12.4).
+
+What `validate` lacked was a form a machine can read: a CI job that wanted to annotate a pull
+request had to parse translated prose, which changes with the language and with any rewording
+(12.4).
 
 ```bash
 monodocs validate --format json

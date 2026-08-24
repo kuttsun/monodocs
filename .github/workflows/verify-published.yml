@@ -234,9 +234,9 @@ jobs:
             fs.mkdirSync('diagnostics/docs', { recursive: true });
             fs.writeFileSync('diagnostics/docs/index.md', '# Home\n\nA line.\n\nA [broken link](nope.md) here.\n');
           "
-          if monodocs validate diagnostics/docs --format json > diagnostics/report.json 2> diagnostics/stderr.txt; then
-            echo "validate should have exited non-zero for a document with a finding"; exit 1
-          fi
+          # An unresolved link is a warning, so the command succeeds: the exit code follows the
+          # severity, and a warning is a gate only under `--strict`.
+          monodocs validate diagnostics/docs --format json > diagnostics/report.json
           cat diagnostics/report.json
           node -e "
             const fs = require('node:fs');
@@ -247,15 +247,20 @@ jobs:
             if (link.severity !== 'warning') throw new Error('unexpected severity: ' + link.severity);
             if (link.path !== 'index.md' || link.line !== 5) throw new Error('the finding lost its position: ' + JSON.stringify(link));
           "
-          # The human report is what every earlier release printed, and it is not JSON.
-          if monodocs validate diagnostics/docs > diagnostics/human.txt 2>&1; then
-            echo "validate should have exited non-zero for a document with a finding"; exit 1
-          fi
+          # The human report is prose, not JSON, and the same document under `--strict` fails.
+          monodocs validate diagnostics/docs > diagnostics/human.txt 2>&1
           node -e "
             const human = require('node:fs').readFileSync('diagnostics/human.txt', 'utf8');
             if (human.trimStart().startsWith('{')) throw new Error('the default report is JSON: ' + human);
             if (!human.includes('nope.md')) throw new Error('the default report does not name the finding: ' + human);
           "
+          if monodocs validate diagnostics/docs --strict > diagnostics/strict.txt 2>&1; then
+            echo "--strict should have failed a document with a warning"; cat diagnostics/strict.txt; exit 1
+          fi
+          # An error fails the command with or without the flag. A path that is not there is one.
+          if monodocs validate diagnostics/does-not-exist > diagnostics/error.txt 2>&1; then
+            echo "a missing input should have failed"; cat diagnostics/error.txt; exit 1
+          fi
           # A clean document is still one JSON object, and still exits zero: a stream that is
           # sometimes JSON and sometimes nothing is not a format either.
           node -e "

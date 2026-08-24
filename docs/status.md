@@ -288,7 +288,8 @@ the two ship as one release rather than as two — the reasoning is under v0.11 
 
 **`validate`** ([roadmap.md](roadmap.md) 25.5)
 
-- [x] `monodocs validate --format json` prints an object carrying a schema version and an array of diagnostics. Human output is unchanged, and there is no `--strict`, because a warning already exits non-zero
+- [x] `monodocs validate --format json` prints an object carrying a schema version and an array of diagnostics, alone on stdout. Human output is unchanged apart from the summary line a warning-only run now gets
+- [x] An error fails the command and a warning does not, with `--strict` failing on warnings too. The exit code follows the severity the report publishes, so a check added in a minor release cannot turn a green job red on its own ([roadmap.md](roadmap.md) 25.5). Reversed before 1.0, since a default changes only in a major release
 - [x] A skipped heading level (an `h2` followed by an `h4`) is reported
 - [x] An image with no `alt` attribute is reported, and an explicitly empty `alt=""` is not. A test asserts the second half, since that is how an author marks a decorative image
 - [x] An unresolved cross-file anchor, which already warns during a build, appears as a diagnostic with a code

@@ -41,7 +41,7 @@ describe("validate --format", () => {
 });
 
 describe("the human report", () => {
-  it("is unchanged: errors, then warnings, then the summary", () => {
+  it("prints errors, then warnings, then the summary", () => {
     const { lines, failed } = renderReport(result([INPUT, LINK]), "human");
     expect(lines).toEqual([
       { channel: "err", text: "error: Input not found: ./docs" },
@@ -57,8 +57,51 @@ describe("the human report", () => {
     expect(failed).toBe(false);
   });
 
-  it("fails on a warning alone, which is why there is no --strict", () => {
-    expect(renderReport(result([LINK]), "human").failed).toBe(true);
+  it("says a warning-only run in its own words", () => {
+    // "✗ 0 error(s)" beside a zero exit code would make the reader distrust one of the two.
+    const { lines, failed } = renderReport(result([LINK]), "human");
+    expect(lines[lines.length - 1]).toEqual({
+      channel: "err",
+      text: "⚠ 1 warning(s) in 3 page(s); no errors.",
+    });
+    expect(failed).toBe(false);
+  });
+
+  it("says the same run failed under --strict, counting both", () => {
+    const { lines, failed } = renderReport(result([LINK]), "human", { strict: true });
+    expect(lines[lines.length - 1]).toEqual({
+      channel: "err",
+      text: "✗ 0 error(s), 1 warning(s) in 3 page(s).",
+    });
+    expect(failed).toBe(true);
+  });
+});
+
+describe("what fails the command", () => {
+  it("is an error, in either format", () => {
+    for (const format of ["human", "json"] as const) {
+      expect(renderReport(result([INPUT]), format).failed, format).toBe(true);
+      expect(renderReport(result([INPUT, LINK]), format).failed, format).toBe(true);
+    }
+  });
+
+  it("is not a warning, unless --strict says so", () => {
+    // The severity is published in the report, and the exit code follows it: a check added in a
+    // minor release must not turn a green job red for a finding nobody has read yet (12.4).
+    for (const format of ["human", "json"] as const) {
+      expect(renderReport(result([LINK]), format).failed, format).toBe(false);
+      expect(renderReport(result([LINK]), format, { strict: true }).failed, format).toBe(true);
+    }
+  });
+
+  it("is nothing at all when nothing was found, strict or not", () => {
+    expect(renderReport(result([]), "json").failed).toBe(false);
+    expect(renderReport(result([]), "json", { strict: true }).failed).toBe(false);
+    expect(renderReport(result([]), "human", { strict: true }).failed).toBe(false);
+  });
+
+  it("counts an error as an error even under --strict", () => {
+    expect(renderReport(result([INPUT]), "human", { strict: true }).failed).toBe(true);
   });
 });
 
@@ -80,6 +123,7 @@ describe("the JSON report", () => {
         },
       ],
     });
+    // Two findings, one of them an error: the command fails.
     expect(failed).toBe(true);
   });
 

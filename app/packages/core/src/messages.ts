@@ -243,6 +243,7 @@ index are all inside it — so it can be handed to someone as it is.
   "cli.validate.description":
     "Detect broken links, missing images, and missing titles (writes no output)",
   "cli.validate.opt.format": "Report format: {supported} (default: human)",
+  "cli.validate.opt.strict": "Fail on warnings as well as errors",
   "cli.help.usage": "Usage:",
   "cli.help.options": "Options:",
   "cli.help.commands": "Commands:",
@@ -256,6 +257,7 @@ index are all inside it — so it can be handed to someone as it is.
   "cli.serving": "Serving at {url} (Ctrl+C to stop)",
   "cli.noIssues": "✓ No issues found ({pages} page(s)).",
   "cli.issues": "✗ {errors} error(s), {warnings} warning(s) in {pages} page(s).",
+  "cli.warningsOnly": "⚠ {warnings} warning(s) in {pages} page(s); no errors.",
   "cli.invalidReportFormat": 'Invalid report format: "{value}" (expected {supported}).',
   "cli.browserOpenFailed": "could not open browser ({command}).",
   "cli.browserOpenFailedNoCommand": "could not open browser.",
@@ -469,6 +471,7 @@ monodocs build
   "cli.validate.description":
     "リンク切れ・画像欠落・タイトル欠落などを検出する（出力は書き出さない）",
   "cli.validate.opt.format": "報告の形式: {supported}（既定: human）",
+  "cli.validate.opt.strict": "エラーだけでなく警告でも失敗させる",
   "cli.help.usage": "使い方:",
   "cli.help.options": "オプション:",
   "cli.help.commands": "コマンド:",
@@ -482,6 +485,7 @@ monodocs build
   "cli.serving": "{url} で配信しています (Ctrl+C で停止)",
   "cli.noIssues": "✓ 問題は見つかりませんでした（{pages} ページ）。",
   "cli.issues": "✗ エラー {errors} 件、警告 {warnings} 件（{pages} ページ）。",
+  "cli.warningsOnly": "⚠ 警告 {warnings} 件（{pages} ページ）。エラーはありません。",
   "cli.invalidReportFormat": '報告の形式が不正です: "{value}"（{supported} のいずれか）。',
   "cli.browserOpenFailed": "ブラウザを開けませんでした（{command}）。",
   "cli.browserOpenFailedNoCommand": "ブラウザを開けませんでした。",
