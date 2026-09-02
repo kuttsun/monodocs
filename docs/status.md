@@ -22,7 +22,7 @@ Last updated: 2026-08-24
 | Page breaks (marker, `pdf.pageBreakLevel`)        | ✅ Done   | v0.11          |
 | Specification sync, diagnostics, `document`       | ✅ Done   | v0.11          |
 | Input root, route aliases, AsciiDoc attributes    | 🚧 Planned| v0.12          |
-| Output size and budget, watermark                 | 🚧 Planned| v0.13          |
+| Output size and budget, watermark, line breaks    | 🚧 Planned| v0.13          |
 | Section numbering, cover, printed table of contents | 🚧 Planned| v0.14        |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
@@ -364,6 +364,17 @@ release rather than as two; the reasoning is under v0.11 in [roadmap.md](roadmap
 - [ ] The text is escaped rather than inserted, so a value containing markup appears as that text
 - [ ] The rule is emitted by core into the print stylesheet, and a document built with a theme that replaces `style.css` still carries it — a theme must not be able to delete "CONFIDENTIAL" from a document that asked for it
 - [ ] There is no image, no per-page control, and no font, angle, or opacity key, on the reason [roadmap.md](roadmap.md) 24.6 gives for a closed key set
+
+**Soft line breaks** ([roadmap.md](roadmap.md) 12.6)
+
+- [ ] `sources.lineBreak` takes `space` (the default), `break`, or `join`, and sits under `sources` rather than under `sources.markdown`, because `join` is a rule about characters and applies to both formats — a key reaching only Markdown would leave half of a mixed document reading differently from the other half
+- [ ] The default `space` produces the bytes the previous release produced, and a test builds an existing fixture unchanged to prove it. The default is not derived from `lang`: a document that declares Japanese is not a document whose Markdown means something different
+- [ ] `break` turns a newline inside a paragraph into a `<br>` in both formats. In AsciiDoc it is `hardbreaks-option` soft-set with the `@` suffix, so a document writing `:hardbreaks-option!:` still wins — the mechanism [roadmap.md](roadmap.md) 17.5 requires, and this key is its first user
+- [ ] `join` removes the newline between two characters of East Asian Width F, W, or H where neither is Hangul, leaves it alone everywhere else, and does not touch `pre` or `code`, where the newline is a line the author drew. The ranges are generated from the Unicode data file, the version is recorded, and a test asserts the table still matches it
+- [ ] The rule `join` applies is recorded as what it is: CSS Text Level 3 §4.1.3 and Level 4 both leave the choice between a space and removal UA-defined, the F/W/H rule was normative in the 2013 Working Draft, and the engines disagree — nine of the 49 `segment-break-transformation-rules` web-platform-tests fail on Chrome 152 and Safari 26.6 and none fail on Firefox 154. Measured in the development image, a Japanese paragraph written one sentence per line carries a 3.58px space between every pair of sentences, and `examples/ja` is affected today
+- [ ] Both values are applied inside the renderers, before the page's text is collected, because `postprocessPages` does not recompute `page.text`. `page.text` and the HTML agree under all three values, so a search result cannot point at text the page does not contain
+- [ ] Search is covered for each value: `break` splits a text node, so the result list can match across a split the in-body highlighting ([roadmap.md](roadmap.md) 22.5) cannot mark, and `join` removes the break before the page's text is collected, so the index stops holding the space `hast-util-to-text` folds that newline into today
+- [ ] [syntax.md](syntax.md) states which rule the default applies — it says only "line breaks" today — and documents Markdown's two explicit hard breaks, the trailing two spaces and the backslash, noting that the first does not survive an editor that trims trailing whitespace. The configuration reference on the site and its Japanese mirror carry the key
 
 ### v0.14: Setting the Printed Page
 
