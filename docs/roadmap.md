@@ -768,6 +768,12 @@ sources:
       - ".adoc"
       - ".asciidoc"
       - ".asc"
+    # Asciidoctor attributes set as defaults rather than locks, so a document that sets its own
+    # wins (v0.12). Attributes that move where files are read from, and the sandbox itself, are
+    # refused naming the attribute and the reason (17.5).
+    # attributes:
+    #   sectnums: true
+    #   product: "Widget"
   # Globs relative to root selecting what may become a page (v0.12). Absent, everything under root
   # is a candidate. exclude subtracts from this, and subtracts last (12.5).
   # include:
@@ -1547,6 +1553,31 @@ configuration file: the file states what every document gets unless it says othe
 is Asciidoctor's own and it is measured rather than assumed: a value ending in `@` is soft-set, and
 with `@asciidoctor/core` 4.0.6 an attribute passed as `""` survives a document's own `:name!:` while
 the same attribute passed as `"@"` does not (12.6).
+
+**The name is validated before it is classified.** A denylist compared against the key as written
+is not a denylist: Asciidoctor reads decoration on the key itself — `name@` is a soft set, and
+`!name`, `name!`, `name!@`, `!name@` are unsets — and every one of those reaches the attribute under
+its bare name. Measured: `allow-uri-read@` walked past a list containing `allow-uri-read`, and a
+build fetched a URL over HTTP and put the response in the output, which is the one thing this
+classification exists to prevent. A name must therefore be bare — lower-case letters, digits,
+underscores, hyphens — and a decorated one is refused rather than stripped, because stripping would
+mean deciding what the decoration meant, and the answer is always something this key does not offer.
+
+**`outfilesuffix` and `relfilesuffix` join the not-configurable set.** They decide what Asciidoctor
+puts on the end of a cross-reference, and the link rewriting matches a known set of extensions to
+turn `xref:b.adoc[]` into a hash route. Measured: `outfilesuffix: ".xyz"` leaves a literal
+`href="b.xyz"` in the single HTML — a dead link inside a document that is supposed to be
+self-contained — and `validate` reports nothing, because nothing about it looks like a broken link.
+
+**Three additions to the classification, from implementing it.** `showtitle` joins the
+not-configurable set: monodocs sets it, and turning it off removes the `h1` that the page title, the
+heading list, and every element ID are built from. `docdir`, `docfile`, `docname`, `docfilesuffix`,
+and `outdir` join it too, for the reason `base_dir` is there — they are what Asciidoctor sets from
+the file it is reading, so setting them from outside moves where a path resolves. And the key does
+not offer **unsetting**: a value of `false`, or a name ending in `!`, is refused, because a
+configuration file states what every document gets unless it says otherwise, and a document unsets an
+attribute for itself with `:name!:`. A value already ending in `@` is refused as well, since that is
+the marker monodocs adds to every value here and writing one would say it twice.
 
 **What safe mode does and does not do.** Asciidoctor's SAFE mode confines `include::` to the base
 directory, and monodocs relies on that (17.3). It does not resolve symbolic links, which Asciidoctor

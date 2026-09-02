@@ -53,7 +53,7 @@ export { readSourceFile, scanSourceFiles, type ScanOptions } from "./scan.js";
 export { detectFormat, FORMAT_EXTENSIONS } from "./sources/detectFormat.js";
 export { toPageId, toRoute } from "./route.js";
 export { markdownRenderer } from "./sources/markdown/renderer.js";
-export { asciidocRenderer } from "./sources/asciidoc/renderer.js";
+export { asciidocRenderer, createAsciidocRenderer } from "./sources/asciidoc/renderer.js";
 export { buildPages, type BuildPagesResult } from "./pipeline/buildPages.js";
 export {
   buildSidebar,

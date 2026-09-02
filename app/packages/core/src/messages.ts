@@ -74,6 +74,29 @@ const EN = {
     '{key} does not accept a negated pattern: "{pattern}". Patterns are combined with OR, so a ' +
     "negated one matches almost every path and selects far more than it looks like it does. " +
     "sources.include selects and sources.exclude subtracts, last.",
+  "config.asciidocAttributeUnset":
+    'sources.asciidoc.attributes cannot unset an attribute: "{name}". A configuration file states ' +
+    "what every document gets unless it says otherwise; a document unsets an attribute for itself " +
+    "with :name!:.",
+  "config.asciidocAttributeFixed":
+    'sources.asciidoc.attributes does not accept "{name}". It decides where a path resolves, or ' +
+    "monodocs depends on it, so it is not a setting a configuration file can move.",
+  "config.asciidocAttributeRefused":
+    'sources.asciidoc.attributes refuses "{name}": it changes where files are read from or what is ' +
+    "produced, which is the boundary monodocs relies on. The sd- namespace belongs to monodocs.",
+  "config.asciidocAttributeNameAtSuffix":
+    'sources.asciidoc.attributes does not accept "{name}" as an attribute name. A trailing @ is how ' +
+    "Asciidoctor marks an attribute the document may override, and monodocs adds it to every value " +
+    "here — writing it into the name would slip the attribute past the classification under its " +
+    "bare name. Write the bare name.",
+  "config.asciidocAttributeName":
+    'sources.asciidoc.attributes does not accept "{name}" as an attribute name. Write the bare ' +
+    "name: lower-case letters, digits, underscores, and hyphens, starting with a letter, a digit, " +
+    "or an underscore.",
+  "config.asciidocAttributeAtSuffix":
+    'sources.asciidoc.attributes value for "{name}" ends in "@": "{value}". A trailing @ is how ' +
+    "Asciidoctor marks an attribute the document may override, and monodocs adds it to every value " +
+    "here, so writing one would say it twice.",
   "config.unsupportedMessageLang":
     'Unsupported message language: "{value}" (supported: {supported}).',
 
@@ -336,6 +359,27 @@ const JA: Record<MessageKey, string> = {
     '{key} は否定パターンを受け付けません: "{pattern}"。パターンは OR で結合されるため、否定パターンは' +
     "ほとんどすべてのパスに当たり、見た目よりはるかに広く選んでしまいます。" +
     "選ぶのは sources.include、引くのは sources.exclude（しかも最後に引く）です。",
+  "config.asciidocAttributeUnset":
+    'sources.asciidoc.attributes では属性を unset できません: "{name}"。設定ファイルは' +
+    "「文書が別のことを言わない限り全文書がこうなる」を述べる場所です。個別に外すのは文書側で " +
+    ":name!: と書いてください。",
+  "config.asciidocAttributeFixed":
+    'sources.asciidoc.attributes は "{name}" を受け付けません。パスの解決先を決める属性か、' +
+    "monodocs 自身が依存している属性であり、設定ファイルから動かせるものではありません。",
+  "config.asciidocAttributeRefused":
+    'sources.asciidoc.attributes は "{name}" を拒否します。どこからファイルを読むか、何を出力するかを' +
+    "変える属性であり、それは monodocs が依存している境界そのものだからです。sd- 名前空間は monodocs のものです。",
+  "config.asciidocAttributeNameAtSuffix":
+    'sources.asciidoc.attributes は "{name}" を属性名として受け付けません。末尾の @ は' +
+    "「文書側が上書きしてよい」ことを表す Asciidoctor の印で、monodocs がここのすべての値に付けます。" +
+    "名前に書くと、その属性が裸の名前のまま分類をすり抜けてしまいます。装飾のない名前を書いてください。",
+  "config.asciidocAttributeName":
+    'sources.asciidoc.attributes は "{name}" を属性名として受け付けません。装飾のない名前を' +
+    "書いてください（英小文字・数字・アンダースコア・ハイフンで、先頭は英小文字・数字・アンダースコア）。",
+  "config.asciidocAttributeAtSuffix":
+    'sources.asciidoc.attributes の "{name}" の値が "@" で終わっています: "{value}"。末尾の @ は' +
+    "「文書側が上書きしてよい」ことを表す Asciidoctor の印で、monodocs がここのすべての値に付けます。" +
+    "自分で書くと二重に述べることになります。",
   "config.unsupportedMessageLang": 'メッセージ言語が不正です: "{value}"（対応: {supported}）。',
 
   "build.inputNotFound": "入力パスが見つかりません: {path}",

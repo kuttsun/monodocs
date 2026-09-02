@@ -15,7 +15,7 @@ import { documentAuthor, documentKeywords, documentSubject } from "./documentMet
 import { resolveLabels } from "./labels.js";
 import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
-import { asciidocRenderer } from "./sources/asciidoc/renderer.js";
+import { createAsciidocRenderer } from "./sources/asciidoc/renderer.js";
 import { buildPages } from "./pipeline/buildPages.js";
 import { buildCustomSidebar, buildSidebar, orderPagesBySidebar } from "./pipeline/buildSidebar.js";
 import { postprocessPages } from "./pipeline/postprocess.js";
@@ -106,11 +106,15 @@ export async function preparePages(
     }
   }
 
-  const { pages, warnings } = await buildPages(sources, [markdownRenderer, asciidocRenderer], {
-    titleTransform: config.sidebarTitleTransform.page,
-    titleFrom: config.sidebarTitleFrom,
-    sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
-  });
+  const { pages, warnings } = await buildPages(
+    sources,
+    [markdownRenderer, createAsciidocRenderer(config.asciidocAttributes)],
+    {
+      titleTransform: config.sidebarTitleTransform.page,
+      titleFrom: config.sidebarTitleFrom,
+      sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
+    },
+  );
   const post = await postprocessPages(pages, {
     inputDir: rootDir,
     sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
