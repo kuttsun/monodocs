@@ -353,8 +353,13 @@ sources:
   `allow-uri-read` は鋭く、`include::` に URL を取りに行かせてビルドを HTTP クライアントに変えます。
   safe mode はこれを止めません——それは safe mode が参照する当の属性だからです。
 - **そもそも受け付けないもの**: サンドボックスである `safe` と `base_dir`、パスの解決先を決める
-  `docdir` / `docfile` / `docname` / `docfilesuffix` / `outdir`、そしてページタイトル・見出し一覧・
-  すべての要素 ID の元になっている `showtitle`。
+  `docdir` / `docfile` / `docname` / `docfilesuffix` / `outdir`、相互参照の見た目——ひいてはそれを
+  hash route に変えられるかどうか——を決める `outfilesuffix` / `relfilesuffix`、そしてページタイトル・
+  見出し一覧・すべての要素 ID の元になっている `showtitle`。
+
+属性名は装飾なしで書いてください（英小文字・数字・アンダースコア・ハイフン）。`@` や `!` を含む名前は
+拒否します。Asciidoctor はそれらを soft set や unset として読むので、その属性が裸の名前のまま、上の
+分類をすり抜けて届いてしまうからです。
 
 unset は提供しません（値 `false` と末尾が `!` の名前は拒否）。個別に外すのは文書側の仕事だからです。
 末尾が `@` の値も拒否します。それは「文書側が上書きしてよい」ことを表す Asciidoctor の印であり、

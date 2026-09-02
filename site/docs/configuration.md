@@ -390,8 +390,14 @@ monodocs relies on:
   `allow-uri-read` is the sharpest of these: it lets `include::` fetch a URL, turning a build into an
   HTTP client, and safe mode does not stop it — it is exactly the attribute safe mode consults.
 - **Not accepted at all**: `safe` and `base_dir`, which are the sandbox; `docdir`, `docfile`,
-  `docname`, `docfilesuffix`, and `outdir`, which decide where a path resolves; and `showtitle`,
-  which the page title, the heading list, and every element ID are built from.
+  `docname`, `docfilesuffix`, and `outdir`, which decide where a path resolves; `outfilesuffix` and
+  `relfilesuffix`, which decide what a cross-reference looks like and so whether it can be turned
+  into a hash route; and `showtitle`, which the page title, the heading list, and every element ID
+  are built from.
+
+An attribute name must be written bare — lower-case letters, digits, underscores, and hyphens. A
+name carrying `@` or `!` is refused, because Asciidoctor reads those as a soft set or an unset and
+the attribute would reach it under its bare name, past the classification above.
 
 Unsetting is not offered — a value of `false`, or a name ending in `!`, is refused — because a
 document unsets an attribute for itself. A value ending in `@` is refused too: that is Asciidoctor's

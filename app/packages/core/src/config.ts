@@ -845,7 +845,26 @@ const ASCIIDOC_FIXED_ATTRIBUTES = [
   "docfilesuffix",
   "outdir",
   "showtitle",
+  // What Asciidoctor puts on the end of a cross-reference. The link rewriting matches a known set
+  // of extensions to turn `xref:b.adoc[]` into a hash route, so a suffix outside that set leaves a
+  // literal `href="b.xyz"` in the single HTML — a dead link, and one `validate` does not report.
+  "outfilesuffix",
+  "relfilesuffix",
 ];
+
+/**
+ * 裸の属性名の形（Asciidoctor が受け付ける文字集合）。
+ *
+ * The classification is a denylist, and a denylist compared against an unnormalised key is not a
+ * denylist at all: Asciidoctor reads decoration on the key itself — `name@` is a soft set, `!name`
+ * and `name!` and `name!@` and `!name@` are unsets — and every one of those spellings reaches the
+ * attribute under its bare name. `allow-uri-read@` therefore walked past a list containing
+ * `allow-uri-read`, and a build fetched a URL over HTTP and put the response in the output. So the
+ * name has to be bare before it is classified, and anything else is refused rather than stripped:
+ * stripping would mean deciding what the decorated form meant, and the answer is always something
+ * this key does not offer.
+ */
+const ASCIIDOC_ATTRIBUTE_NAME = /^[a-z0-9_][a-z0-9_-]*$/;
 
 /**
  * 名前を挙げて拒否する Asciidoctor 属性（17.5）。
@@ -882,11 +901,27 @@ function resolveAsciidocAttributes(
     // Asciidoctor は属性名を小文字として扱うので、分類も小文字で行う。
     const name = rawName.trim().toLowerCase();
 
-    // 末尾の `!` は unset。文書が自分で `:name!:` と書けばよく、設定ファイルからは提供しない。
-    if (name.endsWith("!") || rawValue === false) {
+    // `!` は unset。前置・後置のどちらの綴りもある。文書が自分で `:name!:` と書けばよく、
+    // 設定ファイルからは提供しない。
+    if (name.startsWith("!") || name.endsWith("!") || rawValue === false) {
       throw new MonodocsError(
         "config/invalid",
         t("config.asciidocAttributeUnset", { name: rawName }),
+      );
+    }
+    // 名前の末尾の `@` も soft set の印であり、値と同じく monodocs が付ける。名前に書かれると
+    // 裸の名前のまま分類をすり抜けるので、値の場合とは別の文言で拒否する。
+    if (name.endsWith("@")) {
+      throw new MonodocsError(
+        "config/invalid",
+        t("config.asciidocAttributeNameAtSuffix", { name: rawName }),
+      );
+    }
+    // ここまでで装飾は落ちているはずなので、裸の名前であることを確かめてから分類する。
+    if (!ASCIIDOC_ATTRIBUTE_NAME.test(name)) {
+      throw new MonodocsError(
+        "config/invalid",
+        t("config.asciidocAttributeName", { name: rawName }),
       );
     }
     if (ASCIIDOC_FIXED_ATTRIBUTES.includes(name)) {

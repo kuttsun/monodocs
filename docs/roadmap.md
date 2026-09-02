@@ -1554,6 +1554,21 @@ is Asciidoctor's own and it is measured rather than assumed: a value ending in `
 with `@asciidoctor/core` 4.0.6 an attribute passed as `""` survives a document's own `:name!:` while
 the same attribute passed as `"@"` does not (12.6).
 
+**The name is validated before it is classified.** A denylist compared against the key as written
+is not a denylist: Asciidoctor reads decoration on the key itself — `name@` is a soft set, and
+`!name`, `name!`, `name!@`, `!name@` are unsets — and every one of those reaches the attribute under
+its bare name. Measured: `allow-uri-read@` walked past a list containing `allow-uri-read`, and a
+build fetched a URL over HTTP and put the response in the output, which is the one thing this
+classification exists to prevent. A name must therefore be bare — lower-case letters, digits,
+underscores, hyphens — and a decorated one is refused rather than stripped, because stripping would
+mean deciding what the decoration meant, and the answer is always something this key does not offer.
+
+**`outfilesuffix` and `relfilesuffix` join the not-configurable set.** They decide what Asciidoctor
+puts on the end of a cross-reference, and the link rewriting matches a known set of extensions to
+turn `xref:b.adoc[]` into a hash route. Measured: `outfilesuffix: ".xyz"` leaves a literal
+`href="b.xyz"` in the single HTML — a dead link inside a document that is supposed to be
+self-contained — and `validate` reports nothing, because nothing about it looks like a broken link.
+
 **Three additions to the classification, from implementing it.** `showtitle` joins the
 not-configurable set: monodocs sets it, and turning it off removes the `h1` that the page title, the
 heading list, and every element ID are built from. `docdir`, `docfile`, `docname`, `docfilesuffix`,

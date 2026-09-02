@@ -84,6 +84,15 @@ const EN = {
   "config.asciidocAttributeRefused":
     'sources.asciidoc.attributes refuses "{name}": it changes where files are read from or what is ' +
     "produced, which is the boundary monodocs relies on. The sd- namespace belongs to monodocs.",
+  "config.asciidocAttributeNameAtSuffix":
+    'sources.asciidoc.attributes does not accept "{name}" as an attribute name. A trailing @ is how ' +
+    "Asciidoctor marks an attribute the document may override, and monodocs adds it to every value " +
+    "here — writing it into the name would slip the attribute past the classification under its " +
+    "bare name. Write the bare name.",
+  "config.asciidocAttributeName":
+    'sources.asciidoc.attributes does not accept "{name}" as an attribute name. Write the bare ' +
+    "name: lower-case letters, digits, underscores, and hyphens, starting with a letter, a digit, " +
+    "or an underscore.",
   "config.asciidocAttributeAtSuffix":
     'sources.asciidoc.attributes value for "{name}" ends in "@": "{value}". A trailing @ is how ' +
     "Asciidoctor marks an attribute the document may override, and monodocs adds it to every value " +
@@ -360,6 +369,13 @@ const JA: Record<MessageKey, string> = {
   "config.asciidocAttributeRefused":
     'sources.asciidoc.attributes は "{name}" を拒否します。どこからファイルを読むか、何を出力するかを' +
     "変える属性であり、それは monodocs が依存している境界そのものだからです。sd- 名前空間は monodocs のものです。",
+  "config.asciidocAttributeNameAtSuffix":
+    'sources.asciidoc.attributes は "{name}" を属性名として受け付けません。末尾の @ は' +
+    "「文書側が上書きしてよい」ことを表す Asciidoctor の印で、monodocs がここのすべての値に付けます。" +
+    "名前に書くと、その属性が裸の名前のまま分類をすり抜けてしまいます。装飾のない名前を書いてください。",
+  "config.asciidocAttributeName":
+    'sources.asciidoc.attributes は "{name}" を属性名として受け付けません。装飾のない名前を' +
+    "書いてください（英小文字・数字・アンダースコア・ハイフンで、先頭は英小文字・数字・アンダースコア）。",
   "config.asciidocAttributeAtSuffix":
     'sources.asciidoc.attributes の "{name}" の値が "@" で終わっています: "{value}"。末尾の @ は' +
     "「文書側が上書きしてよい」ことを表す Asciidoctor の印で、monodocs がここのすべての値に付けます。" +

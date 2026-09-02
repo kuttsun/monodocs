@@ -1,3 +1,5 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -134,6 +136,77 @@ describe("what the key refuses", () => {
 
   it("refuses a value already ending in the soft-set marker", async () => {
     await expect(loadWith('product: "Widget@"')).rejects.toThrow(/ends in/i);
+  });
+
+  /**
+   * The classification is a denylist, and Asciidoctor reads decoration on the key itself: `name@` is
+   * a soft set, and `!name`, `name!`, `name!@`, `!name@` are unsets. Every one of those reaches the
+   * attribute under its bare name, so a denylist compared against the written key is not a denylist
+   * at all — `allow-uri-read@` walked past a list containing `allow-uri-read`, and a build fetched a
+   * URL over HTTP and put the response in the output.
+   */
+  it("refuses every decorated spelling of a name it would otherwise refuse", async () => {
+    for (const name of [
+      '"allow-uri-read@"',
+      '"!allow-uri-read"',
+      '"allow-uri-read!"',
+      '"allow-uri-read!@"',
+      '"!allow-uri-read@"',
+      '"safe@"',
+      '"!safe"',
+      '"docinfo@"',
+      '"backend@"',
+      '"sd-title@"',
+      '"!sectids"',
+    ]) {
+      await expect(loadWith(`${name}: "x"`)).rejects.toThrow();
+    }
+  });
+
+  it("refuses a name that is not a bare attribute name", async () => {
+    for (const name of ['""', '" "', '"a=b"', '"a b"', '"-leading"', '"パス"']) {
+      await expect(loadWith(`${name}: "x"`)).rejects.toThrow();
+    }
+  });
+
+  /**
+   * `outfilesuffix` decides what Asciidoctor puts on the end of a cross-reference, and the link
+   * rewriting matches a known set of extensions to turn `xref:b.adoc[]` into a hash route. Set to
+   * anything outside that set it leaves a literal `href="b.xyz"` in the single HTML — a dead link,
+   * and one `validate` does not report.
+   */
+  it("does not accept what decides the shape of a cross-reference", async () => {
+    for (const name of ["outfilesuffix", "relfilesuffix"]) {
+      await expect(loadWith(`${name}: ".xyz"`)).rejects.toThrow(/does not accept/i);
+    }
+  });
+});
+
+describe("the boundary the classification exists for", () => {
+  it("does not let a build become an HTTP client, whatever the attribute is spelled like", async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200);
+      response.end("SECRET-CONTENT-FROM-REMOTE-SERVER\n");
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+
+    try {
+      await writeFile(
+        join(dir, "a.adoc"),
+        `= A\n\nBefore.\n\ninclude::http://127.0.0.1:${port}/leak.adoc[]\n\nAfter.\n`,
+      );
+
+      await expect(
+        build('sources:\n  asciidoc:\n    attributes:\n      "allow-uri-read@": true\n'),
+      ).rejects.toThrow(/does not accept/i);
+
+      // Without the attribute at all, safe mode declines the URI and nothing is fetched.
+      const html = await build("title: T\n");
+      expect(html).not.toContain("SECRET-CONTENT-FROM-REMOTE-SERVER");
+    } finally {
+      server.close();
+    }
   });
 });
 

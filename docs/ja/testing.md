@@ -37,7 +37,7 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 | 項目           | 結果       |
 | -------------- | ---------- |
 | Test Files     | 56 passed  |
-| Tests          | 594 passed |
+| Tests          | 598 passed |
 | typecheck      | 通過       |
 | format:check   | 通過       |
 | package:verify | 通過       |
