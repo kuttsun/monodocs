@@ -94,6 +94,51 @@ describe("an include that escapes the input root", () => {
   });
 });
 
+describe("the four ways a first attempt let outside content through", () => {
+  it("is not fooled by a //// inside a listing block", async () => {
+    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
+    await writeFile(join(root, "a.adoc"), "= A\n\n----\n////\n----\n\ninclude::linked.adoc[]\n");
+
+    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+  });
+
+  it("finds an include inside a one-line conditional", async () => {
+    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
+    await writeFile(join(root, "a.adoc"), "= A\n\nifndef::not-set[include::linked.adoc[]]\n");
+
+    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+  });
+
+  it("accepts a ] inside the target, which Asciidoctor does", async () => {
+    await symlink(join(outside, "secret.adoc"), join(root, "we]ird.adoc"));
+    await writeFile(join(root, "a.adoc"), "= A\n\ninclude::we]ird.adoc[]\n");
+
+    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+  });
+
+  /**
+   * Asciidoctor does not resolve symbolic links, so the directory it resolves the next level
+   * against is the lexical one. Resolving the real path and recursing from there looked at
+   * `root/sub/evil.adoc`, which does not exist, while Asciidoctor read `root/evil.adoc`.
+   */
+  it("keeps the lexical directory when a link leads to the next include", async () => {
+    await mkdir(join(root, "sub"), { recursive: true });
+    await writeFile(join(root, "sub", "part.adoc"), "include::evil.adoc[]\n");
+    await symlink(join(root, "sub", "part.adoc"), join(root, "link.adoc"));
+    await symlink(join(outside, "secret.adoc"), join(root, "evil.adoc"));
+    await writeFile(join(root, "index.adoc"), "= A\n\ninclude::link.adoc[]\n");
+
+    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+  });
+
+  it("is not hidden by a BOM or by lone carriage returns", async () => {
+    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
+    await writeFile(join(root, "a.adoc"), "\uFEFF= A\r\rinclude::linked.adoc[]\r");
+
+    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+  });
+});
+
 describe("what the check leaves alone", () => {
   it("allows an include that stays inside the root", async () => {
     await mkdir(join(root, "sub"), { recursive: true });
@@ -138,11 +183,17 @@ describe("what the check leaves alone", () => {
     await expect(build()).resolves.toBeTypeOf("string");
   });
 
-  it("ignores an include inside a comment block", async () => {
+  /**
+   * Deliberately over-approximated. Modelling `////` meant tracking block structure, and the first
+   * attempt got it wrong in the permissive direction: a `////` inside a listing block put the
+   * checker into a comment state Asciidoctor was not in, and the include after it leaked. No block
+   * structure is modelled now, so an include inside a comment block is checked like any other.
+   */
+  it("checks an include inside a comment block too, rather than modelling block structure", async () => {
     await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
     await writeFile(join(root, "a.adoc"), "= A\n\n////\ninclude::linked.adoc[]\n////\n\nBody.\n");
 
-    expect(await build()).toContain("Body.");
+    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
   });
 
   /**
@@ -159,6 +210,33 @@ describe("what the check leaves alone", () => {
     );
 
     expect(await build()).toContain("Shared paragraph.");
+  });
+
+  it("does not recurse into an include Asciidoctor does not read as AsciiDoc", async () => {
+    // A code sample showing AsciiDoc syntax. Asciidoctor puts the `.rb` contents in a listing block
+    // without preprocessing them, so the `include::` inside it is text rather than a directive.
+    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
+    await writeFile(join(root, "sample.rb"), "# demo\ninclude::linked.adoc[]\n");
+    await writeFile(
+      join(root, "a.adoc"),
+      "= A\n\n[source,ruby]\n----\ninclude::sample.rb[]\n----\n",
+    );
+
+    expect(await build()).toContain("demo");
+  });
+
+  it("honours the backslash that makes the directive literal", async () => {
+    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
+    await writeFile(join(root, "a.adoc"), "= A\n\n\\include::linked.adoc[]\n");
+
+    expect(await build()).toContain("include::linked.adoc[]");
+  });
+
+  it("leaves a target whose first character is a space, which is not a directive", async () => {
+    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
+    await writeFile(join(root, "a.adoc"), "= A\n\ninclude:: linked.adoc[]\n");
+
+    expect(await build()).toBeTypeOf("string");
   });
 
   it("leaves a Markdown-only document untouched", async () => {

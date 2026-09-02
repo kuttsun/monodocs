@@ -1589,6 +1589,19 @@ softening it — an included file's real path is checked against the input root,
 outside it is refused with the path it resolved to. The same check covers images (20.2), where the
 identical hole exists.
 
+**The check over-approximates on purpose.** A static check that models another parser diverges
+from it, and every divergence in the permissive direction is a hole. A first attempt tracked `////`
+comment blocks and matched the directive only at the start of a line, and four documents got outside
+content into the output through the gaps: a `////` inside a listing block put the checker into a
+comment state Asciidoctor was not in; `ifndef::x[include::y[]]` put the directive somewhere the
+checker did not look; a `]` in a target failed a pattern Asciidoctor accepts; and following a
+symbolic link changed the directory the checker resolved the next level against, while Asciidoctor
+kept the lexical one. So no block structure is modelled and no condition is evaluated: every
+`include::` in the text is checked, wherever it sits, and the recursion keeps the lexical path.
+What that costs is a false refusal — an include inside a comment block, inside a false `ifdef`, or
+quoted in a code sample, whose target happens to resolve to a real file outside the root. What it
+buys is that a divergence stops the build instead of leaking.
+
 **The check is static, and an `IncludeProcessor` is not used.** The obvious implementation is an
 extension that validates a target and hands the include back to Asciidoctor, and the API does not
 allow it: `handles` receives the document and the target but has no route to the reader, and the
