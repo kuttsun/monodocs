@@ -132,6 +132,31 @@ describe("the ways a static scan of the source text used to let content through"
   });
 });
 
+describe("safe mode recovering a path out of the jail", () => {
+  /**
+   * Safe mode does not refuse a target that climbs out of the jail — it **recovers** it by dropping
+   * the `..` and reads the recovered path instead ("include file has illegal reference to ancestor
+   * of jail; recovering automatically"). A check that resolved the target the plain way looked at a
+   * path that does not exist, skipped it, and let Asciidoctor read a symbolic link out of the tree.
+   */
+  it("checks the path Asciidoctor recovers, not the one the target spells", async () => {
+    await mkdir(join(root, "docs"), { recursive: true });
+    await symlink(join(outside, "secret.adoc"), join(root, "docs", "linked.adoc"));
+    await writeFile(join(root, "docs", "a.adoc"), "= A\n\ninclude::../linked.adoc[]\n");
+
+    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+  });
+
+  it("allows the recovered path when it stays inside the root", async () => {
+    await mkdir(join(root, "sub"), { recursive: true });
+    // `../part.adoc` from a jail of `root/sub` recovers to `root/sub/part.adoc`, which is inside.
+    await writeFile(join(root, "sub", "_part.adoc"), "Recovered paragraph.\n");
+    await writeFile(join(root, "sub", "a.adoc"), "= A\n\ninclude::../_part.adoc[]\n");
+
+    expect(await build()).toContain("Recovered paragraph.");
+  });
+});
+
 describe("what the check leaves alone", () => {
   it("allows an include that stays inside the root", async () => {
     await mkdir(join(root, "sub"), { recursive: true });
@@ -151,15 +176,19 @@ describe("what the check leaves alone", () => {
   });
 
   /**
-   * A lexical escape was already refused by safe mode, but as an "Unresolved directive" paragraph
-   * left in the output rather than as a build that stops. The check reaches it first now, so the
-   * two ways of leaving the root are refused the same way and say the same thing. That is a
-   * behaviour change for a document that carried a broken `../` include and built anyway.
+   * A lexical escape is not an escape. Safe mode recovers it into the jail rather than refusing it,
+   * so `../outside/secret.adoc` from a jail of the root becomes `root/outside/secret.adoc` — a path
+   * that does not exist here, which Asciidoctor reports as a missing include. There is nothing for
+   * the boundary to refuse, and an earlier version of it refused this only because it resolved the
+   * target differently from Asciidoctor.
    */
-  it("refuses a lexical escape too, rather than leaving a broken paragraph in the output", async () => {
+  it("leaves a lexical escape to safe mode, which recovers it into the jail", async () => {
     await writeFile(join(root, "a.adoc"), "= A\n\ninclude::../outside/secret.adoc[]\n");
 
-    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+    const html = await build();
+
+    expect(html).not.toContain("SECRET-FROM-OUTSIDE");
+    expect(html).toContain("Unresolved directive");
   });
 
   it("does not choke on an include that does not exist", async () => {

@@ -52,13 +52,14 @@ export function createIncludeBoundary(
   registry.includeProcessor(function (this: {
     handles(fn: (doc: unknown, target: string) => boolean): void;
     process(fn: () => void): void;
+    prefer(): void;
   }) {
     this.handles((doc, target) => {
       const base = readerDirectory(doc);
       // 基準が取れないときは判断材料が無い。Asciidoctor の safe mode に任せる。
       if (base === undefined) return false;
 
-      const candidate = resolve(base, target);
+      const candidate = resolvedPath(doc, target, base);
       const real = safeReal(candidate);
       // 存在しないものは Asciidoctor が「見つからない」と報告する。ここで先回りしない。
       if (real === undefined) return false;
@@ -71,6 +72,10 @@ export function createIncludeBoundary(
     });
     // handles が true を返すことは無いので、ここへは来ない。契約上必要なので置いてある。
     this.process(() => {});
+    // Asciidoctor は `handles` が true を返した最初の processor だけを使う。この境界は必ず false を
+    // 返すので順番に意味は無い……が、`prefer()` された別の processor が前に並ぶと、そちらが include を
+    // 引き取って境界には尋ねられない。先頭に置いて、少なくとも後から普通に登録されたものには先んじる。
+    this.prefer();
   });
 
   return {
@@ -102,6 +107,28 @@ function includeOutsideError(violation: IncludeViolation, relativePath: string):
       root: violation.root,
     }),
   );
+}
+
+/**
+ * Asciidoctor が実際に読むパス。
+ *
+ * Not `resolve(base, target)`, which was the first attempt and diverged: safe mode does not refuse a
+ * target that climbs out of the jail, it **recovers** it by dropping the `..` — "include file has
+ * illegal reference to ancestor of jail; recovering automatically". Measured, `include::../x.adoc[]`
+ * from a jail of `root/docs` resolves to `root/docs/x.adoc` and not to `root/x.adoc`, so a check
+ * that resolved it the plain way looked at a path that does not exist, skipped it, and let
+ * Asciidoctor read a symbolic link out of the tree. `normalizeSystemPath` is the same call
+ * Asciidoctor makes, so there is nothing left to diverge.
+ */
+function resolvedPath(doc: unknown, target: string, base: string): string {
+  const normalize = (doc as { normalizeSystemPath?: (t: string, b: string) => unknown } | undefined)
+    ?.normalizeSystemPath;
+  if (typeof normalize === "function") {
+    const resolved = normalize.call(doc, target, base);
+    if (typeof resolved === "string" && resolved !== "") return resolved;
+  }
+  /* c8 ignore next 2 -- Asciidoctor always provides it; the fallback keeps a check rather than none. */
+  return resolve(base, target);
 }
 
 /**

@@ -1609,9 +1609,24 @@ refusals — an include inside a comment block or a false `ifdef` — and still 
 target built from an attribute reference. Asking Asciidoctor has none of those problems, because it
 is asked exactly when an include is about to happen.
 
-So there is nothing this check does not cover, and no false refusal to accept. A lexical escape,
-which safe mode already refused as an "Unresolved directive" left in the output, is refused by the
-check first, so both ways of leaving the root stop the build and say the same thing.
+**The path is resolved by Asciidoctor too, not just the target read from it.** Safe mode does not
+refuse a target that climbs out of the jail — it **recovers** it by dropping the `..` and reads the
+recovered path. Measured, `include::../x.adoc[]` from a jail of `root/docs` resolves to
+`root/docs/x.adoc`, not to `root/x.adoc`, so resolving the target the plain way looked at a path that
+does not exist, skipped it, and let a symbolic link out of the tree be read. `normalizeSystemPath` is
+the call Asciidoctor itself makes, so there is nothing left to diverge — and the same fix removes the
+false refusal the divergence caused in the other direction, where a recovered path that stayed inside
+the root was rejected.
+
+A lexical escape is therefore not an escape: safe mode recovers it into the jail, and what the reader
+sees is Asciidoctor's own "Unresolved directive" when nothing is there.
+
+**What the check assumes.** Asciidoctor uses the first include processor whose `handles` returns
+true, and a processor registered globally with `prefer()` is placed ahead of this one — it would take
+the include and the boundary would never be asked. monodocs registers no other processor, so its own
+CLI is unaffected; a program embedding `@monodocs/core` alongside global Asciidoctor extensions is
+the case where the assumption matters. This boundary calls `prefer()` itself, which puts it ahead of
+anything registered normally.
 
 **Markdown gets no equivalent.** A `vars:` map substituted into Markdown text is a template language:
 it needs an escape for the literal spelling, a rule for an undefined name, a rule for code blocks
