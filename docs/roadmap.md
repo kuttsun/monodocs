@@ -1581,11 +1581,28 @@ the marker monodocs adds to every value here and writing one would say it twice.
 
 **What safe mode does and does not do.** Asciidoctor's SAFE mode confines `include::` to the base
 directory, and monodocs relies on that (17.3). It does not resolve symbolic links, which Asciidoctor
-documents: a link inside the tree pointing outside it is followed. The architecture document's claim
-that safe mode "prevents external access" is therefore too strong. v0.12 makes it true instead of
+documents: a link inside the tree pointing outside it is followed. Measured, and worse than the claim
+suggests — a symlinked file and a symlinked directory both pulled content from outside the jail into
+the output, while `../` and an absolute path were refused. The architecture document's claim that
+safe mode "prevents external access" is therefore too strong. v0.12 makes it true instead of
 softening it — an included file's real path is checked against the input root, and one that resolves
 outside it is refused with the path it resolved to. The same check covers images (20.2), where the
 identical hole exists.
+
+**The check is static, and an `IncludeProcessor` is not used.** The obvious implementation is an
+extension that validates a target and hands the include back to Asciidoctor, and the API does not
+allow it: `handles` receives the document and the target but has no route to the reader, and the
+cursor a `process` call is given reports `.` for a document converted from a string rather than the
+directory the include resolves against. Taking the directive over therefore means reimplementing
+Asciidoctor's own path resolution as well as `lines`, `tag`, and `tags` — a larger surface than the
+hole, and against 17.3's promise that the directive is left to Asciidoctor. So the targets are read
+out of the source text before conversion, resolved, and checked, recursively and with a visited set.
+
+What that does not cover is a target monodocs cannot resolve without running Asciidoctor: one built
+from an attribute reference (`include::{partialsdir}/x.adoc[]`). It is skipped rather than guessed
+at, and recorded here rather than implied. A lexical escape, which safe mode already refused as an
+"Unresolved directive" left in the output, is now refused by the check first, so both ways of leaving
+the root stop the build and say the same thing.
 
 **Markdown gets no equivalent.** A `vars:` map substituted into Markdown text is a template language:
 it needs an escape for the literal spelling, a rule for an undefined name, a rule for code blocks

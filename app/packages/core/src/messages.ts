@@ -101,6 +101,10 @@ const EN = {
     'Unsupported message language: "{value}" (supported: {supported}).',
 
   // ---- build ----
+  "asciidoc.includeOutside":
+    'include::{target}[] in "{path}" resolves outside the input root: "{resolved}" is not under ' +
+    '"{root}". Asciidoctor\'s safe mode confines an include lexically and does not resolve symbolic ' +
+    "links, so a link inside the tree pointing outside it would be followed.",
   "build.inputNotFound": "Input path not found: {path}",
   "build.inputUnsupportedFile":
     "Input file is not a supported source: {path} (supported extensions: {extensions}).",
@@ -382,6 +386,10 @@ const JA: Record<MessageKey, string> = {
     "自分で書くと二重に述べることになります。",
   "config.unsupportedMessageLang": 'メッセージ言語が不正です: "{value}"（対応: {supported}）。',
 
+  "asciidoc.includeOutside":
+    '"{path}" の include::{target}[] が入力ルートの外へ解決されます: "{resolved}" は "{root}" の' +
+    "配下ではありません。Asciidoctor の safe mode は include を字句的にしか閉じ込めず、" +
+    "シンボリックリンクを解決しないため、ツリーの内側から外側を指すリンクはたどられてしまいます。",
   "build.inputNotFound": "入力パスが見つかりません: {path}",
   "build.inputUnsupportedFile":
     "入力ファイルの形式に対応していません: {path}（対応する拡張子: {extensions}）。",

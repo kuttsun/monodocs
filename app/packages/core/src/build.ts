@@ -16,6 +16,7 @@ import { resolveLabels } from "./labels.js";
 import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
 import { createAsciidocRenderer } from "./sources/asciidoc/renderer.js";
+import { assertIncludesInsideRoot } from "./sources/asciidoc/includeBoundary.js";
 import { buildPages } from "./pipeline/buildPages.js";
 import { buildCustomSidebar, buildSidebar, orderPagesBySidebar } from "./pipeline/buildSidebar.js";
 import { postprocessPages } from "./pipeline/postprocess.js";
@@ -105,6 +106,10 @@ export async function preparePages(
       throw new MonodocsError("input/no-sources", t("build.noSources", { path: config.inputDir }));
     }
   }
+
+  // `include::` の読み取り先を、Asciidoctor が読む前に確かめる（17.5）。safe mode は字句的にしか
+  // 閉じ込めず、シンボリックリンクを解決しないため、この検査が無いとツリーの外の内容が束に入る。
+  await assertIncludesInsideRoot(sources, rootDir);
 
   const { pages, warnings } = await buildPages(
     sources,

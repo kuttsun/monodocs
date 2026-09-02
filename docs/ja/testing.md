@@ -36,8 +36,8 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 
 | 項目           | 結果       |
 | -------------- | ---------- |
-| Test Files     | 56 passed  |
-| Tests          | 598 passed |
+| Test Files     | 57 passed  |
+| Tests          | 612 passed |
 | typecheck      | 通過       |
 | format:check   | 通過       |
 | package:verify | 通過       |
@@ -80,6 +80,7 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `build.anchors.test.ts` … e2e（Markdown ↔ AsciiDoc 双方向のファイル跨ぎ見出しアンカー・脚注アンカー・存在しないアンカーの `validate` 警告）
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render（偽レンダラ注入で config 連携・SVG 埋め込みを検証。実 Chromium がある環境でだけ end-to-end 描画とランタイム未注入ゲートを確認）
 - `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入・`serveSite` が pdf/both 設定でも HTML を配信し明示 `-o` を尊重すること）
+- `build.include-boundary.test.ts` … e2e（`include::` の読み取り境界。ファイルへのシンボリックリンクとディレクトリへのシンボリックリンクがどちらも target と解決先を示して拒否されること、ネストした include も拒否されること、`validate` が `include/outside-input` を持つエラーとして報告すること、同じツリーを 1 階層上をルートにしてビルドすると外部の内容が実際に出力へ入る（穴そのものの主張）こと、内側に留まる include とシンボリックリンクは許されること、字句的な脱出が「Unresolved directive」ではなく検査で拒否されるようになったこと、存在しない include と循環 include で壊れないこと、`////` コメントブロック内の include を無視すること、属性参照から組み立てた target を見送ること、Markdown だけの文書に触れないこと）
 - `build.asciidoc-attributes.test.ts` … e2e（`sources.asciidoc.attributes`。体裁の属性が文書一式に効くこと、書き手独自の属性が形で認識されること、文書が設定値を上書きし設定されたフラグを切れること——このキーが存在する理由である soft set——、読み込み先を動かす属性が名指しで拒否されること、`sd-` 名前空間が拒否されること、サンドボックスとパスを決める属性がそもそも受理されないこと、分類が小文字化した名前で行われること、unset がどちらの綴りでも拒否されること、末尾が `@` の値が拒否されること、解決後のマップのすべての値に soft set の印が付いていること）
 - `build.aliases.test.ts` … e2e（route の別名。frontmatter の `aliases:` と AsciiDoc のカンマ区切り `:sd-aliases:`、1 つの route の複数の綴りが 1 つの別名に正規化されること、対応表が `siteDataJson` に載り、誰も宣言しなければ空であること、`hidden` なページも別名を保つこと、別名がサイドバーにもページ一覧にも生成された article にも現れないこと、実在の route が別名を隠して警告し対応表から落ちること、2 つのページが 1 つの別名を主張すればどちらの綴りでも拒否されること、両方が隠された場合は失敗せず警告 2 件になること、1 ページが同じ別名を 2 回書いても無害であること）
 - `themes/default/app.aliases.test.ts` … クライアント側を happy-dom で（古い route が今指しているページを描画すること、hash が現在の route に置き換わること、置換をまたいでアンカーが残ること、対応表が持っていても別名が実在のページを隠さないこと、どちらにも当たらない hash は従来のフォールバックに任せること、後の hashchange だけでなく初回読み込みでも解決すること、継承されたオブジェクトのプロパティを別名と誤認しないこと）

@@ -36,6 +36,7 @@ export const DIAGNOSTIC_CODES = [
   "image/outside-input",
   "image/too-large",
   "image/unsupported",
+  "include/outside-input",
   "init/exists",
   "input/no-sources",
   "input/not-found",
