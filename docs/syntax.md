@@ -17,7 +17,11 @@ monodocs serve examples/ja
 
 In addition to CommonMark, GitHub Flavored Markdown is enabled via `remark-gfm`.
 
-- Headings (`#` to `######`), paragraphs, line breaks
+- Headings (`#` to `######`), paragraphs
+- **Line breaks**: a newline inside a paragraph is not a line break
+  ([cross-format specification](#common-specification-for-single-html-bundling-cross-format)). An explicit
+  break is two trailing spaces or a trailing backslash (`\`). A raw `<br>` is dropped with the rest of the
+  raw HTML, so the backslash is the form that survives an editor that trims trailing whitespace
 - Emphasis (`*em*` / `**strong**`), inline code, links, images
 - Lists (ordered / unordered), nesting, **task lists** (`- [ ]` / `- [x]`)
 - Blockquotes, horizontal rules, **tables (GFM tables)**, **strikethrough** (`~~text~~`), **autolinks**
@@ -35,7 +39,11 @@ In addition to CommonMark, GitHub Flavored Markdown is enabled via `remark-gfm`.
 
 Because conversion is delegated to Asciidoctor.js's standard conversion, most AsciiDoc syntax can be used as is.
 
-- Document title (`= Title`), section headings (`==` and beyond), paragraphs, line breaks
+- Document title (`= Title`), section headings (`==` and beyond), paragraphs
+- **Line breaks**: a newline inside a paragraph is not a line break
+  ([cross-format specification](#common-specification-for-single-html-bundling-cross-format)). An explicit
+  break is ` +` at the end of a line, `[%hardbreaks]` on one block, or `:hardbreaks-option:` (alias
+  `:hardbreaks:`) for a whole document
 - Lists (ordered / unordered / **description lists** / checklists), nesting, continuation lines
 - Inline formatting such as emphasis and monospace, links, cross-references
 - Tables, **admonitions** (NOTE / TIP / IMPORTANT / WARNING / CAUTION). Normalized to the
@@ -58,6 +66,7 @@ To bundle multiple files into a single file, the following normalization is appl
 - **Routing**: A route is generated from the relative path with the extension removed (`index` → `/`), and within the single HTML, pseudo page switching is done via hash routes (`#/setup/install`).
 - **Inter-file link conversion**: Markdown `.md` / `.adoc` links, AsciiDoc `xref:`, and links equivalent to the converted `.html` are converted to `#/route` (hash routes). A link that carries an anchor (`other.md#sec`) is converted to that page's prefixed element ID (`#{page-id}-sec`) instead, which lands on the anchor in both the HTML and the PDF.
 - **In-page anchors**: `#id` (a hash not starting with `/`) is treated as an in-page anchor, displaying the page containing the target element and scrolling to it. This works for footnotes, internal references, and direct URLs (`docs.html#id`).
+- **Line breaks inside a paragraph**: in both formats a newline inside a paragraph joins the lines rather than breaking them — CommonMark's rule and Asciidoctor's alike — and the browser renders that newline as a space. Between two East Asian characters the result depends on the engine: Firefox removes the space, and Chromium and WebKit keep it, so a Japanese paragraph written one sentence per line shows a space between the sentences in the PDF, which Chromium produces. Each format's own hard-break spellings are listed above; [roadmap.md](roadmap.md) 12.6 records the measurement and the configuration key that will make the choice explicit.
 - **Unifying admonitions / alerts**: Markdown GFM alerts (`> [!NOTE]`, etc.) and AsciiDoc admonitions (the `.admonitionblock` in Asciidoctor output) are normalized in postprocess into a common `<div class="admonition admonition-TYPE">` structure. Since the 5 types (NOTE / TIP / IMPORTANT / WARNING / CAUTION) match across both formats, a single set of CSS and colors is shared ([postprocess.ts](../app/packages/core/src/pipeline/postprocess.ts)).
 
 ## Limitations / Unsupported (with Reasons)
