@@ -47,6 +47,37 @@ describe("normalising an alias", () => {
     expect(toAliasRoute("/")).toBe("/");
     expect(toAliasRoute("  /setup/install  ")).toBe("/setup/install");
   });
+
+  /**
+   * An alias is usually a route rather than a path, and a route can end in something that looks
+   * like an extension: `/v1.2` is the route of `v1.2.md`. Stripping whatever `extname` finds would
+   * turn it into `/v1` — an alias pointing at a page that does not exist, colliding with whatever
+   * `/v1.3` normalised to.
+   */
+  it("strips a source extension and not whatever looks like one", () => {
+    expect(toAliasRoute("/v1.2")).toBe("/v1.2");
+    expect(toAliasRoute("/v1.3")).toBe("/v1.3");
+    expect(toAliasRoute("v1.2.md")).toBe("/v1.2");
+    expect(toAliasRoute("/release-2024.10")).toBe("/release-2024.10");
+    // The configured set decides, so a document using custom extensions is normalised by them.
+    expect(toAliasRoute("/page.txt", [".txt"])).toBe("/page");
+    expect(toAliasRoute("/page.md", [".txt"])).toBe("/page.md");
+  });
+});
+
+describe("a route that itself contains a dot", () => {
+  it("can be reached through an alias, and the two do not collide", async () => {
+    await writeFile(join(dir, "index.md"), "# Home\n");
+    await writeFile(
+      join(dir, "guide", "current.md"),
+      "---\ntitle: Current\naliases:\n  - /v1.2\n  - /v1.3\n---\n\n# Current\n",
+    );
+
+    expect(aliasTable(await build())).toEqual({
+      "/v1.2": "/guide/current",
+      "/v1.3": "/guide/current",
+    });
+  });
 });
 
 describe("declaring an alias", () => {

@@ -160,20 +160,24 @@
   }
 
   /**
-   * 別名を現在の route に解決する（15.5）。
+   * 別名の表を引く（15.5）。
    *
-   * Consulted only when the hash matches no real route, so an alias can never shadow a page. The
-   * anchor is split off first and put back afterwards: it names a heading, not a path, so renaming
-   * the file that holds the heading does not change it. The address bar is rewritten to the current
-   * route with `replace`, so the link a reader copies next is the one that will still work, and the
-   * dead alias does not become a back-button stop.
+   * Consulted only when the hash matches no real route, so an alias can never shadow a page.
+   * `hasOwnProperty` rather than a plain lookup, so an inherited property such as `constructor`
+   * is not mistaken for an alias.
    */
-  function resolveAlias(hash) {
-    var cut = hash.indexOf("#");
-    var route = cut === -1 ? hash : hash.slice(0, cut);
-    var anchor = cut === -1 ? "" : hash.slice(cut);
-    if (!Object.prototype.hasOwnProperty.call(aliases, route)) return null;
-    return aliases[route] + anchor;
+  function lookupAlias(route) {
+    return Object.prototype.hasOwnProperty.call(aliases, route) ? aliases[route] : null;
+  }
+
+  /** hash を現在の route（＋あればアンカー）へ書き換える。履歴に停留所を作らない。 */
+  function replaceHash(route, anchor) {
+    var next = "#" + encodeURI(route + (anchor ? "#" + anchor : ""));
+    if (window.history && typeof window.history.replaceState === "function") {
+      window.history.replaceState(null, "", next);
+    } else {
+      window.location.replace(next);
+    }
   }
 
   function onRouteChange() {
@@ -190,20 +194,32 @@
       return;
     }
 
-    // route とアンカーを分ける。`#/setup/install#configuration` の後半は見出しの ID である。
-    var cut = h.indexOf("#");
-    var route = cut === -1 ? h : h.slice(0, cut);
-    var anchor = cut === -1 ? "" : h.slice(cut + 1);
+    var route = h || "/";
+    var anchor = "";
 
-    if (route && !pageByRoute[route]) {
-      var target = resolveAlias(h);
-      if (target) {
-        if (window.history && typeof window.history.replaceState === "function") {
-          window.history.replaceState(null, "", "#" + encodeURI(target));
-        } else {
-          window.location.replace("#" + encodeURI(target));
+    // The whole hash is tried as a route, and as an alias, **before** it is split. A route may
+    // itself contain "#" — `old#name.md` produces `/old#name` — so splitting first would make that
+    // page unreachable through its own address. Only a hash that names nothing is a candidate for
+    // being a route plus a heading.
+    if (!pageByRoute[route]) {
+      var whole = lookupAlias(route);
+      if (whole !== null) {
+        route = whole;
+        replaceHash(route, "");
+      } else {
+        var cut = route.indexOf("#");
+        if (cut !== -1) {
+          anchor = route.slice(cut + 1);
+          route = route.slice(0, cut);
+          if (!pageByRoute[route]) {
+            var aliased = lookupAlias(route);
+            // アンカーは置換をまたいで残る。パスではなく見出しを指しているからである。
+            if (aliased !== null) {
+              route = aliased;
+              replaceHash(route, anchor);
+            }
+          }
         }
-        route = target.indexOf("#") === -1 ? target : target.slice(0, target.indexOf("#"));
       }
     }
 

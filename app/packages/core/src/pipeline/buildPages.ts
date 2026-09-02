@@ -26,6 +26,11 @@ export type BuildPagesOptions = {
    * 明示タイトル（frontmatter `title` / `:sd-title:`）はどちらでも常に最優先。
    */
   titleFrom?: TitleFrom;
+  /**
+   * 設定で解決済みのソース拡張子。別名の正規化で、取り除いてよい拡張子を判断するために使う
+   * （`/v1.2` の `.2` を拡張子と誤解しないため。route.ts の `toAliasRoute`）。
+   */
+  sourceExtensions?: string[];
 };
 
 /** ファイル名（拡張子除く）からタイトルを導出する。 */
@@ -153,7 +158,9 @@ export async function buildPages(
       description: meta.description,
       // Normalised here so that a spelling cannot decide a collision; validated once every page is
       // known, because whether an alias is shadowed depends on routes that may not exist yet (15.5).
-      aliases: dedupe((meta.aliases ?? []).map(toAliasRoute)),
+      aliases: dedupe(
+        (meta.aliases ?? []).map((alias) => toAliasRoute(alias, options.sourceExtensions)),
+      ),
       rawSource: source.raw,
       html: rendered.html,
       text: rendered.text,

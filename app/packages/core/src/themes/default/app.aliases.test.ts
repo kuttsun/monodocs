@@ -8,6 +8,18 @@ import { loadTheme } from "../index";
  * matches no page, so it can never shadow one; when it does resolve, the address bar is rewritten
  * to the current route, so the link a reader copies next is the one that will still work.
  */
+/**
+ * Every mount runs the app's IIFE again, and it registers its own `hashchange` listener. Left
+ * attached, a listener from an earlier test acts on the current DOM with its own page table — and
+ * one whose alias resolves will rewrite the hash before the current instance reads it. So the
+ * listeners each mount registers are recorded and removed before the next one.
+ */
+const mounted: [string, EventListenerOrEventListenerObject][] = [];
+
+function unmountClients(): void {
+  for (const [type, listener] of mounted.splice(0)) window.removeEventListener(type, listener);
+}
+
 async function mountClient(
   routes: string[],
   aliases: Record<string, string>,
@@ -32,7 +44,20 @@ async function mountClient(
     aliases,
   };
 
-  new Function(theme.appJs)();
+  const add = window.addEventListener.bind(window);
+  window.addEventListener = ((
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    ...rest: unknown[]
+  ) => {
+    mounted.push([type, listener]);
+    return (add as unknown as (...args: unknown[]) => void)(type, listener, ...rest);
+  }) as typeof window.addEventListener;
+  try {
+    new Function(theme.appJs)();
+  } finally {
+    window.addEventListener = add;
+  }
 }
 
 function visibleRoute(): string | null {
@@ -53,6 +78,7 @@ function currentHash(): string {
 
 describe("route aliases in the client", () => {
   beforeEach(() => {
+    unmountClients();
     window.location.hash = "";
     document.body.innerHTML = "";
   });
@@ -110,6 +136,37 @@ describe("route aliases in the client", () => {
 
     expect(visibleRoute()).toBe("/guide/install");
     expect(currentHash()).toBe("/guide/install");
+  });
+
+  /**
+   * A route can contain "#": `old#name.md` produces `/old#name`, and `encodeURI` leaves the "#"
+   * alone, so that is what the sidebar link and the address bar both hold. Splitting the hash
+   * before trying it as a route would send the reader to the first page instead.
+   */
+  it("reaches a page whose own route contains a hash", async () => {
+    await mountClient(["/", "/old#name"], {});
+
+    navigate("/old#name");
+
+    expect(visibleRoute()).toBe("/old#name");
+    expect(currentHash()).toBe("/old#name");
+  });
+
+  it("resolves an alias whose old route contains a hash", async () => {
+    await mountClient(["/", "/guide/new"], { "/old#name": "/guide/new" });
+
+    navigate("/old#name");
+
+    expect(visibleRoute()).toBe("/guide/new");
+    expect(currentHash()).toBe("/guide/new");
+  });
+
+  it("prefers a real route over splitting, even when the prefix is also a page", async () => {
+    await mountClient(["/", "/old", "/old#name"], {});
+
+    navigate("/old#name");
+
+    expect(visibleRoute()).toBe("/old#name");
   });
 
   it("does not treat an inherited object property as an alias", async () => {
