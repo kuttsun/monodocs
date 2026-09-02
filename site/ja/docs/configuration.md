@@ -299,6 +299,7 @@ Noto Sans CJK); ✅ (U+2705, e.g. Noto Color Emoji). Install a font that covers 
 | ----------------------------- | -------- | ---------------------------- | ---- |
 | `sources.markdown.extensions` | string[] | `[.md, .markdown]`           | Markdown として描画する拡張子。 |
 | `sources.asciidoc.extensions` | string[] | `[.adoc, .asciidoc, .asc]`   | AsciiDoc として描画する拡張子。 |
+| `sources.asciidoc.attributes` | object   | 未指定                       | Asciidoctor 属性を、ロックではなく**既定値**として設定します。自分で指定した文書が勝ちます。下記参照。 |
 | `sources.include`             | string[] | 未指定                       | ページ化しうるものを選ぶ glob（`root` からの相対）。未指定なら `root` 配下すべてが候補。`sources.exclude` はここから引き、しかも最後に引く。否定パターン（`!…`）はどちらのリストでも拒否されます。パターンは OR で結合されるため、否定パターンはほとんどすべてのパスに当たるからです。 |
 | `sources.exclude`             | string[] | `[]`                         | ページ化しない glob（`root` からの相対パスに対して評価）。既定リストを置き換えず、**そこへ追加される**。 |
 | `sources.excludeDefaults`     | boolean  | `true`                       | 既定の除外リストを適用するか。`_` 始まりのファイルも束ねたいツリーでは `false` にする。 |
@@ -312,6 +313,57 @@ Noto Sans CJK); ✅ (U+2705, e.g. Noto Color Emoji). Install a font that covers 
 sources:
   exclude: [drafts/**] # これも、_partials/** なども除外されたまま
 ```
+
+#### `sources.asciidoc.attributes`（文書一式で共有する値） {#asciidoc-attributes}
+
+Asciidoctor は属性で設定するものです。文書内の `:sectnums:` は効きますが、番号を振りたい文書一式は
+それを全ファイルに書くことになり、ファイル間で共有したい値——製品名、リリース番号、顧客名——に至っては
+置き場所がありません。
+
+```yaml
+sources:
+  asciidoc:
+    attributes:
+      sectnums: true
+      product: "Widget"
+      release: "7.2"
+```
+
+ここで設定した属性は**ロックではなく既定値**なので、自分で指定した文書が勝ちます。
+
+```asciidoc
+= リリースノート
+:product: Gadget
+
+出荷: {product}   // Widget ではなく Gadget
+```
+
+これは Asciidoctor の API の既定とは逆で、設定ファイルに対して書き手が期待する挙動です。設定ファイル
+とは「文書が別のことを言わない限り全文書がこうなる」を述べる場所です。個別に切るのも同じで、文書側で
+`:sectnums!:` と書きます。
+
+中身は素通しせず分類します。境界を動かす属性があるからです。
+
+- **許可**し、ビルドごとに設定できるもの: `sectnums` / `sectnumlevels` / `experimental` /
+  `idprefix` / `idseparator` / `tabsize` / `toclevels` などの体裁と構造の属性。
+- **書き手が定義するもの**: monodocs が押さえていない名前すべて。列挙ではなく形で認識します——
+  monodocs が主張しない属性名は、あなたのものです。
+- **拒否**し、属性名と理由を告げるもの: `allow-uri-read` / `docinfo` / `backend` / `data-uri` /
+  `imagesdir` / `source-highlighter`、そして monodocs に属する `sd-*` 名前空間。とくに
+  `allow-uri-read` は鋭く、`include::` に URL を取りに行かせてビルドを HTTP クライアントに変えます。
+  safe mode はこれを止めません——それは safe mode が参照する当の属性だからです。
+- **そもそも受け付けないもの**: サンドボックスである `safe` と `base_dir`、パスの解決先を決める
+  `docdir` / `docfile` / `docname` / `docfilesuffix` / `outdir`、そしてページタイトル・見出し一覧・
+  すべての要素 ID の元になっている `showtitle`。
+
+unset は提供しません（値 `false` と末尾が `!` の名前は拒否）。個別に外すのは文書側の仕事だからです。
+末尾が `@` の値も拒否します。それは「文書側が上書きしてよい」ことを表す Asciidoctor の印であり、
+monodocs がここのすべての値に付けるものです。
+
+**Markdown には対応物を用意しません。** Markdown の本文に `vars:` を差し込むのはテンプレート言語です。
+リテラルとして書く方法、未定義の名前の扱い、コードブロックの扱い、再帰の可否——そのどれもが仕様です。
+AsciiDoc に属性があるのは AsciiDoc に属性があるからです。共有したい値がある文書一式は、それを使う
+ページを AsciiDoc で書けます。形式を混在できるとはそういうことです。
 
 コマンドラインで直接名指ししたファイル（`monodocs build ./docs/_draft.md`）は、パターンに関わらず
 束に入ります。名指しは明示的な選択であり、パターンが決めるのはディレクトリ走査が何を拾うかだけ

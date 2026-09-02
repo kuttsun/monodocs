@@ -36,8 +36,8 @@ Inside a devcontainer, or when you are in the container's shell, you can run `pn
 
 | Item           | Result     |
 | -------------- | ---------- |
-| Test Files     | 55 passed  |
-| Tests          | 580 passed |
+| Test Files     | 56 passed  |
+| Tests          | 594 passed |
 | typecheck      | passed     |
 | format:check   | passed     |
 | package:verify | passed     |
@@ -80,6 +80,7 @@ Main test targets:
 - `build.anchors.test.ts` … e2e (cross-file heading anchors in both directions between Markdown and AsciiDoc, footnote anchors, `validate` warning for an anchor that does not exist)
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render (verifies config integration and SVG embedding via fake renderer injection; end-to-end rendering and runtime-not-injected gating are confirmed only in environments with a real Chromium)
 - `build.v04.test.ts` … e2e (`watchSite` rebuild, `serveSite` delivery and live-reload injection, `serveSite` serving HTML even with pdf/both configuration and respecting an explicit `-o`)
+- `build.asciidoc-attributes.test.ts` … e2e (`sources.asciidoc.attributes`: a presentational attribute applied across the document set, an author's own attribute recognised by shape, a document overriding a configured value and turning a configured flag off — the soft set the key exists for — the attributes that move where files are read from refused by name, the `sd-` namespace refused, the sandbox and the path-deciding attributes not accepted at all, classification by the lower-cased name, unsetting refused in both spellings, a value already ending in `@` refused, and the resolved map carrying the soft-set marker on every value)
 - `build.aliases.test.ts` … e2e (route aliases: `aliases:` in frontmatter and a comma-separated `:sd-aliases:` in AsciiDoc, normalisation of the spellings of one route into one alias, the table published in `siteDataJson` and empty when nothing declares an alias, a hidden page keeping its aliases, an alias reaching neither the sidebar nor the page list nor the rendered articles, a real route shadowing an alias with a warning and the alias dropped from the table, two pages claiming one alias refused whatever spelling each used, two shadowed claims warning twice rather than failing, and one page listing the same alias twice being harmless)
 - `themes/default/app.aliases.test.ts` … the client half in happy-dom (an old route rendering the page it now points at, the hash replaced with the current route, an anchor kept across the substitution, an alias never shadowing a real page even when the table carries one, a hash matching neither left to the existing fallback, resolution on first load and not only on a later hash change, and an inherited object property not treated as an alias)
 - `build.input-root.test.ts` … e2e (`root` and `sources.include`: one document built from a `README.md` at the top and pages under `docs/`, routes taken relative to the root, an image resolved against the root, `exclude` subtracting last, the built-in list still applying and still anchored at the root, a directory no include pattern can reach left out, a configuration writing neither key behaving as before, `root` resolving to the input directory or to the directory holding a single-file input, `input` and `root` accepted only when they name the same directory — including from the command line — and `root` without `input` pointing the build at the root rather than at the default `./docs`)

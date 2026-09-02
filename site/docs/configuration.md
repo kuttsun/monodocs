@@ -335,6 +335,7 @@ the bundle entirely.
 | ------------------------------ | ---------- | ----------------------------- | ----------- |
 | `sources.markdown.extensions`  | string[]   | `[.md, .markdown]`            | Extensions rendered as Markdown. |
 | `sources.asciidoc.extensions`  | string[]   | `[.adoc, .asciidoc, .asc]`    | Extensions rendered as AsciiDoc. |
+| `sources.asciidoc.attributes`  | object     | unset                         | Asciidoctor attributes set as **defaults**, not locks: a document that sets its own wins. See below. |
 | `sources.include`              | string[]   | unset                         | Glob patterns, relative to `root`, selecting what may become a page. Unset, everything under `root` is a candidate. `sources.exclude` subtracts from this, and subtracts last. A negated pattern (`!…`) is refused in both lists: patterns are combined with OR, so a negated one matches almost every path. |
 | `sources.exclude`              | string[]   | `[]`                          | Glob patterns, matched against the path relative to `root`, whose matches are never turned into pages. **Added to the built-in list**, not replacing it. |
 | `sources.excludeDefaults`      | boolean    | `true`                        | Whether the built-in list applies. Set `false` for a tree that really does bundle its `_`-prefixed files. |
@@ -348,6 +349,59 @@ surfaces far from its cause.
 sources:
   exclude: [drafts/**] # kept out, and so are _partials/** and the rest
 ```
+
+#### `sources.asciidoc.attributes` (values a document set shares) {#asciidoc-attributes}
+
+Asciidoctor is configured by attributes. `:sectnums:` in one document works, but a document set that
+wants numbering has to repeat it in every file, and a value shared across files — a product name, a
+release, a customer — has nowhere to live at all.
+
+```yaml
+sources:
+  asciidoc:
+    attributes:
+      sectnums: true
+      product: "Widget"
+      release: "7.2"
+```
+
+An attribute set here is a **default, not a lock**, so a document that sets its own wins:
+
+```asciidoc
+= Release notes
+:product: Gadget
+
+Shipping {product}.   // Gadget, not Widget
+```
+
+That is the opposite of what Asciidoctor's API does by default, and it is what an author expects from
+a configuration file: the file states what every document gets *unless it says otherwise*. A document
+turns one off for itself the same way, with `:sectnums!:`.
+
+The contents are classified rather than passed through, because some attributes move the boundary
+monodocs relies on:
+
+- **Allowed**, and settable per build: presentational and structural attributes such as `sectnums`,
+  `sectnumlevels`, `experimental`, `idprefix`, `idseparator`, `tabsize`, `toclevels`.
+- **Author-defined**: any name that is not one monodocs holds back. These are recognised by shape
+  rather than enumerated — an attribute name monodocs does not claim is yours.
+- **Refused**, naming the attribute and why: `allow-uri-read`, `docinfo`, `backend`, `data-uri`,
+  `imagesdir`, `source-highlighter`, and the `sd-*` namespace, which belongs to monodocs.
+  `allow-uri-read` is the sharpest of these: it lets `include::` fetch a URL, turning a build into an
+  HTTP client, and safe mode does not stop it — it is exactly the attribute safe mode consults.
+- **Not accepted at all**: `safe` and `base_dir`, which are the sandbox; `docdir`, `docfile`,
+  `docname`, `docfilesuffix`, and `outdir`, which decide where a path resolves; and `showtitle`,
+  which the page title, the heading list, and every element ID are built from.
+
+Unsetting is not offered — a value of `false`, or a name ending in `!`, is refused — because a
+document unsets an attribute for itself. A value ending in `@` is refused too: that is Asciidoctor's
+marker for an attribute the document may override, and monodocs adds it to every value here.
+
+**Markdown gets no equivalent.** A `vars:` map substituted into Markdown text is a template language:
+it needs an escape for the literal spelling, a rule for an undefined name, a rule for code blocks,
+and a decision about recursion. AsciiDoc has attributes because AsciiDoc has attributes. A document
+set that needs shared values can write the pages that use them in AsciiDoc, which is what mixing
+formats is for.
 
 A file named directly on the command line (`monodocs build ./docs/_draft.md`) is bundled whatever the
 patterns say. Naming it is a choice; the patterns only decide what a directory scan picks up.

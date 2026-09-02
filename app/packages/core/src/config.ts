@@ -323,7 +323,17 @@ function buildConfigFileSchema() {
             .strict()
             .optional(),
           asciidoc: z
-            .object({ extensions: z.array(z.string()).optional() })
+            .object({
+              extensions: z.array(z.string()).optional(),
+              /**
+               * Asciidoctor 属性を、ロックではなく**既定値**として設定する（17.5）。
+               * 中身は素通しせず分類する。境界を動かす属性は拒否し、サンドボックスそのものは
+               * そもそも受け付けない。
+               */
+              attributes: z
+                .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+                .optional(),
+            })
             .strict()
             .optional(),
           /**
@@ -577,6 +587,11 @@ export type ResolvedConfig = {
   asciidocExtensions: string[];
   /** Glob patterns selecting what may become a page. Empty means everything under `rootDir`. */
   include: string[];
+  /**
+   * 解決済みの Asciidoctor 属性。値はすべて `@` 付き（soft set）なので、文書が自分で
+   * 指定すればそちらが勝つ（17.5）。
+   */
+  asciidocAttributes: Record<string, string>;
   exclude: string[];
   /** サイドバーの生成方式（"folder" = フォルダ構造 / "custom" = sidebarItems）。 */
   sidebarMode: SidebarMode;
@@ -811,6 +826,89 @@ function configBaseFor(input: string): string {
   return existsSync(input) && statSync(input).isFile() ? dirname(input) : input;
 }
 
+/**
+ * 設定ファイルからは触らせない Asciidoctor 属性（17.5）。
+ *
+ * `safe` and `base_dir` are the sandbox, and a sandbox a configuration file can widen is a sandbox
+ * in name. The rest decide where a path resolves — `docdir`, `docfile`, and their relatives are what
+ * Asciidoctor sets from the file it is reading — so setting them from outside moves the boundary the
+ * same way. `showtitle` is here because monodocs depends on it: turning it off removes the `h1` the
+ * page title, the heading list, and the element IDs are all built from.
+ */
+const ASCIIDOC_FIXED_ATTRIBUTES = [
+  "safe",
+  "base_dir",
+  "base-dir",
+  "docdir",
+  "docfile",
+  "docname",
+  "docfilesuffix",
+  "outdir",
+  "showtitle",
+];
+
+/**
+ * 名前を挙げて拒否する Asciidoctor 属性（17.5）。
+ *
+ * `allow-uri-read` lets `include::` fetch a URL, which turns a build into an HTTP client — and safe
+ * mode does not stop it, because it is exactly the attribute safe mode consults. The rest move where
+ * files are read from or what is produced. `sd-*` is monodocs' own namespace (13.2).
+ */
+const ASCIIDOC_REFUSED_ATTRIBUTES = [
+  "allow-uri-read",
+  "docinfo",
+  "docinfo1",
+  "docinfo2",
+  "backend",
+  "data-uri",
+  "imagesdir",
+  "source-highlighter",
+];
+
+/**
+ * `sources.asciidoc.attributes` を分類し、Asciidoctor へ渡せる形に解決する（17.5）。
+ *
+ * Every value leaves here with a trailing `@`, which is Asciidoctor's own marker for a soft set:
+ * measured with `@asciidoctor/core` 4.0.6, an attribute passed as `""` overrides a document's own
+ * `:name!:` while the same attribute passed as `"@"` does not. That is the difference between a lock
+ * and a default, and a configuration file states what every document gets **unless it says
+ * otherwise**.
+ */
+function resolveAsciidocAttributes(
+  raw: Record<string, string | number | boolean> | undefined,
+): Record<string, string> {
+  const resolved: Record<string, string> = {};
+  for (const [rawName, rawValue] of Object.entries(raw ?? {})) {
+    // Asciidoctor は属性名を小文字として扱うので、分類も小文字で行う。
+    const name = rawName.trim().toLowerCase();
+
+    // 末尾の `!` は unset。文書が自分で `:name!:` と書けばよく、設定ファイルからは提供しない。
+    if (name.endsWith("!") || rawValue === false) {
+      throw new MonodocsError(
+        "config/invalid",
+        t("config.asciidocAttributeUnset", { name: rawName }),
+      );
+    }
+    if (ASCIIDOC_FIXED_ATTRIBUTES.includes(name)) {
+      throw new MonodocsError("config/invalid", t("config.asciidocAttributeFixed", { name }));
+    }
+    if (ASCIIDOC_REFUSED_ATTRIBUTES.includes(name) || name.startsWith("sd-")) {
+      throw new MonodocsError("config/invalid", t("config.asciidocAttributeRefused", { name }));
+    }
+
+    const value = rawValue === true ? "" : String(rawValue);
+    // 末尾の `@` は soft set の印であり、monodocs が付ける。書かれていると意味が二重になる。
+    if (value.endsWith("@")) {
+      throw new MonodocsError(
+        "config/invalid",
+        t("config.asciidocAttributeAtSuffix", { name, value }),
+      );
+    }
+    resolved[name] = value + "@";
+  }
+  return resolved;
+}
+
 /** 否定 glob（`!` 始まり）を拒否する。受け入れると静かに誤読されるため（12.5）。 */
 function assertNoNegatedGlob(patterns: string[], key: string): void {
   const negated = patterns.find((pattern) => pattern.trimStart().startsWith("!"));
@@ -982,6 +1080,7 @@ export async function loadConfig(
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
     include: fileConfig.sources?.include ?? [],
     exclude,
+    asciidocAttributes: resolveAsciidocAttributes(fileConfig.sources?.asciidoc?.attributes),
     sidebarMode: fileConfig.sidebar?.mode ?? "folder",
     sidebarItems: fileConfig.sidebar?.items ?? [],
     sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,
