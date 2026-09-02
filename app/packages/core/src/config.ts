@@ -811,6 +811,14 @@ function configBaseFor(input: string): string {
   return existsSync(input) && statSync(input).isFile() ? dirname(input) : input;
 }
 
+/** 否定 glob（`!` 始まり）を拒否する。受け入れると静かに誤読されるため（12.5）。 */
+function assertNoNegatedGlob(patterns: string[], key: string): void {
+  const negated = patterns.find((pattern) => pattern.trimStart().startsWith("!"));
+  if (negated !== undefined) {
+    throw new MonodocsError("config/invalid", t("config.negatedGlob", { key, pattern: negated }));
+  }
+}
+
 function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
   if (options.inputDir) {
     const inputConfigPath = join(
@@ -914,11 +922,20 @@ export async function loadConfig(
     rootDir = configBaseFor(resolve(cwd, inputDir));
   } else {
     rootDir = resolveConfigRelativePath(configBaseDir, fileConfig.root);
+    // The root is what routes, images, and `include::` are resolved against, so a file cannot be
+    // one. Left unchecked it half works: a single page builds, and only a relative image reveals
+    // that the base is a file. The check is skipped when the path does not exist, so the missing
+    // input is still reported as missing rather than as the wrong shape.
+    if (existsSync(rootDir) && !statSync(rootDir).isDirectory()) {
+      throw new MonodocsError("config/invalid", t("config.rootNotDirectory", { root: rootDir }));
+    }
     // With a root written and no input, the root is what the build is pointed at. Falling back to
     // the default `./docs` here would make `root: "."` fail on a repository that has no such
     // directory, which is exactly the repository shape this key exists for.
     inputDir = explicitInput ?? rootDir;
-    if (explicitInput !== undefined) {
+    // A path that does not exist cannot be told from a directory, so comparing it would turn a
+    // missing file into a disagreement about roots. Left to the build, which reports it as missing.
+    if (explicitInput !== undefined && existsSync(resolve(cwd, explicitInput))) {
       const inputBase = configBaseFor(resolve(cwd, explicitInput));
       if (resolve(cwd, inputBase) !== resolve(cwd, rootDir)) {
         throw new MonodocsError(
@@ -928,6 +945,15 @@ export async function loadConfig(
       }
     }
   }
+
+  // A negated glob is refused rather than accepted and misread. picomatch ORs the patterns of an
+  // array, so `["docs/**", "!docs/drafts/**"]` matches everything — the second pattern matches
+  // every path outside `docs/drafts`, which is most of them — and the drafts stay in the bundle.
+  // The pruning reads a pattern's static prefix, which for `!foo/**` is `foo`, so it would also
+  // walk exactly the directory the author meant to leave out and skip the ones they meant to keep.
+  // Two keys already say both things: `include` selects and `exclude` subtracts, last (12.5).
+  assertNoNegatedGlob(fileConfig.sources?.include ?? [], "sources.include");
+  assertNoNegatedGlob(sourcesExclude ?? sidebarExclude ?? [], "sources.exclude");
 
   // 設定ファイルの output.format は zod で検証済みだが、CLI の --format は生文字列で渡るため
   // ここで検証する（不正値が resolveOutputs の both 分岐へ落ちるのを防ぐ）。

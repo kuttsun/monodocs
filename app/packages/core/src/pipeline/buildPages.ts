@@ -7,7 +7,7 @@ import type {
   TitleTransform,
 } from "../types.js";
 import { type Diagnostic, MonodocsError, warn } from "../diagnostics.js";
-import { toPageId, toRoute } from "../route.js";
+import { toAliasRoute, toPageId, toRoute } from "../route.js";
 import { applyTitleTransform, DEFAULT_TITLE_TRANSFORM } from "./titleTransform.js";
 import { t } from "../messages.js";
 
@@ -26,6 +26,11 @@ export type BuildPagesOptions = {
    * 明示タイトル（frontmatter `title` / `:sd-title:`）はどちらでも常に最優先。
    */
   titleFrom?: TitleFrom;
+  /**
+   * 設定で解決済みのソース拡張子。別名の正規化で、取り除いてよい拡張子を判断するために使う
+   * （`/v1.2` の `.2` を拡張子と誤解しないため。route.ts の `toAliasRoute`）。
+   */
+  sourceExtensions?: string[];
 };
 
 /** ファイル名（拡張子除く）からタイトルを導出する。 */
@@ -151,6 +156,11 @@ export async function buildPages(
       order: meta.order,
       hidden: meta.hidden,
       description: meta.description,
+      // Normalised here so that a spelling cannot decide a collision; validated once every page is
+      // known, because whether an alias is shadowed depends on routes that may not exist yet (15.5).
+      aliases: dedupe(
+        (meta.aliases ?? []).map((alias) => toAliasRoute(alias, options.sourceExtensions)),
+      ),
       rawSource: source.raw,
       html: rendered.html,
       text: rendered.text,
@@ -161,6 +171,8 @@ export async function buildPages(
     });
   }
 
+  resolveAliases(pages, warnings);
+
   // order（明示順）→ route の順に並べる。
   pages.sort((a, b) => {
     const ao = a.order ?? Number.MAX_SAFE_INTEGER;
@@ -170,4 +182,53 @@ export async function buildPages(
   });
 
   return { pages, warnings };
+}
+
+function dedupe(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+/**
+ * 別名の隠蔽と重複を、全ページが揃ってから判定する（15.5）。
+ *
+ * Shadowing is decided first and only warns, because a real route always wins: an alias that could
+ * shadow a page would make a page unreachable, and the page is the thing a reader asked for. The
+ * warning says so rather than the alias silently taking precedence — or silently doing nothing.
+ *
+ * Duplicates are decided afterwards, on what survives, and are an error: two pages answering to one
+ * name would be settled by scan order, which is not something an author can reason about. Doing it
+ * in this order means two pages claiming an alias that is also a real route produce two warnings and
+ * no error, because once both are dropped there is nothing left to be ambiguous about.
+ */
+function resolveAliases(pages: Page[], warnings: Diagnostic[]): void {
+  const routes = new Map(pages.map((page) => [page.route, page.relativePath]));
+  const claimed = new Map<string, string>();
+
+  for (const page of pages) {
+    const kept: string[] = [];
+    for (const alias of page.aliases) {
+      const shadowing = routes.get(alias);
+      if (shadowing !== undefined) {
+        warnings.push(
+          warn(
+            "page/alias-shadowed",
+            t("pages.aliasShadowed", { alias, path: page.relativePath, page: shadowing }),
+            { path: page.relativePath },
+          ),
+        );
+        continue;
+      }
+
+      const first = claimed.get(alias);
+      if (first !== undefined) {
+        throw new MonodocsError(
+          "page/duplicate-alias",
+          t("pages.aliasCollision", { alias, first, second: page.relativePath }),
+        );
+      }
+      claimed.set(alias, page.relativePath);
+      kept.push(alias);
+    }
+    page.aliases = kept;
+  }
 }

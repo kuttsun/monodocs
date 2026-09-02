@@ -109,6 +109,7 @@ export async function preparePages(
   const { pages, warnings } = await buildPages(sources, [markdownRenderer, asciidocRenderer], {
     titleTransform: config.sidebarTitleTransform.page,
     titleFrom: config.sidebarTitleFrom,
+    sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
   });
   const post = await postprocessPages(pages, {
     inputDir: rootDir,

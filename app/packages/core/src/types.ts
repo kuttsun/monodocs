@@ -81,6 +81,11 @@ export type PageMeta = {
   order?: number;
   hidden?: boolean;
   description?: string;
+  /**
+   * 著者が書いた、このページの古い route（Markdown `aliases` / AsciiDoc `:sd-aliases:`）。
+   * 正規化前の生の文字列。正規化と衝突判定は buildPages が行う（15.5）。
+   */
+  aliases?: string[];
 };
 
 /** 共通ページモデル。すべての形式はここへ正規化される。 */
@@ -95,6 +100,12 @@ export type Page = {
   order?: number;
   hidden?: boolean;
   description?: string;
+  /**
+   * 正規化済みの、このページが応答する古い route（15.5）。実 route に隠されたものと
+   * 重複するものは buildPages が取り除いてあるので、ここに残るのは有効な別名だけ。
+   * ページではないので、サイドバー・検索インデックス・前後ナビには現れない。
+   */
+  aliases: string[];
 
   rawSource: string;
   html: string;

@@ -36,5 +36,25 @@ export function toPageMeta(raw: Record<string, unknown>, headingTitle?: string):
     meta.description = raw.description.trim();
   }
 
+  // Markdown writes a YAML list, AsciiDoc writes one attribute, so a comma-separated string is the
+  // only shape `:sd-aliases:` can take. Both are accepted from either format rather than one being
+  // rejected for being written the other way; the values are normalised in buildPages (15.5).
+  const aliases = toStringList(raw.aliases);
+  if (aliases.length > 0) meta.aliases = aliases;
+
   return meta;
+}
+
+/** リスト（Markdown frontmatter）またはカンマ区切り文字列（AsciiDoc 属性）を文字列配列にする。 */
+function toStringList(value: unknown): string[] {
+  const items = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(",")
+      : undefined;
+  if (!items) return [];
+  return items
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item !== "");
 }

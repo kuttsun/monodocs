@@ -242,7 +242,10 @@ describe("input and root together", () => {
   it("refuses an input outside the root", async () => {
     await writeRepository();
     await mkdir(join(dir, "elsewhere"), { recursive: true });
-    const configFile = await writeConfig('root: "./docs"\ninput: "../elsewhere"\n');
+    // `./elsewhere`, not `../elsewhere`: a path in the configuration is relative to the file
+    // holding it, so the second would name a directory beside the temporary tree that does not
+    // exist — and a path that does not exist is left to the build to report as missing.
+    const configFile = await writeConfig('root: "./docs"\ninput: "./elsewhere"\n');
 
     await expect(loadConfig({ configFile }, dir)).rejects.toThrow(/input and root/i);
   });
@@ -254,6 +257,71 @@ describe("input and root together", () => {
     await expect(loadConfig({ configFile, inputDir: join(dir, "docs") }, dir)).rejects.toThrow(
       /input and root/i,
     );
+  });
+});
+
+describe("patterns that cannot mean what they look like", () => {
+  /**
+   * picomatch combines the patterns of an array with OR, so `["docs/**", "!docs/drafts/**"]`
+   * matches everything: the second matches every path outside `docs/drafts`, which is most of
+   * them. The pruning reads a pattern's static prefix, and for `!foo/**` that prefix is `foo`, so
+   * it would walk exactly the directory the author meant to leave out. Refused rather than
+   * misread — `include` selects and `exclude` subtracts, last.
+   */
+  it("refuses a negated pattern in sources.include", async () => {
+    await writeRepository();
+    const configFile = await writeConfig(
+      'root: "."\nsources:\n  include:\n    - "docs/**"\n    - "!docs/drafts/**"\n',
+    );
+
+    await expect(loadConfig({ configFile }, dir)).rejects.toThrow(/negated pattern/i);
+  });
+
+  it("refuses a negated pattern in sources.exclude", async () => {
+    await writeRepository();
+    const configFile = await writeConfig('sources:\n  exclude:\n    - "!drafts/**"\n');
+
+    await expect(loadConfig({ configFile }, dir)).rejects.toThrow(/negated pattern/i);
+  });
+
+  it("refuses one written with leading whitespace", async () => {
+    await writeRepository();
+    const configFile = await writeConfig('root: "."\nsources:\n  include:\n    - " !docs/**"\n');
+
+    await expect(loadConfig({ configFile }, dir)).rejects.toThrow(/negated pattern/i);
+  });
+});
+
+describe("root has to be a directory", () => {
+  it("refuses a root naming a file, which would half work", async () => {
+    await writeRepository();
+    const configFile = await writeConfig('root: "./README.md"\n');
+
+    await expect(loadConfig({ configFile }, dir)).rejects.toThrow(/must name a directory/i);
+  });
+
+  it("leaves a root that does not exist to the build, which reports it as missing", async () => {
+    await writeRepository();
+    const configFile = await writeConfig('root: "./nowhere"\n');
+
+    const config = await loadConfig({ configFile }, dir);
+    expect(config.rootDir).toBe(join(dir, "nowhere"));
+    await expect(
+      buildSite({ configFile, outputFile: join(dir, "out.html"), format: "html" }),
+    ).rejects.toThrow(/not found/i);
+  });
+
+  it("reports a missing single-file input as missing rather than as disagreeing with the root", async () => {
+    await writeRepository();
+    const configFile = await writeConfig('root: "./docs"\ninput: "./docs/missing.md"\n');
+
+    // The path does not exist, so nothing can tell a file from a directory — comparing it would
+    // turn a missing file into an argument about roots.
+    const config = await loadConfig({ configFile }, dir);
+    expect(config.inputDir).toBe(join(dir, "docs", "missing.md"));
+    await expect(
+      buildSite({ configFile, outputFile: join(dir, "out.html"), format: "html" }),
+    ).rejects.toThrow(/not found/i);
   });
 });
 

@@ -52,6 +52,7 @@ export const asciidocRenderer: SourceRenderer = {
         order: doc.getAttribute("sd-order"),
         hidden: doc.getAttribute("sd-hidden"),
         description: doc.getAttribute("sd-description"),
+        aliases: doc.getAttribute("sd-aliases"),
       },
       docTitle,
     );

@@ -11,6 +11,9 @@
   var navPages = pages.filter(function (p) {
     return !p.hidden;
   });
+  // 古い route → 現在の route（15.5）。ページではないので pageByRoute には入れない。
+  // どの実 route にも当たらなかった hash だけがここを引くので、別名がページを隠すことはない。
+  var aliases = data.aliases && typeof data.aliases === "object" ? data.aliases : {};
 
   var STORAGE_THEME = "monodocs:theme";
   var STORAGE_CONTENT_WIDTH = "monodocs:content-width";
@@ -156,6 +159,27 @@
     return h;
   }
 
+  /**
+   * 別名の表を引く（15.5）。
+   *
+   * Consulted only when the hash matches no real route, so an alias can never shadow a page.
+   * `hasOwnProperty` rather than a plain lookup, so an inherited property such as `constructor`
+   * is not mistaken for an alias.
+   */
+  function lookupAlias(route) {
+    return Object.prototype.hasOwnProperty.call(aliases, route) ? aliases[route] : null;
+  }
+
+  /** hash を現在の route（＋あればアンカー）へ書き換える。履歴に停留所を作らない。 */
+  function replaceHash(route, anchor) {
+    var next = "#" + encodeURI(route + (anchor ? "#" + anchor : ""));
+    if (window.history && typeof window.history.replaceState === "function") {
+      window.history.replaceState(null, "", next);
+    } else {
+      window.location.replace(next);
+    }
+  }
+
   function onRouteChange() {
     var h = rawHash();
     // route は必ず "/" 始まり。"/" で始まらない hash はページ内アンカー
@@ -169,7 +193,38 @@
       }
       return;
     }
-    showPage(h || "/");
+
+    var route = h || "/";
+    var anchor = "";
+
+    // The whole hash is tried as a route, and as an alias, **before** it is split. A route may
+    // itself contain "#" — `old#name.md` produces `/old#name` — so splitting first would make that
+    // page unreachable through its own address. Only a hash that names nothing is a candidate for
+    // being a route plus a heading.
+    if (!pageByRoute[route]) {
+      var whole = lookupAlias(route);
+      if (whole !== null) {
+        route = whole;
+        replaceHash(route, "");
+      } else {
+        var cut = route.indexOf("#");
+        if (cut !== -1) {
+          anchor = route.slice(cut + 1);
+          route = route.slice(0, cut);
+          if (!pageByRoute[route]) {
+            var aliased = lookupAlias(route);
+            // アンカーは置換をまたいで残る。パスではなく見出しを指しているからである。
+            if (aliased !== null) {
+              route = aliased;
+              replaceHash(route, anchor);
+            }
+          }
+        }
+      }
+    }
+
+    if (anchor) pendingHeadingId = anchor;
+    showPage(route || "/");
   }
 
   // ---- in-page table of contents ----

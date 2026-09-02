@@ -47,6 +47,8 @@ export const DIAGNOSTIC_CODES = [
   "link/unresolved-anchor",
   "mermaid/prerenderer-missing",
   "mermaid/render-failed",
+  "page/alias-shadowed",
+  "page/duplicate-alias",
   "page/duplicate-id",
   "page/duplicate-route",
   "page/no-renderer",

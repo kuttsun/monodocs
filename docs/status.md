@@ -328,11 +328,12 @@ release rather than as two; the reasoning is under v0.11 in [roadmap.md](roadmap
 
 **Route aliases** ([roadmap.md](roadmap.md) 15.5)
 
-- [ ] `aliases:` in frontmatter and `:sd-aliases:` in AsciiDoc make an old hash route render the page and replace the hash with the current route, so the address bar ends up holding the link that still works
-- [ ] An anchor survives the substitution, because the anchor belongs to the heading rather than to the path
-- [ ] Two pages claiming one alias is an error; an alias colliding with a real route warns and the real route wins; aliases are normalised — leading slash, no extension, `index` meaning the directory — before either is decided
-- [ ] An alias reaches neither the sidebar, the search index, nor the previous/next order
-- [ ] No alias is generated from repository history, so a document's link table does not depend on which clone built it
+- [x] `aliases:` in frontmatter and `:sd-aliases:` in AsciiDoc make an old hash route render the page and replace the hash with the current route, so the address bar ends up holding the link that still works. The substitution uses `replaceState`, so a dead alias does not become a back-button stop
+- [x] An anchor survives the substitution, because the anchor belongs to the heading rather than to the path. The router now splits a hash into route and anchor for every route, not only an aliased one, so `#/route#heading` reaches the heading instead of falling back to the first page
+- [x] Two pages claiming one alias is an error; an alias colliding with a real route warns and the real route wins; aliases are normalised — leading slash, no extension, `index` meaning the directory — before either is decided. Shadowing is decided first, so two pages claiming an alias that is also a real route produce two warnings and no error: once both are dropped there is nothing left to be ambiguous about
+- [x] An alias reaches neither the sidebar, the search index, nor the previous/next order. A `hidden` page keeps its aliases, because a link someone already holds is not navigation
+- [x] The client consults the table only when the hash matches no page, so an alias cannot shadow one even in a document whose table was hand-edited, and the lookup is guarded against inherited object properties
+- [x] No alias is generated from repository history, so a document's link table does not depend on which clone built it
 
 **AsciiDoc attributes and the read boundary** ([roadmap.md](roadmap.md) 17.5)
 
