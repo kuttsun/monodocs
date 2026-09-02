@@ -1591,33 +1591,27 @@ softening it — an included file's real path is checked against the input root,
 outside it is refused with the path it resolved to. The same check covers images (20.2), where the
 identical hole exists.
 
-**The check over-approximates on purpose.** A static check that models another parser diverges
-from it, and every divergence in the permissive direction is a hole. A first attempt tracked `////`
-comment blocks and matched the directive only at the start of a line, and four documents got outside
-content into the output through the gaps: a `////` inside a listing block put the checker into a
-comment state Asciidoctor was not in; `ifndef::x[include::y[]]` put the directive somewhere the
-checker did not look; a `]` in a target failed a pattern Asciidoctor accepts; and following a
-symbolic link changed the directory the checker resolved the next level against, while Asciidoctor
-kept the lexical one. So no block structure is modelled and no condition is evaluated: every
-`include::` in the text is checked, wherever it sits, and the recursion keeps the lexical path.
-What that costs is a false refusal — an include inside a comment block, inside a false `ifdef`, or
-quoted in a code sample, whose target happens to resolve to a real file outside the root. What it
-buys is that a divergence stops the build instead of leaking.
+**The check asks Asciidoctor rather than reading the text.** An include processor's `handles` is
+called with the document and the **expanded** target for every include about to be read, and
+returning `false` declines it and leaves Asciidoctor to do the include — so `lines`, `tag`, `tags`,
+and everything else 17.3 promises are untouched. Only a target whose real path lands outside the
+root is stopped, by throwing.
 
-**The check is static, and an `IncludeProcessor` is not used.** The obvious implementation is an
-extension that validates a target and hands the include back to Asciidoctor, and the API does not
-allow it: `handles` receives the document and the target but has no route to the reader, and the
-cursor a `process` call is given reports `.` for a document converted from a string rather than the
-directory the include resolves against. Taking the directive over therefore means reimplementing
-Asciidoctor's own path resolution as well as `lines`, `tag`, and `tags` — a larger surface than the
-hole, and against 17.3's promise that the directive is left to Asciidoctor. So the targets are read
-out of the source text before conversion, resolved, and checked, recursively and with a visited set.
+A first attempt scanned the source text instead, on the belief that a processor had no route from
+the document to the reader. That was wrong, and wrong for a small reason: `doc.getReader()` returns
+the `PreprocessorReader` and `reader.getCursor().getDirectory()` is the directory the include
+resolves against, correct at each level of nesting — but `getDirectory` sits on the cursor rather
+than on the reader, and a missing method was read as a missing route. The scan that followed had to
+decide what a `////` line meant, whether a directive could sit anywhere but the start of a line, and
+whether `]` could appear in a target, and it was wrong about all three in the permissive direction:
+outside content reached the output through each. Over-approximating closed those and cost false
+refusals — an include inside a comment block or a false `ifdef` — and still could not resolve a
+target built from an attribute reference. Asking Asciidoctor has none of those problems, because it
+is asked exactly when an include is about to happen.
 
-What that does not cover is a target monodocs cannot resolve without running Asciidoctor: one built
-from an attribute reference (`include::{partialsdir}/x.adoc[]`). It is skipped rather than guessed
-at, and recorded here rather than implied. A lexical escape, which safe mode already refused as an
-"Unresolved directive" left in the output, is now refused by the check first, so both ways of leaving
-the root stop the build and say the same thing.
+So there is nothing this check does not cover, and no false refusal to accept. A lexical escape,
+which safe mode already refused as an "Unresolved directive" left in the output, is refused by the
+check first, so both ways of leaving the root stop the build and say the same thing.
 
 **Markdown gets no equivalent.** A `vars:` map substituted into Markdown text is a template language:
 it needs an escape for the literal spelling, a rule for an undefined name, a rule for code blocks

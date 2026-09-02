@@ -148,9 +148,10 @@ PDF はシステムフォントを使います。開発イメージには Noto C
 - AsciiDoc passthrough は未サニタイズの raw HTML を出力できるため、信頼できない入力は XSS の原因になります。
 - AsciiDoc `include::[]` は safe mode で実行しますが、その制限は**字句的**です。`../` と絶対パスは
   拒否される一方、ツリーの内側から外側を指すシンボリックリンクはたどられます。safe mode が
-  シンボリックリンクを解決しないことは Asciidoctor 自身が明記しています。そのため monodocs は変換の前に
-  各 include の実体パスを解決し、入力ルートの外へ落ちるものを、解決先のパスを示して拒否します。
-  属性参照から組み立てた target は Asciidoctor を走らせずには解決できないため、覆えません
+  シンボリックリンクを解決しないことは Asciidoctor 自身が明記しています。そのため monodocs は
+  Asciidoctor に尋ねます。読もうとしているすべての include について include processor が展開済みの
+  target とともに呼ばれ、実体パスが入力ルートの外へ落ちるものを、解決先のパスを示して拒否します。
+  安全な target は Asciidoctor へ見送るので、`lines` / `tag` / `tags` はそのまま効きます
   （[roadmap.md](roadmap.md) 17.5）。
 - 画像は symlink 解決後の real path が入力ルート内にある場合だけ埋め込みます。
 - `assets.onLargeImage` は、上限超過画像を警告付きで埋め込む、外部参照に保つ、エラーにする、のいずれかを制御します。

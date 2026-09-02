@@ -1,151 +1,133 @@
-import { readFile, realpath } from "node:fs/promises";
-import { dirname, extname, relative, resolve, sep } from "node:path";
+import { realpathSync } from "node:fs";
+import { resolve, sep } from "node:path";
+import { Extensions } from "@asciidoctor/core";
 import { MonodocsError } from "../../diagnostics.js";
 import { t } from "../../messages.js";
-import type { SourceFile } from "../../types.js";
+
+/** ルートの外へ解決された include の記録。 */
+export type IncludeViolation = { target: string; resolved: string; root: string };
 
 /**
- * `include::` の読み取り先が入力ルートの外へ解決されないことを、変換の前に確かめる（17.5）。
+ * `include::` の読み取り先が入力ルートの外へ解決されないことを、Asciidoctor に読ませながら確かめる
+ * （17.5）。
  *
  * Asciidoctor's SAFE mode confines `include::` to the base directory, and monodocs relies on that
- * (17.3). Measured, it confines it **lexically**: `include::../outside/x.adoc[]` and an absolute
- * path are both refused, and a symbolic link inside the base directory pointing outside it is
- * followed — both a linked file and a linked directory pulled content from outside the jail into the
- * output. Asciidoctor documents that it does not resolve symbolic links, so this is its behaviour
- * rather than a defect, and closing it is monodocs' job.
+ * (17.3). Measured, it confines it **lexically**: `include::../outside/x.adoc[]` and an absolute path
+ * are both refused, and a symbolic link inside the base directory pointing outside it is followed —
+ * both a linked file and a linked directory pulled content from outside the jail into the output.
+ * Asciidoctor documents that it does not resolve symbolic links, so this is its behaviour rather
+ * than a defect, and closing it is monodocs' job.
  *
- * The check is a static one, run over the source text before Asciidoctor reads it, rather than an
- * `IncludeProcessor` that takes the directive over. Measured: an include processor cannot validate
- * and then decline — `handles` receives the document and the target but has no route to the reader,
- * and the cursor a `process` call is given reports `.` for a document converted from a string, so
- * taking the directive over means reimplementing Asciidoctor's own path resolution as well as
- * `lines`, `tag`, and `tags`. That is a larger surface than the hole, and 17.3 promises the
- * directive is left to Asciidoctor.
+ * The check runs inside an include processor's `handles`, which is called with the document and the
+ * **expanded** target for every include Asciidoctor is about to read. Returning `false` declines the
+ * include and leaves Asciidoctor to do it, so `lines`, `tag`, `tags`, and everything else 17.3
+ * promises are untouched; only a target that resolves outside the root is stopped, by throwing.
  *
- * **It therefore over-approximates on purpose.** A static check that models another parser diverges
- * from it, and every divergence in the permissive direction is a hole. A first attempt tracked
- * `////` comment blocks and matched the directive only at the start of a line, and four documents
- * got outside content into the output through the gaps: a `////` inside a listing block put the
- * checker into a comment state Asciidoctor was not in; `ifndef::x[include::y[]]` put the directive
- * somewhere the checker did not look; a `]` in a target failed a pattern Asciidoctor accepts; and
- * following a symbolic link changed the directory the checker resolved the next level against, while
- * Asciidoctor kept the lexical one. So no block structure is modelled and no condition is evaluated:
- * every `include::` in the text is checked, wherever it sits. What that costs is a false refusal —
- * an include inside a comment block, inside a false `ifdef`, or quoted in a code sample, whose target
- * happens to resolve to a real file outside the root. What it buys is that a divergence stops the
- * build instead of leaking.
+ * This replaces a static scan of the source text, and the reason is worth recording because the
+ * scan's rationale was wrong. It said an include processor had no route from the document to the
+ * reader — measured, `doc.getReader()` returns the `PreprocessorReader` and
+ * `reader.getCursor().getDirectory()` is the directory the include resolves against, correct at each
+ * level of nesting. What went unmeasured was one step: `getDirectory` sits on the cursor rather than
+ * on the reader, and a missing method was read as a missing route.
  *
- * **What it still does not cover** is a target monodocs cannot resolve without running Asciidoctor:
- * one built from an attribute reference (`include::{partialsdir}/x.adoc[]`). Such a target is
- * skipped rather than guessed at, and the limitation is written down rather than implied.
+ * The scan cost what a parser model always costs. It had to decide what a `////` line meant, whether
+ * a directive could sit anywhere but the start of a line, and whether `]` could appear in a target,
+ * and it was wrong about all three in the permissive direction — outside content reached the output
+ * through each. Over-approximating closed those, at the price of refusing an include inside a
+ * comment block or a false `ifdef`, and it still could not resolve a target built from an attribute
+ * reference. Asking Asciidoctor has none of those problems: it is called exactly when an include is
+ * about to happen, with the target already expanded.
  */
-export async function assertIncludesInsideRoot(
-  sources: readonly SourceFile[],
+export function createIncludeBoundary(
   rootDir: string,
-): Promise<void> {
-  const asciidoc = sources.filter((source) => source.format === "asciidoc");
-  if (asciidoc.length === 0) return;
+  relativePath: string,
+): {
+  registry: unknown;
+  takeViolation(): IncludeViolation | undefined;
+} {
+  const realRoot = safeReal(rootDir);
+  let violation: IncludeViolation | undefined;
 
-  const realRoot = await realpath(rootDir).catch(() => resolve(rootDir));
-  // 字句パスで訪問済みを持つ。realpath で持つと、同じ実体へ別の字句経路から届いたときに
-  // 二度目を飛ばしてしまい、その経路の解決基準が検査されないまま残る。
-  const visited = new Set<string>();
+  const registry = Extensions.create();
+  registry.includeProcessor(function (this: {
+    handles(fn: (doc: unknown, target: string) => boolean): void;
+    process(fn: () => void): void;
+  }) {
+    this.handles((doc, target) => {
+      const base = readerDirectory(doc);
+      // 基準が取れないときは判断材料が無い。Asciidoctor の safe mode に任せる。
+      if (base === undefined) return false;
 
-  for (const source of asciidoc) {
-    await walk(source.absolutePath, source.raw, realRoot, rootDir, visited);
-  }
+      const candidate = resolve(base, target);
+      const real = safeReal(candidate);
+      // 存在しないものは Asciidoctor が「見つからない」と報告する。ここで先回りしない。
+      if (real === undefined) return false;
+      if (isInside(realRoot, real)) return false;
+
+      violation = { target, resolved: real, root: realRoot ?? rootDir };
+      // Asciidoctor はこれを自分のエラーに包んでしまうので、呼び出し側は記録した violation から
+      // 同じエラーを組み直す。ここで投げるものも、コードと catalogue の文言を持つ本物にしておく。
+      throw includeOutsideError(violation, relativePath);
+    });
+    // handles が true を返すことは無いので、ここへは来ない。契約上必要なので置いてある。
+    this.process(() => {});
+  });
+
+  return {
+    registry,
+    takeViolation() {
+      const found = violation;
+      violation = undefined;
+      return found;
+    },
+  };
 }
 
-/** Asciidoctor の既定と同じ上限。ここに達したら以降は Asciidoctor の報告に任せる。 */
-const MAX_INCLUDE_DEPTH = 64;
+/** 記録された violation があれば同じエラーを組み直して投げる。 */
+export function rethrowIncludeViolation(
+  violation: IncludeViolation | undefined,
+  relativePath: string,
+): never | void {
+  if (violation === undefined) return;
+  throw includeOutsideError(violation, relativePath);
+}
+
+function includeOutsideError(violation: IncludeViolation, relativePath: string): MonodocsError {
+  return new MonodocsError(
+    "include/outside-input",
+    t("asciidoc.includeOutside", {
+      target: violation.target,
+      path: relativePath,
+      resolved: violation.resolved,
+      root: violation.root,
+    }),
+  );
+}
 
 /**
- * Asciidoctor が include 先を AsciiDoc として読み直す拡張子（`constants.js` の ASCIIDOC_EXTENSIONS）。
- * それ以外の中身は listing の本文としてそのまま出るだけで、`include::` に見える行があっても読まれない。
- * 再帰をここへ限らないと、AsciiDoc の書き方を見せているコードサンプルを拒否してしまう。
+ * include の解決基準になるディレクトリ。
+ *
+ * `getDirectory` is on the cursor, not on the reader — the step whose absence was once read as the
+ * whole route being missing. It is correct per level: the root for a top-level include, and the
+ * including file's own directory for a nested one.
  */
-const RECURSIVE_EXTENSIONS = new Set([".adoc", ".asciidoc", ".asc", ".ad", ".txt"]);
+function readerDirectory(doc: unknown): string | undefined {
+  const reader = (doc as { getReader?: () => unknown } | undefined)?.getReader?.();
+  const cursor = (reader as { getCursor?: () => unknown } | undefined)?.getCursor?.();
+  const dir = (cursor as { getDirectory?: () => unknown } | undefined)?.getDirectory?.();
+  return typeof dir === "string" && dir !== "" ? dir : undefined;
+}
 
-async function walk(
-  filePath: string,
-  contents: string,
-  realRoot: string,
-  rootDir: string,
-  visited: Set<string>,
-  depth = 0,
-): Promise<void> {
-  if (depth >= MAX_INCLUDE_DEPTH) return;
-  const baseDir = dirname(filePath);
-
-  for (const target of includeTargets(contents)) {
-    // 属性で組み立てた target は、Asciidoctor を走らせずには解決できない。推測せずに見送る。
-    if (target.includes("{")) continue;
-    // URI は safe mode が止める。それを開ける allow-uri-read はそもそも設定できない（17.5）。
-    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(target)) continue;
-
-    // 解決は**字句的**に行い、次の階層の基準にもその字句パスを使う。Asciidoctor は symlink を
-    // 解決しないので、実体パスを基準にすると、リンクを経た先で基準がずれて検査が空振りする。
-    const candidate = resolve(baseDir, target);
-    // 存在しないものは Asciidoctor が「見つからない」と報告する。ここで先回りしない。
-    const real = await realpath(candidate).catch(() => undefined);
-    if (real === undefined) continue;
-
-    if (!isInside(realRoot, real)) {
-      throw new MonodocsError(
-        "include/outside-input",
-        t("asciidoc.includeOutside", {
-          target,
-          path: displayPath(rootDir, filePath),
-          resolved: real,
-          root: realRoot,
-        }),
-      );
-    }
-
-    if (visited.has(candidate)) continue;
-    visited.add(candidate);
-    if (!RECURSIVE_EXTENSIONS.has(extname(candidate).toLowerCase())) continue;
-    const included = await readFile(candidate, "utf8").catch(() => undefined);
-    if (included !== undefined) {
-      await walk(candidate, included, realRoot, rootDir, visited, depth + 1);
-    }
+function safeReal(path: string): string | undefined {
+  try {
+    return realpathSync(path);
+  } catch {
+    return undefined;
   }
 }
 
 /** real が realRoot 配下（または同一）か。postprocess の画像検査と同じ判定。 */
-function isInside(realRoot: string, real: string): boolean {
+function isInside(realRoot: string | undefined, real: string): boolean {
+  if (realRoot === undefined) return true;
   return real === realRoot || real.startsWith(realRoot + sep);
-}
-
-/** 報告に使う、ルートからの相対パス。ルート外なら絶対パスのまま示す。 */
-function displayPath(rootDir: string, filePath: string): string {
-  const rel = relative(rootDir, filePath);
-  return rel === "" || rel.startsWith("..") ? filePath : rel.split(sep).join("/");
-}
-
-/**
- * `include::` の target を、行のどこにあっても取り出す。
- *
- * The target grammar is Asciidoctor's own: after `include::` it starts with a character that is
- * neither whitespace nor `[`, runs up to the `[` that opens the attribute list, and does not end in
- * whitespace — so a `]` inside it is allowed, which the first attempt got wrong. A leading backslash
- * escapes the directive, and that is honoured. Nothing else about where the directive sits is
- * modelled, so an inline `ifndef::x[include::y[]]` is found as well as one starting a line.
- *
- * The text is normalised the way Asciidoctor normalises its input — BOM removed, `\r\n` and a lone
- * `\r` folded to `\n` — so that neither can hide a directive from the check.
- */
-function includeTargets(contents: string): string[] {
-  const normalised = contents.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
-  const targets: string[] = [];
-
-  for (const match of normalised.matchAll(/(\\)?include::([^\s[][^[]*?)\[/g)) {
-    if (match[1]) continue; // `\include::` は本文であって directive ではない。
-    const target = match[2];
-    // 末尾が空白の target は Asciidoctor が directive として認めない。
-    if (target === undefined || /\s$/.test(target)) continue;
-    targets.push(target);
-  }
-
-  return targets;
 }
