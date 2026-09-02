@@ -841,6 +841,7 @@ At the top of each page you can set the following — Markdown via YAML frontmat
 | `order`              | `:sd-order:`       | number  | Sort order (ascending). Without it, pages fall back to filename order (pages that have an `order` come first). |
 | `hidden`             | `:sd-hidden:`      | boolean | Exclude from the sidebar, prev/next nav, and search. The page HTML is still generated and reachable via its hash route. |
 | `description`        | `:sd-description:` | string  | Page description (metadata). |
+| `aliases`            | `:sd-aliases:`     | string[] | Old hash routes this page still answers to. See below. |
 
 ```yaml
 ---
@@ -857,6 +858,50 @@ For AsciiDoc:
 = Setup
 :sd-order: 10
 ```
+
+#### `aliases` (keeping an old link working) {#aliases}
+
+A hash route is a link a reader copies. In a document that travels as a single file it is the only
+way one person tells another where to look, so it ends up in a chat log, a ticket, another document
+— and renaming the page behind it breaks every copy silently. The reader who follows one lands on a
+document that looks fine and shows the wrong page.
+
+```yaml
+---
+title: Installation
+aliases:
+  - /setup/install
+  - /getting-started/install
+---
+```
+
+```asciidoc
+= Installation
+:sd-aliases: /setup/install, /getting-started/install
+```
+
+An alias is an old route that now resolves to this page. When a hash matches no page, the document
+consults the table, replaces the hash with the current route, and renders the page — so the address
+bar ends up holding the link that will still work next time. A route carrying an anchor
+(`#/setup/install#configuration`) keeps the anchor across the substitution, because the anchor names
+a heading rather than a path.
+
+The rules are checked at build time rather than discovered by a reader:
+
+- An alias is matched **after** every real route, so it can never shadow a page. A page that arrives
+  at a route some other page claims as an alias wins, and the alias warns that it has been shadowed
+  rather than silently taking precedence.
+- **Two pages claiming the same alias is an error.** One of them would win by scan order, which is
+  not something you can reason about.
+- An alias is normalised the way a route is — leading slash, no extension, `index` meaning the
+  directory — so `setup/install.md`, `/setup/install`, and `setup/install` are one alias, not three.
+- An alias appears in neither the sidebar, the search index, nor the previous/next order. It is not
+  a page; it is a name a page answers to. A `hidden` page keeps its aliases, because a link someone
+  already holds is not navigation.
+
+No alias is generated automatically. monodocs could read every route a file has ever had out of the
+repository's history, and the document's link table would then depend on which clone built it — a
+shallow checkout in CI would produce a different file from a full one. An alias is a line you wrote.
 
 ## See also
 

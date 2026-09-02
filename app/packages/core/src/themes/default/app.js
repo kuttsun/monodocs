@@ -11,6 +11,9 @@
   var navPages = pages.filter(function (p) {
     return !p.hidden;
   });
+  // 古い route → 現在の route（15.5）。ページではないので pageByRoute には入れない。
+  // どの実 route にも当たらなかった hash だけがここを引くので、別名がページを隠すことはない。
+  var aliases = data.aliases && typeof data.aliases === "object" ? data.aliases : {};
 
   var STORAGE_THEME = "monodocs:theme";
   var STORAGE_CONTENT_WIDTH = "monodocs:content-width";
@@ -156,6 +159,23 @@
     return h;
   }
 
+  /**
+   * 別名を現在の route に解決する（15.5）。
+   *
+   * Consulted only when the hash matches no real route, so an alias can never shadow a page. The
+   * anchor is split off first and put back afterwards: it names a heading, not a path, so renaming
+   * the file that holds the heading does not change it. The address bar is rewritten to the current
+   * route with `replace`, so the link a reader copies next is the one that will still work, and the
+   * dead alias does not become a back-button stop.
+   */
+  function resolveAlias(hash) {
+    var cut = hash.indexOf("#");
+    var route = cut === -1 ? hash : hash.slice(0, cut);
+    var anchor = cut === -1 ? "" : hash.slice(cut);
+    if (!Object.prototype.hasOwnProperty.call(aliases, route)) return null;
+    return aliases[route] + anchor;
+  }
+
   function onRouteChange() {
     var h = rawHash();
     // route は必ず "/" 始まり。"/" で始まらない hash はページ内アンカー
@@ -169,7 +189,26 @@
       }
       return;
     }
-    showPage(h || "/");
+
+    // route とアンカーを分ける。`#/setup/install#configuration` の後半は見出しの ID である。
+    var cut = h.indexOf("#");
+    var route = cut === -1 ? h : h.slice(0, cut);
+    var anchor = cut === -1 ? "" : h.slice(cut + 1);
+
+    if (route && !pageByRoute[route]) {
+      var target = resolveAlias(h);
+      if (target) {
+        if (window.history && typeof window.history.replaceState === "function") {
+          window.history.replaceState(null, "", "#" + encodeURI(target));
+        } else {
+          window.location.replace("#" + encodeURI(target));
+        }
+        route = target.indexOf("#") === -1 ? target : target.slice(0, target.indexOf("#"));
+      }
+    }
+
+    if (anchor) pendingHeadingId = anchor;
+    showPage(route || "/");
   }
 
   // ---- in-page table of contents ----

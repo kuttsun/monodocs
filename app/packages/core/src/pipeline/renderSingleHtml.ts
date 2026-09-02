@@ -107,6 +107,21 @@ function safeJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
+/**
+ * 古い route から現在の route への対応表（15.5）。
+ *
+ * A hidden page keeps its aliases. `hidden` decides navigation, and a link someone already holds is
+ * not navigation — following it should still land on the page rather than on whatever the router
+ * falls back to.
+ */
+function aliasTable(pages: Page[]): Record<string, string> {
+  const table: Record<string, string> = {};
+  for (const page of pages) {
+    for (const alias of page.aliases ?? []) table[alias] = page.route;
+  }
+  return table;
+}
+
 /** 設定由来のテーマ CSS 変数を追加する。公開レンダリング境界でも値を検証する。 */
 function styleWithOverrides(style: string, input: RenderHtmlInput): string {
   let out = style;
@@ -340,6 +355,10 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     labels,
     // 目次・検索・前後ナビ用のページメタ（本文 HTML は含めない）。
     pages: input.pages.map(pageData),
+    // 古い route → 現在の route の対応表（15.5）。ページではないので pages には入らず、
+    // サイドバー・検索・前後ナビにも現れない。どの route にも当たらなかった hash だけが
+    // ここを引く。別名が無ければ空オブジェクトなので、出力はほとんど変わらない。
+    aliases: aliasTable(input.pages),
   });
 
   let html = renderConditionalBlock(

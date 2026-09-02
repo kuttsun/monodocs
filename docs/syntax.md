@@ -31,7 +31,7 @@ In addition to CommonMark, GitHub Flavored Markdown is enabled via `remark-gfm`.
 - Fenced code blocks (triple backticks with an optional language identifier). Syntax highlighted with shiki
   (dual theme, dark mode support)
 - **Footnotes** (`[^1]`). IDs are prefixed with the page id so they don't collide within the single HTML
-- YAML frontmatter (`---`). Reads `title` / `order` / `hidden` / `description` ([roadmap.md](roadmap.md) Chapter 13)
+- YAML frontmatter (`---`). Reads `title` / `order` / `hidden` / `description` ([roadmap.md](roadmap.md) Chapter 13) and `aliases`, the old hash routes the page still answers to ([roadmap.md](roadmap.md) 15.5)
 - ` ```mermaid ` code blocks → Mermaid diagrams (`mermaid.mode`: `client` default / `pre-render` = SVG-rendered at build time)
 - Images (`![alt](path)`) → the actual file under the input is embedded as a data URI
 
@@ -53,7 +53,7 @@ Because conversion is delegated to Asciidoctor.js's standard conversion, most As
 - Callouts, `kbd:` / `btn:` / `menu:` macros
 - Image macros (`image::path[]` / `image:path[]`) → data URI embedding
 - `include::[]` (jailed under the input file's directory in safe mode)
-- Document attributes, `:sd-title:` / `:sd-order:` / `:sd-hidden:` / `:sd-description:` ([roadmap.md](roadmap.md) Chapter 13)
+- Document attributes, `:sd-title:` / `:sd-order:` / `:sd-hidden:` / `:sd-description:` ([roadmap.md](roadmap.md) Chapter 13), and `:sd-aliases:` — a comma-separated list of old hash routes ([roadmap.md](roadmap.md) 15.5)
 - `[source,mermaid]` blocks → Mermaid diagrams (`mermaid.mode`: `client` default / `pre-render` = SVG-rendered at build time)
 - `xref:` within the same document / internal anchors (IDs are prefixed to keep them working)
 - Footnotes (`footnote:[]`). IDs are prefixed with the page id

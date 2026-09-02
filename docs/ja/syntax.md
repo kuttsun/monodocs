@@ -31,7 +31,7 @@ CommonMark に加え、`remark-gfm` により GitHub Flavored Markdown を有効
   AsciiDoc の admonition と共通の構造・配色で表示する（[形式横断仕様](#単一-html-化のための共通仕様形式横断)）
 - フェンスドコードブロック（` `lang ```）。shiki で構文ハイライトする（dual theme・ダークモード追従）
 - **脚注**（`[^1]`）。ID は単一 HTML 内で衝突しないよう page id を prefix する
-- YAML frontmatter（`---`）。`title` / `order` / `hidden` / `description` を読む（[roadmap.md](roadmap.md) 13章）
+- YAML frontmatter（`---`）。`title` / `order` / `hidden` / `description` を読む（[roadmap.md](roadmap.md) 13章）。加えて `aliases`（このページが今も応答する古い hash route）を読む（[roadmap.md](roadmap.md) 15.5）
 - ` ```mermaid ` コードブロック → Mermaid 図（`mermaid.mode`: `client` 既定 / `pre-render` = ビルド時 SVG 化）
 - 画像（`![alt](path)`）→ 入力配下の実体を data URI 化して埋め込み
 
@@ -51,7 +51,7 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 - コールアウト（callout）、`kbd:` / `btn:` / `menu:` マクロ
 - 画像マクロ（`image::path[]` / `image:path[]`）→ data URI 埋め込み
 - `include::[]`（safe モードで入力ファイルのディレクトリ配下に jail）
-- ドキュメント属性、`:sd-title:` / `:sd-order:` / `:sd-hidden:` / `:sd-description:`（[roadmap.md](roadmap.md) 13章）
+- ドキュメント属性、`:sd-title:` / `:sd-order:` / `:sd-hidden:` / `:sd-description:`（[roadmap.md](roadmap.md) 13章）、および `:sd-aliases:`（カンマ区切りの古い hash route）（[roadmap.md](roadmap.md) 15.5）
 - `[source,mermaid]` ブロック → Mermaid 図（`mermaid.mode`: `client` 既定 / `pre-render` = ビルド時 SVG 化）
 - 同一文書内の `xref:` / 内部アンカー（ID を prefix して追従）
 - 脚注（`footnote:[]`）。ID は page id を prefix する

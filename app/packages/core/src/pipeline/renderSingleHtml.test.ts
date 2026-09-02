@@ -10,6 +10,7 @@ function page(route: string, id: string, title: string): Page {
     relativePath: id + ".md",
     format: "markdown",
     title,
+    aliases: [],
     rawSource: "",
     html: `<p>${title}</p>`,
     text: title,

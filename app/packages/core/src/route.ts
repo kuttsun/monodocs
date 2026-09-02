@@ -27,6 +27,27 @@ export function toRoute(relativePath: string): string {
   return "/" + p;
 }
 
+/**
+ * 著者が書いた route の別名を、route と同じ形へ正規化する（15.5）。
+ *
+ * An alias is an old route, and an old route was written in whatever form was to hand: with or
+ * without a leading slash, with or without the extension, naming `index` or the directory holding
+ * it. Normalising here means `setup/install.md`, `/setup/install`, and `setup/install` are one
+ * alias rather than three, and it happens before shadowing and collisions are decided so that
+ * neither can turn on a spelling.
+ *
+ * ```text
+ * "/setup/install"     -> /setup/install
+ * "setup/install.md"   -> /setup/install
+ * "setup/"             -> /setup
+ * "index.md"           -> /
+ * ```
+ */
+export function toAliasRoute(value: string): string {
+  const trimmed = normalize(value).trim();
+  return toRoute(trimmed.replace(/^\/+/, "").replace(/\/+$/, ""));
+}
+
 /** route のセグメントを ID 用 slug に変換する（unicode 文字は保持）。 */
 function slugifySegment(segment: string): string {
   return segment
