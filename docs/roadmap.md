@@ -746,6 +746,11 @@ fontCheck: "warn"
 
 input: "./docs"
 
+# The directory every relative path resolves against (v0.12). Defaults to input's value, so a
+# configuration without it keeps its meaning. Written together with input, the two must name the
+# same directory; a document spanning more than one selects with sources.include (12.5).
+# root: "."
+
 output:
   format: "html"
   path: "./dist/docs.html"
@@ -763,6 +768,11 @@ sources:
       - ".adoc"
       - ".asciidoc"
       - ".asc"
+  # Globs relative to root selecting what may become a page (v0.12). Absent, everything under root
+  # is a candidate. exclude subtracts from this, and subtracts last (12.5).
+  # include:
+  #   - "README.md"
+  #   - "docs/**"
   # Patterns that never become pages, added to the built-in list rather than replacing it (12.3).
   # exclude:
   #   - "drafts/**"
@@ -980,8 +990,25 @@ aliases (15.5) keep the old links working.
 `input` is not renamed and not deprecated. It is what a single-directory document uses, and it is
 the spelling in every existing configuration, the CLI argument, and every example in this
 repository. `root` is what a document that spans more than one directory sets, and the two are the
-same key seen from different distances — setting both, with `input` naming something outside `root`,
-is a configuration error rather than a merge.
+same key seen from different distances — so writing both is allowed only when they name the same
+directory, and anything else is a configuration error rather than a merge. That is stricter than
+"outside `root` is an error", and deliberately: an `input` pointing at a subdirectory of `root` has
+no meaning that is not either the include list written out longhand or a second root wearing a
+disguise. The rule holds for the command line too, so `monodocs build ./docs` against a
+configuration that sets `root: "."` stops rather than silently picking one. An `input` naming a file
+is compared as the directory holding it, which is how it is already treated when a configuration
+file is looked for (25.2).
+
+**Written without `input`, `root` is what the build is pointed at.** Falling back to the default
+`./docs` would make `root: "."` fail on a repository that has no such directory — the exact shape
+this key exists for.
+
+**The built-in exclude patterns are anchored at the root**, which means moving the root moves what
+they cover. `_partials/**` matches a directory at the top of the root, and `**/_*` matches a file
+whose own name begins with `_`; under `root: "."` a `docs/_partials/` is therefore no longer matched
+by the first, in the same way a nested `sub/_partials/` is not matched today. It is a consequence of
+the root moving rather than a hole this key opens, and `sources.exclude` is where a document says
+what it actually wants.
 
 ### 12.6 Soft Line Breaks (v0.13)
 

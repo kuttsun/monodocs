@@ -32,12 +32,12 @@ docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 
 devcontainer 内、またはコンテナのシェルに入っている場合は `app/` で `pnpm test` を直接実行できる。
 
-## テスト結果（2026-08-24 時点）
+## テスト結果（2026-09-02 時点）
 
 | 項目           | 結果       |
 | -------------- | ---------- |
-| Test Files     | 52 passed  |
-| Tests          | 531 passed |
+| Test Files     | 53 passed  |
+| Tests          | 550 passed |
 | typecheck      | 通過       |
 | format:check   | 通過       |
 | package:verify | 通過       |
@@ -50,7 +50,7 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `sources/markdown/renderer.test.ts` … Markdown 変換・H1 / frontmatter 抽出・見出し/脚注の ID prefix・GFM
 - `sources/asciidoc/renderer.test.ts` … AsciiDoc 変換・タイトル / `:sd-*:` 抽出・xref 書き換え
 - `sources/prefixIds.ts` … 全要素 ID の prefix・アンカー書き換え（Markdown/AsciiDoc 共通。各 renderer テストで間接検証）
-- `scan.test.ts` … 拡張子マップによる走査・カスタム拡張子・除外
+- `scan.test.ts` … 拡張子マップによる走査・カスタム拡張子・除外、そして `sources.include`（未指定・空なら root 配下すべてを選ぶこと、include で選び exclude がその後に引くという順序、どの include パターンも届かないディレクトリを走査しないこと。読めないディレクトリを置き、走査すれば失敗することで主張する）
 - `pipeline/buildPages.test.ts` … route / page id の重複検知
 - `pipeline/buildSidebar.test.ts` … フォルダ構造サイドバー
 - `pipeline/buildSidebar.custom.test.ts` … カスタムサイドバー（`sidebar.items` の構造・順序・タイトル、`./`・バックスラッシュ区切りのパス、存在しないパスのエラー、未掲載・`hidden`・重複の警告、ページが消えたグループ、`orderPagesBySidebar` による閲覧順）
@@ -80,6 +80,7 @@ devcontainer 内、またはコンテナのシェルに入っている場合は 
 - `build.anchors.test.ts` … e2e（Markdown ↔ AsciiDoc 双方向のファイル跨ぎ見出しアンカー・脚注アンカー・存在しないアンカーの `validate` 警告）
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render（偽レンダラ注入で config 連携・SVG 埋め込みを検証。実 Chromium がある環境でだけ end-to-end 描画とランタイム未注入ゲートを確認）
 - `build.v04.test.ts` … e2e（`watchSite` の再ビルド・`serveSite` の配信とライブリロード注入・`serveSite` が pdf/both 設定でも HTML を配信し明示 `-o` を尊重すること）
+- `build.input-root.test.ts` … e2e（`root` と `sources.include`。ルートの `README.md` と `docs/` 配下のページから 1 つの文書を組むこと、route を root からの相対で作ること、画像を root から解決すること、`exclude` が最後に引くこと、組み込みの除外リストが引き続き効きルート基準のままであること、どの include パターンも届かないディレクトリが束に入らないこと、どちらのキーも書かない設定が従来どおりであること、`root` が入力ディレクトリ（単一ファイル入力ならそれを含むディレクトリ）へ解決されること、`input` と `root` は同じディレクトリを指すときだけ受理されること（コマンドラインからの指定も含む）、`input` を書かない `root` がビルドを既定の `./docs` ではなく root へ向けること）
 - `build.input-file.test.ts` … e2e（単一の Markdown / AsciiDoc ファイルを入力に渡した場合。そのファイル 1 ページがビルドされること、設定をそれを含むディレクトリから読むこと、相対パスの画像を同じディレクトリ基準で解決して埋め込むこと、名指しした `_` 始まりのファイルが束に入ること（除外パターンは走査の規則であって束ねる規則ではない）、`validate` でも同じ経路を通ること、対応しない拡張子は扱える拡張子を挙げて拒否すること、存在しないパスは従来どおり「見つからない」と報告すること）
 - `init.test.ts` … `monodocs init`（書き出す 2 ファイルと、肝心の主張 — 書き出したものが手を入れずにビルドできること。設定ファイルだけを名指して呼び、入力も出力もそのファイルから来るようにして確かめる）。雛形については「書かれていないこと」も見る。全キーのダンプでも「設定を書き出した」という検査は通ってしまうため。あわせて、雛形がメッセージ言語に従うこと（設定する `lang` の値まで含めて。日本語の最初のページが英語を宣言したまま公開されないようにするため）を確認する。「雛形がビルドできる」ことは 2 言語を書き並べるのではなく同梱メッセージ言語すべてに対して主張する。雛形は言語ごとに手で書かれた設定とページであり、引用符の閉じ忘れや無くなったキーが現れるのは次に増える言語だからである。最後に拒否の挙動（どちらか一方でもあれば両方とも書かない、見つかったものを最初の 1 つではなくすべて名指す、既存の `docs/` ディレクトリは上書き対象として扱わない）を確認する
 - `build.pdf.test.ts` … PDF 出力（v0.5。`resolveOutputs` の html/pdf/both 出力パス解決・偽 `PdfGenerator` 注入で format 分岐と設定（pageSize/margin/printBackground）連携・embedImages 上書き・しおり outline の受け渡しを browserless 検証。実 Chromium がある環境でだけ実際の PDF 生成＝`%PDF-`・`/Outlines`・`/UseOutlines`・ページ間リンクの内部リンク注釈・ファイル跨ぎ見出しアンカーがページ先頭ではなく見出し位置を指すことを確認）
