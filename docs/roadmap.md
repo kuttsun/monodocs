@@ -982,6 +982,107 @@ the spelling in every existing configuration, the CLI argument, and every exampl
 repository. `root` is what a document that spans more than one directory sets, and the two are the
 same key seen from different distances — setting both, with `input` naming something outside `root`,
 is a configuration error rather than a merge.
+
+### 12.6 Soft Line Breaks (v0.13)
+
+A newline inside a paragraph has three defensible renderings, and monodocs has only ever produced
+one of them. CommonMark makes it a space, which is what monodocs does today. A renderer may make it
+a `<br>` instead — GitHub does in an issue comment, and Typora, GitLab, and VS Code's preview each
+offer it as a setting. And CSS Text says that between two East Asian characters it should disappear
+entirely, so that a Japanese paragraph written one sentence per line reads as one paragraph. The
+three are not degrees of one thing; they answer different questions, and which one an author wants
+cannot be derived from the document.
+
+```yaml
+sources:
+  lineBreak: "space" # space (default) / break / join
+```
+
+| Value             | A newline inside a paragraph                 | Markdown                           | AsciiDoc                                |
+| ----------------- | -------------------------------------------- | ---------------------------------- | --------------------------------------- |
+| `space` (default) | becomes a space                              | nothing is done                    | nothing is done                         |
+| `break`           | becomes a `<br>`                             | the newline becomes a `break` node | `hardbreaks-option` is set as a default |
+| `join`            | disappears between two East Asian characters | one shared helper                  | the same helper                         |
+
+**The key sits under `sources` rather than under `sources.markdown`.** `join` is a rule about
+characters and not about a syntax: AsciiDoc joins the lines of a paragraph exactly as CommonMark
+does, so a key reaching only Markdown would leave half of a mixed document (6.3) reading differently
+from the other half for a reason its author never chose. `sources.exclude` and
+`sources.excludeDefaults` (12.3) already sit at that level for the same reason.
+
+**The default stays `space`**, which is what every existing document is already built with. It
+changes no output that exists today. It does not break a paragraph that was hard-wrapped at some
+column, which `break` would turn into a stack of short lines — and the damage is asymmetric, since a
+missing break is visible to the author who wanted it while an unwanted one appears throughout a
+document that was fine. And it matches how GitHub renders a repository's own `.md` files, which
+matters because the same file is read there and built here.
+
+What does **not** count is conformance. CommonMark and GFM both permit a renderer to turn a soft
+break into either a space or a line break, so `break` is not a departure from the GFM support 6.1
+promises. The reason for the default is GitHub's rendering, not the specification.
+
+**The rule `join` applies is not one the current specification mandates, and the engines disagree
+about it.** CSS Text Level 3 §4.1.3 and CSS Text Level 4 both say that a collapsible segment break is
+"either transformed into a space (U+0020) or removed depending on the context before and after the
+break", and that "the rules for this operation are UA-defined in this level". The rule that removes
+it between two characters of East Asian Width F, W, or H where neither is Hangul was normative in the
+2013 Working Draft, and it is what web-platform-tests still asserts: of the 49
+`segment-break-transformation-rules` tests, nine fail on Chrome 152 and on Safari 26.6 and none fail
+on Firefox 154 (stable channels, checked 2026-08-31). Measured in the development image
+(Chrome/151.0.7922.137, 16px body): `日` + newline + `本` is 35.59px wide against 32.02px for `日本`
+— a 3.58px space — and the same 3.58px appears between `。` and `次`, between two full-width Latin
+letters, and between two half-width katakana.
+
+So `join` is monodocs choosing one of the two behaviours the specification leaves to the user agent,
+and choosing it once at build time so that the answer stops depending on which engine opens the file.
+That it is the behaviour Firefox implements and the tests assert is why it is worth choosing; that
+nothing mandates it is why it is a value of a key rather than the default.
+
+This is not hypothetical here. `examples/ja/search.md` is written one sentence per line, and the
+Markdown pipeline emits that newline verbatim into the HTML, so the published Japanese sample — and
+the PDF built from it, which is Chromium's by construction — carries a space between every pair of
+sentences.
+
+**`break` reaches AsciiDoc through an attribute, set as a default.** The attribute is
+`hardbreaks-option`, with `hardbreaks` an accepted alias. 17.5 requires an attribute monodocs sets to
+be a default the document can override rather than a lock, and the mechanism is measured rather than
+assumed: with `@asciidoctor/core` 4.0.6, an attribute passed through the API as `""` survives a
+document's own `:hardbreaks-option!:`, and the same attribute passed as `"@"` does not. The `@`
+suffix is what 17.5's rule is made of, and this key is its first user.
+
+The asymmetry that follows is recorded rather than hidden: an AsciiDoc document can turn `break` off
+for itself and a Markdown document cannot. AsciiDoc has document attributes because AsciiDoc has
+document attributes (17.5), and inventing a Markdown counterpart is the template language 17.5
+already refused.
+
+**`join` costs a table.** JavaScript's regular expressions expose `\p{Script=Han}` but not
+`\p{East_Asian_Width=W}`, so the F/W/H ranges are generated from the Unicode data file into a source
+table, with the Unicode version recorded and a test asserting the table still matches it. `pre` and
+`code` are skipped: there `white-space: pre` makes the newline a line the author drew rather than a
+segment break, and removing it would join two lines of a code sample.
+
+**Both values run inside the renderers, before the page's text is collected.** `postprocessPages`
+re-parses `page.html` but does not recompute `page.text`, which the renderer produced earlier, so a
+shared post-processing step would leave the search index describing a document the HTML no longer is.
+One helper called from two renderers keeps them in agreement and leaves the Source Renderer boundary
+(Chapter 11) intact.
+
+**What each value does to search.** `break` splits a text node, and the result list matches across
+the split while the in-body highlighting of 22.5 works within one text node and cannot mark it — a
+limitation an explicit `<br>` already has, at a frequency `break` raises sharply. `join` moves the
+other way, and what it removes is not what the HTML shows: the HTML carries the newline, but
+`hast-util-to-text` folds it to a space when the page's text is collected, so the index holds
+`です。 次` and a query spanning the two sentences finds nothing. `join` removes the break before that
+collection happens, and the same query matches.
+
+**The default does not follow `lang`.** A document that declares Japanese is not a document whose
+Markdown means something different; the same file would then produce different structure depending on
+a display setting, and one document can hold both languages at once. `lang` selects labels and
+`<html lang>` (23.4), not a parser.
+
+**This does not gate 1.0.** It is an optional key whose default changes nothing, which 12.4 allows a
+minor release to add. It is scheduled after v0.12 because `break`'s AsciiDoc half is the attribute
+machinery 17.5 defines, and that has to exist first.
 ---
 
 ## 13. Metadata
@@ -1401,7 +1502,10 @@ So the key exists and its contents are classified rather than passed through:
 
 An attribute set here is a **default**, not a lock, so a document that sets its own wins. That is
 the opposite of Asciidoctor's API default and it is the behaviour an author expects from a
-configuration file: the file states what every document gets unless it says otherwise.
+configuration file: the file states what every document gets unless it says otherwise. The mechanism
+is Asciidoctor's own and it is measured rather than assumed: a value ending in `@` is soft-set, and
+with `@asciidoctor/core` 4.0.6 an attribute passed as `""` survives a document's own `:name!:` while
+the same attribute passed as `"@"` does not (12.6).
 
 **What safe mode does and does not do.** Asciidoctor's SAFE mode confines `include::` to the base
 directory, and monodocs relies on that (17.3). It does not resolve symbolic links, which Asciidoctor
@@ -3559,12 +3663,21 @@ project follows from the output being one file, and nothing in it measures that 
 the risk and `maxInlineSize` judges one image at a time, which is a rule about a part rather than a
 fact about the whole. An author learns the size from a mail server rejecting it.
 
+This milestone carries a second half that has nothing to do with the budget, and says so rather than
+pretending otherwise, as v0.11 did with the page breaks and the 1.0 contract. `sources.lineBreak`
+(12.6) is here because `break`'s AsciiDoc half needs the attribute machinery v0.12 builds and
+nothing after it depends on the key, and because the document set this repository publishes is
+affected today: `examples/ja` is written one sentence per line and comes out with a space between
+every pair of sentences.
+
 Implementation scope:
 
 - Report the output size and an honest breakdown at the end of a build (20.5)
 - Add `assets.budget` and `assets.onBudget`, unset by default (20.5)
 - Record why images are not re-encoded, so the question is answered rather than reopened (20.5)
 - Add `pdf.watermark`, emitted from core so a theme cannot delete it (24.10)
+- Add `sources.lineBreak` with `space` (the default), `break`, and `join`, applied inside both
+  renderers before the page's text is collected (12.6)
 
 Completion criteria:
 
@@ -3584,6 +3697,17 @@ Completion criteria:
 - The decision not to re-encode images is recorded with its reasons — the native dependency the
   binary cannot take, the Chromium dependency an HTML build must not acquire, and the reproducibility
   it would cost — as Docker and Homebrew were before it
+- `sources.lineBreak: break` turns a newline inside a paragraph into a `<br>` in both formats, and an
+  AsciiDoc document that writes `:hardbreaks-option!:` still wins, because the attribute is soft-set
+  with the `@` suffix 17.5 requires
+- `sources.lineBreak: join` removes the newline between two characters of East Asian Width F, W, or H
+  where neither is Hangul, leaving it alone everywhere else and inside `pre` and `code` entirely. The
+  ranges are generated from the Unicode data file, the Unicode version is recorded, and a test
+  asserts the table still matches it
+- The default `space` produces the bytes the previous release produced, and a test builds an existing
+  fixture unchanged to prove it
+- `page.text` and the HTML agree under all three values, so a search result cannot point at text the
+  page does not contain
 
 ---
 
