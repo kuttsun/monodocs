@@ -20,7 +20,10 @@ monodocs serve examples/ja
 
 CommonMark に加え、`remark-gfm` により GitHub Flavored Markdown を有効化している。
 
-- 見出し（`#`〜`######`）、段落、改行
+- 見出し（`#`〜`######`）、段落
+- **改行**: 段落の中の改行は改行にならない（[形式横断の共通仕様](#単一-html-化のための共通仕様形式横断)）。
+  明示的な改行は行末のスペース 2 つ、または行末のバックスラッシュ（`\`）。生 HTML の `<br>` は他の生 HTML
+  とともに落とされるので、行末の空白を削るエディタでも残るのはバックスラッシュのほう
 - 強調（`*em*` / `**strong**`）、インラインコード、リンク、画像
 - リスト（順序付き / 順序なし）、ネスト、**タスクリスト**（`- [ ]` / `- [x]`）
 - 引用、水平線、**表（GFM tables）**、**取り消し線**（`~~text~~`）、**オートリンク**
@@ -36,7 +39,10 @@ CommonMark に加え、`remark-gfm` により GitHub Flavored Markdown を有効
 
 Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法をそのまま利用できる。
 
-- 文書タイトル（`= Title`）、セクション見出し（`==`〜）、段落、改行
+- 文書タイトル（`= Title`）、セクション見出し（`==`〜）、段落
+- **改行**: 段落の中の改行は改行にならない（[形式横断の共通仕様](#単一-html-化のための共通仕様形式横断)）。
+  明示的な改行は行末の ` +`、ブロック単位なら `[%hardbreaks]`、文書全体なら `:hardbreaks-option:`
+  （別名 `:hardbreaks:`）
 - リスト（順序付き / 順序なし / **説明リスト** / チェックリスト）、ネスト、継続行
 - 強調・モノスペース等のインライン書式、リンク、相互参照
 - 表、**admonition**（NOTE / TIP / IMPORTANT / WARNING / CAUTION）。Markdown の GFM alerts と
@@ -63,6 +69,12 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
   リンク先ページの prefix 済み要素 ID（`#{page-id}-sec`）へ変換し、HTML でも PDF でもアンカー位置に着地する。
 - **ページ内アンカー**: `#id`（`/` で始まらない hash）はページ内アンカーとして扱い、該当要素を含む
   ページを表示してスクロールする。脚注・内部参照・直接 URL（`docs.html#id`）で機能する。
+- **段落の中の改行**: 両形式とも、段落の中の改行は行を分けるのではなく繋ぐ。CommonMark の規則であり
+  Asciidoctor の規則でもある。そしてブラウザはその改行を空白として描く。東アジアの文字に挟まれた場合の
+  結果はエンジンによって違う。Firefox はその空白を消し、Chromium と WebKit は残すので、一文一行で書いた
+  日本語の段落は、Chromium が作る PDF では文と文のあいだに空白が出る。各形式の明示的な改行の書き方は
+  上記のとおり。実測と、この選択を明示できるようにする設定キーは [roadmap.md](roadmap.md) 12.6 に
+  記録している。
 - **Admonition / alert の共通化**: Markdown の GFM alerts（`> [!NOTE]` など）と AsciiDoc の admonition
   （Asciidoctor 出力の `.admonitionblock`）を、postprocess で共通の `<div class="admonition admonition-TYPE">`
   構造へ正規化する。5 種（NOTE / TIP / IMPORTANT / WARNING / CAUTION）は両形式で一致するため、
