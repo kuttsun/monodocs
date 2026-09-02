@@ -1093,7 +1093,8 @@ sentences.
 **`break` reaches AsciiDoc through an attribute, set as a default.** The attribute is
 `hardbreaks-option`, with `hardbreaks` an accepted alias. 17.5 requires an attribute monodocs sets to
 be a default the document can override rather than a lock, and the mechanism is measured rather than
-assumed: with `@asciidoctor/core` 4.0.6, an attribute passed through the API as `""` survives a
+assumed: with `@asciidoctor/core` 4.0.6, and re-measured unchanged on 4.0.11, an attribute passed
+through the API as `""` survives a
 document's own `:hardbreaks-option!:`, and the same attribute passed as `"@"` does not. The `@`
 suffix is what 17.5's rule is made of, and this key is its first user.
 
@@ -1551,7 +1552,8 @@ An attribute set here is a **default**, not a lock, so a document that sets its 
 the opposite of Asciidoctor's API default and it is the behaviour an author expects from a
 configuration file: the file states what every document gets unless it says otherwise. The mechanism
 is Asciidoctor's own and it is measured rather than assumed: a value ending in `@` is soft-set, and
-with `@asciidoctor/core` 4.0.6 an attribute passed as `""` survives a document's own `:name!:` while
+with `@asciidoctor/core` 4.0.6 — re-measured unchanged on 4.0.11 — an attribute passed as `""`
+survives a document's own `:name!:` while
 the same attribute passed as `"@"` does not (12.6).
 
 **The name is validated before it is classified.** A denylist compared against the key as written
