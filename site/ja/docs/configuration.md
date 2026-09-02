@@ -192,7 +192,7 @@ route は `root` からの相対パスで作ります。したがって `docs/` 
 姿を変えた 2 つ目のルートのどちらかでしかありません。この規則はコマンドラインにも及ぶので、
 `root: "."` の設定に対する `monodocs build ./docs` は、どちらかを黙って選ばずに止まります。
 
-`input` を書かずに `root` を書いた場合、ビルドが指すのは既定の `./docs` ではなく `root` です。
+`input` を書かずに `root` を書いた場合、ビルドが指すのは既定の `./docs` ではなく `root` です。`root` にはディレクトリを指定してください。route も画像も `include::` もそこから解決されるので、ファイルはそれになれません。
 
 知っておく価値のある帰結が 1 つあります。組み込みの除外パターンはルートを基準に固定されています。
 `_partials/**` はルート直下のディレクトリに当たるので、`root: "."` のもとでは `docs/_partials/` には
@@ -299,7 +299,7 @@ Noto Sans CJK); ✅ (U+2705, e.g. Noto Color Emoji). Install a font that covers 
 | ----------------------------- | -------- | ---------------------------- | ---- |
 | `sources.markdown.extensions` | string[] | `[.md, .markdown]`           | Markdown として描画する拡張子。 |
 | `sources.asciidoc.extensions` | string[] | `[.adoc, .asciidoc, .asc]`   | AsciiDoc として描画する拡張子。 |
-| `sources.include`             | string[] | 未指定                       | ページ化しうるものを選ぶ glob（`root` からの相対）。未指定なら `root` 配下すべてが候補。`sources.exclude` はここから引き、しかも最後に引く。 |
+| `sources.include`             | string[] | 未指定                       | ページ化しうるものを選ぶ glob（`root` からの相対）。未指定なら `root` 配下すべてが候補。`sources.exclude` はここから引き、しかも最後に引く。否定パターン（`!…`）はどちらのリストでも拒否されます。パターンは OR で結合されるため、否定パターンはほとんどすべてのパスに当たるからです。 |
 | `sources.exclude`             | string[] | `[]`                         | ページ化しない glob（`root` からの相対パスに対して評価）。既定リストを置き換えず、**そこへ追加される**。 |
 | `sources.excludeDefaults`     | boolean  | `true`                       | 既定の除外リストを適用するか。`_` 始まりのファイルも束ねたいツリーでは `false` にする。 |
 

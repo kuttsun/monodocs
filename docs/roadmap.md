@@ -1003,6 +1003,20 @@ file is looked for (25.2).
 `./docs` would make `root: "."` fail on a repository that has no such directory — the exact shape
 this key exists for.
 
+**A negated pattern is refused in both lists.** picomatch combines the patterns of an array with
+OR, so `["docs/**", "!docs/drafts/**"]` matches everything — the second matches every path outside
+`docs/drafts`, which is most of them — and the drafts stay in the bundle. The pruning is worse: it
+reads a pattern's static prefix, and for `!foo/**` that prefix is `foo`, so the walk enters exactly
+the directory the author meant to leave out and skips the ones they meant to keep. Two keys already
+say both things, so a third way of saying one of them is refused rather than misread.
+
+**`root` has to name a directory.** It is what routes, images, and `include::` resolve against, and
+a file cannot be that. Unchecked it half works — a single page builds, and only a relative image
+reveals that the base is a file — which is the accepted-and-ignored failure 12.2 exists to prevent.
+A `root` that does not exist is left to the build, which reports it as missing; so is an `input`
+that does not exist, because nothing can tell a missing file from a missing directory, and comparing
+them would turn a missing file into an argument about roots.
+
 **The built-in exclude patterns are anchored at the root**, which means moving the root moves what
 they cover. `_partials/**` matches a directory at the top of the root, and `**/_*` matches a file
 whose own name begins with `_`; under `root: "."` a `docs/_partials/` is therefore no longer matched

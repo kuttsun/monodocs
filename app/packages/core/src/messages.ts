@@ -67,6 +67,13 @@ const EN = {
     'input and root name different directories: input "{input}", root "{root}". Everything relative ' +
     "is resolved against one root, so two would leave a route and an image path with two answers. A " +
     "document that spans more than one directory selects with sources.include instead of moving input.",
+  "config.rootNotDirectory":
+    'root must name a directory, but "{root}" is a file. Routes, images, and include:: are all ' +
+    "resolved against the root; point it at the directory holding the file, and name the file with input.",
+  "config.negatedGlob":
+    '{key} does not accept a negated pattern: "{pattern}". Patterns are combined with OR, so a ' +
+    "negated one matches almost every path and selects far more than it looks like it does. " +
+    "sources.include selects and sources.exclude subtracts, last.",
   "config.unsupportedMessageLang":
     'Unsupported message language: "{value}" (supported: {supported}).',
 
@@ -322,6 +329,13 @@ const JA: Record<MessageKey, string> = {
     'input と root が別のディレクトリを指しています: input "{input}"、root "{root}"。' +
     "相対的なものはすべて 1 つのルートから解決するため、2 つあると route も画像のパスも答えが 2 つに" +
     "なります。複数のディレクトリにまたがる文書は、input を動かすのではなく sources.include で選んでください。",
+  "config.rootNotDirectory":
+    'root にはディレクトリを指定してください。"{root}" はファイルです。route も画像も include:: も' +
+    "すべて root から解決されます。root にはそのファイルを含むディレクトリを指定し、ファイル自体は input で指定してください。",
+  "config.negatedGlob":
+    '{key} は否定パターンを受け付けません: "{pattern}"。パターンは OR で結合されるため、否定パターンは' +
+    "ほとんどすべてのパスに当たり、見た目よりはるかに広く選んでしまいます。" +
+    "選ぶのは sources.include、引くのは sources.exclude（しかも最後に引く）です。",
   "config.unsupportedMessageLang": 'メッセージ言語が不正です: "{value}"（対応: {supported}）。',
 
   "build.inputNotFound": "入力パスが見つかりません: {path}",

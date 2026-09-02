@@ -193,7 +193,7 @@ input is either the include list written out longhand or a second root in disgui
 the command line too, so `monodocs build ./docs` against a configuration that sets `root: "."` stops
 rather than silently picking one.
 
-Written without `input`, `root` is what the build is pointed at, rather than the default `./docs`.
+Written without `input`, `root` is what the build is pointed at, rather than the default `./docs`. `root` has to name a directory: it is what routes, images, and `include::` resolve against, and a file cannot be that.
 
 One consequence worth knowing: the built-in exclude patterns are anchored at the root. `_partials/**`
 matches a directory at the top of the root, so under `root: "."` a `docs/_partials/` is not matched
@@ -335,7 +335,7 @@ the bundle entirely.
 | ------------------------------ | ---------- | ----------------------------- | ----------- |
 | `sources.markdown.extensions`  | string[]   | `[.md, .markdown]`            | Extensions rendered as Markdown. |
 | `sources.asciidoc.extensions`  | string[]   | `[.adoc, .asciidoc, .asc]`    | Extensions rendered as AsciiDoc. |
-| `sources.include`              | string[]   | unset                         | Glob patterns, relative to `root`, selecting what may become a page. Unset, everything under `root` is a candidate. `sources.exclude` subtracts from this, and subtracts last. |
+| `sources.include`              | string[]   | unset                         | Glob patterns, relative to `root`, selecting what may become a page. Unset, everything under `root` is a candidate. `sources.exclude` subtracts from this, and subtracts last. A negated pattern (`!…`) is refused in both lists: patterns are combined with OR, so a negated one matches almost every path. |
 | `sources.exclude`              | string[]   | `[]`                          | Glob patterns, matched against the path relative to `root`, whose matches are never turned into pages. **Added to the built-in list**, not replacing it. |
 | `sources.excludeDefaults`      | boolean    | `true`                        | Whether the built-in list applies. Set `false` for a tree that really does bundle its `_`-prefixed files. |
 
