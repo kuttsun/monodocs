@@ -37,7 +37,7 @@ Inside a devcontainer, or when you are in the container's shell, you can run `pn
 | Item           | Result     |
 | -------------- | ---------- |
 | Test Files     | 55 passed  |
-| Tests          | 569 passed |
+| Tests          | 580 passed |
 | typecheck      | passed     |
 | format:check   | passed     |
 | package:verify | passed     |
