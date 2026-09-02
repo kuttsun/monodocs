@@ -32,12 +32,12 @@ docker run --rm -v "$PWD":/work -w /work/app monodocs-dev pnpm test
 
 Inside a devcontainer, or when you are in the container's shell, you can run `pnpm test` directly in `app/`.
 
-## Test Results (as of 2026-08-24)
+## Test Results (as of 2026-09-02)
 
 | Item           | Result     |
 | -------------- | ---------- |
-| Test Files     | 52 passed  |
-| Tests          | 531 passed |
+| Test Files     | 53 passed  |
+| Tests          | 550 passed |
 | typecheck      | passed     |
 | format:check   | passed     |
 | package:verify | passed     |
@@ -50,7 +50,7 @@ Main test targets:
 - `sources/markdown/renderer.test.ts` … Markdown conversion, H1 / frontmatter extraction, ID prefix for headings/footnotes, GFM
 - `sources/asciidoc/renderer.test.ts` … AsciiDoc conversion, title / `:sd-*:` extraction, xref rewriting
 - `sources/prefixIds.ts` … prefix for all element IDs, anchor rewriting (common to Markdown/AsciiDoc; indirectly verified in each renderer test)
-- `scan.test.ts` … scanning via extension map, custom extensions, exclusion
+- `scan.test.ts` … scanning via extension map, custom extensions, exclusion, and `sources.include`: absent or empty selects everything under the root, include selects and exclude then subtracts in that order, and a directory no include pattern can reach is not walked (asserted with an unreadable directory, which a walk would fail on)
 - `pipeline/buildPages.test.ts` … duplicate detection of route / page id
 - `pipeline/buildSidebar.test.ts` … folder-structure sidebar
 - `pipeline/buildSidebar.custom.test.ts` … custom sidebar (`sidebar.items` structure/order/titles, `./` and backslash paths, error for a missing path, warnings for unlisted, hidden, and duplicated pages, a group emptied of pages, and reading order via `orderPagesBySidebar`)
@@ -80,6 +80,7 @@ Main test targets:
 - `build.anchors.test.ts` … e2e (cross-file heading anchors in both directions between Markdown and AsciiDoc, footnote anchors, `validate` warning for an anchor that does not exist)
 - `build.mermaid-prerender.test.ts` … Mermaid pre-render (verifies config integration and SVG embedding via fake renderer injection; end-to-end rendering and runtime-not-injected gating are confirmed only in environments with a real Chromium)
 - `build.v04.test.ts` … e2e (`watchSite` rebuild, `serveSite` delivery and live-reload injection, `serveSite` serving HTML even with pdf/both configuration and respecting an explicit `-o`)
+- `build.input-root.test.ts` … e2e (`root` and `sources.include`: one document built from a `README.md` at the top and pages under `docs/`, routes taken relative to the root, an image resolved against the root, `exclude` subtracting last, the built-in list still applying and still anchored at the root, a directory no include pattern can reach left out, a configuration writing neither key behaving as before, `root` resolving to the input directory or to the directory holding a single-file input, `input` and `root` accepted only when they name the same directory — including from the command line — and `root` without `input` pointing the build at the root rather than at the default `./docs`)
 - `build.input-file.test.ts` … e2e (a single Markdown or AsciiDoc file as the input: one page built from it, the configuration read from the directory holding it, a relative image resolved and embedded against that same directory, a `_`-prefixed file bundled when it is named directly because the exclude patterns are a scanning rule rather than a bundling one, `validate` covering the same path, an unsupported extension refused naming the ones that work, and a path that does not exist still reported as not found)
 - `init.test.ts` … `monodocs init` (the two files written, and the claim that matters — what it writes builds unedited, named by the configuration alone so that input and output come from the file itself). The scaffold is checked for what it does *not* contain, since a dump of every key would pass a "writes a configuration" assertion just as well. It also covers the scaffold following the message language down to the `lang` it sets, so a Japanese first page cannot be published declaring English; that a scaffold builds is asserted over the shipped message languages rather than the two spelled out, since each is a configuration and a page written by hand and the next language added is where a stray quote would land. Then the refusal: either file already present writes neither, the error names everything it found rather than the first one, and an existing `docs/` directory is not treated as something to overwrite
 - `build.pdf.test.ts` … PDF output (v0.5. browserless verification of `resolveOutputs` html/pdf/both output path resolution, format branching and configuration (pageSize/margin/printBackground) integration via fake `PdfGenerator` injection, embedImages override, bookmark outline passing. Actual PDF generation = `%PDF-`, `/Outlines`, `/UseOutlines`, internal link annotations for cross-page links, and a cross-file heading anchor landing on the heading rather than the page top, confirmed only in environments with a real Chromium)

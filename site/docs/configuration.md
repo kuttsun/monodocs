@@ -68,6 +68,10 @@ fontCheck: warn # warn | error | off
 # Input directory (overridden by the CLI input argument)
 input: ./docs
 
+# What every relative path resolves against. Defaults to input's value.
+# Write it, with sources.include, to build one document from more than one directory.
+# root: "."
+
 output:
   format: html # html | pdf | both
   path: ./dist/docs.html
@@ -77,6 +81,9 @@ sources:
     extensions: [.md, .markdown]
   asciidoc:
     extensions: [.adoc, .asciidoc, .asc]
+  # Glob patterns, relative to root, selecting what may become a page. Unset, everything under
+  # root is a candidate. exclude subtracts from this, and subtracts last.
+  # include: [README.md, docs/**]
   # Glob patterns that are never turned into pages. Added to the built-in list below, not
   # replacing it: ['_partials/**', 'partials/**', 'includes/**', '**/_*']
   # exclude: [drafts/**]
@@ -152,7 +159,46 @@ pdf:
 | `lang`   | string | `en`              | Language of the generated document. Fills `<html lang>` and selects the UI label table. See below. |
 | `fontCheck` | `warn` `error` `off` | `warn` | What to do when the build machine lacks a font the document needs. See below. |
 | `input`  | string | `./docs`          | Input path to scan: a directory, or a single source file. The CLI input argument overrides this. Relative to the config file. |
+| `root`   | string | value of `input`  | The directory every relative path resolves against: routes, images, `include::`, and the config file. See below. |
 | `document` | object | unset | What the document says about itself: `version`, `date`, `authors`. See below. |
+
+#### `root` (building one document from more than one directory) {#root}
+
+A repository usually keeps its `README.md` at the top and its pages under `docs/`. `input` names one
+directory, so those two cannot be one document. Letting `input` take a list would be the obvious fix
+and the wrong one: one root answers four questions at once — where `monodocs.config.yml` is looked
+for, what a route is relative to, which directory an image may be read from, and how far an AsciiDoc
+`include::` may reach — and two roots leave every one of them with two answers.
+
+So the root stays single and the **selection** becomes configurable:
+
+```yaml
+root: "."
+sources:
+  include:
+    - "README.md"
+    - "docs/**"
+```
+
+`root` defaults to `input`'s value, so a configuration that does not write it keeps its meaning
+exactly: `input: ./docs` is `root: ./docs` with everything under it included.
+
+Routes come from the path relative to `root`. Adding `README.md` to a `docs/` tree therefore changes
+the routes of every page in it — `docs/index.md` becomes `/docs` rather than `/`. That is a real
+cost, and the honest one: the document now holds two trees.
+
+Write `input` and `root` together only when they name the same directory. Anything else is a
+configuration error rather than a merge, including an `input` that points *inside* `root` — such an
+input is either the include list written out longhand or a second root in disguise. The rule covers
+the command line too, so `monodocs build ./docs` against a configuration that sets `root: "."` stops
+rather than silently picking one.
+
+Written without `input`, `root` is what the build is pointed at, rather than the default `./docs`.
+
+One consequence worth knowing: the built-in exclude patterns are anchored at the root. `_partials/**`
+matches a directory at the top of the root, so under `root: "."` a `docs/_partials/` is not matched
+by it — name it in `sources.exclude` if you want it left out. A file whose own name starts with `_`
+is still matched at any depth by `**/_*`.
 
 #### `document` (what the document says about itself) {#document}
 
@@ -289,7 +335,8 @@ the bundle entirely.
 | ------------------------------ | ---------- | ----------------------------- | ----------- |
 | `sources.markdown.extensions`  | string[]   | `[.md, .markdown]`            | Extensions rendered as Markdown. |
 | `sources.asciidoc.extensions`  | string[]   | `[.adoc, .asciidoc, .asc]`    | Extensions rendered as AsciiDoc. |
-| `sources.exclude`              | string[]   | `[]`                          | Glob patterns, matched against the path relative to the input directory, whose matches are never turned into pages. **Added to the built-in list**, not replacing it. |
+| `sources.include`              | string[]   | unset                         | Glob patterns, relative to `root`, selecting what may become a page. Unset, everything under `root` is a candidate. `sources.exclude` subtracts from this, and subtracts last. |
+| `sources.exclude`              | string[]   | `[]`                          | Glob patterns, matched against the path relative to `root`, whose matches are never turned into pages. **Added to the built-in list**, not replacing it. |
 | `sources.excludeDefaults`      | boolean    | `true`                        | Whether the built-in list applies. Set `false` for a tree that really does bundle its `_`-prefixed files. |
 
 The built-in list is `['_partials/**', 'partials/**', 'includes/**', '**/_*']` — the paths that hold

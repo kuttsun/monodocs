@@ -77,11 +77,14 @@ export async function preparePages(
   // holding the file becomes the base for its links and images — the same relationship the input
   // directory has to what it contains.
   const inputIsFile = statSync(inputPath).isFile();
-  const inputDir = inputIsFile ? dirname(inputPath) : inputPath;
+  // Everything relative — routes, images, `include::` — is resolved against the root, which is the
+  // input unless the configuration said otherwise (12.5). The scan walks from here too, so a
+  // document spanning `README.md` and `docs/**` is one tree with one set of routes.
+  const rootDir = isAbsolute(config.rootDir) ? config.rootDir : resolve(cwd, config.rootDir);
 
   let sources: SourceFile[];
   if (inputIsFile) {
-    const file = await readSourceFile(inputPath, { extensions });
+    const file = await readSourceFile(inputPath, { extensions, rootDir });
     if (file === undefined) {
       throw new MonodocsError(
         "input/unsupported-file",
@@ -93,7 +96,11 @@ export async function preparePages(
     }
     sources = [file];
   } else {
-    sources = await scanSourceFiles(inputDir, { extensions, exclude: config.exclude });
+    sources = await scanSourceFiles(rootDir, {
+      extensions,
+      include: config.include,
+      exclude: config.exclude,
+    });
     if (sources.length === 0) {
       throw new MonodocsError("input/no-sources", t("build.noSources", { path: config.inputDir }));
     }
@@ -104,7 +111,7 @@ export async function preparePages(
     titleFrom: config.sidebarTitleFrom,
   });
   const post = await postprocessPages(pages, {
-    inputDir,
+    inputDir: rootDir,
     sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
     embedImages: opts.embedImages ?? config.embedImages,
     maxInlineSize: config.maxInlineSize,

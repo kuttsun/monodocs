@@ -298,6 +298,17 @@ function buildConfigFileSchema() {
         .strict()
         .optional(),
       input: z.string().optional(),
+      /**
+       * The directory every relative path is resolved against: routes, images, `include::`, and the
+       * configuration file itself. Defaults to `input`'s value, so a configuration that does not
+       * write it keeps its meaning exactly (12.5).
+       *
+       * It exists so that a document can span more than one directory without the root becoming
+       * several. `input` stays the single-directory spelling, and writing both is allowed only when
+       * they name the same directory — a document that spans two trees selects with
+       * `sources.include`, not by pointing `input` somewhere else.
+       */
+      root: z.string().optional(),
       output: z
         .object({
           format: z.enum(["html", "pdf", "both"]).optional(),
@@ -316,8 +327,17 @@ function buildConfigFileSchema() {
             .strict()
             .optional(),
           /**
+           * Glob patterns, relative to `root`, selecting what may become a page. Absent, everything
+           * under `root` is a candidate, which is what a single-directory document wants and what
+           * every configuration before v0.12 got.
+           *
+           * `exclude` subtracts from this and subtracts last, so a pattern written to keep drafts
+           * out is not undone by an include that happens to cover them.
+           */
+          include: z.array(z.string()).optional(),
+          /**
            * Glob patterns whose matches are not turned into pages, evaluated against the path
-           * relative to the input directory. These are added to DEFAULT_EXCLUDE rather than
+           * relative to `root`. These are added to DEFAULT_EXCLUDE rather than
            * replacing it: a list written to keep one draft out of the bundle should not also
            * hand back the fragments the built-in list exists to keep out.
            */
@@ -545,10 +565,18 @@ export type ResolvedConfig = {
   /** 必要なフォントがビルド環境に無いときの挙動（既定 warn）。 */
   fontCheck: FontCheckMode;
   inputDir: string;
+  /**
+   * The directory routes, images, and `include::` are resolved against, and the base the scan walks
+   * from. Equal to `inputDir` — or, for an input naming a file, the directory holding it — unless
+   * the configuration writes `root` (12.5).
+   */
+  rootDir: string;
   outputFile: string;
   format: OutputFormat;
   markdownExtensions: string[];
   asciidocExtensions: string[];
+  /** Glob patterns selecting what may become a page. Empty means everything under `rootDir`. */
+  include: string[];
   exclude: string[];
   /** サイドバーの生成方式（"folder" = フォルダ構造 / "custom" = sidebarItems）。 */
   sidebarMode: SidebarMode;
@@ -867,6 +895,40 @@ export async function loadConfig(
     ...(sourcesExclude ?? sidebarExclude ?? []),
   ];
 
+  // `root` and `input` are the same key seen from different distances (12.5): one names what
+  // everything is relative to, the other names what a single-directory document bundles. Written
+  // together they have to agree, because there is nothing sensible to do with two roots — an image
+  // at `./assets/logo.png` would be inside one and outside the other. A document that spans two
+  // trees says so with `sources.include`, which is the whole reason `root` exists.
+  const explicitInput =
+    options.inputDir ??
+    (fileConfig.input === undefined
+      ? undefined
+      : resolveConfigRelativePath(configBaseDir, fileConfig.input));
+  let rootDir: string;
+  let inputDir: string;
+  if (fileConfig.root === undefined) {
+    inputDir = explicitInput ?? resolveConfigRelativePath(configBaseDir, DEFAULT_INPUT);
+    // Unwritten, the root is the input, and an input naming a file is rooted at the directory
+    // holding it — the relationship a scanned file already has to the directory it was found in.
+    rootDir = configBaseFor(resolve(cwd, inputDir));
+  } else {
+    rootDir = resolveConfigRelativePath(configBaseDir, fileConfig.root);
+    // With a root written and no input, the root is what the build is pointed at. Falling back to
+    // the default `./docs` here would make `root: "."` fail on a repository that has no such
+    // directory, which is exactly the repository shape this key exists for.
+    inputDir = explicitInput ?? rootDir;
+    if (explicitInput !== undefined) {
+      const inputBase = configBaseFor(resolve(cwd, explicitInput));
+      if (resolve(cwd, inputBase) !== resolve(cwd, rootDir)) {
+        throw new MonodocsError(
+          "config/input-outside-root",
+          t("config.inputOutsideRoot", { input: inputDir, root: rootDir }),
+        );
+      }
+    }
+  }
+
   // 設定ファイルの output.format は zod で検証済みだが、CLI の --format は生文字列で渡るため
   // ここで検証する（不正値が resolveOutputs の both 分岐へ落ちるのを防ぐ）。
   const format = options.format ?? fileConfig.output?.format ?? "html";
@@ -884,15 +946,15 @@ export async function loadConfig(
     // 既定は warn。検査は Chromium のフォールバック連鎖に対するヒューリスティックなので、
     // 誤検出が既定でビルドを止められる形にはしない。
     fontCheck: fileConfig.fontCheck ?? "warn",
-    inputDir:
-      options.inputDir ??
-      resolveConfigRelativePath(configBaseDir, fileConfig.input ?? DEFAULT_INPUT),
+    inputDir,
+    rootDir,
     outputFile:
       options.outputFile ??
       resolveConfigRelativePath(configBaseDir, fileConfig.output?.path ?? defaultOutputFor(format)),
     format,
     markdownExtensions: fileConfig.sources?.markdown?.extensions ?? DEFAULT_MARKDOWN_EXTENSIONS,
     asciidocExtensions: fileConfig.sources?.asciidoc?.extensions ?? DEFAULT_ASCIIDOC_EXTENSIONS,
+    include: fileConfig.sources?.include ?? [],
     exclude,
     sidebarMode: fileConfig.sidebar?.mode ?? "folder",
     sidebarItems: fileConfig.sidebar?.items ?? [],

@@ -68,6 +68,10 @@ fontCheck: warn # warn | error | off
 # 入力ディレクトリ（CLI の入力引数で上書きされる）
 input: ./docs
 
+# 相対的なものすべての基準。既定は input の値。
+# 複数のディレクトリから 1 つの文書を組むときに、sources.include と一緒に書く
+# root: "."
+
 output:
   format: html # html | pdf | both
   path: ./dist/docs.html
@@ -77,6 +81,9 @@ sources:
     extensions: [.md, .markdown]
   asciidoc:
     extensions: [.adoc, .asciidoc, .asc]
+  # ページ化しうるものを選ぶ glob（root からの相対）。未指定なら root 配下すべてが候補。
+  # exclude はここから引き、しかも最後に引く
+  # include: [README.md, docs/**]
   # ページ化しない glob。下の既定リストを置き換えず、そこへ追加される
   # 既定: ['_partials/**', 'partials/**', 'includes/**', '**/_*']
   # exclude: [drafts/**]
@@ -152,7 +159,45 @@ pdf:
 | `lang`   | string | `en`            | 生成する文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ。下記参照。   |
 | `fontCheck` | `warn` `error` `off` | `warn` | 文書が必要とするフォントがビルド環境に無いときの挙動。下記参照。 |
 | `input`  | string | `./docs`        | 走査する入力パス。ディレクトリ、または単一のソースファイル。CLI の入力引数で上書き。設定ファイル基準の相対パス。 |
+| `root`   | string | `input` の値    | 相対的なものすべての基準になるディレクトリ。route・画像・`include::`・設定ファイル。下記参照。 |
 | `document` | object | 未設定 | 文書自身が名乗る情報。`version` / `date` / `authors`。下記参照。 |
+
+#### `root`（複数のディレクトリから 1 つの文書を組む） {#root}
+
+リポジトリはたいてい `README.md` をルートに置き、ページを `docs/` に置きます。`input` はディレクトリを
+1 つしか指せないので、この 2 つは 1 つの文書になりません。`input` にリストを取らせるのが素直な解決に
+見えますが、それは誤りです。ルートは 4 つの問いに同時に答えています——`monodocs.config.yml` をどこから
+探すか、route が何からの相対か、画像をどのディレクトリから読んでよいか、AsciiDoc の `include::` が
+どこまで届いてよいか。ルートが 2 つあれば、そのすべてに答えが 2 つできます。
+
+そこでルートは 1 つのままにし、**選択**のほうを設定可能にします。
+
+```yaml
+root: "."
+sources:
+  include:
+    - "README.md"
+    - "docs/**"
+```
+
+`root` の既定値は `input` の値です。したがって書かなければ設定の意味は変わりません。`input: ./docs`
+は「`root: ./docs` で配下すべてを含める」です。
+
+route は `root` からの相対パスで作ります。したがって `docs/` のツリーに `README.md` を足すと、その中の
+全ページの route が変わり、`docs/index.md` は `/` ではなく `/docs` になります。これは実際のコストであり、
+正直なコストです。その文書は 2 つのツリーを含むようになったのですから。
+
+`input` と `root` を併記できるのは、同じディレクトリを指すときだけです。それ以外はマージではなく設定
+エラーになります。`root` の**内側**を指す `input` も同様です——それは include を長く書き下したものか、
+姿を変えた 2 つ目のルートのどちらかでしかありません。この規則はコマンドラインにも及ぶので、
+`root: "."` の設定に対する `monodocs build ./docs` は、どちらかを黙って選ばずに止まります。
+
+`input` を書かずに `root` を書いた場合、ビルドが指すのは既定の `./docs` ではなく `root` です。
+
+知っておく価値のある帰結が 1 つあります。組み込みの除外パターンはルートを基準に固定されています。
+`_partials/**` はルート直下のディレクトリに当たるので、`root: "."` のもとでは `docs/_partials/` には
+当たりません。外したい場合は `sources.exclude` に書いてください。名前が `_` で始まるファイルは、
+`**/_*` により今までどおりどの深さでも当たります。
 
 #### `document`（文書自身が名乗る情報） {#document}
 
@@ -254,7 +299,8 @@ Noto Sans CJK); ✅ (U+2705, e.g. Noto Color Emoji). Install a font that covers 
 | ----------------------------- | -------- | ---------------------------- | ---- |
 | `sources.markdown.extensions` | string[] | `[.md, .markdown]`           | Markdown として描画する拡張子。 |
 | `sources.asciidoc.extensions` | string[] | `[.adoc, .asciidoc, .asc]`   | AsciiDoc として描画する拡張子。 |
-| `sources.exclude`             | string[] | `[]`                         | ページ化しない glob（入力ディレクトリからの相対パスに対して評価）。既定リストを置き換えず、**そこへ追加される**。 |
+| `sources.include`             | string[] | 未指定                       | ページ化しうるものを選ぶ glob（`root` からの相対）。未指定なら `root` 配下すべてが候補。`sources.exclude` はここから引き、しかも最後に引く。 |
+| `sources.exclude`             | string[] | `[]`                         | ページ化しない glob（`root` からの相対パスに対して評価）。既定リストを置き換えず、**そこへ追加される**。 |
 | `sources.excludeDefaults`     | boolean  | `true`                       | 既定の除外リストを適用するか。`_` 始まりのファイルも束ねたいツリーでは `false` にする。 |
 
 既定リストは `['_partials/**', 'partials/**', 'includes/**', '**/_*']` で、ページではなく include

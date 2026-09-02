@@ -319,11 +319,12 @@ release rather than as two; the reasoning is under v0.11 in [roadmap.md](roadmap
 
 **The input root** ([roadmap.md](roadmap.md) 12.5)
 
-- [ ] `root: .` with `sources.include: ["README.md", "docs/**"]` builds one document from a repository shaped the way repositories are shaped, resolving images, links, and `monodocs.config.yml` against `root`
-- [ ] `sources.exclude` subtracts last, so a pattern that keeps drafts out is not undone by an include that covers them
-- [ ] A configuration with neither key behaves exactly as it does today, and a test builds an existing fixture unchanged to prove it
-- [ ] `input` is neither renamed nor deprecated; naming a path outside `root` is an error rather than a merge
-- [ ] The CLI gains no variadic input list. Two paths on a command line would have to answer where the configuration is, what routes are relative to, and which directory an image may be read from ([roadmap.md](roadmap.md) 25.2)
+- [x] `root: .` with `sources.include: ["README.md", "docs/**"]` builds one document from a repository shaped the way repositories are shaped, resolving images, links, and `monodocs.config.yml` against `root`. Routes come from the path relative to `root`, so `docs/index.md` is `/docs` in such a document rather than `/`
+- [x] `sources.exclude` subtracts last, so a pattern that keeps drafts out is not undone by an include that covers them, and the built-in list still applies
+- [x] A configuration with neither key behaves exactly as it does today, and the 531 tests that existed before this change pass unaltered. `rootDir` resolves to the input directory, or to the directory holding a single-file input
+- [x] `input` is neither renamed nor deprecated. Writing both is allowed only when they name the same directory — stricter than "outside `root`", because an `input` pointing inside `root` is either the include list longhand or a second root in disguise ([roadmap.md](roadmap.md) 12.5). The rule covers the command line, so `monodocs build ./docs` against `root: "."` stops instead of picking one
+- [x] A directory no include pattern can reach is not walked, so `root: "."` on a repository does not descend into `node_modules` to decide that nothing in it was wanted. Asserted with a directory that cannot be read, which a walk would fail on
+- [x] The CLI gains no variadic input list. Two paths on a command line would have to answer where the configuration is, what routes are relative to, and which directory an image may be read from ([roadmap.md](roadmap.md) 25.2)
 
 **Route aliases** ([roadmap.md](roadmap.md) 15.5)
 

@@ -168,7 +168,10 @@ export async function watchSite(
     const parent = dirname(inputPath);
     startWatch(parent, parent, false, basename(inputPath));
   } else {
-    startWatch(inputPath, inputPath, true);
+    // The root rather than the input, because that is what the build reads: with `root` and
+    // `sources.include` the document can span directories the input alone does not name (12.5).
+    const rootPath = isAbsolute(config.rootDir) ? config.rootDir : resolve(cwd, config.rootDir);
+    startWatch(rootPath, rootPath, true);
   }
   // 設定ファイルの監視は best-effort（失敗しても入力監視は継続する）。
   if (config.configFilePath && existsSync(config.configFilePath)) {

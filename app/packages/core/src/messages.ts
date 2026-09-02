@@ -63,6 +63,10 @@ const EN = {
     "sidebar.exclude is deprecated: use sources.exclude, which is named for what it does — a match " +
     "is left out of the bundle, not only out of the sidebar. Patterns are now added to the built-in " +
     "exclude list rather than replacing it (sources.excludeDefaults: false drops that list).",
+  "config.inputOutsideRoot":
+    'input and root name different directories: input "{input}", root "{root}". Everything relative ' +
+    "is resolved against one root, so two would leave a route and an image path with two answers. A " +
+    "document that spans more than one directory selects with sources.include instead of moving input.",
   "config.unsupportedMessageLang":
     'Unsupported message language: "{value}" (supported: {supported}).',
 
@@ -309,6 +313,10 @@ const JA: Record<MessageKey, string> = {
     "（サイドバーからではなく束そのものからファイルを外す設定です）。" +
     "指定したパターンは既定の除外リストを置き換えず、そこへ追加されるようになりました" +
     "（既定リストを外すには sources.excludeDefaults: false）。",
+  "config.inputOutsideRoot":
+    'input と root が別のディレクトリを指しています: input "{input}"、root "{root}"。' +
+    "相対的なものはすべて 1 つのルートから解決するため、2 つあると route も画像のパスも答えが 2 つに" +
+    "なります。複数のディレクトリにまたがる文書は、input を動かすのではなく sources.include で選んでください。",
   "config.unsupportedMessageLang": 'メッセージ言語が不正です: "{value}"（対応: {supported}）。',
 
   "build.inputNotFound": "入力パスが見つかりません: {path}",
