@@ -260,12 +260,15 @@ machine's fonts into the SVG, which is why the setting is not part of `pdf`.
 - AsciiDoc passthrough can emit raw HTML, which is embedded without sanitization. Converting untrusted AsciiDoc
   can therefore cause XSS.
 - AsciiDoc `include::[]` runs in safe mode, which jails it under the input file's directory
-  **lexically**: `../` and an absolute path are refused, and a symbolic link inside the tree pointing
-  outside it is followed, because Asciidoctor documents that safe mode does not resolve symbolic
-  links. monodocs therefore asks Asciidoctor: an include processor is consulted for every include
+  by **recovering**: `../` and an absolute path are both pulled back inside the jail rather than
+  refused. What it does not do is resolve symbolic links, so a link inside the tree pointing outside
+  it is followed, which Asciidoctor documents. monodocs therefore asks Asciidoctor: an include processor is consulted for every include
   about to be read, with the target already expanded, and one whose real path lands outside the input
-  root is refused, naming the path it resolved to. A safe target is declined back to Asciidoctor, so
-  `lines`, `tag`, and `tags` are untouched ([roadmap.md](roadmap.md) 17.5).
+  root is refused, naming the path it resolved to. The path comes from `normalizeSystemPath`, the
+  call Asciidoctor itself makes, so safe mode's recovery of a path out of the jail is followed rather
+  than second-guessed. A safe target is declined back to Asciidoctor, so `lines`, `tag`, and `tags`
+  are untouched. Another include processor registered in the same process could preempt this one or
+  read elsewhere; monodocs registers none ([roadmap.md](roadmap.md) 17.5).
 - Images are embedded only when their resolved real paths, including symlink resolution, remain under the input
   root.
 - `assets.onLargeImage` controls whether over-limit images are embedded with a warning, kept external, or treated

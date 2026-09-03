@@ -1585,7 +1585,9 @@ the marker monodocs adds to every value here and writing one would say it twice.
 directory, and monodocs relies on that (17.3). It does not resolve symbolic links, which Asciidoctor
 documents: a link inside the tree pointing outside it is followed. Measured, and worse than the claim
 suggests — a symlinked file and a symlinked directory both pulled content from outside the jail into
-the output, while `../` and an absolute path were refused. The architecture document's claim that
+the output, while `../` and an absolute path were **recovered** into the jail rather than refused —
+what a reader sees when nothing is at the recovered path is Asciidoctor's own "Unresolved directive",
+which is easy to mistake for a refusal and was. The architecture document's claim that
 safe mode "prevents external access" is therefore too strong. v0.12 makes it true instead of
 softening it — an included file's real path is checked against the input root, and one that resolves
 outside it is refused with the path it resolved to. The same check covers images (20.2), where the
@@ -1621,12 +1623,19 @@ the root was rejected.
 A lexical escape is therefore not an escape: safe mode recovers it into the jail, and what the reader
 sees is Asciidoctor's own "Unresolved directive" when nothing is there.
 
-**What the check assumes.** Asciidoctor uses the first include processor whose `handles` returns
-true, and a processor registered globally with `prefer()` is placed ahead of this one — it would take
-the include and the boundary would never be asked. monodocs registers no other processor, so its own
-CLI is unaffected; a program embedding `@monodocs/core` alongside global Asciidoctor extensions is
-the case where the assumption matters. This boundary calls `prefer()` itself, which puts it ahead of
-anything registered normally.
+**What the check assumes, stated precisely.** It sees the path Asciidoctor's own include handling
+would read. Another include processor can change that in two ways, and both are outside what this
+boundary can see: one whose `handles` returns true **before** it takes the include, and one that
+returns true **after** it and then pushes the contents of a different file. So the assumption is not
+"no preferred processor" but the wider "no other include processor either preempts this one or reads
+somewhere other than the target it was asked about".
+
+monodocs registers no other processor, so its own CLI, `watch`, and `serve` are unaffected. The case
+where it matters is a program embedding `@monodocs/core` in a process that registers global
+Asciidoctor extensions. The boundary calls `prefer()`, which places it ahead of anything registered
+normally — measured, it is already ahead of those, since it is registered on the registry directly
+and global extensions are activated afterwards; what `prefer()` actually buys is being ahead of
+another `prefer()`ing processor activated before it, and the last one activated still wins.
 
 **Markdown gets no equivalent.** A `vars:` map substituted into Markdown text is a template language:
 it needs an escape for the literal spelling, a rule for an undefined name, a rule for code blocks

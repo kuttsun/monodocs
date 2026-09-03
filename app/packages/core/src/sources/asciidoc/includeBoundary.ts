@@ -12,8 +12,10 @@ export type IncludeViolation = { target: string; resolved: string; root: string 
  * （17.5）。
  *
  * Asciidoctor's SAFE mode confines `include::` to the base directory, and monodocs relies on that
- * (17.3). Measured, it confines it **lexically**: `include::../outside/x.adoc[]` and an absolute path
- * are both refused, and a symbolic link inside the base directory pointing outside it is followed —
+ * (17.3). Measured, it confines it by **recovering** rather than refusing: `include::../x.adoc[]`
+ * and an absolute path are both pulled back inside the jail — "recovering automatically" — and what
+ * a reader sees when nothing is there is Asciidoctor's own "Unresolved directive". What it does not
+ * do is resolve symbolic links, so a link inside the base directory pointing outside it is followed:
  * both a linked file and a linked directory pulled content from outside the jail into the output.
  * Asciidoctor documents that it does not resolve symbolic links, so this is its behaviour rather
  * than a defect, and closing it is monodocs' job.

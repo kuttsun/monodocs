@@ -6,10 +6,11 @@ import { buildSite, validateSite } from "./build";
 
 /**
  * Asciidoctor's safe mode confines `include::` to the base directory, and monodocs relies on that
- * (roadmap.md 17.3). Measured, it confines it **lexically**: `../` and an absolute path are both
- * refused, and a symbolic link inside the tree pointing outside it is followed — which is what
- * Asciidoctor documents, and what makes architecture.md's claim that safe mode "prevents external
- * access" too strong. This is the check that closes it (17.5).
+ * (roadmap.md 17.3). Measured, it confines them by **recovering**: `../` and an absolute path are
+ * both pulled back inside the jail rather than refused. What it does not do is resolve symbolic
+ * links, so a link inside the tree pointing outside it is followed — which is what Asciidoctor
+ * documents, and what makes architecture.md's claim that safe mode "prevents external access" too
+ * strong. This is the check that closes it (17.5).
  */
 let dir: string;
 let root: string;
