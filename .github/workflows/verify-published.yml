@@ -59,8 +59,9 @@ jobs:
 
       # The version decides which surface exists to be verified: this workflow takes any dist-tag or
       # version as input, and `init`, the message language, and PDF page numbers all arrive in 0.10,
-      # while the diagnostics JSON and `document` arrive in 0.11. Verifying an older release must
-      # stay possible, so those steps ask rather than assume.
+      # the diagnostics JSON and `document` in 0.11, and `root` / `sources.include`, route aliases,
+      # `sources.asciidoc.attributes`, and the include boundary in 0.12. Verifying an older release
+      # must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
           version="$(monodocs --version | tr -d '\r')"
@@ -73,11 +74,12 @@ jobs:
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
             const major = Number(m[1]), minor = Number(m[2]);
             const atLeast = (n) => major > 0 || minor >= n;
-            process.stdout.write([atLeast(10), atLeast(11)].map(String).join(' '));
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V011=$(echo "$gate" | cut -d' ' -f2)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V012=$(echo "$gate" | cut -d' ' -f3)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -334,3 +336,96 @@ jobs:
             const b = fs.readFileSync('docmeta/second.html');
             if (!a.equals(b)) throw new Error('the same input produced different bytes');
           "
+
+      # v0.12. A repository shaped the way repositories are shaped — a readme at the top and pages
+      # one directory down — builds as one document, with routes taken relative to `root` (12.5).
+      - name: Input root and sources.include
+        if: env.SUPPORTS_V012 == 'true'
+        run: |
+          mkdir -p inputroot/docs
+          printf '= Readme\n\nThe top of the repository.\n' > inputroot/README.adoc
+          printf '= Docs\n\nThe documentation index.\n' > inputroot/docs/index.adoc
+          printf '= Draft\n\nNot for readers.\n' > inputroot/docs/draft.adoc
+          printf 'root: "."\nsources:\n  include:\n    - "README.adoc"\n    - "docs/**"\n  exclude:\n    - "docs/draft.adoc"\n' > inputroot/monodocs.config.yml
+          monodocs build -c inputroot/monodocs.config.yml -o inputroot/out.html
+          node -e "
+            const h = require('node:fs').readFileSync('inputroot/out.html', 'utf8');
+            if (!h.includes('The top of the repository.')) throw new Error('the readme at the root was not bundled');
+            if (!h.includes('data-route=\"/docs\"')) throw new Error('routes are not relative to root');
+            if (h.includes('Not for readers.')) throw new Error('exclude did not subtract last');
+          "
+
+      # v0.12. A negated pattern is refused rather than misread, because picomatch combines an array
+      # with OR and one would match almost every path (12.5).
+      - name: Negated glob refused
+        if: env.SUPPORTS_V012 == 'true'
+        shell: bash
+        run: |
+          printf 'sources:\n  include:\n    - "!docs/**"\n' > inputroot/negated.yml
+          if monodocs build -c inputroot/negated.yml -o inputroot/negated.html 2> inputroot/negated.log; then
+            echo "a negated pattern was accepted"; cat inputroot/negated.log; exit 1
+          fi
+          grep -q "negated pattern" inputroot/negated.log || { echo "the error did not name the problem"; cat inputroot/negated.log; exit 1; }
+
+      # v0.12. An old hash route still reaches the page, and the table reaches the client (15.5).
+      - name: Route aliases
+        if: env.SUPPORTS_V012 == 'true'
+        run: |
+          mkdir -p aliases/guide
+          printf '= Home\n\nHome page.\n' > aliases/index.adoc
+          printf '= Installation\n:sd-aliases: /setup/install, /getting-started/install\n\nInstall me.\n' > aliases/guide/install.adoc
+          monodocs build aliases -o aliases/out.html
+          node -e "
+            const h = require('node:fs').readFileSync('aliases/out.html', 'utf8');
+            const m = h.match(/window\.__MONODOCS_DATA__\s*=\s*(\{[\s\S]*?\});/);
+            if (!m) throw new Error('no site data in the output');
+            const aliases = JSON.parse(m[1]).aliases || {};
+            if (aliases['/setup/install'] !== '/guide/install') throw new Error('alias missing: ' + JSON.stringify(aliases));
+            if (aliases['/getting-started/install'] !== '/guide/install') throw new Error('second alias missing');
+            if (h.includes('data-route=\"/setup/install\"')) throw new Error('an alias became a page');
+          "
+
+      # v0.12. A configured attribute is a default the document can override, and one that moves the
+      # read boundary is refused naming it (17.5).
+      - name: AsciiDoc attributes
+        if: env.SUPPORTS_V012 == 'true'
+        shell: bash
+        run: |
+          mkdir -p adocattrs/docs
+          printf '= A\n\nShipping {product}.\n' > adocattrs/docs/a.adoc
+          printf '= B\n:product: Gadget\n\nShipping {product}.\n' > adocattrs/docs/b.adoc
+          printf 'input: ./docs\nsources:\n  asciidoc:\n    attributes:\n      product: "Widget"\n' > adocattrs/config.yml
+          monodocs build adocattrs/docs -c adocattrs/config.yml -o adocattrs/out.html
+          node -e "
+            const h = require('node:fs').readFileSync('adocattrs/out.html', 'utf8');
+            if (!h.includes('Shipping Widget.')) throw new Error('the configured attribute was not applied');
+            if (!h.includes('Shipping Gadget.')) throw new Error('the document did not win over the configuration');
+          "
+          printf 'input: ./docs\nsources:\n  asciidoc:\n    attributes:\n      allow-uri-read: true\n' > adocattrs/refused.yml
+          if monodocs build adocattrs/docs -c adocattrs/refused.yml -o adocattrs/refused.html 2> adocattrs/refused.log; then
+            echo "allow-uri-read was accepted"; cat adocattrs/refused.log; exit 1
+          fi
+          grep -q "allow-uri-read" adocattrs/refused.log || { echo "the error did not name the attribute"; cat adocattrs/refused.log; exit 1; }
+          printf 'input: ./docs\nsources:\n  asciidoc:\n    attributes:\n      "allow-uri-read@": true\n' > adocattrs/decorated.yml
+          if monodocs build adocattrs/docs -c adocattrs/decorated.yml -o adocattrs/decorated.html 2> adocattrs/decorated.log; then
+            echo "a decorated attribute name walked past the classification"; cat adocattrs/decorated.log; exit 1
+          fi
+
+      # v0.12. Safe mode does not resolve symbolic links, so an include reaching outside the input
+      # root through one is refused naming the path it resolved to (17.5). Linux only: creating a
+      # symbolic link on a Windows runner needs privileges this job does not have.
+      - name: Include read boundary
+        if: env.SUPPORTS_V012 == 'true' && runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p boundary/root boundary/outside
+          printf 'SECRET-FROM-OUTSIDE\n' > boundary/outside/secret.adoc
+          ln -s ../outside/secret.adoc boundary/root/linked.adoc
+          printf '= A\n\ninclude::linked.adoc[]\n' > boundary/root/a.adoc
+          if monodocs build boundary/root -o boundary/out.html 2> boundary/log; then
+            echo "an include reaching outside the root was allowed"; cat boundary/log
+            grep -q "SECRET-FROM-OUTSIDE" boundary/out.html && echo "and the outside content is in the output"
+            exit 1
+          fi
+          grep -q "outside the input root" boundary/log || { echo "the error did not say what was wrong"; cat boundary/log; exit 1; }
+          grep -q "secret.adoc" boundary/log || { echo "the error did not name the path it resolved to"; cat boundary/log; exit 1; }
