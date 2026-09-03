@@ -146,11 +146,15 @@ PDF はシステムフォントを使います。開発イメージには Noto C
   一致させ、core が組み立てた要素（`div` ひとつ、クラスひとつ、子は無し）に置き換えます。
   入力から出力へ届くものは無いので、境界に開いた穴ではなく、認識されたマーカーです。
 - AsciiDoc passthrough は未サニタイズの raw HTML を出力できるため、信頼できない入力は XSS の原因になります。
-- AsciiDoc `include::[]` は safe mode で実行しますが、その制限は**字句的**です。`../` と絶対パスは
-  拒否される一方、ツリーの内側から外側を指すシンボリックリンクはたどられます。safe mode が
-  シンボリックリンクを解決しないことは Asciidoctor 自身が明記しています。そのため monodocs は変換の前に
-  各 include の実体パスを解決し、入力ルートの外へ落ちるものを、解決先のパスを示して拒否します。
-  属性参照から組み立てた target は Asciidoctor を走らせずには解決できないため、覆えません
+- AsciiDoc `include::[]` は safe mode で実行しますが、その制限は**復旧**によるものです。`../` も
+  絶対パスも、拒否されるのではなく jail の中へ引き戻されます。しない のはシンボリックリンクの解決で、
+  ツリーの内側から外側を指すリンクはたどられます。これは Asciidoctor 自身が明記しています。そのため monodocs は
+  Asciidoctor に尋ねます。読もうとしているすべての include について include processor が展開済みの
+  target とともに呼ばれ、実体パスが入力ルートの外へ落ちるものを、解決先のパスを示して拒否します。
+  パスは Asciidoctor 自身が呼ぶ `normalizeSystemPath` から得るので、safe mode が jail 外のパスを
+  復旧することにも推測せず追随します。安全な target は Asciidoctor へ見送るので、`lines` / `tag` /
+  `tags` はそのまま効きます。同じプロセスに登録された他の include processor は、この境界を追い越す
+  ことも別の場所を読むこともできます。monodocs は他の processor を登録しません
   （[roadmap.md](roadmap.md) 17.5）。
 - 画像は symlink 解決後の real path が入力ルート内にある場合だけ埋め込みます。
 - `assets.onLargeImage` は、上限超過画像を警告付きで埋め込む、外部参照に保つ、エラーにする、のいずれかを制御します。

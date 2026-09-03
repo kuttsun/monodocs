@@ -6,10 +6,11 @@ import { buildSite, validateSite } from "./build";
 
 /**
  * Asciidoctor's safe mode confines `include::` to the base directory, and monodocs relies on that
- * (roadmap.md 17.3). Measured, it confines it **lexically**: `../` and an absolute path are both
- * refused, and a symbolic link inside the tree pointing outside it is followed — which is what
- * Asciidoctor documents, and what makes architecture.md's claim that safe mode "prevents external
- * access" too strong. This is the check that closes it (17.5).
+ * (roadmap.md 17.3). Measured, it confines them by **recovering**: `../` and an absolute path are
+ * both pulled back inside the jail rather than refused. What it does not do is resolve symbolic
+ * links, so a link inside the tree pointing outside it is followed — which is what Asciidoctor
+ * documents, and what makes architecture.md's claim that safe mode "prevents external access" too
+ * strong. This is the check that closes it (17.5).
  */
 let dir: string;
 let root: string;
@@ -94,7 +95,7 @@ describe("an include that escapes the input root", () => {
   });
 });
 
-describe("the four ways a first attempt let outside content through", () => {
+describe("the ways a static scan of the source text used to let content through", () => {
   it("is not fooled by a //// inside a listing block", async () => {
     await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
     await writeFile(join(root, "a.adoc"), "= A\n\n----\n////\n----\n\ninclude::linked.adoc[]\n");
@@ -130,12 +131,30 @@ describe("the four ways a first attempt let outside content through", () => {
 
     await expect(build()).rejects.toThrow(/resolves outside the input root/i);
   });
+});
 
-  it("is not hidden by a BOM or by lone carriage returns", async () => {
-    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
-    await writeFile(join(root, "a.adoc"), "\uFEFF= A\r\rinclude::linked.adoc[]\r");
+describe("safe mode recovering a path out of the jail", () => {
+  /**
+   * Safe mode does not refuse a target that climbs out of the jail — it **recovers** it by dropping
+   * the `..` and reads the recovered path instead ("include file has illegal reference to ancestor
+   * of jail; recovering automatically"). A check that resolved the target the plain way looked at a
+   * path that does not exist, skipped it, and let Asciidoctor read a symbolic link out of the tree.
+   */
+  it("checks the path Asciidoctor recovers, not the one the target spells", async () => {
+    await mkdir(join(root, "docs"), { recursive: true });
+    await symlink(join(outside, "secret.adoc"), join(root, "docs", "linked.adoc"));
+    await writeFile(join(root, "docs", "a.adoc"), "= A\n\ninclude::../linked.adoc[]\n");
 
     await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+  });
+
+  it("allows the recovered path when it stays inside the root", async () => {
+    await mkdir(join(root, "sub"), { recursive: true });
+    // `../part.adoc` from a jail of `root/sub` recovers to `root/sub/part.adoc`, which is inside.
+    await writeFile(join(root, "sub", "_part.adoc"), "Recovered paragraph.\n");
+    await writeFile(join(root, "sub", "a.adoc"), "= A\n\ninclude::../_part.adoc[]\n");
+
+    expect(await build()).toContain("Recovered paragraph.");
   });
 });
 
@@ -158,15 +177,19 @@ describe("what the check leaves alone", () => {
   });
 
   /**
-   * A lexical escape was already refused by safe mode, but as an "Unresolved directive" paragraph
-   * left in the output rather than as a build that stops. The check reaches it first now, so the
-   * two ways of leaving the root are refused the same way and say the same thing. That is a
-   * behaviour change for a document that carried a broken `../` include and built anyway.
+   * A lexical escape is not an escape. Safe mode recovers it into the jail rather than refusing it,
+   * so `../outside/secret.adoc` from a jail of the root becomes `root/outside/secret.adoc` — a path
+   * that does not exist here, which Asciidoctor reports as a missing include. There is nothing for
+   * the boundary to refuse, and an earlier version of it refused this only because it resolved the
+   * target differently from Asciidoctor.
    */
-  it("refuses a lexical escape too, rather than leaving a broken paragraph in the output", async () => {
+  it("leaves a lexical escape to safe mode, which recovers it into the jail", async () => {
     await writeFile(join(root, "a.adoc"), "= A\n\ninclude::../outside/secret.adoc[]\n");
 
-    await expect(build()).rejects.toThrow(/resolves outside the input root/i);
+    const html = await build();
+
+    expect(html).not.toContain("SECRET-FROM-OUTSIDE");
+    expect(html).toContain("Unresolved directive");
   });
 
   it("does not choke on an include that does not exist", async () => {
@@ -184,24 +207,43 @@ describe("what the check leaves alone", () => {
   });
 
   /**
-   * Deliberately over-approximated. Modelling `////` meant tracking block structure, and the first
-   * attempt got it wrong in the permissive direction: a `////` inside a listing block put the
-   * checker into a comment state Asciidoctor was not in, and the include after it leaked. No block
-   * structure is modelled now, so an include inside a comment block is checked like any other.
+   * The check is asked at the moment Asciidoctor is about to read an include, so an include inside
+   * a comment block is never offered to it — Asciidoctor does not read one. No block structure is
+   * modelled, so there is nothing to get wrong and no false refusal to accept.
    */
-  it("checks an include inside a comment block too, rather than modelling block structure", async () => {
+  it("leaves an include inside a comment block alone, because Asciidoctor never reads it", async () => {
     await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
     await writeFile(join(root, "a.adoc"), "= A\n\n////\ninclude::linked.adoc[]\n////\n\nBody.\n");
+
+    expect(await build()).toContain("Body.");
+  });
+
+  it("leaves an include inside a false conditional alone", async () => {
+    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
+    await writeFile(
+      join(root, "a.adoc"),
+      "= A\n\nifdef::nope[]\ninclude::linked.adoc[]\nendif::[]\n\nBody.\n",
+    );
+
+    expect(await build()).toContain("Body.");
+  });
+
+  /**
+   * `handles` is given the **expanded** target, so a target built from an attribute reference is
+   * checked like any other. The static scan it replaced could not resolve one and had to skip it,
+   * which was the hole it documented rather than closed.
+   */
+  it("checks a target built from an attribute reference, because it arrives expanded", async () => {
+    await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
+    await writeFile(
+      join(root, "a.adoc"),
+      "= A\n:partsdir: .\n\ninclude::{partsdir}/linked.adoc[]\n",
+    );
 
     await expect(build()).rejects.toThrow(/resolves outside the input root/i);
   });
 
-  /**
-   * A target built from an attribute cannot be resolved without running Asciidoctor, so it is
-   * skipped rather than guessed at. The limitation is the price of not taking the directive over,
-   * and it is written down in roadmap.md 17.5 rather than left to be discovered.
-   */
-  it("skips a target built from an attribute reference", async () => {
+  it("still resolves an attribute-built target that stays inside", async () => {
     await mkdir(join(root, "sub"), { recursive: true });
     await writeFile(join(root, "sub", "part.adoc"), "Shared paragraph.\n");
     await writeFile(
@@ -212,9 +254,9 @@ describe("what the check leaves alone", () => {
     expect(await build()).toContain("Shared paragraph.");
   });
 
-  it("does not recurse into an include Asciidoctor does not read as AsciiDoc", async () => {
-    // A code sample showing AsciiDoc syntax. Asciidoctor puts the `.rb` contents in a listing block
-    // without preprocessing them, so the `include::` inside it is text rather than a directive.
+  it("leaves a code sample quoting an include alone, because Asciidoctor does not read it", async () => {
+    // Asciidoctor puts the `.rb` contents in a listing block without preprocessing them, so the
+    // `include::` inside it is never offered to the check.
     await symlink(join(outside, "secret.adoc"), join(root, "linked.adoc"));
     await writeFile(join(root, "sample.rb"), "# demo\ninclude::linked.adoc[]\n");
     await writeFile(
@@ -223,6 +265,24 @@ describe("what the check leaves alone", () => {
     );
 
     expect(await build()).toContain("demo");
+  });
+
+  it("keeps lines= and tag= working, because a safe include is left to Asciidoctor", async () => {
+    // `_`-prefixed so it is a fragment rather than a page of its own, which would put every line
+    // of it in the bundle and make the assertions meaningless.
+    await writeFile(
+      join(root, "_part.adoc"),
+      "line one\nline two\n// tag::a[]\ntagged line\n// end::a[]\nline five\n",
+    );
+    await writeFile(
+      join(root, "a.adoc"),
+      "= A\n\ninclude::_part.adoc[lines=2]\n\n== T\n\ninclude::_part.adoc[tag=a]\n",
+    );
+
+    const html = await build();
+    expect(html).toContain("line two");
+    expect(html).toContain("tagged line");
+    expect(html).not.toContain("line five");
   });
 
   it("honours the backslash that makes the directive literal", async () => {

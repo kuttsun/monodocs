@@ -1093,7 +1093,8 @@ sentences.
 **`break` reaches AsciiDoc through an attribute, set as a default.** The attribute is
 `hardbreaks-option`, with `hardbreaks` an accepted alias. 17.5 requires an attribute monodocs sets to
 be a default the document can override rather than a lock, and the mechanism is measured rather than
-assumed: with `@asciidoctor/core` 4.0.6, an attribute passed through the API as `""` survives a
+assumed: with `@asciidoctor/core` 4.0.6, and re-measured unchanged on 4.0.11, an attribute passed
+through the API as `""` survives a
 document's own `:hardbreaks-option!:`, and the same attribute passed as `"@"` does not. The `@`
 suffix is what 17.5's rule is made of, and this key is its first user.
 
@@ -1551,7 +1552,8 @@ An attribute set here is a **default**, not a lock, so a document that sets its 
 the opposite of Asciidoctor's API default and it is the behaviour an author expects from a
 configuration file: the file states what every document gets unless it says otherwise. The mechanism
 is Asciidoctor's own and it is measured rather than assumed: a value ending in `@` is soft-set, and
-with `@asciidoctor/core` 4.0.6 an attribute passed as `""` survives a document's own `:name!:` while
+with `@asciidoctor/core` 4.0.6 — re-measured unchanged on 4.0.11 — an attribute passed as `""`
+survives a document's own `:name!:` while
 the same attribute passed as `"@"` does not (12.6).
 
 **The name is validated before it is classified.** A denylist compared against the key as written
@@ -1583,39 +1585,57 @@ the marker monodocs adds to every value here and writing one would say it twice.
 directory, and monodocs relies on that (17.3). It does not resolve symbolic links, which Asciidoctor
 documents: a link inside the tree pointing outside it is followed. Measured, and worse than the claim
 suggests — a symlinked file and a symlinked directory both pulled content from outside the jail into
-the output, while `../` and an absolute path were refused. The architecture document's claim that
+the output, while `../` and an absolute path were **recovered** into the jail rather than refused —
+what a reader sees when nothing is at the recovered path is Asciidoctor's own "Unresolved directive",
+which is easy to mistake for a refusal and was. The architecture document's claim that
 safe mode "prevents external access" is therefore too strong. v0.12 makes it true instead of
 softening it — an included file's real path is checked against the input root, and one that resolves
 outside it is refused with the path it resolved to. The same check covers images (20.2), where the
 identical hole exists.
 
-**The check over-approximates on purpose.** A static check that models another parser diverges
-from it, and every divergence in the permissive direction is a hole. A first attempt tracked `////`
-comment blocks and matched the directive only at the start of a line, and four documents got outside
-content into the output through the gaps: a `////` inside a listing block put the checker into a
-comment state Asciidoctor was not in; `ifndef::x[include::y[]]` put the directive somewhere the
-checker did not look; a `]` in a target failed a pattern Asciidoctor accepts; and following a
-symbolic link changed the directory the checker resolved the next level against, while Asciidoctor
-kept the lexical one. So no block structure is modelled and no condition is evaluated: every
-`include::` in the text is checked, wherever it sits, and the recursion keeps the lexical path.
-What that costs is a false refusal — an include inside a comment block, inside a false `ifdef`, or
-quoted in a code sample, whose target happens to resolve to a real file outside the root. What it
-buys is that a divergence stops the build instead of leaking.
+**The check asks Asciidoctor rather than reading the text.** An include processor's `handles` is
+called with the document and the **expanded** target for every include about to be read, and
+returning `false` declines it and leaves Asciidoctor to do the include — so `lines`, `tag`, `tags`,
+and everything else 17.3 promises are untouched. Only a target whose real path lands outside the
+root is stopped, by throwing.
 
-**The check is static, and an `IncludeProcessor` is not used.** The obvious implementation is an
-extension that validates a target and hands the include back to Asciidoctor, and the API does not
-allow it: `handles` receives the document and the target but has no route to the reader, and the
-cursor a `process` call is given reports `.` for a document converted from a string rather than the
-directory the include resolves against. Taking the directive over therefore means reimplementing
-Asciidoctor's own path resolution as well as `lines`, `tag`, and `tags` — a larger surface than the
-hole, and against 17.3's promise that the directive is left to Asciidoctor. So the targets are read
-out of the source text before conversion, resolved, and checked, recursively and with a visited set.
+A first attempt scanned the source text instead, on the belief that a processor had no route from
+the document to the reader. That was wrong, and wrong for a small reason: `doc.getReader()` returns
+the `PreprocessorReader` and `reader.getCursor().getDirectory()` is the directory the include
+resolves against, correct at each level of nesting — but `getDirectory` sits on the cursor rather
+than on the reader, and a missing method was read as a missing route. The scan that followed had to
+decide what a `////` line meant, whether a directive could sit anywhere but the start of a line, and
+whether `]` could appear in a target, and it was wrong about all three in the permissive direction:
+outside content reached the output through each. Over-approximating closed those and cost false
+refusals — an include inside a comment block or a false `ifdef` — and still could not resolve a
+target built from an attribute reference. Asking Asciidoctor has none of those problems, because it
+is asked exactly when an include is about to happen.
 
-What that does not cover is a target monodocs cannot resolve without running Asciidoctor: one built
-from an attribute reference (`include::{partialsdir}/x.adoc[]`). It is skipped rather than guessed
-at, and recorded here rather than implied. A lexical escape, which safe mode already refused as an
-"Unresolved directive" left in the output, is now refused by the check first, so both ways of leaving
-the root stop the build and say the same thing.
+**The path is resolved by Asciidoctor too, not just the target read from it.** Safe mode does not
+refuse a target that climbs out of the jail — it **recovers** it by dropping the `..` and reads the
+recovered path. Measured, `include::../x.adoc[]` from a jail of `root/docs` resolves to
+`root/docs/x.adoc`, not to `root/x.adoc`, so resolving the target the plain way looked at a path that
+does not exist, skipped it, and let a symbolic link out of the tree be read. `normalizeSystemPath` is
+the call Asciidoctor itself makes, so there is nothing left to diverge — and the same fix removes the
+false refusal the divergence caused in the other direction, where a recovered path that stayed inside
+the root was rejected.
+
+A lexical escape is therefore not an escape: safe mode recovers it into the jail, and what the reader
+sees is Asciidoctor's own "Unresolved directive" when nothing is there.
+
+**What the check assumes, stated precisely.** It sees the path Asciidoctor's own include handling
+would read. Another include processor can change that in two ways, and both are outside what this
+boundary can see: one whose `handles` returns true **before** it takes the include, and one that
+returns true **after** it and then pushes the contents of a different file. So the assumption is not
+"no preferred processor" but the wider "no other include processor either preempts this one or reads
+somewhere other than the target it was asked about".
+
+monodocs registers no other processor, so its own CLI, `watch`, and `serve` are unaffected. The case
+where it matters is a program embedding `@monodocs/core` in a process that registers global
+Asciidoctor extensions. The boundary calls `prefer()`, which places it ahead of anything registered
+normally — measured, it is already ahead of those, since it is registered on the registry directly
+and global extensions are activated afterwards; what `prefer()` actually buys is being ahead of
+another `prefer()`ing processor activated before it, and the last one activated still wins.
 
 **Markdown gets no equivalent.** A `vars:` map substituted into Markdown text is a template language:
 it needs an escape for the literal spelling, a rule for an undefined name, a rule for code blocks

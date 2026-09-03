@@ -339,7 +339,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 - [x] `sources.asciidoc.attributes` が `sectnums` のような体裁の属性と書き手独自の属性を、ロックではなく**既定値**として設定する。したがって自分で指定した文書が勝つ——Asciidoctor の API の挙動とは逆であり、設定ファイルが意味すべきことである。すべての値には Asciidoctor 自身の soft set の印である末尾の `@` が付く（#110 で実測）
 - [x] `allow-uri-read` / `docinfo` / `backend` / `data-uri` / `imagesdir` / `source-highlighter` / `sd-*` は属性名と理由を告げて拒否する。`safe` と `base_dir` はそもそも受理しない。設定ファイルから広げられるサンドボックスは名ばかりだからである。あわせて `docdir` / `docfile` / `docname` / `docfilesuffix` / `outdir` / `showtitle` も受理しない。パスの解決先を決めるか、monodocs がページタイトルと要素 ID を組み立てる元だからである。unset は提供せず、末尾が `@` の値も拒否する
-- [x] 実体パスが入力ルートの外へ解決される `include::` と画像を、解決先のパスを示して拒否する。Asciidoctor の safe mode がシンボリックリンクを解決しないため、テストは実際のシンボリックリンクを使う——この検査の前は、リンクされたファイルもリンクされたディレクトリも外部の内容を出力へ持ち込めた。include の検査はソーステキストに対する静的なものなので、属性参照から組み立てた target は推測せずに見送る。`IncludeProcessor` を使わない理由は実測して記録した（[roadmap.md](roadmap.md) 17.5）
+- [x] 実体パスが入力ルートの外へ解決される `include::` と画像を、解決先のパスを示して拒否する。Asciidoctor の safe mode がシンボリックリンクを解決しないため、テストは実際のシンボリックリンクを使う——この検査の前は、リンクされたファイルもリンクされたディレクトリも外部の内容を出力へ持ち込めた。include の検査は include processor の `handles` の中で行う。Asciidoctor 自身の処理が読もうとしているすべての include について展開済みの target とともに呼ばれ、`normalizeSystemPath` で解決するので、safe mode が jail の外のパスを復旧することを推測せずに追随する。属性参照から組み立てた target も覆え、安全なものは `lines` / `tag` / `tags` を保ったまま Asciidoctor へ見送る。見えないのは、他の include processor がこの境界を追い越す場合と、別の場所を読む場合であり、自身の CLI ではどちらも起きない（[roadmap.md](roadmap.md) 17.5）
 - [x] [architecture.md](architecture.md) が、safe mode がすることとこの検査がすることを書き分ける。safe mode が外部アクセスを防ぐとは主張しない
 - [x] Markdown には変数展開を足さない。理由は [roadmap.md](roadmap.md) 17.5 に記録する——エスケープ、未定義の名前、コードブロック、再帰の決定を背負うテンプレート言語だからである
 

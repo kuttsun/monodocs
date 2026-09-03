@@ -14,6 +14,11 @@ import type {
 } from "../../types.js";
 import { toPageMeta } from "../meta.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
+import {
+  createIncludeBoundary,
+  rethrowIncludeViolation,
+  type IncludeViolation,
+} from "./includeBoundary.js";
 
 /**
  * Asciidoctor の変換オプションを生成する。
@@ -29,6 +34,7 @@ import { prefixIdsAndCollect } from "../prefixIds.js";
 function buildOptions(
   source: SourceFile,
   attributes: Readonly<Record<string, string>>,
+  registry: unknown,
 ): Record<string, unknown> {
   return {
     safe: "safe",
@@ -37,6 +43,8 @@ function buildOptions(
     // 設定由来の属性が先。monodocs 自身が必要とするものは後に置いて上書きされないようにする。
     // 値はすべて `@` 付き（soft set）で届くので、文書が自分で指定すればそちらが勝つ（17.5）。
     attributes: { ...attributes, showtitle: true },
+    // include の読み取り先がルートの外へ解決されないことを、Asciidoctor が読む直前に確かめる（17.5）。
+    ...(registry === undefined ? {} : { extension_registry: registry }),
   };
 }
 
@@ -50,13 +58,21 @@ function buildOptions(
  */
 export function createAsciidocRenderer(
   attributes: Readonly<Record<string, string>> = {},
+  rootDir?: string,
 ): SourceRenderer {
+  // ルートを知らされていない呼び出し（core を直接使う場合）は境界を張らない。判定の基準が無い。
+  const boundaryFor = (source: SourceFile) =>
+    rootDir === undefined ? undefined : createIncludeBoundary(rootDir, source.relativePath);
+
   return {
     format: "asciidoc",
     extensions: [".adoc", ".asciidoc", ".asc"],
 
     async extractMeta(source: SourceFile): Promise<PageMeta> {
-      const doc = await load(source.raw, buildOptions(source, attributes));
+      const boundary = boundaryFor(source);
+      const doc = await withBoundary(boundary, source, () =>
+        load(source.raw, buildOptions(source, attributes, boundary?.registry)),
+      );
       const rawTitle = doc.getDocumentTitle();
       const docTitle = typeof rawTitle === "string" ? rawTitle : undefined;
 
@@ -74,7 +90,10 @@ export function createAsciidocRenderer(
     },
 
     async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
-      const rawHtml = (await convert(source.raw, buildOptions(source, attributes))) as string;
+      const boundary = boundaryFor(source);
+      const rawHtml = (await withBoundary(boundary, source, () =>
+        convert(source.raw, buildOptions(source, attributes, boundary?.registry)),
+      )) as string;
 
       const out = { headings: [] as Heading[], text: "", anchors: [] as string[] };
 
@@ -101,6 +120,26 @@ export function createAsciidocRenderer(
       };
     },
   };
+}
+
+/**
+ * Asciidoctor を走らせ、include の境界違反があれば monodocs のエラーに変えて投げ直す。
+ *
+ * The boundary throws from inside `handles`, and Asciidoctor wraps that in a failure of its own, so
+ * what the caller would otherwise see is "Failed to load AsciiDoc document" with monodocs' message
+ * buried in it. The violation is read back from the boundary instead of parsed out of the text.
+ */
+async function withBoundary<T>(
+  boundary: { takeViolation(): IncludeViolation | undefined } | undefined,
+  source: SourceFile,
+  run: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    rethrowIncludeViolation(boundary?.takeViolation(), source.relativePath);
+    throw error;
+  }
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */
