@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-08-24
+Last updated: 2026-09-03
 
 ## Support Status
 
@@ -21,7 +21,7 @@ Last updated: 2026-08-24
 | Language, `init`, PDF fonts and page numbers      | ✅ Done   | v0.10          |
 | Page breaks (marker, `pdf.pageBreakLevel`)        | ✅ Done   | v0.11          |
 | Specification sync, diagnostics, `document`       | ✅ Done   | v0.11          |
-| Input root, route aliases, AsciiDoc attributes    | 🚧 Planned| v0.12          |
+| Input root, route aliases, AsciiDoc attributes    | ✅ Done   | v0.12          |
 | Output size and budget, watermark, line breaks    | 🚧 Planned| v0.13          |
 | Section numbering, cover, printed table of contents | 🚧 Planned| v0.14        |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
@@ -31,8 +31,12 @@ disproportionate for a single maintainer, and the boundary between the extension
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
 and it, v0.9, v0.10, and v0.11 are released.
 
-0.11.0 is released. Both halves of it — the page breaks and the 1.0 contract — went out as one
-release rather than as two; the reasoning is under v0.11 in [roadmap.md](roadmap.md).
+0.12.0 has not been released yet. Every item of its checklist has landed: `root` and
+`sources.include`, route aliases, `sources.asciidoc.attributes`, and the include read boundary. The
+prerelease goes out under `next` first, because two of those change what an existing configuration
+does — a negated pattern in `sources.include` or `sources.exclude` is now refused rather than
+misread, and an `include::` reaching outside the input root through a symbolic link now stops the
+build — and both are worth seeing a published artifact do before `latest` moves.
 
 ## Completion Criteria Status
 
