@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-09-03
+最終更新: 2026-09-24
 
 ## 対応状況
 
@@ -32,11 +32,14 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 いずれもリリース済みである。
 
 0.12.0 はまだリリースしていない。チェックリストの項目はすべて入った——`root` と
-`sources.include`、route の別名、`sources.asciidoc.attributes`、include の読み取り境界である。先に
-プレリリースを `next` で出すのは、そのうち 2 つが既存の設定の振る舞いを変えるからである。
+`sources.include`、route の別名、`sources.asciidoc.attributes`、include の読み取り境界である。
+`0.12.0-beta.1` を `next` で npm に出してあるのは、そのうち 2 つが既存の設定の振る舞いを変えるからである。
 `sources.include` / `sources.exclude` の否定パターンは誤読ではなく拒否になり、シンボリックリンクで
 入力ルートの外へ届く `include::` はビルドを止めるようになった。どちらも `latest` を動かす前に、
-公開された成果物がそうしているところを見ておく価値がある。
+公開された成果物がそうしているところを見ておく価値があった。両方の検証ワークフローが、レジストリから
+インストールしたパッケージに対してそれを確かめた。beta と `latest` のあいだに残っているのは、この
+リポジトリのどの CI ジョブにもできない部分——Node.js の無いホストでのリリースバイナリの検証と、人にしか
+できない確認である。
 
 ## 完了条件の達成状況
 
@@ -346,6 +349,15 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] 実体パスが入力ルートの外へ解決される `include::` と画像を、解決先のパスを示して拒否する。Asciidoctor の safe mode がシンボリックリンクを解決しないため、テストは実際のシンボリックリンクを使う——この検査の前は、リンクされたファイルもリンクされたディレクトリも外部の内容を出力へ持ち込めた。include の検査は include processor の `handles` の中で行う。Asciidoctor 自身の処理が読もうとしているすべての include について展開済みの target とともに呼ばれ、`normalizeSystemPath` で解決するので、safe mode が jail の外のパスを復旧することを推測せずに追随する。属性参照から組み立てた target も覆え、安全なものは `lines` / `tag` / `tags` を保ったまま Asciidoctor へ見送る。見えないのは、他の include processor がこの境界を追い越す場合と、別の場所を読む場合であり、自身の CLI ではどちらも起きない（[roadmap.md](roadmap.md) 17.5）
 - [x] [architecture.md](architecture.md) が、safe mode がすることとこの検査がすることを書き分ける。safe mode が外部アクセスを防ぐとは主張しない
 - [x] Markdown には変数展開を足さない。理由は [roadmap.md](roadmap.md) 17.5 に記録する——エスケープ、未定義の名前、コードブロック、再帰の決定を背負うテンプレート言語だからである
+
+**リリース**
+
+- [x] `next` tag で `0.12.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。0.12 を必要とする手順はインストールされたバージョンで切り替え、0.11 の検証も従来どおり行えるようにする。`v0.12.0-beta.1` タグから CI で provenance 付きで公開した。実行は `0.12.0-beta.1` をインストールし、ログの `SUPPORTS_V012: true` が示すとおり、入力のルートと `sources.include`、否定パターンの拒否、route の別名、AsciiDoc の属性を、レジストリからインストールしたパッケージに対して両プラットフォームで確認した。include の読み取り境界は Linux だけで走る。Windows ランナーでシンボリックリンクを作るには、ジョブが持たない権限が要るからである（[maintenance.md](maintenance.md)）
+- [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証した。各 16 項目が PASS する
+- [ ] Node.js の無い実機で、公開済みの `v0.12.0-beta.1` の資産に対して両方のスクリプト——[`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) と [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1)——を実行する。バイナリ配布が主張しているのはまさにその環境であり、このリポジトリのどの CI ジョブも用意できないものである（[maintenance.md](maintenance.md)）
+- [ ] 生成 HTML のブラウザ確認を、目視ではなく操作して行う。対象はフッタが `monodocs v0.12.0-beta.1` の成果物とし、ローカルビルドではなく検証対象のリリースそのものであることを確かめる
+- [ ] 人にしか答えられない部分（Windows）: 生成 HTML が Edge でどう見えるか（とりわけ日本語）、`serve --open` が既定のブラウザを起動すること、スクリプト経由ではなくブラウザで取得した資産に対する Mark of the Web と SmartScreen。バイナリは方針として未署名なので（[roadmap.md](roadmap.md) 8.5）警告が出るのが想定どおりである。v0.11 も同じ留保を残している
+- [ ] stable `0.12.0` を公開・検証し、公式サイトの CI ガイドの固定バージョンを英日とも `0.12.0` に合わせる。このリリースには beta の後に入った #120 も載る。既定テーマのコードの表示を直したもので、スタイルシートだけの変更なので beta は出し直さない
 
 ### v0.13: 単一ファイルの予算
 

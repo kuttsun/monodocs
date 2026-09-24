@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-09-03
+Last updated: 2026-09-24
 
 ## Support Status
 
@@ -32,11 +32,14 @@ undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.
 and it, v0.9, v0.10, and v0.11 are released.
 
 0.12.0 has not been released yet. Every item of its checklist has landed: `root` and
-`sources.include`, route aliases, `sources.asciidoc.attributes`, and the include read boundary. The
-prerelease goes out under `next` first, because two of those change what an existing configuration
+`sources.include`, route aliases, `sources.asciidoc.attributes`, and the include read boundary.
+`0.12.0-beta.1` is on npm under `next`, because two of those change what an existing configuration
 does — a negated pattern in `sources.include` or `sources.exclude` is now refused rather than
 misread, and an `include::` reaching outside the input root through a symbolic link now stops the
-build — and both are worth seeing a published artifact do before `latest` moves.
+build — and both were worth seeing a published artifact do before `latest` moves. Both verification
+workflows have now run them against the registry install. What stands between the beta and `latest`
+is the part no CI job in this repository can do: the release binaries on hosts without Node.js, and
+the checks only a person can make.
 
 ## Completion Criteria Status
 
@@ -346,6 +349,15 @@ build — and both are worth seeing a published artifact do before `latest` move
 - [x] An `include::` or an image whose real path resolves outside the input root is refused, naming the path it resolved to. A test uses an actual symbolic link, since Asciidoctor's safe mode does not resolve them — a linked file and a linked directory both pulled outside content into the output before this. The include check runs inside an include processor's `handles`, which is called with the expanded target for every include Asciidoctor's own handling is about to read, and resolves it with `normalizeSystemPath` so that safe mode's recovery of a path out of the jail is followed rather than second-guessed. An attribute-built target is covered and a safe one is declined back to Asciidoctor with `lines` / `tag` / `tags` intact. What it does not see is another include processor preempting it or reading elsewhere, which its own CLI never does ([roadmap.md](roadmap.md) 17.5)
 - [x] [architecture.md](architecture.md) says what safe mode does and what this check does, instead of claiming safe mode prevents external access
 - [x] Markdown gains no variable substitution, and [roadmap.md](roadmap.md) 17.5 records why: it is a template language, with an escape, an undefined-name rule, a code-block rule, and a recursion decision behind it
+
+**Release**
+
+- [x] Publish `0.12.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`, with the steps that need 0.12 gated on the installed version so that 0.11 can still be verified. Published from CI on the `v0.12.0-beta.1` tag with provenance; the run installs `0.12.0-beta.1` and reports `SUPPORTS_V012: true`, so the input root with `sources.include`, the refused negated pattern, route aliases, and AsciiDoc attributes were exercised against the registry install on both platforms. The include read boundary ran on Linux only, because creating a symbolic link on a Windows runner needs privileges the job does not have ([maintenance.md](maintenance.md))
+- [x] Verify the release binaries through `verify-release-binaries.yml` on both platforms: sixteen checks pass on each
+- [ ] Run both host scripts on machines without Node.js against the published `v0.12.0-beta.1` assets — [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) and [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) — since that is the environment a binary release makes its claim about and the one no CI job in this repository provides ([maintenance.md](maintenance.md))
+- [ ] The browser pass over the generated HTML, driven rather than eyeballed, on an artifact whose footer reads `monodocs v0.12.0-beta.1`, so that it is the release under test rather than a local build
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser rather than through a script. The binary is unsigned by policy ([roadmap.md](roadmap.md) 8.5), so a warning is the expected outcome; v0.11 left the same reservation open
+- [ ] Publish and verify the stable `0.12.0` release, and pin the CI guide on the documentation site — English and Japanese alike — to it. The release also carries #120, which landed after the beta: the default theme's code styling, a stylesheet-only change that does not warrant a second beta
 
 ### v0.13: The Single-File Budget
 
