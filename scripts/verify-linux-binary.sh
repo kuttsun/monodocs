@@ -161,8 +161,9 @@ file_contains() { grep -q -- "$2" "$1" 2>/dev/null; }
 # A proxy must not stand between these checks and the server they are checking. $http_proxy applies
 # to 127.0.0.1 unless the literal address is in $no_proxy -- "localhost" does not cover it -- and the
 # proxy then answers for the local server, so a healthy serve reads as an HTTP error. Every request
-# to the served URL goes through this wrapper. The downloads above are left alone: they have to reach
-# github.com, and may well need the proxy to get there.
+# to the served URL goes through this wrapper, except the backgrounded one in check_live_reload. The
+# downloads above are left alone: they have to reach github.com, and may well need the proxy to get
+# there.
 curl_local() { curl --noproxy '*' "$@"; }
 
 url_contains() { curl_local -fsS --max-time 15 "$1" 2>/dev/null | grep -q -- "$2"; }
@@ -427,7 +428,9 @@ run_check "serve starts on port $port and injects live reload" check_serve_start
 check_live_reload() {
   [ -n "$serve_pid" ] || { echo "serve is not running" >&2; return 1; }
   # Reading the SSE endpoint directly proves the reload broadcast without driving a browser.
-  curl_local -sN -D "$sse_headers" "${serve_url}__monodocs-livereload" >"$sse_body" 2>/dev/null &
+  # Not through curl_local: a backgrounded function makes $! the subshell rather than curl, and
+  # stop_process would then stop the subshell and leave curl connected. The flag is curl_local's.
+  curl --noproxy '*' -sN -D "$sse_headers" "${serve_url}__monodocs-livereload" >"$sse_body" 2>/dev/null &
   sse_pid=$!
   wait_until 15 test -s "$sse_headers" || { echo "No response headers from the live reload endpoint" >&2; return 1; }
   grep -qi "content-type: *text/event-stream" "$sse_headers" \
