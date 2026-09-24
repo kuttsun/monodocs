@@ -10,6 +10,8 @@
   --color-accent: #0969da;
   --color-accent-bg: #ddf4ff;
   --color-code-bg: #f6f8fa;
+  --color-inline-code-bg: rgba(129, 139, 152, 0.2);
+  --color-code-link: #0550ae;
   --color-input-bg: #ffffff;
   --color-mark-bg: #fff3cd;
   /* Admonition（GFM alert）の種別色。GitHub Primer に準拠。淡い背景は色帯の色を
@@ -50,6 +52,8 @@
     --color-accent: #58a6ff;
     --color-accent-bg: #1f2d3d;
     --color-code-bg: #161b22;
+    --color-inline-code-bg: rgba(110, 118, 129, 0.35);
+    --color-code-link: #79c0ff;
     --color-input-bg: #0d1117;
     --color-mark-bg: #5a4a00;
     /* 暗所は白を薄く重ねて中立的に明るくする。 */
@@ -75,6 +79,8 @@
   --color-accent: #58a6ff;
   --color-accent-bg: #1f2d3d;
   --color-code-bg: #161b22;
+  --color-inline-code-bg: rgba(110, 118, 129, 0.35);
+  --color-code-link: #79c0ff;
   --color-input-bg: #0d1117;
   --color-mark-bg: #5a4a00;
   --color-nav-hover-bg: rgba(255, 255, 255, 0.06);
@@ -524,23 +530,62 @@ body.content-wide #content {
   text-decoration: underline;
 }
 
+/* コードブロックの大きさは pre が持つ。中の code は下で 1em に戻すので、code を持たない
+   pre（AsciiDoc のリテラルや言語指定の無いリスティング）とも同じ大きさになる。 */
 #content pre {
   background: var(--color-code-bg);
+  font-size: 0.9em;
   padding: 1rem;
   border-radius: 6px;
   overflow-x: auto;
 }
 
+/* 総称ファミリー monospace 単独だと、ブラウザは基準サイズを 16px から 13px に下げる。
+   具体名を先に並べてその縮小を避け、font-size の em を本文基準で効かせる。 */
+#content code,
+#content pre,
+#content kbd,
+#content samp {
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* 上の英字フォントには日本語の字形がなく、代替フォントの全角は英字 2 文字分の幅にならない。
+   日本語の文書では全角がちょうど 2 文字分になるフォントを先に置き、コード中の桁を揃える。 */
+#content :is(code, pre, kbd, samp):lang(ja) {
+  font-family:
+    "BIZ UDGothic", "Noto Sans Mono CJK JP", "Osaka-Mono", "MS Gothic", ui-monospace,
+    SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* インラインコードの背景は半透明にして下の色を一段沈める。本文でも admonition や表の中でも、
+   地の背景との差がコードブロックより大きくなる。文字色は本文色に固定する。引用や脚注の
+   淡い文字色を継ぐと、沈めた背景の上で AA（4.5:1）に届かない。 */
 #content code {
-  background: var(--color-code-bg);
+  color: var(--color-text);
+  background: var(--color-inline-code-bg);
   padding: 0.15em 0.35em;
   border-radius: 4px;
   font-size: 0.9em;
 }
 
+/* リンク内のコードは、アクセント色のままだとコードの背景の上で AA（4.5:1）に届かない。 */
+#content a code {
+  color: var(--color-code-link);
+}
+
+/* mark はブラウザ既定の黄色の地に黒の文字で、テーマを問わない。中のコードはリンク内でも
+   その黒（MarkText）で置く。本文色やリンク色では黄色の地の上で読めない。 */
+#content mark code,
+#content mark a code {
+  color: MarkText;
+}
+
 #content pre code {
   padding: 0;
+  color: inherit;
   background: none;
+  font-size: 1em;
 }
 
 /* shiki のライトテーマは背景が白（インライン style）なので、本文と見分けが付くよう
