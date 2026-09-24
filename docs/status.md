@@ -29,18 +29,14 @@ Last updated: 2026-09-24
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
-and it, v0.9, v0.10, and v0.11 are released.
+and it, v0.9, v0.10, v0.11, and v0.12 are released.
 
-0.12.0 has not been released yet. Every item of its checklist has landed: `root` and
-`sources.include`, route aliases, `sources.asciidoc.attributes`, and the include read boundary.
-`0.12.0-beta.1` is on npm under `next`, because two of those change what an existing configuration
-does — a negated pattern in `sources.include` or `sources.exclude` is now refused rather than
-misread, and an `include::` reaching outside the input root through a symbolic link now stops the
-build — and both were worth seeing a published artifact do before `latest` moves. Both verification
-workflows have run them against the registry install, and the Windows host script and the browser
-pass have run against the released binary. The stable release goes out with two items written as
-open rather than ticked: the Linux host script on a machine without Node.js, which no such machine
-was available for, and the Windows checks only a person can make.
+0.12.0 is released. Two of its changes stop a build that used to succeed — a negated pattern in
+`sources.include` or `sources.exclude` is refused rather than misread, and an `include::` reaching
+outside the input root through a symbolic link stops the build — so `0.12.0-beta.1` went out under
+`next` first and both were seen in a published artifact before `latest` moved. Two release items
+stay open rather than ticked: the Linux host script on a machine without Node.js, which no such
+machine was available for, and the Windows checks only a person can make.
 
 ## Completion Criteria Status
 
@@ -359,7 +355,7 @@ was available for, and the Windows checks only a person can make.
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js — the environment a binary release makes its claim about, and the one no CI job in this repository provides ([maintenance.md](maintenance.md)). No such host was available for this release. The script passes all sixteen checks against the published `v0.12.0-beta.1` assets on a Linux x64 host that has Node.js on its `PATH`, and `verify-release-binaries.yml` runs it on every publish, but neither is that environment, so 0.12.0 ships with this left open
 - [x] The browser pass over the generated HTML, driven rather than eyeballed: the artifact the released Linux binary produced — the asset checked against its `.sha256` — was opened in Chromium and put through fourteen checks. They cover the sidebar rendering, navigating, and marking the current page, previous/next, search returning results and highlighting them in the page it opens, `Escape` clearing the box and restoring the tree, dark mode surviving a reload, the drawer at 375px opening from the toggle and closing after a link, and no script errors. Two are new for this milestone: an alias rendering its page and rewriting the hash, and an alias keeping its anchor — `#/old/setup#guide-install` lands on `#/guide#guide-install` scrolled to the heading. The footer of that artifact reads `monodocs v0.12.0-beta.1`, so it is the release under test rather than a local build
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser rather than through a script. The binary is unsigned by policy ([roadmap.md](roadmap.md) 8.5), so a warning is the expected outcome; v0.11 left the same reservation open
-- [ ] Publish and verify the stable `0.12.0` release, and pin the CI guide on the documentation site — English and Japanese alike — to it. The release also carries #120, which landed after the beta: the default theme's code styling, a stylesheet-only change that does not warrant a second beta
+- [x] Publish and verify the stable `0.12.0` release, and pin the CI guide on the documentation site — English and Japanese alike — to it: published from CI on the `v0.12.0` tag with provenance, carrying the `latest` dist-tag, verified through `verify-published.yml` and `verify-release-binaries.yml` on Linux x64 and Windows x64, with the CI guide pinning `monodocs@0.12.0`. The release binaries pass sixteen checks on each platform. The first `verify-published.yml` attempt failed on Linux at the browser auto-detection step — Chrome, found without `PUPPETEER_EXECUTABLE_PATH`, did not report its endpoint within 30 seconds — while the PDF step before it, launching the same browser by path, passed; rerunning the failed job passed every step. It also carries #120, the default theme's code styling, which landed after the beta
 
 ### v0.13: The Single-File Budget
 
