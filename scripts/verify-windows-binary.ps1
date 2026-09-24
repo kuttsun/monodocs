@@ -234,17 +234,36 @@ function Test-PortOpen {
     }
 }
 
+# A proxy must not stand between these checks and the server they are checking. A corporate proxy
+# is used for 127.0.0.1 unless the literal address is in the bypass list -- neither `localhost` nor
+# `<local>` covers it -- and the proxy then answers for the local server, so a healthy `serve` reads
+# as a 503. Every request below is to 127.0.0.1, so all of them go direct. The release download
+# above is left alone: it has to reach github.com, and may well need the proxy to get there.
+function New-DirectHttpClient {
+    # Needed on Windows PowerShell 5.1; already loaded on PowerShell 7.
+    try { Add-Type -AssemblyName System.Net.Http -ErrorAction Stop } catch { Write-Verbose "System.Net.Http is already available: $_" }
+    $handler = New-Object System.Net.Http.HttpClientHandler
+    $handler.UseProxy = $false
+    return (New-Object System.Net.Http.HttpClient($handler))
+}
+
 function Get-HttpBody {
     param([string]$Url, [int]$TimeoutSec = 15)
-    return (Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec $TimeoutSec).Content
+    $client = New-DirectHttpClient
+    try {
+        $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSec)
+        $response = $client.GetAsync($Url).GetAwaiter().GetResult()
+        $response.EnsureSuccessStatusCode() | Out-Null
+        return $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    } finally {
+        $client.Dispose()
+    }
 }
 
 # Opens the live-reload SSE stream without a browser, so the reload broadcast itself is verifiable.
 function Open-SseStream {
     param([string]$Url)
-    # Needed on Windows PowerShell 5.1; already loaded on PowerShell 7.
-    try { Add-Type -AssemblyName System.Net.Http -ErrorAction Stop } catch { Write-Verbose "System.Net.Http is already available: $_" }
-    $client = New-Object System.Net.Http.HttpClient
+    $client = New-DirectHttpClient
     $client.Timeout = [TimeSpan]::FromMinutes(5)
     $response = $client.GetAsync($Url, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
     $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()

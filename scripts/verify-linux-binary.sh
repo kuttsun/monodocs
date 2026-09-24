@@ -158,7 +158,14 @@ port_closed() { ! port_open; }
 
 file_contains() { grep -q -- "$2" "$1" 2>/dev/null; }
 
-url_contains() { curl -fsS --max-time 15 "$1" 2>/dev/null | grep -q -- "$2"; }
+# A proxy must not stand between these checks and the server they are checking. $http_proxy applies
+# to 127.0.0.1 unless the literal address is in $no_proxy -- "localhost" does not cover it -- and the
+# proxy then answers for the local server, so a healthy serve reads as an HTTP error. Every request
+# to the served URL goes through this wrapper. The downloads above are left alone: they have to reach
+# github.com, and may well need the proxy to get there.
+curl_local() { curl --noproxy '*' "$@"; }
+
+url_contains() { curl_local -fsS --max-time 15 "$1" 2>/dev/null | grep -q -- "$2"; }
 
 # Stops a background process, escalating rather than waiting out one that cannot answer. SIGINT is
 # the documented way to stop serve / watch, so that is the default and the path a person would take;
@@ -410,7 +417,7 @@ check_serve_starts() {
     || { echo "serve did not report a listening URL: $(cat "$serve_err")" >&2; return 1; }
   wait_until 30 port_open || { echo "Port $port never opened" >&2; return 1; }
   local body
-  body="$(curl -fsS --max-time 15 "$serve_url")" || { echo "Could not fetch $serve_url" >&2; return 1; }
+  body="$(curl_local -fsS --max-time 15 "$serve_url")" || { echo "Could not fetch $serve_url" >&2; return 1; }
   echo "$body" | grep -q "__MONODOCS_DATA__" || { echo "Served page has no document payload" >&2; return 1; }
   echo "$body" | grep -q "EventSource" || { echo "Live reload script was not injected" >&2; return 1; }
   echo "$body" | grep -q "__monodocs-livereload" || { echo "Live reload endpoint not referenced" >&2; return 1; }
@@ -420,7 +427,7 @@ run_check "serve starts on port $port and injects live reload" check_serve_start
 check_live_reload() {
   [ -n "$serve_pid" ] || { echo "serve is not running" >&2; return 1; }
   # Reading the SSE endpoint directly proves the reload broadcast without driving a browser.
-  curl -sN -D "$sse_headers" "${serve_url}__monodocs-livereload" >"$sse_body" 2>/dev/null &
+  curl_local -sN -D "$sse_headers" "${serve_url}__monodocs-livereload" >"$sse_body" 2>/dev/null &
   sse_pid=$!
   wait_until 15 test -s "$sse_headers" || { echo "No response headers from the live reload endpoint" >&2; return 1; }
   grep -qi "content-type: *text/event-stream" "$sse_headers" \
