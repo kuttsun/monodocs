@@ -253,8 +253,9 @@ function processAdmonitions(tree: HastRoot): void {
       firstText.value = firstText.value.slice(marker[0].length);
       // A hard break after the marker (a trailing `\` or two spaces) arrives as `[!NOTE]<br>\n…`,
       // so the `<br>` and the newline after it go with the marker; otherwise the body opens
-      // with an empty line.
-      stripLeadingBreak(firstEl);
+      // with an empty line. A marker that ended in a newline has no break of its own: a `<br>`
+      // after it is the body's first line, written on purpose, and stays.
+      if (!marker[0].endsWith("\n")) stripLeadingBreak(firstEl);
       // マーカーだけの段落（`> [!NOTE]\n>\n> 本文` 形式）は空になるので除去する。
       if (toText(firstEl).trim() === "") {
         node.children = node.children.filter((c) => c !== firstEl);

@@ -644,6 +644,18 @@ describe("postprocessPages - admonitions", () => {
     expect(pages[0]!.html).toContain("<p>first<br>\nsecond</p>");
   });
 
+  it("keeps a hard break that opens the body on the line after the marker", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html: "<blockquote>\n<p>[!NOTE]\n<br>\nBody.</p>\n</blockquote>",
+      }),
+    ];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain("<p><br>\nBody.</p>");
+  });
+
   it("removes a <br> after the marker even without a newline after it", async () => {
     const pages: Page[] = [
       page({
