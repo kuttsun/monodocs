@@ -295,6 +295,19 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     expect(warning?.message).toContain("U+50000");
   }, 120_000);
 
+  it("checks the cover on its own page, in the font it is set in (24.8)", async () => {
+    // The character is only on the cover. Measured as a probe beside the body, the cover would be
+    // checked without its stylesheet, so the check has to run where the cover is rendered.
+    const result = await buildPdf(
+      "real-cover-missing",
+      "# Home\n\nPlain text.\n",
+      `  cover:\n    enabled: true\ntitle: "Spec ${UNASSIGNED}"\n`,
+    );
+    const warning = fontWarnings(result)[0];
+    expect(warning?.code).toBe("font/missing");
+    expect(warning?.message).toContain("U+50000");
+  }, 120_000);
+
   it("fails the build for error, and says nothing for off", async () => {
     const failed = await buildPdf(
       "real-error",

@@ -180,7 +180,9 @@ Preserve these display and reachability invariants:
   code, so an error caught at the top is reported as the finding it was; anything else reaching that
   boundary is reported as `internal/unexpected` rather than as a finding with no code at all. A code
   is never renamed or given a different meaning once released.
-- Every PDF page carries its number and the total, centred at the foot. The band is an HTML fragment
+- Every PDF page of the body carries its number and the total, centred at the foot. The generated
+  cover (`pdf.cover`) is the exception: it is rendered apart from the body with no bands, so it has no
+  number, the body starts at 1, and the total counts the body only. Page labels make the viewer agree. The band is an HTML fragment
   handed to Chromium and substituted through Chromium's own classes, not a monodocs template
   language, and it holds digits and a separator so the one thing added to every page needs no
   translation. Turning a band off must emit an explicitly empty fragment: `displayHeaderFooter` with
