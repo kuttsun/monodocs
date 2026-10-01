@@ -2753,7 +2753,7 @@ override of `pageBreakLevel`, because frontmatter that changes how the paper is 
 document's sheet count depend on which files it happens to include. No arbitrary CSS hook, for the
 reason 24.6 gives — a closed key set is what 1.0 can freeze.
 
-### 24.8 The Cover (v0.14)
+### 24.8 The Cover (v0.13)
 
 A PDF handed to someone begins with a cover: the title, what version it is, when it was true, and
 who is answerable for it. monodocs begins with the first page of content. An author can write a page
@@ -2778,15 +2778,34 @@ The object can: `source` is where a `cover.md` would go when there is a reason t
 
 **Numbering starts after the cover, and that is the hard half.** Chromium's footer knows the
 physical sheet it is drawn on; it has no offset, so a cover makes every number one too high and the
-total one too many. What can be done on the finished bytes is where this is solved: the cover is one
-sheet monodocs itself produced, so the footer is suppressed on it and the numbers on the remaining
-sheets are the ones the document should show. PDF page labels (the numbering a reader sees in a
-viewer's page box) are set the same way, so the viewer agrees with the paper.
+total one too many.
 
-Whether the footer can be suppressed on one sheet without a second render is what v0.14 measures. If
-it cannot, the cover is rendered as its own single-page PDF with no header or footer band and
-concatenated — the outline and metadata passes already run on finished bytes (24.3.2), so the
-machinery for that is the machinery already there.
+Whether the footer can be suppressed on one sheet in a single render was measured, and it cannot:
+the header and footer templates are one fragment for the whole render, nothing in them can tell the
+first sheet from the others, and a first sheet given `@page :first { margin: 0 }` still had the
+footer drawn on it and was still counted by `pageNumber` / `totalPages`. So the cover is rendered as
+its own PDF with no header or footer band, and its sheets are inserted in front of the body on the
+finished bytes — the outline and metadata passes already run there (24.3.2), so the machinery is the
+machinery already there. The body, rendered alone, already numbers from 1 and counts only itself.
+The cover is inserted before the outline is added; inserting pages leaves the body's page objects,
+and so the named destinations the outline and internal links resolve, where they were. PDF page
+labels (the numbering a reader sees in a viewer's page box) are set on the same pass: the cover
+carries the `cover` UI label, which follows `lang` and `html.labels` (23.4), and the body is numbered
+from 1, so the viewer agrees with the paper. A title long enough to push the cover onto a second
+sheet is not clipped; both sheets carry the cover label.
+
+Chromium writes tagged PDFs, and copying the cover's pages copies their `/StructParents` keys but not
+the cover's structure tree. Measured, the cover's key 0 then resolved through the body's parent tree
+to the elements of the body's first sheet, so assistive technology would read the body where the
+cover is. The cover's structure elements are therefore moved under the body's structure root, ahead
+of the body's own, and the cover's parent-tree keys are shifted past the body's. A structure of a
+shape this does not merge leaves the cover untagged rather than attributed to the body. The font
+check (24.3.3) runs on the cover's own page: measured beside the body it would be checked without its
+stylesheet, in a font it is not set in.
+
+Because the cover is rendered apart from the body, the body's print stylesheet does not reach it.
+The watermark (24.10) is printed on every sheet including the cover, so it has to be handed to the
+cover render too rather than assumed to arrive through the stylesheet.
 
 The HTML gets no cover. A cover is a sheet of paper; on screen the same information belongs where a
 reader can see it without scrolling past it, which is the branding footer 13.5 already fills.
@@ -3810,6 +3829,9 @@ Implementation scope:
 - Add `pdf.watermark`, emitted from core so a theme cannot delete it (24.10)
 - Remove the hard break that follows a GFM alert marker together with the marker, ahead of
   `sources.lineBreak` (12.6)
+- Add `pdf.cover.enabled`, generating a cover from `title` and `document` and starting the numbering
+  after it (24.8). Brought forward from v0.14: it depends on neither section numbering nor the table
+  of contents, and authors handing PDFs over today are waiting for it
 - Add `sources.lineBreak` with `space` (the default), `break`, and `join`, applied inside both
   renderers before the page's text is collected (12.6)
 
@@ -3827,7 +3849,14 @@ Completion criteria:
   the PDF and of a browser print, and nothing on screen. The text is escaped; a value containing
   markup appears as that text
 - The watermark rule is emitted by core into the print stylesheet, and a document built with a theme
-  that replaces `style.css` still carries it
+  that replaces `style.css` still carries it. The cover, which is rendered apart from the body,
+  carries it too
+- `pdf.cover.enabled: true` produces a first sheet carrying the title, version, date, and authors
+  from `document`, with no page number on it, and the following sheet numbered 1. The PDF's page
+  labels agree with the printed numbers
+- Whether the footer can be suppressed on one sheet in a single render is measured; it cannot, so
+  the cover is produced as its own PDF and inserted on the pass that already rewrites the finished
+  bytes
 - The decision not to re-encode images is recorded with its reasons — the native dependency the
   binary cannot take, the Chromium dependency an HTML build must not acquire, and the reproducibility
   it would cost — as Docker and Homebrew were before it
@@ -3855,8 +3884,9 @@ Purpose:
 Finish the document that is handed over on paper. v0.10 gave it page numbers and a density, v0.11
 let the author decide where a sheet ends, and what is still missing is what a specification is: a
 cover that says what version it is, sections that can be cited by number, and a table of contents
-that says which page to turn to. The three arrive together because they depend on each other — a
-table of contents lists numbered sections, and it counts sheets that a cover has shifted.
+that says which page to turn to. v0.13 brought the cover forward; the other two arrive together
+because they depend on each other — a table of contents lists numbered sections, and it counts the
+sheets the cover has already shifted.
 
 This milestone also answers the math question rather than repeating a reason that has expired.
 
@@ -3864,8 +3894,6 @@ Implementation scope:
 
 - Add `numbering.sections`, decided over the whole document in the shared `Page` model rather than
   per file in either renderer (19.1)
-- Add `pdf.cover.enabled`, generating a cover from `document` and starting the numbering after it
-  (24.8)
 - Add `pdf.toc`, produced by a verified two-pass render that fails rather than printing a number it
   has not checked (24.9)
 - Measure whether math through KaTeX's MathML output is good enough to adopt, and record the answer
@@ -3879,12 +3907,6 @@ Completion criteria:
 - The number is an element inside the heading, appears in the sidebar and the in-page table of
   contents, and does not outweigh a word in search. `:sectnums:` in a document is refused while
   numbering is on, naming the configuration key
-- `pdf.cover.enabled: true` produces a first sheet carrying the title, version, date, and authors
-  from `document`, with no page number on it, and the following sheet numbered 1. The PDF's page
-  labels agree with the printed numbers
-- Whether the footer can be suppressed on one sheet in a single render is measured; if it cannot,
-  the cover is produced as its own PDF and concatenated, on the pass that already rewrites the
-  finished bytes
 - `pdf.toc.enabled: true` prints a table of contents whose page numbers are read from the delivered
   PDF, not from the first pass. After substitution the destinations are read again and compared to
   the numbers printed; a mismatch retries within a fixed bound, and a document that does not converge

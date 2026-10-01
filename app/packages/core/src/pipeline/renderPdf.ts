@@ -5,6 +5,7 @@ import { runFontCheck, type FontCheckMode } from "./fontCheck.js";
 import { DEFAULT_PDF_FOOTER, DEFAULT_PDF_FOOTER_PROBE, EMPTY_PDF_BAND } from "./pdfBands.js";
 import { addOutline, collectDests, remapDests, type PdfOutlineNode } from "./pdfOutline.js";
 import { setPdfMetadata } from "./pdfMetadata.js";
+import { prependCover, type PdfCover } from "./pdfCover.js";
 import { t } from "../messages.js";
 
 /** {@link PdfGenerator.render} のオプション。 */
@@ -36,6 +37,11 @@ export type PdfRenderOptions = {
   subject?: string;
   /** バージョンと日付そのもの（PDF の Keywords）。 */
   keywords?: string[];
+  /**
+   * The cover (24.8). Rendered on its own without the bands and put in front of the body, so the
+   * body's footer numbers from 1 and the cover carries no number. Omitted means no cover.
+   */
+  cover?: PdfCover;
   /** ページ上部の帯（HTML フラグメント）。未指定は帯なし扱い。 */
   header?: string;
   /** ページ下部の帯（同上）。未指定は帯なし扱い。 */
@@ -197,6 +203,44 @@ async function warnIfFooterDoesNotFit(page: PageLike, options: PdfRenderOptions)
 }
 
 /**
+ * Renders the cover as a PDF of its own, on the same paper and margins as the body.
+ *
+ * Measured: the header and footer templates are one fragment for the whole render, and nothing
+ * in them can tell the first sheet from the others. A first sheet given `@page :first { margin: 0 }`
+ * still had the footer drawn on it, and `pageNumber` / `totalPages` still counted it. A cover
+ * rendered with the body would therefore carry a footer and push every number up by one. Rendering
+ * it apart gives it no bands and leaves the body's numbers as the document means them.
+ */
+async function renderCover(
+  browser: BrowserLike,
+  options: PdfRenderOptions,
+  cover: PdfCover,
+): Promise<Uint8Array> {
+  let page: PageLike;
+  try {
+    page = await browser.newPage();
+    await page.setContent(cover.html, { waitUntil: "load" });
+  } catch (error) {
+    throw new BrowserSetupError(t("pdf.pageLoadFailed", { detail: (error as Error).message }));
+  }
+  // Checked on the cover's own page: as a probe beside the body it would be measured without its
+  // stylesheet, in a font it is not set in.
+  if (options.fontCheck !== undefined) {
+    await runFontCheck(page, {
+      mode: options.fontCheck,
+      context: "pdf",
+      onWarning: options.onWarning ?? (() => {}),
+    });
+  }
+  return page.pdf({
+    format: options.pageSize,
+    margin: options.margin,
+    printBackground: options.printBackground,
+    displayHeaderFooter: false,
+  });
+}
+
+/**
  * Puppeteer で単一 HTML を PDF 化するジェネレータを作る。
  * `page.pdf()` は既定で print メディアをエミュレートするため、テーマの `@media print`
  * （全ページ縦展開・サイドバー/目次/ツールバー非表示）がそのまま適用される。
@@ -271,11 +315,21 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
         footerTemplate: options.footer ?? EMPTY_PDF_BAND,
       });
 
+      // The cover goes in before the outline: inserting pages leaves the body's page objects, and
+      // so the named destinations the outline resolves, where they were.
+      const withCover = options.cover
+        ? await prependCover(
+            pdf,
+            await renderCover(b, options, options.cover),
+            options.cover.pageLabel,
+          )
+        : pdf;
+
       // 生成後に HTML サイドバーと同じ フォルダ→ページ 構造のしおりを付与する。
       const withOutline =
         options.outline && destIds.length > 0
-          ? await addOutline(pdf, remapDests(options.outline, surrogate))
-          : pdf;
+          ? await addOutline(withCover, remapDests(options.outline, surrogate))
+          : withCover;
       // 文書情報は最後に入れる（しおり付与でも pdf-lib が Producer を書き戻すため）。
       return setPdfMetadata(withOutline, {
         title: options.title,

@@ -11,7 +11,12 @@ import type {
 } from "./types.js";
 import { loadConfig, type MermaidMode, type OnLargeImage, type ResolvedConfig } from "./config.js";
 import { bySeverity, type Diagnostic, MonodocsError, toDiagnostic, warn } from "./diagnostics.js";
-import { documentAuthor, documentKeywords, documentSubject } from "./documentMeta.js";
+import {
+  documentAuthor,
+  documentCoverParts,
+  documentKeywords,
+  documentSubject,
+} from "./documentMeta.js";
 import { resolveLabels } from "./labels.js";
 import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { markdownRenderer } from "./sources/markdown/renderer.js";
@@ -25,6 +30,7 @@ import {
 } from "./pipeline/mermaidPrerender.js";
 import { createPuppeteerPdfGenerator, type PdfGenerator } from "./pipeline/renderPdf.js";
 import { sidebarToOutline } from "./pipeline/pdfOutline.js";
+import { buildPdfCover } from "./pipeline/pdfCover.js";
 import { renderSingleHtml } from "./pipeline/renderSingleHtml.js";
 import { mermaidRuntimeScript } from "./themes/mermaid.js";
 import { t } from "./messages.js";
@@ -287,6 +293,14 @@ export async function buildSite(
         author: documentAuthor(config.documentMetadata),
         subject: documentSubject(config.documentMetadata, resolvedLabels.labels),
         keywords: documentKeywords(config.documentMetadata),
+        cover: config.pdfCover
+          ? buildPdfCover({
+              title: config.title,
+              parts: documentCoverParts(config.documentMetadata, resolvedLabels.labels),
+              lang: config.lang,
+              pageLabel: resolvedLabels.labels.cover,
+            })
+          : undefined,
         header: config.pdfHeader,
         footer: config.pdfFooter,
         fontCheck: config.fontCheck,

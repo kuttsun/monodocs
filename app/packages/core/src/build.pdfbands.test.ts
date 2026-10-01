@@ -96,6 +96,42 @@ describe("PDF header and footer bands", () => {
   });
 });
 
+describe("PDF cover options", () => {
+  it("has no cover unless it is enabled", async () => {
+    const options = await buildWith("cover-default", "title: T\n");
+    expect(options.cover).toBeUndefined();
+  });
+
+  it("builds the cover from title and document, with the cover label for the language", async () => {
+    const options = await buildWith(
+      "cover-on",
+      'title: "仕様書"\nlang: ja\ndocument:\n  version: "1.2"\n  date: "2026-08-22"\n' +
+        '  authors:\n    - "開発チーム"\npdf:\n  cover:\n    enabled: true\n',
+    );
+    expect(options.cover?.fragment).toContain(">仕様書</h1>");
+    // The same words the PDF's Subject uses, so the cover cannot disagree with the properties.
+    expect(options.cover?.fragment).toContain("<p>バージョン 1.2</p><p>2026-08-22</p>");
+    expect(options.cover?.fragment).toContain("<p>開発チーム</p>");
+    expect(options.cover?.pageLabel).toBe("表紙");
+  });
+
+  it("takes the page label from html.labels", async () => {
+    const options = await buildWith(
+      "cover-label",
+      "html:\n  labels:\n    cover: Title page\npdf:\n  cover:\n    enabled: true\n",
+    );
+    expect(options.cover?.pageLabel).toBe("Title page");
+  });
+
+  it("rejects a key the cover does not have", async () => {
+    const root = join(dir, "cover-unknown");
+    await mkdir(root, { recursive: true });
+    const configFile = join(root, "monodocs.config.yml");
+    await writeFile(configFile, "pdf:\n  cover:\n    source: ./cover.md\n");
+    await expect(loadConfig({ configFile }, root)).rejects.toThrow(/Invalid config file/);
+  });
+});
+
 // 帯が実際に描かれるかは Chromium にしか答えられない。
 const chromium =
   process.env.PUPPETEER_EXECUTABLE_PATH ??
@@ -245,6 +281,70 @@ describe.skipIf(!chromium)("PDF bands（実 Chromium）", () => {
     // 帯を切れば数字はどこにも描かれない。
     expect(await pageDigits(offBytes, 0)).toEqual([]);
     expect(await pageDigits(offBytes, total - 1)).toEqual([]);
+  }, 120_000);
+
+  it("puts an unnumbered cover in front and numbers the body from 1 (24.8)", async () => {
+    const root = join(dir, "real-cover");
+    await mkdir(root, { recursive: true });
+    const configFile = join(root, "monodocs.config.yml");
+    // No version or date: the cover then carries no numerals, so any digit read off it would
+    // have come from a footer.
+    await writeFile(configFile, "title: Spec\npdf:\n  cover:\n    enabled: true\n");
+    const out = join(root, "docs.pdf");
+    await buildSite({ inputDir: docs, configFile, outputFile: out, format: "pdf" });
+
+    const bytes = await readFile(out);
+    const { PDFDocument, PDFName, PDFDict, PDFArray } = await import("pdf-lib");
+    const doc = await PDFDocument.load(bytes);
+    const total = doc.getPageCount();
+    const body = total - 1;
+    expect(body).toBeGreaterThan(2);
+
+    expect(await pageDigits(bytes, 0)).toEqual([]);
+    expect(await pageDigits(bytes, 1)).toEqual(["1", String(body)]);
+    expect(await pageDigits(bytes, total - 1)).toEqual([String(body), String(body)]);
+
+    // The viewer's page number box says what the footer says.
+    const labels = doc.catalog.lookup(PDFName.of("PageLabels"));
+    expect(labels).toBeInstanceOf(PDFDict);
+
+    // The outline still opens the first page of the body, not the cover.
+    const outlines = doc.catalog.lookup(PDFName.of("Outlines")) as InstanceType<typeof PDFDict>;
+    const first = outlines.lookup(PDFName.of("First")) as InstanceType<typeof PDFDict>;
+    const dest = first.lookup(PDFName.of("Dest")) as InstanceType<typeof PDFArray>;
+    expect(doc.getPages().findIndex((page) => page.ref === dest.get(0))).toBe(1);
+
+    // Chromium writes a tagged PDF. Every sheet's `/StructParents` resolves, through the merged
+    // parent tree, to structure elements on that same sheet — the cover's to the cover's, not to
+    // the body's first sheet as a plain page copy leaves it.
+    const structRoot = doc.catalog.lookup(PDFName.of("StructTreeRoot")) as InstanceType<
+      typeof PDFDict
+    >;
+    const nums = (
+      structRoot.lookup(PDFName.of("ParentTree")) as InstanceType<typeof PDFDict>
+    ).lookup(PDFName.of("Nums")) as InstanceType<typeof PDFArray>;
+    const parents = new Map<number, unknown>();
+    for (let i = 0; i < nums.size(); i += 2) {
+      parents.set((nums.lookup(i) as { asNumber(): number }).asNumber(), nums.lookup(i + 1));
+    }
+    const pages = doc.getPages();
+    pages.forEach((page, index) => {
+      const key = page.node.lookup(PDFName.of("StructParents")) as
+        { asNumber(): number } | undefined;
+      expect(key, `sheet ${index}`).toBeDefined();
+      const elements = parents.get(key!.asNumber()) as InstanceType<typeof PDFArray>;
+      expect(elements, `sheet ${index}`).toBeInstanceOf(PDFArray);
+      const sheets = new Set<number>();
+      for (let j = 0; j < elements.size(); j++) {
+        const element = elements.lookup(j) as InstanceType<typeof PDFDict>;
+        sheets.add(pages.findIndex((p) => p.ref === element.get(PDFName.of("Pg"))));
+      }
+      // An element spanning a sheet break names the sheet it starts on, so a sheet's marked
+      // content can belong to an element whose `/Pg` is the previous sheet — but never across the
+      // cover boundary.
+      if (index === 0) expect([...sheets]).toEqual([0]);
+      else expect([...sheets].every((sheet) => sheet >= 1 && sheet <= index)).toBe(true);
+    });
   }, 120_000);
 
   it("warns when the bottom margin is smaller than the footer needs", async () => {

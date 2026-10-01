@@ -468,6 +468,16 @@ function buildConfigFileSchema() {
           header: z.union([z.literal(false), z.string().min(1)]).optional(),
           footer: z.union([z.literal(false), z.string().min(1)]).optional(),
           /**
+           * A cover generated from `title` and `document` (24.8). An object rather than `true`, so
+           * that an author-supplied cover can arrive later as a second field beside `enabled`.
+           */
+          cover: z
+            .object({
+              enabled: z.boolean().optional(),
+            })
+            .strict()
+            .optional(),
+          /**
            * この深さまでの見出しの前で改ページする。`false`（既定）はどの見出しでも改ページ
            * しない。数値は「新しい紙を始める最も深い見出しレベル」で、2 は h2 だけ、6 は h2〜h6。
            * h1 はページタイトルであり、そのファイルは既に改ページ済みなので含めない。
@@ -649,6 +659,8 @@ export type ResolvedConfig = {
   pdfHeader: string;
   /** ページ下部の帯（同上。既定はページ番号）。 */
   pdfFooter: string;
+  /** Whether the PDF starts with a cover generated from `title` and `document` (24.8). */
+  pdfCover: boolean;
 };
 
 /**
@@ -1156,5 +1168,6 @@ export async function loadConfig(
     // ヘッダは既定で帯なし。フッタは既定でページ番号。
     pdfHeader: resolveBand(fileConfig.pdf?.header, EMPTY_PDF_BAND),
     pdfFooter: resolveBand(fileConfig.pdf?.footer, DEFAULT_PDF_FOOTER),
+    pdfCover: fileConfig.pdf?.cover?.enabled ?? false,
   };
 }

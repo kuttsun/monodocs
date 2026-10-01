@@ -83,3 +83,24 @@ export function documentKeywords(metadata: DocumentMetadata): string[] {
     (value): value is string => value !== undefined,
   );
 }
+
+/** What the PDF cover prints under the title, each part on a line of its own. */
+export type DocumentCoverParts = {
+  version?: string;
+  date?: string;
+  authors: string[];
+};
+
+/**
+ * The cover's lines. The version carries its word as it does in the footer, and the values are
+ * the same trimmed strings the PDF's properties carry, so the cover and the properties cannot
+ * disagree (24.8).
+ */
+export function documentCoverParts(metadata: DocumentMetadata, labels: Labels): DocumentCoverParts {
+  const version = trimmed(metadata.version);
+  return {
+    version: version === undefined ? undefined : versionPhrase(version, labels),
+    date: trimmed(metadata.date),
+    authors: authorList(metadata),
+  };
+}

@@ -22,8 +22,8 @@ Last updated: 2026-09-24
 | Page breaks (marker, `pdf.pageBreakLevel`)        | ✅ Done   | v0.11          |
 | Specification sync, diagnostics, `document`       | ✅ Done   | v0.11          |
 | Input root, route aliases, AsciiDoc attributes    | ✅ Done   | v0.12          |
-| Output size and budget, watermark, line breaks    | 🚧 Planned| v0.13          |
-| Section numbering, cover, printed table of contents | 🚧 Planned| v0.14        |
+| Output size and budget, watermark, cover, line breaks | 🚧 Planned| v0.13      |
+| Section numbering, printed table of contents      | 🚧 Planned| v0.14          |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -381,6 +381,14 @@ machine was available for, and the Windows checks only a person can make.
 - [ ] The rule is emitted by core into the print stylesheet, and a document built with a theme that replaces `style.css` still carries it — a theme must not be able to delete "CONFIDENTIAL" from a document that asked for it
 - [ ] There is no image, no per-page control, and no font, angle, or opacity key, on the reason [roadmap.md](roadmap.md) 24.6 gives for a closed key set
 
+**The cover** ([roadmap.md](roadmap.md) 24.8)
+
+- [x] `pdf.cover.enabled: true` produces a first sheet carrying the title, version, date, and authors from `document`, generated rather than authored, so the cover cannot disagree with the PDF's own properties
+- [x] No page number on the cover, the following sheet numbered 1, and the PDF's page labels agreeing with the printed numbers. The cover's label is the `cover` UI label, so it follows `lang` and `html.labels`
+- [x] Whether the footer can be suppressed on one sheet in a single render is measured: it cannot. A first sheet given `@page :first { margin: 0 }` still had the footer drawn on it, and `pageNumber` / `totalPages` still counted it. The cover is therefore rendered as its own PDF without bands and inserted in front of the body on the pass that already rewrites the finished bytes, before the outline is added
+- [x] The key is an object rather than `true | "./cover.md"`, so an author-written cover can be added later as a second field
+- [x] The HTML gets no cover
+
 **Soft line breaks** ([roadmap.md](roadmap.md) 12.6)
 
 - [ ] `sources.lineBreak` takes `space` (the default), `break`, or `join`, and sits under `sources` rather than under `sources.markdown`, because `join` is a rule about characters and applies to both formats — a key reaching only Markdown would leave half of a mixed document reading differently from the other half
@@ -405,14 +413,6 @@ machine was available for, and the Windows checks only a person can make.
 - [ ] Routes, page IDs, and heading IDs are unchanged, and a test asserts it. An address that changes when a page is reordered would break every link ever copied
 - [ ] The number is an element inside the heading, appears in the sidebar and the in-page table of contents, and does not outweigh a word in search
 - [ ] `:sectnums:` in a document is refused while numbering is on, naming the configuration key
-
-**The cover** ([roadmap.md](roadmap.md) 24.8)
-
-- [ ] `pdf.cover.enabled: true` produces a first sheet carrying the title, version, date, and authors from `document`, generated rather than authored, so the cover cannot disagree with the PDF's own properties
-- [ ] No page number on the cover, the following sheet numbered 1, and the PDF's page labels agreeing with the printed numbers
-- [ ] Whether the footer can be suppressed on one sheet in a single render is measured; if it cannot, the cover is produced as its own PDF and concatenated on the pass that already rewrites the finished bytes
-- [ ] The key is an object rather than `true | "./cover.md"`, so an author-written cover can be added later as a second field
-- [ ] The HTML gets no cover
 
 **A table of contents on paper** ([roadmap.md](roadmap.md) 24.9)
 
