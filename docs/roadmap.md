@@ -1123,6 +1123,16 @@ other way, and what it removes is not what the HTML shows: the HTML carries the 
 `です。 次` and a query spanning the two sentences finds nothing. `join` removes the break before that
 collection happens, and the same query matches.
 
+**`break` reaches the alert marker, and the marker has to make room for it.** A GFM alert is
+recognised after the renderer has run, in `postprocessPages`, by matching `[!NOTE]` at the start of a
+blockquote's first paragraph. Under `break` the newline after the marker is already a `<br>` by then,
+so `> [!NOTE]` followed by its body arrives as `[!NOTE]<br>body`, and removing the marker text alone
+leaves the `<br>` at the head of the body: every alert would open with an empty line. `break` does not
+create the shape, it only makes it universal. A marker line ending in a backslash or in two spaces
+produces it today — measured on 0.12.0, `> [!WARNING]\` renders a body that begins with `<br>`. So the
+marker is removed together with the hard break that follows it, and that change lands before `break`
+does.
+
 **The default does not follow `lang`.** A document that declares Japanese is not a document whose
 Markdown means something different; the same file would then produce different structure depending on
 a display setting, and one document can hold both languages at once. `lang` selects labels and
@@ -3798,6 +3808,8 @@ Implementation scope:
 - Add `assets.budget` and `assets.onBudget`, unset by default (20.5)
 - Record why images are not re-encoded, so the question is answered rather than reopened (20.5)
 - Add `pdf.watermark`, emitted from core so a theme cannot delete it (24.10)
+- Remove the hard break that follows a GFM alert marker together with the marker, ahead of
+  `sources.lineBreak` (12.6)
 - Add `sources.lineBreak` with `space` (the default), `break`, and `join`, applied inside both
   renderers before the page's text is collected (12.6)
 
@@ -3830,6 +3842,9 @@ Completion criteria:
   fixture unchanged to prove it
 - `page.text` and the HTML agree under all three values, so a search result cannot point at text the
   page does not contain
+- An alert whose marker is followed by a hard break — a trailing backslash, two trailing spaces, or
+  a plain newline under `break` — has a body that does not begin with a `<br>`, and a test covers
+  each of the three
 
 ---
 
