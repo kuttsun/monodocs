@@ -85,7 +85,7 @@ PowerShell だけ入れさせる理由は無く、またプラットフォーム
 - [ ] **Dependabot のプルリクエスト。** 1 サイクル以上放置されているものが無く、CI が黙って落ちて
       いるものも無いこと。
 - [ ] **未対応の alert。** Dependabot alerts をトリアージし、open のまま残すものには理由を残す。
-- [ ] **セキュリティ override。** [development.md](development.md) に記録した 2 件の override を
+- [ ] **セキュリティ override。** [development.md](development.md) に記録した各 override を
       削除条件と突き合わせ、結論が変わらなかった場合も「再点検した日付」を更新する。
 - [ ] **npm の maintainer。** `monodocs` を publish できるアカウントが意図したものだけであり、
       いずれも 2FA が有効であること。

@@ -54,7 +54,7 @@ jobs:
           - [ ] **Scheduled workflows still enabled.** \`Scheduled Audit\` has recent runs.
           - [ ] **Dependabot pull requests.** None open longer than a cycle; none silently failing CI.
           - [ ] **Open alerts.** Dependabot alerts triaged, with anything left open explained.
-          - [ ] **Security overrides.** The two overrides in \`docs/development.md\` re-checked against their removal conditions, with the "Last checked" line updated either way.
+          - [ ] **Security overrides.** Each override documented in \`docs/development.md\` re-checked against their removal conditions, with the "Last checked" line updated either way.
           - [ ] **npm maintainers.** Only intended accounts can publish \`monodocs\`, and each has 2FA enabled.
           - [ ] **Trusted Publisher.** The npm setting still names this repository, \`release.yml\`, and the release environment.
           - [ ] **Node.js and Chromium support range.** Floor is Node 22.12; Node 22 leaves LTS in April 2027. Chromium detection paths in \`site/docs/ci.md\` still match the supported platforms.
