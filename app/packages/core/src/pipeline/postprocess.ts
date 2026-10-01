@@ -157,6 +157,18 @@ function admonitionIconNode(type: AdmonitionType): ElementContent {
  */
 const ALERT_MARKER = /^[^\S\n]*\[!(note|tip|important|warning|caution)\][^\S\n]*(?:\r?\n|$)/i;
 
+/**
+ * Remove a `<br>` that opens a paragraph once the alert marker before it is gone, together with
+ * the empty text node the marker left and the newline that follows the `<br>`.
+ */
+function stripLeadingBreak(paragraph: Element): void {
+  const [first, second, third] = paragraph.children;
+  if (first?.type !== "text" || first.value !== "") return;
+  if (second?.type !== "element" || second.tagName !== "br") return;
+  paragraph.children.splice(0, 2);
+  if (third?.type === "text") third.value = third.value.replace(/^\r?\n/, "");
+}
+
 /** 種別と本文から共通の admonition 構造（`.admonition`）を組み立てる。 */
 function makeAdmonition(type: AdmonitionType, content: ElementContent[]): Element {
   return {
@@ -239,6 +251,10 @@ function processAdmonitions(tree: HastRoot): void {
 
       // マーカー（と直後の改行）を本文から取り除く。
       firstText.value = firstText.value.slice(marker[0].length);
+      // A hard break after the marker (a trailing `\` or two spaces) arrives as `[!NOTE]<br>\n…`,
+      // so the `<br>` and the newline after it go with the marker; otherwise the body opens
+      // with an empty line.
+      stripLeadingBreak(firstEl);
       // マーカーだけの段落（`> [!NOTE]\n>\n> 本文` 形式）は空になるので除去する。
       if (toText(firstEl).trim() === "") {
         node.children = node.children.filter((c) => c !== firstEl);

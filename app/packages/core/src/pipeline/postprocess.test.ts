@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { postprocessPages } from "./postprocess";
+import { markdownRenderer } from "../sources/markdown/renderer";
 import { MermaidPrerenderSetupError } from "./mermaidPrerender";
 import type { Page } from "../types";
 
@@ -626,6 +627,33 @@ describe("postprocessPages - admonitions", () => {
     expect(pages[0]!.html).toContain("Be careful.");
     // マーカーだけの空段落は残さない。
     expect(pages[0]!.html).not.toContain("<p></p>");
+  });
+
+  it.each([
+    ["a trailing backslash", "> [!NOTE]\\\n> first\\\n> second\n"],
+    ["two trailing spaces", "> [!NOTE]  \n> first  \n> second\n"],
+  ])("removes the hard break after the marker when it is %s", async (_, raw) => {
+    const rendered = await markdownRenderer.render(
+      { absolutePath: "/docs/a.md", relativePath: "a.md", raw, format: "markdown" },
+      { page: { id: "a", route: "/a", relativePath: "a.md", format: "markdown" } },
+    );
+    const pages: Page[] = [page({ relativePath: "a.md", route: "/a", html: rendered.html })];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('class="admonition admonition-note"');
+    // The body starts with its text, and the break between the body lines survives.
+    expect(pages[0]!.html).toContain("<p>first<br>\nsecond</p>");
+  });
+
+  it("removes a <br> after the marker even without a newline after it", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html: "<blockquote>\n<p>[!TIP]<br>Body.</p>\n</blockquote>",
+      }),
+    ];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain("<p>Body.</p>");
   });
 
   it("leaves ordinary blockquotes untouched", async () => {
