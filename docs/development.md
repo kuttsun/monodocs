@@ -40,16 +40,18 @@ monodocs/
 
 Instead of installing Node / pnpm on the host, develop, build, and test inside the dedicated image **`monodocs-dev`**. The image bakes in pnpm on top of Node 22 (the same version as `packageManager` in `app/package.json`), so pnpm is not downloaded each time via corepack.
 
-### App Dependency Security Override
+### App Dependency Security Override (Removed)
 
-The `app/` workspace pins `postcss` to a patched release (`^8.5.18`) through pnpm `overrides` in
-`pnpm-workspace.yaml` (pnpm 11 no longer reads the `pnpm` field in `package.json`). `postcss <= 8.5.17`
-carries a high-severity path-traversal advisory (GHSA-r28c-9q8g-f849) and reaches the tree transitively
-via `vitest -> vite` — a dev/test-only dependency that is not shipped in the published bundle. The override
-keeps `pnpm audit` green; revisit and remove it once `vite` resolves a patched `postcss` on its own.
-Last checked 2026-08-05: `vite` 8.2.0 declares `postcss: ^8.5.23`, so upstream now resolves a patched release
-on its own — but the committed lockfile is still on `vite` 8.1.0, whose floor is `^8.5.15`. The override stays
-until the Dependabot bump to 8.2.0 lands, and is removed with it.
+The `app/` workspace used to pin `postcss` to `^8.5.18` through pnpm `overrides` in `pnpm-workspace.yaml`,
+because `postcss <= 8.5.17` carries a high-severity path-traversal advisory (GHSA-r28c-9q8g-f849) and reached
+the dev/test-only tree through `vitest -> vite`. It was removed on 2026-10-01, once the lockfile resolved
+`vite` 8.3.1, which declares `postcss: ^8.5.28` on its own.
+
+`vite` is a peer dependency of `vitest`, not a direct dependency, so Dependabot never proposes a bump for it
+and it stays wherever the lockfile last resolved it. Waiting for a Dependabot update to move it does not work.
+To move a peer like this, reinstall the package that pulls it in (`pnpm remove vitest && pnpm add -D
+vitest@<current range>`), which re-resolves the peer to the newest matching version without changing
+`package.json`.
 
 ### Release-Age Policy for Dependencies
 
@@ -76,8 +78,8 @@ declares Vite `^5.4.14`, but that line resolves to versions covered by the Vite 
 advisories detected by Dependabot. The override is intentionally limited to Vite 6.4 patch releases
 and must continue to pass `npm ci`, `npm audit`, and the VitePress production build. Revisit and remove
 it when upgrading to a stable VitePress release whose declared Vite range includes a secure version.
-Last checked 2026-08-05: the stable line is still VitePress 1.6.4 with `vite ^5.4.14` (VitePress 2 is still
-published only as an alpha, `2.0.0-alpha.19` on `next`), and `6.4.3` is still the newest Vite 6.4 patch, so
+Last checked 2026-10-01: the stable line is still VitePress 1.6.4 with `vite ^5.4.14` (VitePress 2 is still
+published only as an alpha, `2.0.0-alpha.20` on `next`), and `6.4.3` is still the newest Vite 6.4 patch, so
 the override stays as it is.
 
 ### Site Theme
