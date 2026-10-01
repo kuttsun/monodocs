@@ -22,7 +22,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@asciidoctor/core": "^4.0.11",
+    "@asciidoctor/core": "^4.1.0",
     "hast-util-to-text": "^4.0.2",
     "mdast-util-to-string": "^4.0.0",
     "mermaid": "^11.17.2",
@@ -38,18 +38,18 @@
     "shiki": "^4.4.3",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",
-    "yaml": "^2.9.0",
-    "zod": "^4.5.2"
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
   },
   "optionalDependencies": {
-    "puppeteer-core": "^25.9.0"
+    "puppeteer-core": "^25.12.0"
   },
   "devDependencies": {
     "@types/hast": "^3.0.5",
     "@types/mdast": "^4.0.4",
-    "@types/node": "^22.20.1",
+    "@types/node": "^22.20.4",
     "@types/picomatch": "^4.0.3",
     "@types/unist": "^3.0.3",
-    "happy-dom": "^20.11.15"
+    "happy-dom": "^20.14.5"
   }
 }
