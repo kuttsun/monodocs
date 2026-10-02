@@ -2,7 +2,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { postprocessPages } from "./postprocess";
+import { unified } from "unified";
+import rehypeStringify from "rehype-stringify";
+import type { Root as HastRoot } from "hast";
+import { postprocessPages, SHIKI_INJECTORS, shikiLanguageClosure } from "./postprocess";
 import { createMarkdownRenderer, markdownRenderer } from "../sources/markdown/renderer";
 import { MermaidPrerenderSetupError } from "./mermaidPrerender";
 import type { Page } from "../types";
@@ -551,6 +554,155 @@ describe("postprocessPages - code highlight (shiki)", () => {
     expect(pages[0]!.html).toContain('class="mermaid"');
     expect(pages[0]!.html).not.toContain("shiki");
   }, 20000);
+
+  it("highlights a code sample's embedded language whatever was highlighted before", async () => {
+    // Haskell is used nowhere else in this file, so before the fix nothing had loaded it when the
+    // first page was processed, and its block inside the AsciiDoc sample stayed uncoloured.
+    const sample = (path: string): Page =>
+      page({
+        relativePath: path,
+        route: `/${path}`,
+        html:
+          '<pre><code class="language-asciidoc">[source,haskell]\n----\n' +
+          "main = putStrLn &quot;hi&quot;\n----\n</code></pre>",
+      });
+    const first = [sample("h1.md")];
+    await postprocessPages(first, { ...baseOptions, codeHighlight: true });
+    const between = [
+      page({
+        relativePath: "hs.md",
+        route: "/hs",
+        html: '<pre><code class="language-haskell">main = pure ()</code></pre>',
+      }),
+    ];
+    await postprocessPages(between, { ...baseOptions, codeHighlight: true });
+    const again = [sample("h1.md")];
+    await postprocessPages(again, { ...baseOptions, codeHighlight: true });
+
+    expect(again[0]!.html).toBe(first[0]!.html);
+    // And the embedded Haskell is coloured: its `=` is an operator, not plain text.
+    expect(first[0]!.html).toMatch(/<span style="color:#D73A49;[^"]*">=<\/span>/);
+  }, 60000);
+
+  it("renders ansi blocks as Shiki's built-in terminal colours", async () => {
+    const pages: Page[] = [
+      page({
+        relativePath: "ansi.md",
+        route: "/ansi",
+        html: '<pre><code class="language-ansi">\u001b[31mred\u001b[0m plain</code></pre>',
+      }),
+    ];
+    await postprocessPages(pages, { ...baseOptions, codeHighlight: true });
+    expect(pages[0]!.html).not.toContain("\u001b");
+    expect(pages[0]!.html).toMatch(/<span style="color:#d73a49;[^"]*">red<\/span>/i);
+  }, 20000);
+
+  it("knows every grammar that injects into another language's scope", async () => {
+    const { bundledLanguages } = await import("shiki");
+    const byScope = new Map<string, Set<string>>();
+    for (const loader of new Set(Object.values(bundledLanguages))) {
+      for (const grammar of (await loader()).default) {
+        for (const scope of grammar.injectTo ?? []) {
+          const names = byScope.get(scope) ?? new Set<string>();
+          names.add(grammar.name);
+          byScope.set(scope, names);
+        }
+      }
+    }
+    // What SHIKI_INJECTORS loads for each scope, by grammar name, must be exactly what injects there.
+    const listed = new Map<string, Set<string>>();
+    for (const [scope, carriers] of Object.entries(SHIKI_INJECTORS)) {
+      const names = new Set<string>();
+      for (const carrier of carriers) {
+        const loader = bundledLanguages[carrier as keyof typeof bundledLanguages];
+        for (const grammar of (await loader()).default) {
+          if (grammar.injectTo?.includes(scope)) names.add(grammar.name);
+        }
+      }
+      listed.set(scope, names);
+    }
+    const sorted = (m: Map<string, Set<string>>) =>
+      Object.fromEntries([...m].map(([k, v]) => [k, [...v].sort()]).sort());
+    expect(sorted(listed)).toEqual(sorted(byScope));
+  }, 120000);
+
+  it("loads every grammar that can inject into a language, for every bundled language", async () => {
+    const shiki = await import("shiki");
+    const loaders = new Map<unknown, string>();
+    for (const [id, loader] of Object.entries(shiki.bundledLanguages)) {
+      if (!loaders.has(loader)) loaders.set(loader, id);
+    }
+    // Every injecting grammar, by the scope it targets.
+    const injectors: { name: string; target: string }[] = [];
+    for (const loader of loaders.keys()) {
+      for (const grammar of (
+        await (loader as () => Promise<{ default: { name: string; injectTo?: string[] }[] }>)()
+      ).default) {
+        for (const target of grammar.injectTo ?? []) injectors.push({ name: grammar.name, target });
+      }
+    }
+    const missing: string[] = [];
+    for (const id of loaders.values()) {
+      const closure = await shikiLanguageClosure(shiki, id);
+      const loaded = new Set<string>();
+      const scopes = new Set<string>();
+      for (const member of closure) {
+        for (const grammar of (await shiki.bundledLanguages[member]()).default) {
+          loaded.add(grammar.name);
+          // Shiki applies an injection to a scope and to every scope that extends it.
+          const parts = grammar.scopeName.split(".");
+          parts.forEach((_, i) => scopes.add(parts.slice(0, i + 1).join(".")));
+        }
+      }
+      for (const { name, target } of injectors) {
+        if (scopes.has(target) && !loaded.has(name)) missing.push(`${id}: ${name} -> ${target}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  }, 180000);
+
+  it("highlights as a highlighter with every bundled language loaded first would", async () => {
+    // The strongest form of "depends on the block alone": nothing loaded beforehand can change it.
+    const { bundledLanguages, createHighlighter } = await import("shiki");
+    const samples: [string, string][] = [
+      ["js", "const s = css`color: red;`; const h = html`<b>${s}</b>`;"],
+      // Injected under a prefix of its scope: `source.js.jsx` receives what targets `source.js`.
+      ["jsx", "const s = css`a{color:red}`; const e = <b>{s}</b>;"],
+      // Vue's and Angular's injections both match `{{`; which wins follows registration order, so
+      // Vue comes first here and the reference below loads every language in sorted order.
+      ["vue", "<template><p>{{ value | uppercase }}</p></template>"],
+      ["angular-html", '<p *ngIf="x" v-if="y">{{ value | uppercase }}</p>'],
+      ["ts", "const q = sql`select 1`; let n: number = 1;"],
+      ["markdown", "# T\n\n```lit\nhtml`<p></p>`\n```\n\n```python\nx = 1\n```\n"],
+      ["vue", '<template><p>{{ x }}</p></template><script setup lang="ts">const x = 1</script>'],
+      ["html", "<style>a{color:red}</style><script>let x = css`a{}`</script>"],
+      ["asciidoc", "[source,python]\n----\ndef f(): return 1\n----\n"],
+    ];
+    const everything = await createHighlighter({
+      themes: ["github-light", "github-dark"],
+      langs: Object.keys(bundledLanguages).sort(),
+    });
+    for (const [lang, code] of samples) {
+      const pages = [
+        page({
+          relativePath: `${lang}.md`,
+          route: `/${lang}`,
+          html: `<pre><code class="language-${lang}">${code.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</code></pre>`,
+        }),
+      ];
+      await postprocessPages(pages, { ...baseOptions, codeHighlight: true });
+      const reference = unified()
+        .use(rehypeStringify)
+        .stringify(
+          everything.codeToHast(code, {
+            lang,
+            themes: { light: "github-light", dark: "github-dark" },
+          }) as HastRoot,
+        );
+      expect(pages[0]!.html, lang).toBe(reference);
+    }
+    everything.dispose();
+  }, 180000);
 
   it("falls back to plaintext for unknown languages", async () => {
     const pages: Page[] = [
