@@ -3,12 +3,13 @@ import { spawn } from "node:child_process";
 import { Command, CommanderError } from "commander";
 import {
   buildSite,
-  type Diagnostic,
+  type BuildResult,
   initSite,
   MESSAGE_LANGS,
   resolveMessageLang,
   serveSite,
   setMessageLang,
+  sizeReportLines,
   t,
   type MessageKey,
   validateSite,
@@ -79,9 +80,10 @@ function printError(message: string): void {
 }
 
 /** ビルド結果の警告とサマリを標準出力へ表示する共通処理。 */
-function reportBuild(result: { pages: number; outputs: string[]; warnings: Diagnostic[] }): void {
+function reportBuild(result: BuildResult): void {
   for (const warning of result.warnings) printWarning(warning.message);
   console.log(t("cli.generated", { pages: result.pages, outputs: result.outputs.join(", ") }));
+  for (const line of sizeReportLines(result.sizes)) console.log(line);
 }
 
 applyMessageLang(process.argv);

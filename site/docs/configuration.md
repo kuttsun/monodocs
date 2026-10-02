@@ -121,6 +121,8 @@ assets:
   embedImages: true
   maxInlineSize: 5MB # "500KB", "5MB", or a raw byte count
   onLargeImage: warn # warn | error | external
+  # budget: 10MB # unset by default; say so when an output exceeds it
+  onBudget: warn # warn | error
 
 mermaid:
   enabled: true
@@ -499,6 +501,45 @@ sidebar:
 | `assets.embedImages`   | boolean         | `true`  | Embed local images as data URIs so the output stays self-contained.                       |
 | `assets.maxInlineSize` | string / number | `5MB`   | Maximum size for an embedded image. Accepts `B` / `KB` / `MB` / `GB` suffixes or a byte count. |
 | `assets.onLargeImage`  | `warn` `error` `external` | `warn` | What to do when an image exceeds `maxInlineSize`: warn and embed anyway, fail the build, or keep an external reference. |
+| `assets.budget`        | string / number | unset   | The size an output may reach. Same units as `maxInlineSize`. Checked against every file written — the HTML and the PDF — after it is complete. Unset, nothing is checked. |
+| `assets.onBudget`      | `warn` `error`  | `warn`  | What exceeding `budget` does: warn (code `output/over-budget`), or fail the build. The file is still written, so it can be inspected. `warn` is the default so that adding a budget cannot break a build that was already over. `watch` and `serve` always warn. |
+
+Every build reports the size of what it wrote, read from disk after the file is complete. For the HTML
+it also says where the bytes went, and the parts sum to the file:
+
+```text
+✓ Generated 20 page(s) -> docs.html
+  docs.html  9.4 MB
+    images     7.9 MB  (12 file(s), largest: guide/setup.png 2.1 MB)
+    mermaid    912.4 KB  (inline runtime)
+    page data  409.6 KB  (siteDataJson: text, headings, search)
+    document   204.8 KB
+```
+
+`images` counts every embedded copy, so an image referenced twice is counted twice; the file count is
+of distinct files, and the largest image is named, by its path relative to the root, with the size of
+one copy. `mermaid` appears
+only when `mermaid.runtime: inline` put the runtime in the file. Code highlighting has no line: it
+happens at build time and leaves only markup in the document.
+
+Under `onBudget: error` the build fails with this report in the error message, since a failed build
+prints no summary, and an HTML over budget fails before a PDF is rendered from it. `watch` and `serve`
+treat an exceeded budget as a warning whatever `onBudget` says, so a budget kept for CI does not fail
+every save.
+
+**Images are not re-encoded.** Downscaling a screenshot is the largest saving available, and monodocs
+does not do it:
+
+- the libraries that do it well are native, which neither the single-file CLI bundle nor the
+  standalone binary can carry;
+- doing it in a browser would make an HTML-only build need Chromium;
+- an encoder's output varies with its version and platform, so the same input would stop producing
+  the same bytes;
+- and quality, colour space, EXIF orientation, animation, and SVG would each need a rule, a wrong one
+  silently degrading the picture.
+
+For a document whose images are genuinely too big, `onLargeImage: external` keeps them as files beside
+the HTML; to make them smaller, run an image tool as a step before the build.
 
 ### `mermaid`
 

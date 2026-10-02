@@ -31,7 +31,14 @@ import {
 import { createPuppeteerPdfGenerator, type PdfGenerator } from "./pipeline/renderPdf.js";
 import { sidebarToOutline } from "./pipeline/pdfOutline.js";
 import { buildPdfCover } from "./pipeline/pdfCover.js";
-import { renderSingleHtml } from "./pipeline/renderSingleHtml.js";
+import { renderSingleHtmlParts } from "./pipeline/renderSingleHtml.js";
+import {
+  checkBudget,
+  type EmbeddedImage,
+  measureFile,
+  measureHtml,
+  type OutputSize,
+} from "./pipeline/outputSize.js";
 import { mermaidRuntimeScript } from "./themes/mermaid.js";
 import { t } from "./messages.js";
 
@@ -58,6 +65,7 @@ type PreparedSite = {
   sidebar: SidebarNode[];
   warnings: Diagnostic[];
   hasMermaid: boolean;
+  embeddedImages: EmbeddedImage[];
 };
 
 /**
@@ -145,6 +153,7 @@ export async function preparePages(
       sidebar: custom.sidebar,
       warnings: [...config.warnings, ...warnings, ...post.warnings, ...custom.warnings],
       hasMermaid: post.hasMermaid,
+      embeddedImages: post.embeddedImages,
     };
   }
 
@@ -158,6 +167,7 @@ export async function preparePages(
     sidebar,
     warnings: [...config.warnings, ...warnings, ...post.warnings],
     hasMermaid: post.hasMermaid,
+    embeddedImages: post.embeddedImages,
   };
 }
 
@@ -246,7 +256,7 @@ export async function buildSite(
   const resolvedLabels = resolveLabels(config.lang, config.labelOverrides);
   if (resolvedLabels.warning !== undefined) warnings.push(resolvedLabels.warning);
 
-  const html = await renderSingleHtml({
+  const { html, siteDataJson } = await renderSingleHtmlParts({
     title: config.title,
     documentMetadata: config.documentMetadata,
     pages,
@@ -272,11 +282,21 @@ export async function buildSite(
 
   const outputs = resolveOutputs(config, cwd);
   const written: string[] = [];
+  const sizes: OutputSize[] = [];
+  const onBudget = options.onBudget ?? config.onBudget;
 
   if (outputs.html) {
     await mkdir(dirname(outputs.html), { recursive: true });
     await writeFile(outputs.html, html, "utf8");
     written.push(outputs.html);
+    const size = await measureHtml(outputs.html, html, {
+      images: prepared.embeddedImages,
+      // Only the inline runtime is the runtime; a CDN reference is a few bytes of document.
+      mermaidRuntime: clientMermaid && config.mermaidRuntime === "inline" ? bodyScripts : "",
+      siteDataJson,
+    });
+    sizes.push(size);
+    checkBudget(size, sizes, config.budget, onBudget, warnings);
   }
 
   if (outputs.pdf) {
@@ -312,12 +332,15 @@ export async function buildSite(
       await mkdir(dirname(outputs.pdf), { recursive: true });
       await writeFile(outputs.pdf, pdf);
       written.push(outputs.pdf);
+      const size = await measureFile(outputs.pdf);
+      sizes.push(size);
+      checkBudget(size, sizes, config.budget, onBudget, warnings);
     } finally {
       if (ownGenerator) await generator.close();
     }
   }
 
-  return { outputs: written, pages: pages.length, warnings };
+  return { outputs: written, pages: pages.length, warnings, sizes };
 }
 
 /** {@link validateSite} の結果。 */

@@ -36,7 +36,7 @@ const EN = {
   "config.invalid": "Invalid config file {path}: {detail}",
   "config.notFound": "Config file not found: {path}",
   "config.invalidFormat": 'Invalid output format: "{value}" (expected "html", "pdf", or "both").',
-  "config.invalidMaxInlineSize": "Invalid maxInlineSize: {value}",
+  "config.invalidSize": "Invalid {key}: {value}",
   "config.invalidContentWidth": "Invalid contentWidth: {value}",
   "config.invalidRegexTransform": "Invalid regex transform: {detail}",
   "config.sidebarItemBothPathAndChildren":
@@ -112,6 +112,7 @@ const EN = {
   "build.pdfImagesEmbedded":
     "Images were embedded for PDF output, overriding assets.embedImages / onLargeImage: external. " +
     "A distributed PDF cannot reach relative images outside itself.",
+  "build.overBudget": "{file} is {size}, over assets.budget ({budget}).",
 
   // ---- pages ----
   "pages.noRenderer": 'No renderer for "{path}" ({format}); skipped.',
@@ -295,6 +296,11 @@ index are all inside it — so it can be handed to someone as it is.
   "cli.help.helpCommand": "display help for a command",
   "cli.help.versionOption": "output the version number",
   "cli.generated": "✓ Generated {pages} page(s) -> {outputs}",
+  "cli.size.total": "  {file}  {size}",
+  "cli.size.images": "    images     {size}  ({files} file(s), largest: {largest} {largestSize})",
+  "cli.size.mermaid": "    mermaid    {size}  (inline runtime)",
+  "cli.size.pageData": "    page data  {size}  (siteDataJson: text, headings, search)",
+  "cli.size.document": "    document   {size}",
   "cli.rebuilt": "✓ Rebuilt {pages} page(s)",
   "cli.watching": "Watching for changes… (Ctrl+C to stop)",
   "cli.serving": "Serving at {url} (Ctrl+C to stop)",
@@ -319,7 +325,7 @@ const JA: Record<MessageKey, string> = {
   "config.invalid": "設定ファイル {path} の内容が不正です: {detail}",
   "config.notFound": "設定ファイルが見つかりません: {path}",
   "config.invalidFormat": '出力形式が不正です: "{value}"（"html" / "pdf" / "both" のいずれか）。',
-  "config.invalidMaxInlineSize": "maxInlineSize が不正です: {value}",
+  "config.invalidSize": "{key} が不正です: {value}",
   "config.invalidContentWidth": "contentWidth が不正です: {value}",
   "config.invalidRegexTransform": "regex 変換が不正です: {detail}",
   "config.sidebarItemBothPathAndChildren":
@@ -397,6 +403,7 @@ const JA: Record<MessageKey, string> = {
   "build.pdfImagesEmbedded":
     "PDF 出力のため画像を埋め込みました（assets.embedImages / onLargeImage: external を上書き）。" +
     "配布された PDF は自分の外にある相対パスの画像を参照できないためです。",
+  "build.overBudget": "{file} は {size} で、assets.budget（{budget}）を超えています。",
 
   "pages.noRenderer": '"{path}"（{format}）に対応するレンダラがありません。スキップしました。',
   "pages.routeCollision":
@@ -564,6 +571,11 @@ monodocs build
   "cli.help.helpCommand": "コマンドのヘルプを表示する",
   "cli.help.versionOption": "バージョンを表示する",
   "cli.generated": "✓ {pages} ページを生成しました -> {outputs}",
+  "cli.size.total": "  {file}  {size}",
+  "cli.size.images": "    画像          {size}（{files} ファイル、最大: {largest} {largestSize}）",
+  "cli.size.mermaid": "    Mermaid       {size}（inline ランタイム）",
+  "cli.size.pageData": "    ページデータ  {size}（siteDataJson: 本文テキスト・見出し・検索）",
+  "cli.size.document": "    文書本体      {size}",
   "cli.rebuilt": "✓ {pages} ページを再生成しました",
   "cli.watching": "変更を監視しています… (Ctrl+C で停止)",
   "cli.serving": "{url} で配信しています (Ctrl+C で停止)",

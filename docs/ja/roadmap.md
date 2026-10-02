@@ -815,6 +815,9 @@ assets:
   embedImages: true
   maxInlineSize: "5MB"
   onLargeImage: "warn"
+  # 出力が達してよい大きさ。既定は未設定（20.5）。
+  # budget: "10MB"
+  onBudget: "warn"
 
 mermaid:
   enabled: true

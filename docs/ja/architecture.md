@@ -127,6 +127,10 @@ TypeScript コンパイルはテーマ資産をコピーしません。core buil
 
 `serve.ts` は Node.js API で HTTP 配信、`watchSite`、SSE live reload を提供します。明確な移植性要件がない限り依存を増やしません。
 
+## 出力サイズ
+
+[`pipeline/outputSize.ts`](../../app/packages/core/src/pipeline/outputSize.ts) は、各出力を書き出したあとに報告します（roadmap 20.5）。合計はビルド中に積算せず、ディスクから読みます。HTML の内訳は、完成したテキストの中から各部分——埋め込んだ各画像の data URI、inline の Mermaid ランタイム、`siteDataJson`——を探して測り、`document` は残りとするので、内訳の合計は必ずファイルと一致します。`assets.budget` はこの測った大きさに対して、各出力を測った直後に、HTML だけでなく PDF についても確かめます。そのため `onBudget: error` で HTML が予算を超えると、PDF を作る前に失敗します。失敗したビルドは結果を返さず表示の元が無いので、エラーに大きさの報告を含めます。`watch`（とその上で動く `serve`）は `onBudget: "warn"` を渡します。
+
 ## PDF
 
 PDF は Chromium の印刷レイアウトで単一 HTML を展開します。

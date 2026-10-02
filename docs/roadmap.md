@@ -820,6 +820,9 @@ assets:
   embedImages: true
   maxInlineSize: "5MB"
   onLargeImage: "warn"
+  # The size an output may reach; unset by default (20.5).
+  # budget: "10MB"
+  onBudget: "warn"
 
 mermaid:
   enabled: true
