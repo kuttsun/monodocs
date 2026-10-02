@@ -19,9 +19,8 @@ What keeps running after a release, and what a person has to check. This is the 
 
 The scheduled audit exists because the PR CI audit only runs when a pull request is open. It reads
 the committed lockfiles without installing, so a failure means an advisory, not an install problem.
-It is not redundant with Dependabot alerts: alerts compare the dependency graph against GitHub's
-advisory database, while `pnpm audit` sees the tree that this repository's `overrides` actually
-resolve to.
+It is not redundant with Dependabot alerts: it is a second, independent check over the same
+committed lockfiles, and a failure opens an issue instead of waiting in the alerts list.
 
 ## Release binary verification
 

@@ -19,8 +19,8 @@ M6 の運用面にあたる。方針そのものはそちらに置く。
 
 定期 audit を別に持つのは、PR CI の audit が PR のあるときしか走らないためである。インストールせずに
 コミット済み lockfile を読むので、失敗はインストールの問題ではなく advisory を意味する。Dependabot
-alert とは重複しない。alert が依存グラフと GitHub の advisory database を突き合わせるのに対し、
-`pnpm audit` はこのリポジトリの `overrides` を効かせた実際の解決結果を見る。
+alert とは重複しない。同じコミット済み lockfile を独立したもう一つの手段で検査するもので、失敗は
+alert 一覧で待つのではなく Issue として表に出る。
 
 ## リリースバイナリの検証
 
