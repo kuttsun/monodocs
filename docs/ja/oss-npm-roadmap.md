@@ -446,9 +446,7 @@ monodocs build ./docs -o ./dist/docs.html
 
 - [x] 依存関係を定期更新する。（Dependabot。月次、3 つの依存セット）
 - [x] 脆弱性アラートを確認する。（Dependabot alerts と automated security fixes に加え、失敗時に
-      Issue を作る週次の `scheduled-audit.yml`。PR CI の audit は PR があるときしか走らず、また
-      `pnpm audit` はこのリポジトリの `overrides` を効かせた解決結果を見るため、alert の依存グラフ
-      とは対象が異なる）
+      Issue を作る週次の `scheduled-audit.yml`。PR CI の audit は PR があるときしか走らないため）
 - [x] npm maintainer 権限を定期的に棚卸しする。（四半期チェックリスト）
 - [x] Trusted Publisher 設定を監査する。（四半期チェックリスト。リポジトリ名・ワークフローファイル・
       environment のいずれかを改名すると publish が黙って壊れる）

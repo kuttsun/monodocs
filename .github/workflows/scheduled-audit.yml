@@ -4,9 +4,8 @@ name: Scheduled Audit
 # 走らない。新しい advisory がその期間に出ても、次に誰かが PR を作るまで気づけないため、
 # 定期的に同じ audit を回す。
 #
-# Dependabot alert とは対象が異なる。alert は GitHub の advisory database と依存グラフを
-# 突き合わせるのに対し、こちらは pnpm の overrides を効かせた実際の解決結果を見る。
-# 本リポジトリは overrides を持つので、両者の判定はずれ得る。
+# Dependabot alert とは重複しない。同じコミット済み lockfile を独立したもう一つの手段で
+# 検査し、失敗は alert 一覧で待つのではなく Issue として表に出る。
 #
 # 注意: 60 日間 activity が無いリポジトリでは GitHub が schedule を自動停止する。
 # 停止していないことは四半期の棚卸し（docs/maintenance.md）で確認する。

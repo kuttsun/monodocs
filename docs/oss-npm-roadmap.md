@@ -446,8 +446,7 @@ only a document.
 - [x] Update dependencies regularly. (Dependabot, monthly, across the three dependency sets.)
 - [x] Check vulnerability alerts. (Dependabot alerts and automated security fixes, plus a weekly
       `scheduled-audit.yml` that opens an issue on failure — PR CI's audit only runs when a pull
-      request is open, and `pnpm audit` sees the tree that this repository's `overrides` resolve to,
-      which the alert graph does not.)
+      request is open.)
 - [x] Periodically review npm maintainer permissions. (Quarterly checklist.)
 - [x] Audit the Trusted Publisher settings. (Quarterly checklist. Renaming the repository, the
       workflow file, or the environment breaks publishing silently.)

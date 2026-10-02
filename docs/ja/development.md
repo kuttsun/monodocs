@@ -45,7 +45,7 @@ monodocs/
 
 `app/` ワークスペースは以前、`postcss` を pnpm `overrides`（`pnpm-workspace.yaml`）で `^8.5.18` に固定していました。`postcss <= 8.5.17` は高深刻度の path traversal advisory（GHSA-r28c-9q8g-f849）を持ち、`vitest -> vite` 経由で dev/test 専用の依存ツリーに入っていたためです。2026-10-01、lockfile が `vite` 8.3.1 を解決するようになった時点で削除しました。`vite` 8.3.1 は自前で `postcss: ^8.5.28` を宣言しています。
 
-`vite` は `vitest` の peer dependency であって直接依存ではないため、Dependabot は更新を提案しません。lockfile が最後に解決した版のまま止まり、Dependabot の更新を待っても動きません。こうした peer を動かすには、それを引き込んでいるパッケージを入れ直します（`pnpm remove vitest && pnpm add -D vitest@<現在の範囲>`）。`package.json` を変えずに、peer が範囲内の最新版へ解決し直されます。
+`vite` は `vitest` の peer dependency として依存ツリーに入ります。peer にとどまっていた間は、manifest を対象とする Dependabot の通常のバージョン更新が更新を提案せず、上流で修正が出てから 2 か月間、lockfile は `vite` 8.1.0 のままでした。そのため `vite` を `app/package.json` の直接の dev dependency として宣言し、ほかの開発ツールと同じく通常のバージョン更新で追跡されるようにしています。`vitest` がもともと要求していたものなのでインストール内容は増えず、公開バンドルにも含まれません。
 
 ### 依存関係の公開後経過時間ポリシー
 

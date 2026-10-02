@@ -4,14 +4,14 @@
 
 | Category               | Adopted                                                                                                   |
 | ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| Language / Runtime     | TypeScript 6 (NodeNext / strict), Node.js 22 LTS                                                          |
+| Language / Runtime     | TypeScript 7 (NodeNext / strict), Node.js 22 LTS                                                          |
 | Package management     | pnpm 11 workspace (via corepack)                                                                          |
 | Markdown conversion    | unified / remark-parse / remark-gfm / remark-frontmatter / remark-rehype / rehype-slug / rehype-stringify |
 | AsciiDoc conversion    | @asciidoctor/core 4 (native ESM / async API) + post-processing via rehype-parse                           |
 | HTML / text processing | hast-util-to-text / unist-util-visit / mdast-util-to-string                                               |
 | Configuration files    | yaml + zod                                                                                                |
 | File traversal         | picomatch (exclusion glob)                                                                                |
-| Testing                | vitest 4 (happy-dom for DOM tests)                                                                        |
+| Testing                | vitest 5 (happy-dom for DOM tests)                                                                        |
 | Formatting             | Prettier 3                                                                                                |
 
 ## Versioning Policy

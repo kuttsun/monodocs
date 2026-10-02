@@ -47,11 +47,11 @@ because `postcss <= 8.5.17` carries a high-severity path-traversal advisory (GHS
 the dev/test-only tree through `vitest -> vite`. It was removed on 2026-10-01, once the lockfile resolved
 `vite` 8.3.1, which declares `postcss: ^8.5.28` on its own.
 
-`vite` is a peer dependency of `vitest`, not a direct dependency, so Dependabot never proposes a bump for it
-and it stays wherever the lockfile last resolved it. Waiting for a Dependabot update to move it does not work.
-To move a peer like this, reinstall the package that pulls it in (`pnpm remove vitest && pnpm add -D
-vitest@<current range>`), which re-resolves the peer to the newest matching version without changing
-`package.json`.
+`vite` reaches the tree as a peer dependency of `vitest`. While it was only a peer, Dependabot's routine
+version updates, which follow the manifest, never proposed a bump for it, and the lockfile stayed on `vite`
+8.1.0 for two months after the fix shipped upstream. `vite` is therefore declared as a direct dev dependency
+in `app/package.json`, so routine updates now track it like any other dev tool. It adds nothing to the
+install, because `vitest` required it already, and nothing to the published bundle.
 
 ### Release-Age Policy for Dependencies
 

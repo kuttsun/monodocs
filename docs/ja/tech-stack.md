@@ -4,14 +4,14 @@
 
 | 区分                | 採用                                                                                                      |
 | ------------------- | --------------------------------------------------------------------------------------------------------- |
-| 言語 / ランタイム   | TypeScript 6（NodeNext / strict）、Node.js 22 LTS                                                         |
+| 言語 / ランタイム   | TypeScript 7（NodeNext / strict）、Node.js 22 LTS                                                         |
 | パッケージ管理      | pnpm 11 workspace（corepack 経由）                                                                        |
 | Markdown 変換       | unified / remark-parse / remark-gfm / remark-frontmatter / remark-rehype / rehype-slug / rehype-stringify |
 | AsciiDoc 変換       | @asciidoctor/core 4（ネイティブ ESM・async API）+ rehype-parse による後処理                               |
 | HTML / テキスト処理 | hast-util-to-text / unist-util-visit / mdast-util-to-string                                               |
 | 設定ファイル        | yaml + zod                                                                                                |
 | ファイル走査        | picomatch（除外 glob）                                                                                    |
-| テスト              | vitest 4（DOM テストは happy-dom）                                                                        |
+| テスト              | vitest 5（DOM テストは happy-dom）                                                                        |
 | 整形                | Prettier 3                                                                                                |
 
 ## バージョン方針
