@@ -139,6 +139,12 @@ Preserve these display and reachability invariants:
   default.
   Images inside links or buttons retain the parent interaction, and the dialog must not appear in print or PDF
   output. Images with an explicit empty `alt` retain their decorative semantics.
+  Mermaid diagrams open in the same dialog once their SVG exists (at load for `pre-render`, after rendering for
+  `client`). The SVG is moved into the dialog and back on close rather than copied, because a copy would
+  duplicate the IDs its own styles and `url(#…)` references depend on. The diagram block is not given a button
+  role, which would hide the diagram's text and description from assistive technology; a separate button that
+  appears on keyboard focus opens it. The dialog closes before printing and on route changes so that a diagram
+  is never missing from the page.
 - `html.theme` selects a built-in theme by name or a custom theme by directory path (resolved against the
   configuration file). A custom theme may supply any subset of `template.html`, `style.css`, and `app.js`;
   the default theme supplies the rest, so a theme never has to vendor the client script to restyle output.
