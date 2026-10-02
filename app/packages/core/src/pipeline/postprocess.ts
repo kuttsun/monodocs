@@ -20,14 +20,160 @@ import { t } from "../messages.js";
 const SHIKI_THEMES = { light: "github-light", dark: "github-dark" } as const;
 
 // shiki は重いので、ハイライトが実際に必要になったときだけ動的 import する。
-type CodeToHast = typeof import("shiki").codeToHast;
-let codeToHastFn: CodeToHast | null = null;
-async function loadCodeToHast(): Promise<CodeToHast> {
-  if (!codeToHastFn) {
-    const shiki = await import("shiki");
-    codeToHastFn = shiki.codeToHast;
+type Shiki = typeof import("shiki");
+export type BundledLanguage = keyof Shiki["bundledLanguages"];
+let shikiModule: Shiki | null = null;
+async function loadShiki(): Promise<Shiki> {
+  shikiModule ??= await import("shiki");
+  return shikiModule;
+}
+
+/**
+ * Grammars that inject rules into a scope other languages use, by that scope, as the bundled
+ * language that carries them. Shiki loads none of these on its own, and an injection only reaches a
+ * grammar first used after it was loaded, so without them a JavaScript block's colours depended on
+ * whether a `lit` block had come earlier. Generated from the bundled grammars' `injectTo`; a test
+ * scans every bundled grammar and fails when this falls out of date.
+ */
+export const SHIKI_INJECTORS: Readonly<Record<string, readonly string[]>> = {
+  "source.js": ["ts-tags"],
+  "source.ts": ["ts-tags"],
+  "source.ts.ng": ["angular-html", "angular-ts"],
+  "source.vue": ["vue"],
+  "text.html.derivative": ["angular-html", "angular-ts", "vue"],
+  "text.html.derivative.ng": ["angular-html", "angular-ts"],
+  "text.html.markdown": ["nix", "vue"],
+  "text.pug": ["vue"],
+};
+
+/** One load per language and process; a rebuild under watch reuses them. */
+const languageLoads = new Map<string, Promise<void>>();
+
+/**
+ * Carriers whose injections can compete, grouped: two carriers injecting into the same scope are in
+ * one group, transitively, and each group is sorted. `ts-tags` is alone in its group, so a
+ * JavaScript block does not pull in Vue and Angular.
+ */
+const INJECTOR_GROUPS: readonly (readonly string[])[] = (() => {
+  const groups: Set<string>[] = [];
+  for (const carriers of Object.values(SHIKI_INJECTORS)) {
+    const merged = new Set(carriers);
+    for (const group of [...groups]) {
+      if ([...group].some((carrier) => merged.has(carrier))) {
+        for (const carrier of group) merged.add(carrier);
+        groups.splice(groups.indexOf(group), 1);
+      }
+    }
+    groups.push(merged);
   }
-  return codeToHastFn;
+  return groups.map((group) => [...group].sort());
+})();
+
+/** The one load of each injector group, by its first carrier. */
+const injectorLoads = new Map<string, Promise<void>>();
+
+/**
+ * Loads a language with everything its highlighting can depend on, and returns the language to
+ * highlight with: the language itself, Shiki's built-in `ansi` and plain-text names as they are, and
+ * `text` for anything Shiki does not bundle.
+ *
+ * Shiki shares one highlighter per process and loads languages on demand, and a block's colours
+ * depended on what had been loaded before it, in this build or any earlier one of the process —
+ * measured, the first build of `examples/ja` differed from the second. Two things reach a grammar
+ * from outside it: the languages it embeds, most of them lazily (the Python inside an AsciiDoc
+ * `[source,python]`), and grammars injecting into its scopes ({@link SHIKI_INJECTORS}). Both are
+ * loaded, transitively, before the block is highlighted, so its output depends on the block alone.
+ * Measured against a highlighter with every bundled language loaded first, the output is the same.
+ * The largest closure (around seventy languages, for AsciiDoc or MDX) costs one to two seconds,
+ * once per process.
+ */
+async function prepareLanguage(shiki: Shiki, lang: string): Promise<string> {
+  if (shiki.isSpecialLang(lang)) return lang;
+  if (!Object.hasOwn(shiki.bundledLanguages, lang)) return "text";
+  let load = languageLoads.get(lang);
+  if (!load) {
+    load = (async () => {
+      const ids = await shikiLanguageClosure(shiki, lang);
+      const highlighter = await shiki.getSingletonHighlighter({
+        themes: Object.values(SHIKI_THEMES),
+      });
+      // Injections that match at the same place are tried in the order their grammars were
+      // registered: Vue's and Angular's both match `{{` in an Angular template, and measured, which
+      // one colours `{{ value | uppercase }}` followed which block came first. So the moment any
+      // carrier of a group is needed, the whole group is registered together in a fixed order,
+      // before anything that depends on it; a document that needs none loads none.
+      for (const group of INJECTOR_GROUPS) {
+        if (!group.some((carrier) => ids.has(carrier as BundledLanguage))) continue;
+        const key = group[0]!;
+        let groupLoad = injectorLoads.get(key);
+        if (!groupLoad) {
+          groupLoad = (async () => {
+            const all = new Set<BundledLanguage>();
+            for (const carrier of group) {
+              for (const id of await shikiLanguageClosure(shiki, carrier)) all.add(id);
+            }
+            await highlighter.loadLanguage(...[...all].sort());
+          })();
+          groupLoad.catch(() => injectorLoads.delete(key));
+          injectorLoads.set(key, groupLoad);
+        }
+        await groupLoad;
+      }
+      await highlighter.loadLanguage(...ids);
+    })();
+    // A failed load is not remembered, so the next build tries again rather than inheriting it.
+    load.catch(() => languageLoads.delete(lang));
+    languageLoads.set(lang, load);
+  }
+  await load;
+  return lang;
+}
+
+/** `source.js.jsx`, `source.js`, `source`: the scopes Shiki looks injections up under. */
+function scopePrefixes(scope: string): string[] {
+  const parts = scope.split(".");
+  return parts.map((_, i) => parts.slice(0, i + 1).join("."));
+}
+
+/**
+ * Every bundled language a block of `lang` can be affected by: the languages its grammars embed,
+ * eagerly or lazily, and the carriers of grammars injecting into any of their scopes, transitively.
+ * Shiki looks injections up under every dot-prefix of a scope — `source.js.jsx` receives what is
+ * injected into `source.js` — so the lookup here does too. Exported for the test that checks it
+ * against every bundled grammar.
+ */
+export async function shikiLanguageClosure(
+  shiki: Shiki,
+  lang: string,
+): Promise<Set<BundledLanguage>> {
+  const ids = new Set<BundledLanguage>();
+  const scopes = new Set<string>();
+  const visit = async (id: string): Promise<void> => {
+    if (!Object.hasOwn(shiki.bundledLanguages, id)) return;
+    const known = id as BundledLanguage;
+    if (ids.has(known)) return;
+    ids.add(known);
+    const embedded: string[] = [];
+    for (const grammar of (await shiki.bundledLanguages[known]()).default) {
+      for (const scope of scopePrefixes(grammar.scopeName)) scopes.add(scope);
+      embedded.push(...(grammar.embeddedLangs ?? []), ...(grammar.embeddedLangsLazy ?? []));
+    }
+    // The grammar modules are independent imports; fetch a level at once rather than one by one.
+    await Promise.all(embedded.map(visit));
+  };
+  await visit(lang);
+  // Injectors bring scopes of their own, which can have injectors; run to a fixed point.
+  for (let grown = true; grown;) {
+    grown = false;
+    for (const scope of [...scopes]) {
+      for (const carrier of SHIKI_INJECTORS[scope] ?? []) {
+        if (ids.has(carrier as BundledLanguage)) continue;
+        await visit(carrier);
+        grown = true;
+      }
+    }
+  }
+  return ids;
 }
 
 /** リンク変換対象とする追加拡張子（AsciiDoc 変換後の .html 相当）。 */
@@ -413,15 +559,27 @@ async function highlightCode(tree: HastRoot): Promise<void> {
   });
   if (blocks.length === 0) return;
 
-  const codeToHast = await loadCodeToHast();
+  const shiki = await loadShiki();
+  // The highlighter's own codeToHast rather than Shiki's shorthand: the shorthand also loads any
+  // language it guesses from the code itself (a fence inside a Markdown sample), which is a load
+  // this module did not decide on and that would reach later blocks.
+  let highlighter: Awaited<ReturnType<Shiki["getSingletonHighlighter"]>>;
+  try {
+    highlighter = await shiki.getSingletonHighlighter({ themes: Object.values(SHIKI_THEMES) });
+  } catch {
+    // No highlighter at all (the regex engine failed to load): the blocks stay as they were, as a
+    // block whose language fails does, rather than failing the build over colours.
+    return;
+  }
   for (const block of blocks) {
     let root: HastRoot;
     try {
-      root = await codeToHast(block.code, { lang: block.lang, themes: SHIKI_THEMES });
+      const lang = await prepareLanguage(shiki, block.lang);
+      root = highlighter.codeToHast(block.code, { lang, themes: SHIKI_THEMES });
     } catch {
       // 未対応言語などは素のテキスト（plaintext）としてハイライトする。
       try {
-        root = await codeToHast(block.code, { lang: "text", themes: SHIKI_THEMES });
+        root = highlighter.codeToHast(block.code, { lang: "text", themes: SHIKI_THEMES });
       } catch {
         continue; // それも失敗するなら元の <pre> を残す。
       }
