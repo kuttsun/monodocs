@@ -152,6 +152,7 @@ pdf:
   footer: '<div style="width:100%;margin:0 15pt;font-family:sans-serif;font-size:8pt;color:#666;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>'
   cover:
     enabled: false # true generates a cover from title and document
+  watermark: false # false, or one line of text printed behind every sheet
 
 ```
 
@@ -709,6 +710,7 @@ paper.
 | `pdf.header`          | `false` / string  | `false`   | The band at the top of every page. See below. |
 | `pdf.footer`          | `false` / string  | page number | The band at the bottom of every page. See below. |
 | `pdf.cover.enabled`   | boolean           | `false`   | Put a cover generated from `title` and `document` in front. See below. |
+| `pdf.watermark`       | `false` / string  | `false`   | One line of text printed diagonally behind the content of every sheet. See below. |
 
 #### `pdf.density` (how tightly the page is set) {#pdf-density}
 
@@ -871,6 +873,33 @@ pdf:
 - **The bookmarks still point into the body.** The cover is not added to them.
 - **HTML gets no cover.** On screen, the same information belongs in the footer at the end, which
   `document` already fills.
+
+#### `pdf.watermark` (watermark) {#pdf-watermark}
+
+A draft, or a document that is not to leave the building, can say so on every sheet:
+
+```yaml
+pdf:
+  watermark: "DRAFT"
+```
+
+- **One line of text, and nothing else to set.** It is printed diagonally across the middle of every
+  sheet, in a light grey that survives a photocopier. It is blended into the page so that it reads as
+  behind the content — text and lines stay as dark as they were where they cross it — and nothing
+  covers it: not a code block's background, and not a background a theme paints. Its size follows the
+  length of the text so that the line fits. There is no image, angle, font, opacity, or per-page control.
+- **Every printed sheet, and only printed ones.** The PDF carries it on every sheet, the
+  [cover](#pdf-cover) included, and so does the HTML when it is printed from a browser. It never
+  appears on screen. Blending can only darken, so a browser print of the dark color scheme with
+  background graphics on shows it barely, if at all.
+- **A theme cannot remove it.** The rule is added to the stylesheet by monodocs itself, so a theme
+  that replaces `style.css` still prints it, and its declarations are `!important`, so a print rule
+  that hides generated content (`*::after { display: none }`) does not take it along.
+- **Its text is font-checked.** [`fontCheck`](#font-check) measures the watermark as well as the body,
+  on the body's sheets and on the cover, so a watermark in a script the build machine has no font for
+  is reported rather than printed as tofu on every sheet.
+- **The text is text.** It is escaped into the stylesheet, so quotes, backslashes, or markup in the
+  value appear as those characters. A line break or a blank value is refused.
 
 #### `pdf.pageBreakLevel` (a sheet per section) {#pdf-page-break-level}
 

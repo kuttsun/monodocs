@@ -156,6 +156,12 @@ Preserve these display and reachability invariants:
   A template that lacks `{{style}}`, `{{sidebar}}`, `{{pages}}`, `{{siteDataJson}}`, `{{appJs}}`, or
   `{{bodyScripts}}` must fail the build rather than produce a broken document. Themes are read from the
   filesystem so that every distribution form supports them, and they must not reference external assets.
+- Rules a document asked for are appended by core to whatever stylesheet the theme supplies, never left to
+  the theme: the page-break marker, `pdf.pageBreakLevel`, `pdf.density`, and the `pdf.watermark` rule
+  ([`pipeline/watermark.ts`](../app/packages/core/src/pipeline/watermark.ts)). A theme replacing `style.css`
+  must not be able to delete "CONFIDENTIAL" from a document that asked for it. The watermark's text reaches
+  the CSS as an escaped string, and the generated cover carries the same rule. It is painted above the
+  content with `mix-blend-mode: multiply` rather than underneath: underneath, a theme's background covers it.
 - Print and PDF have no scrollbars: anything the screen makes scrollable (code blocks, tables) must wrap or
   be laid out to fit in print, and a table crossing a page break repeats its header row. Content must never be
   silently cut off at the page edge.

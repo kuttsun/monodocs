@@ -489,6 +489,24 @@ function buildConfigFileSchema() {
             .strict()
             .optional(),
           /**
+           * One line of text printed diagonally behind the content of every sheet (24.10), or
+           * `false`. Nothing else is configurable: no image, angle, font, or opacity (24.6).
+           */
+          watermark: z
+            .union(
+              [
+                z.literal(false),
+                // Any line break, including the ones a `white-space: pre` box would also break at.
+                z
+                  .string()
+                  .refine(
+                    (value) => value.trim() !== "" && !/[\r\n\f\v\u0085\u2028\u2029]/.test(value),
+                  ),
+              ],
+              { message: t("config.invalidPdfWatermarkValue") },
+            )
+            .optional(),
+          /**
            * この深さまでの見出しの前で改ページする。`false`（既定）はどの見出しでも改ページ
            * しない。数値は「新しい紙を始める最も深い見出しレベル」で、2 は h2 だけ、6 は h2〜h6。
            * h1 はページタイトルであり、そのファイルは既に改ページ済みなので含めない。
@@ -677,6 +695,8 @@ export type ResolvedConfig = {
   pdfFooter: string;
   /** Whether the PDF starts with a cover generated from `title` and `document` (24.8). */
   pdfCover: boolean;
+  /** The watermark printed on every sheet (24.10); undefined for none. */
+  pdfWatermark?: string;
 };
 
 /**
@@ -1199,5 +1219,6 @@ export async function loadConfig(
     pdfHeader: resolveBand(fileConfig.pdf?.header, EMPTY_PDF_BAND),
     pdfFooter: resolveBand(fileConfig.pdf?.footer, DEFAULT_PDF_FOOTER),
     pdfCover: fileConfig.pdf?.cover?.enabled ?? false,
+    pdfWatermark: fileConfig.pdf?.watermark || undefined,
   };
 }

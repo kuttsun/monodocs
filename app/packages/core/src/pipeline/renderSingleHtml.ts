@@ -12,6 +12,7 @@ import { DEFAULT_LANG, LABEL_KEYS, resolveLabels, type Labels } from "../labels.
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, escapeLabel, renderTemplate } from "../util/html.js";
 import { documentFooterLine, type DocumentMetadata } from "../documentMeta.js";
+import { watermarkRules } from "./watermark.js";
 
 export type RenderHtmlInput = {
   title: string;
@@ -40,6 +41,8 @@ export type RenderHtmlInput = {
    * 印そのものは postprocess が付ける（{@link file://./pageBreakHeadings.ts}）。
    */
   pdfPageBreakLevel?: PdfPageBreakLevel;
+  /** `pdf.watermark`: printed behind every sheet, in the PDF and in a browser's print (24.10). */
+  pdfWatermark?: string;
   /** 読者向けの本文幅切替ボタンを表示するか。未指定は true。 */
   contentWidthToggle?: boolean;
   /** Initial state when the content-width toggle is shown. Defaults to standard. */
@@ -137,7 +140,8 @@ function styleWithOverrides(style: string, input: RenderHtmlInput): string {
     out = `${out}\n${PRINT_HEADING_BREAK_RULES}`;
   }
   const density = printDensityRules(input.pdfDensity);
-  return density === "" ? out : `${out}\n${density}`;
+  if (density !== "") out = `${out}\n${density}`;
+  return input.pdfWatermark ? `${out}\n${watermarkRules(input.pdfWatermark)}` : out;
 }
 
 /**

@@ -873,6 +873,8 @@ pdf:
   # syntax: the fragment is handed to Chromium as written.
   footer: '<span class="pageNumber"></span> / <span class="totalPages"></span>'
   header: false
+  # One line of text printed behind every sheet: false (default) or the text (v0.13, 24.10).
+  watermark: false
 ```
 
 **This example is a test fixture (v0.11).** Until then it was prose, and it drifted: it carried
@@ -2882,6 +2884,12 @@ Text, one line, diagonal, behind the content, on every sheet including the cover
 photocopies without hiding what it covers. No image, no per-page control, no font or angle or
 opacity: those are the keys that turn one feature into a layout language, and the text is what the
 feature is for.
+
+"Behind" is how it reads, not where it is painted. Measured, a box underneath the content is covered
+by any background a theme paints on `html` or on a content wrapper, which is the deletion the next
+paragraph rules out. So it is painted above everything and multiplied into it: a light grey darkens
+the paper and leaves dark ink as it was. Multiplying can only darken, so on a page printed with a
+dark background it is barely there; the PDF and a light page are what it is for.
 
 It is emitted by core into the print stylesheet, beside the density and page-break rules and for the
 same reason 24.7 gives — a theme replacing `style.css` must not be able to delete "CONFIDENTIAL"

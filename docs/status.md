@@ -376,10 +376,10 @@ machine was available for, and the Windows checks only a person can make.
 
 **Watermark** ([roadmap.md](roadmap.md) 24.10)
 
-- [ ] `pdf.watermark: "DRAFT"` prints one line of text diagonally behind the content on every sheet of the PDF and of a browser print, and nothing on screen
-- [ ] The text is escaped rather than inserted, so a value containing markup appears as that text
-- [ ] The rule is emitted by core into the print stylesheet, and a document built with a theme that replaces `style.css` still carries it — a theme must not be able to delete "CONFIDENTIAL" from a document that asked for it
-- [ ] There is no image, no per-page control, and no font, angle, or opacity key, on the reason [roadmap.md](roadmap.md) 24.6 gives for a closed key set
+- [x] `pdf.watermark: "DRAFT"` prints one line of text diagonally behind the content on every sheet of the PDF and of a browser print, and nothing on screen
+- [x] The text is escaped rather than inserted, so a value containing markup appears as that text
+- [x] The rule is emitted by core into the print stylesheet, and a document built with a theme that replaces `style.css` still carries it — a theme must not be able to delete "CONFIDENTIAL" from a document that asked for it
+- [x] There is no image, no per-page control, and no font, angle, or opacity key, on the reason [roadmap.md](roadmap.md) 24.6 gives for a closed key set
 
 **The cover** ([roadmap.md](roadmap.md) 24.8)
 
