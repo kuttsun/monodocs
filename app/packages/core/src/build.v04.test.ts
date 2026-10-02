@@ -55,6 +55,29 @@ describe("watchSite", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
+  it("reports an exceeded budget as a warning even under onBudget: error", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-watch-budget-"));
+    const docs = join(dir, "docs");
+    await mkdir(docs, { recursive: true });
+    await writeFile(join(docs, "index.md"), "# Budget\n");
+    const configFile = join(dir, "monodocs.config.yml");
+    await writeFile(configFile, "assets:\n  budget: 1KB\n  onBudget: error\n");
+
+    const codes: string[] = [];
+    const errors: Error[] = [];
+    const handle = await watchSite(
+      { inputDir: docs, outputFile: join(dir, "out.html"), configFile },
+      {
+        onRebuild: (result) => codes.push(...result.warnings.map((w) => w.code)),
+        onError: (error) => errors.push(error),
+      },
+    );
+    await handle.close();
+    expect(errors).toEqual([]);
+    expect(codes).toContain("output/over-budget");
+    await rm(dir, { recursive: true, force: true });
+  });
+
   it("does not self-trigger when the output lives inside the watched input", async () => {
     const dir = await mkdtemp(join(tmpdir(), "monodocs-watch-loop-"));
     const docs = join(dir, "docs");

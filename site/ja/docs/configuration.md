@@ -121,6 +121,8 @@ assets:
   embedImages: true
   maxInlineSize: 5MB # "500KB"・"5MB"・またはバイト数
   onLargeImage: warn # warn | error | external
+  # budget: 10MB # 既定は未設定。出力がこれを超えたら知らせる
+  onBudget: warn # warn | error
 
 mermaid:
   enabled: true
@@ -459,6 +461,39 @@ sidebar:
 | `assets.embedImages`   | boolean         | `true` | ローカル画像を data URI として埋め込み、出力を自己完結に保つ。           |
 | `assets.maxInlineSize` | string / number | `5MB`  | 埋め込む画像の最大サイズ。`B` / `KB` / `MB` / `GB` 接尾辞またはバイト数。 |
 | `assets.onLargeImage`  | `warn` `error` `external` | `warn` | 画像が `maxInlineSize` を超えたときの挙動: 警告して埋め込む / ビルド失敗 / 外部参照のまま残す。 |
+| `assets.budget`        | string / number | 未設定 | 出力が達してよい大きさ。単位は `maxInlineSize` と同じ。書き出したすべてのファイル（HTML と PDF）について、完成後に確かめる。未設定なら確かめない。 |
+| `assets.onBudget`      | `warn` `error`  | `warn` | `budget` を超えたときの挙動: 警告する（コード `output/over-budget`）/ ビルドを失敗させる。ファイルは書き出したまま残るので、中身を確かめられる。既定が `warn` なのは、予算を足しただけで既に超えているビルドが落ちないようにするため。`watch` と `serve` は常に警告する。 |
+
+ビルドは毎回、書き出したものの大きさを、ファイルの完成後にディスクから読んで表示します。HTML については
+内訳も示し、その合計はファイルの大きさと一致します。
+
+```text
+✓ 20 ページを生成しました -> docs.html
+  docs.html  9.4 MB
+    画像          7.9 MB（12 ファイル、最大: guide/setup.png 2.1 MB）
+    Mermaid       912.4 KB（inline ランタイム）
+    ページデータ  409.6 KB（siteDataJson: 本文テキスト・見出し・検索）
+    文書本体      204.8 KB
+```
+
+`画像` は埋め込んだ写しをすべて数えるので、2 か所から参照した画像は 2 回数えます。ファイル数は異なるファイルの数で、
+最大の画像は、ルートからの相対パスと 1 枚分の大きさで示します。`Mermaid` の行は、
+`mermaid.runtime: inline` がランタイムをファイルに入れたときだけ出ます。コードのハイライトには行がありません。
+ハイライトはビルド時に行われ、文書にはマークアップしか残さないからです。
+
+`onBudget: error` でビルドが失敗したときは、この表示をエラーメッセージに含めます。失敗したビルドは
+サマリを表示しないからです。また HTML が予算を超えた時点で失敗し、そこから PDF は作りません。`watch` と
+`serve` は `onBudget` の値にかかわらず予算超過を警告として扱うので、CI 用に書いた予算で保存のたびに失敗することはありません。
+
+**画像は再エンコードしません。** スクリーンショットの縮小は最も大きな節約になりますが、monodocs は行いません。
+
+- うまく縮小できるライブラリはネイティブであり、単一ファイルの CLI バンドルにも単体実行ファイルにも載せられない
+- ブラウザで行えば、HTML だけのビルドに Chromium が必要になる
+- エンコーダーの出力はバージョンとプラットフォームで変わるので、同じ入力から同じバイトが出なくなる
+- 品質・色空間・EXIF の向き・アニメーション・SVG のそれぞれに規則が要り、誤った規則は画像を黙って劣化させる
+
+画像が本当に大きすぎる文書では、`onLargeImage: external` で画像を HTML の隣のファイルとして残せます。
+画像を小さくしたい場合は、ビルドの前段で画像ツールを走らせてください。
 
 ### `mermaid`
 

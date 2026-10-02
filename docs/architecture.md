@@ -244,6 +244,16 @@ writing a temporary file and renaming it over the original.
 Node.js APIs. Keep the implementation dependency-free unless a clear portability requirement justifies a new
 watching dependency.
 
+## Output Size
+
+[`pipeline/outputSize.ts`](../app/packages/core/src/pipeline/outputSize.ts) reports each output after it is
+written (roadmap 20.5). The total is read from disk, not summed while building. Each part of the HTML breakdown
+is found in the final text — every embedded image's data URI, the inline Mermaid runtime, the `siteDataJson`
+payload — and `document` is the remainder, so the parts always sum to the file. `assets.budget` is checked
+against each output as soon as it is measured, for the PDF as well as the HTML, so an HTML over budget under
+`onBudget: error` fails before the PDF is rendered; the error carries the size report, because a failed build
+returns no result to print it from. `watch` (and `serve`, which runs on it) passes `onBudget: "warn"`.
+
 ## PDF
 
 PDF generation expands the single HTML document in Chromium's print layout. Preserve the following properties:

@@ -327,6 +327,16 @@ function renderConditionalBlock(template: string, name: string, enabled: boolean
 
 /** Page[] とサイドバーから自己完結した単一 HTML を生成する。 */
 export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> {
+  return (await renderSingleHtmlParts(input)).html;
+}
+
+/**
+ * {@link renderSingleHtml}, also returning the `siteDataJson` payload exactly as it was inserted,
+ * so the build can report how much of the file it is (roadmap 20.5).
+ */
+export async function renderSingleHtmlParts(
+  input: RenderHtmlInput,
+): Promise<{ html: string; siteDataJson: string }> {
   const theme = await loadTheme(input.theme ?? "default");
   const tocMaxLevel = input.tocMaxLevel ?? 3;
   // 既定はライト。サーバ出力の data-theme と __MONODOCS_DATA__ の値を必ず一致させる。
@@ -383,7 +393,7 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
   );
   // 1 回の走査でまとめて置換する。順番に置換すると、先に入れた本文 HTML やテーマの
   // CSS / JS に含まれる `{{...}}` が後続の置換で書き換えられてしまう。
-  return renderTemplate(html, {
+  const rendered = renderTemplate(html, {
     ...labelTokens(labels),
     // 任意のトークン。必須にすると、この機能を望まないかもしれない既存テーマをすべて壊す。
     // `<html lang="…">` を直接書いたカスタムテンプレートは書いたものをそのまま保つ。
@@ -404,4 +414,5 @@ export async function renderSingleHtml(input: RenderHtmlInput): Promise<string> 
     appJs: theme.appJs,
     bodyScripts: input.bodyScripts ?? "",
   });
+  return { html: rendered, siteDataJson: siteData };
 }

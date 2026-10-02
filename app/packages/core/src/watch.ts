@@ -64,7 +64,8 @@ export async function watchSite(
       // 監視先の更新はビルドより先に行う。設定でテーマを差し替えた直後は新テーマが
       // まだ壊れていてビルドが失敗しうるが、その修正を拾えなければテーマ制作に使えない。
       await syncThemeWatch();
-      const result = await buildSite(options);
+      // A development loop reports an exceeded budget rather than failing on it (see BuildOptions).
+      const result = await buildSite({ ...options, onBudget: "warn" });
       callbacks.onRebuild?.(result);
     } catch (error) {
       callbacks.onError?.(error as Error);

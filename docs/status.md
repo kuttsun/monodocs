@@ -363,16 +363,16 @@ machine was available for, and the Windows checks only a person can make.
 
 **Measuring the output** ([roadmap.md](roadmap.md) 20.5)
 
-- [ ] A build prints the output size and a breakdown: embedded images, the inline Mermaid runtime, the `siteDataJson` payload, and everything else. The parts sum to the file, and a test asserts that they do
-- [ ] Shiki has no line in the breakdown, because it leaves no runtime in the output — highlighting happens at build time
-- [ ] The largest embedded image is named with its size, since the breakdown exists to be acted on
-- [ ] Both numbers are the bytes written to disk, measured after the file is complete, rather than an estimate summed while building
+- [x] A build prints the output size and a breakdown: embedded images, the inline Mermaid runtime, the `siteDataJson` payload, and everything else. The parts sum to the file, and a test asserts that they do
+- [x] Shiki has no line in the breakdown, because it leaves no runtime in the output — highlighting happens at build time
+- [x] The largest embedded image is named with its size, since the breakdown exists to be acted on
+- [x] Both numbers are the bytes written to disk, measured after the file is complete, rather than an estimate summed while building
 
 **The budget** ([roadmap.md](roadmap.md) 20.5)
 
-- [ ] `assets.budget: 10MB` warns when the output exceeds it, and `assets.onBudget: error` fails the build. `warn` is the default so that adding the key cannot break a build that was already over
-- [ ] Unset, nothing changes and no existing build starts warning
-- [ ] The decision not to re-encode images is recorded with its reasons — the native dependency the CJS bundle and the SEA binary cannot take, the Chromium dependency an HTML-only build must not acquire, the reproducibility it would cost, and the rules quality, colour space, EXIF orientation, animation, and SVG would each need. `onLargeImage: external` remains the answer for a document whose images are genuinely too big
+- [x] `assets.budget: 10MB` warns when the output exceeds it, and `assets.onBudget: error` fails the build. `warn` is the default so that adding the key cannot break a build that was already over
+- [x] Unset, nothing changes and no existing build starts warning
+- [x] The decision not to re-encode images is recorded with its reasons — the native dependency the CJS bundle and the SEA binary cannot take, the Chromium dependency an HTML-only build must not acquire, the reproducibility it would cost, and the rules quality, colour space, EXIF orientation, animation, and SVG would each need. `onLargeImage: external` remains the answer for a document whose images are genuinely too big
 
 **Watermark** ([roadmap.md](roadmap.md) 24.10)
 

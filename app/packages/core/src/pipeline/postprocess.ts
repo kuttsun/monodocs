@@ -1,5 +1,5 @@
 import { readFile, realpath, stat } from "node:fs/promises";
-import { dirname, posix, resolve, sep } from "node:path";
+import { dirname, posix, relative, resolve, sep } from "node:path";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
@@ -10,6 +10,7 @@ import type { MermaidMode, OnLargeImage, PdfPageBreakLevel } from "../config.js"
 import type { Page } from "../types.js";
 import { type Diagnostic, type DiagnosticSource, MonodocsError, warn } from "../diagnostics.js";
 import { type MermaidPrerenderer } from "./mermaidPrerender.js";
+import type { EmbeddedImage } from "./outputSize.js";
 import { BrowserSetupError } from "./browser.js";
 import { markPageBreakHeadings } from "./pageBreakHeadings.js";
 import { checkHeadingLevels, checkImageAlt } from "./pageChecks.js";
@@ -71,6 +72,8 @@ export type PostprocessResult = {
   warnings: Diagnostic[];
   /** いずれかのページに Mermaid ブロックが含まれていたか。 */
   hasMermaid: boolean;
+  /** Every image embedded as a data URI, one entry per reference, for the size report (20.5). */
+  embeddedImages: EmbeddedImage[];
 };
 
 function normalizePath(p: string): string {
@@ -758,6 +761,7 @@ async function embedImages(
   options: PostprocessOptions,
   realRoot: string,
   warnings: Diagnostic[],
+  embedded: EmbeddedImage[],
 ): Promise<void> {
   const images: Element[] = [];
   visit(tree, "element", (node) => {
@@ -822,7 +826,9 @@ async function embedImages(
     }
 
     const data = await readFile(real);
-    img.properties.src = `data:${mime};base64,${data.toString("base64")}`;
+    const dataUri = `data:${mime};base64,${data.toString("base64")}`;
+    img.properties.src = dataUri;
+    embedded.push({ path: relative(realRoot, real).split(sep).join("/"), dataUri });
   }
 }
 
@@ -847,6 +853,7 @@ export async function postprocessPages(
   const serializer = unified().use(rehypeStringify, { allowDangerousHtml: true });
 
   const warnings: Diagnostic[] = [];
+  const embeddedImages: EmbeddedImage[] = [];
   let hasMermaid = false;
   // pre-render SVG の id を全 HTML で一意にするグローバルカウンタ（CSS/SVG セーフな ASCII）。
   let mermaidIdSeq = 0;
@@ -895,7 +902,9 @@ export async function postprocessPages(
     // 著者向けの検査は画像埋め込みより前に行う。あとにすると、報告する src が data URI になる。
     checkHeadingLevels(tree, page, warnings);
     checkImageAlt(tree, page, warnings);
-    if (options.embedImages) await embedImages(tree, page, options, realRoot, warnings);
+    if (options.embedImages) {
+      await embedImages(tree, page, options, realRoot, warnings, embeddedImages);
+    }
     // 印は最後に付ける。見出しの前に何があるかは、リンク書き換えや画像埋め込みのあとの姿で決まる。
     if (options.pdfPageBreakLevel !== false) {
       markPageBreakHeadings(tree, options.pdfPageBreakLevel);
@@ -903,5 +912,5 @@ export async function postprocessPages(
     page.html = serializer.stringify(tree);
   }
 
-  return { warnings, hasMermaid };
+  return { warnings, hasMermaid, embeddedImages };
 }

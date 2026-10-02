@@ -69,6 +69,13 @@ export {
 } from "./pipeline/postprocess.js";
 export { renderSingleHtml, type RenderHtmlInput } from "./pipeline/renderSingleHtml.js";
 export {
+  formatSize,
+  sizeReportLines,
+  type EmbeddedImage,
+  type HtmlBreakdown,
+  type OutputSize,
+} from "./pipeline/outputSize.js";
+export {
   createPuppeteerPdfGenerator,
   type PdfGenerator,
   type PdfRenderOptions,

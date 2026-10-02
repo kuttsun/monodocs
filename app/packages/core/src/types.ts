@@ -7,6 +7,7 @@
  */
 
 import type { Diagnostic } from "./diagnostics.js";
+import type { OutputSize } from "./pipeline/outputSize.js";
 
 /** 対応するソース形式。将来 "html" / "rst" などを追加できる。 */
 export type SourceFormat = "markdown" | "asciidoc";
@@ -188,6 +189,11 @@ export type BuildOptions = {
   format?: OutputFormat;
   /** 生成物のブランディング表示に埋め込む monodocs のバージョン。 */
   generatorVersion?: string;
+  /**
+   * Overrides `assets.onBudget`. `watch` and `serve` pass `warn`: a budget written as `error` for
+   * CI must not turn every save into a failed rebuild, which would also stop the preview reloading.
+   */
+  onBudget?: "warn" | "error";
 };
 
 /** {@link buildSite} の結果。 */
@@ -198,4 +204,6 @@ export type BuildResult = {
   pages: number;
   /** What the build found, each carrying the code a report identifies it by (27.3). */
   warnings: Diagnostic[];
+  /** The size of each output, measured on disk after it was written (20.5). */
+  sizes: OutputSize[];
 };

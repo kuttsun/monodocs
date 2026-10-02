@@ -418,6 +418,10 @@ function buildConfigFileSchema() {
           embedImages: z.boolean().optional(),
           maxInlineSize: z.union([z.string(), z.number()]).optional(),
           onLargeImage: z.enum(["warn", "error", "external"]).optional(),
+          /** The size an output may reach before the build says so (20.5). Unset, nothing is checked. */
+          budget: z.union([z.string(), z.number()]).optional(),
+          /** What exceeding `budget` does: `warn` (the default) or `error`, which fails the build. */
+          onBudget: z.enum(["warn", "error"]).optional(),
         })
         .strict()
         .optional(),
@@ -646,6 +650,9 @@ export type ResolvedConfig = {
   embedImages: boolean;
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
+  /** Bytes an output may reach before `onBudget` applies. Undefined: no budget. */
+  budget?: number;
+  onBudget: "warn" | "error";
   mermaidEnabled: boolean;
   mermaidMode: MermaidMode;
   mermaidRuntime: MermaidRuntime;
@@ -676,11 +683,15 @@ export type ResolvedConfig = {
  * "5MB" / "500KB" / 1048576 などをバイト数に変換する。
  * 未指定は fallback。不正値・非正値は設定エラーとして例外を投げる。
  */
-export function parseSize(value: string | number | undefined, fallback: number): number {
+export function parseSize(
+  value: string | number | undefined,
+  fallback: number,
+  key = "maxInlineSize",
+): number {
   if (value === undefined) return fallback;
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value <= 0) {
-      throw new MonodocsError("config/invalid", t("config.invalidMaxInlineSize", { value }));
+      throw new MonodocsError("config/invalid", t("config.invalidSize", { key, value }));
     }
     return value;
   }
@@ -688,7 +699,7 @@ export function parseSize(value: string | number | undefined, fallback: number):
   if (!match) {
     throw new MonodocsError(
       "config/invalid",
-      t("config.invalidMaxInlineSize", { value: `"${value}"` }),
+      t("config.invalidSize", { key, value: `"${value}"` }),
     );
   }
   const amount = Number(match[1]);
@@ -698,7 +709,7 @@ export function parseSize(value: string | number | undefined, fallback: number):
   if (bytes <= 0) {
     throw new MonodocsError(
       "config/invalid",
-      t("config.invalidMaxInlineSize", { value: `"${value}"` }),
+      t("config.invalidSize", { key, value: `"${value}"` }),
     );
   }
   return bytes;
@@ -1156,8 +1167,17 @@ export async function loadConfig(
     imageLightbox: fileConfig.html?.imageLightbox ?? true,
     branding: fileConfig.html?.branding ?? true,
     embedImages: fileConfig.assets?.embedImages ?? true,
-    maxInlineSize: parseSize(fileConfig.assets?.maxInlineSize, DEFAULT_MAX_INLINE_SIZE),
+    maxInlineSize: parseSize(
+      fileConfig.assets?.maxInlineSize,
+      DEFAULT_MAX_INLINE_SIZE,
+      "assets.maxInlineSize",
+    ),
     onLargeImage: fileConfig.assets?.onLargeImage ?? "warn",
+    budget:
+      fileConfig.assets?.budget === undefined
+        ? undefined
+        : parseSize(fileConfig.assets.budget, 0, "assets.budget"),
+    onBudget: fileConfig.assets?.onBudget ?? "warn",
     mermaidEnabled: fileConfig.mermaid?.enabled ?? true,
     mermaidMode: fileConfig.mermaid?.mode ?? "client",
     // 既定は inline（自己完結）。単一ファイル配布時にオフラインでも図が表示される。
