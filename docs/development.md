@@ -161,6 +161,21 @@ To output a single HTML (distributable) to a file:
 scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/docs.html
 ```
 
+### Unicode Data for `sources.lineBreak: join`
+
+`join` needs the East_Asian_Width property, which JavaScript regular expressions do not expose. The
+table in `app/packages/core/src/sources/eastAsianWidth.ts` is generated from the vendored
+`app/packages/core/scripts/data/EastAsianWidth-<version>.txt`, and a test fails when the two disagree.
+The data is distributed under the Unicode License v3, vendored next to it as `LICENSE-Unicode.txt`;
+`app/scripts/bundle.mjs` adds it to `THIRD-PARTY-NOTICES.txt` by hand, because no package carries it. The
+generator also refuses a data file whose header no longer names the ranges it treats as "W" by default,
+since those are prose rather than data. To move to a new Unicode version, replace the data file, point the
+generator at it, regenerate, and update the version the test in `sources/lineBreak.test.ts` expects:
+
+```bash
+scripts/app.sh sh -c 'cd packages/core && node scripts/generate-east-asian-width.mjs'
+```
+
 ### Building a Single Executable File (Native Binary)
 
 `scripts/app.sh` / `scripts/app-serve.sh` mount only the repository (`/work`) into the container, and the working directory is `/work/app`, so **they can only serve paths under the repository** (you cannot point to an arbitrary directory outside the repository; to point outside `app/`, prefix with `../` as in `../examples/ja`). To avoid this and try out documents in an arbitrary location, use a single executable file that runs directly on the host.

@@ -27,6 +27,7 @@ import type {
   SourceRenderer,
 } from "../../types.js";
 import { toPageMeta } from "../meta.js";
+import { joinSegmentBreaks, remarkSoftBreaksToBreaks, type LineBreak } from "../lineBreak.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
 import { remarkPageBreak } from "./pageBreak.js";
 
@@ -72,73 +73,86 @@ function collectLinks(tree: MdastRoot): LinkRef[] {
   return links;
 }
 
-/** Markdown 用の SourceRenderer（unified / remark / rehype）。 */
-export const markdownRenderer: SourceRenderer = {
-  format: "markdown",
-  extensions: [".md", ".markdown"],
+/**
+ * Markdown 用の SourceRenderer（unified / remark / rehype）を作る。
+ *
+ * `lineBreak` is applied here rather than in post-processing, because the page's text for search is
+ * collected in this renderer and `postprocessPages` does not recompute it (roadmap 12.6).
+ */
+export function createMarkdownRenderer(options: { lineBreak?: LineBreak } = {}): SourceRenderer {
+  const lineBreak = options.lineBreak ?? "space";
+  return {
+    format: "markdown",
+    extensions: [".md", ".markdown"],
 
-  async extractMeta(source: SourceFile): Promise<PageMeta> {
-    const tree = unified()
-      .use(remarkParse)
-      .use(remarkFrontmatter, ["yaml"])
-      .parse(source.raw) as MdastRoot;
+    async extractMeta(source: SourceFile): Promise<PageMeta> {
+      const tree = unified()
+        .use(remarkParse)
+        .use(remarkFrontmatter, ["yaml"])
+        .parse(source.raw) as MdastRoot;
 
-    let frontmatter: Record<string, unknown> = {};
-    let h1: string | undefined;
-    visit(tree, (node) => {
-      if (node.type === "yaml") {
-        try {
-          const parsed = parseYaml((node as Yaml).value);
-          if (parsed && typeof parsed === "object") {
-            frontmatter = parsed as Record<string, unknown>;
+      let frontmatter: Record<string, unknown> = {};
+      let h1: string | undefined;
+      visit(tree, (node) => {
+        if (node.type === "yaml") {
+          try {
+            const parsed = parseYaml((node as Yaml).value);
+            if (parsed && typeof parsed === "object") {
+              frontmatter = parsed as Record<string, unknown>;
+            }
+          } catch {
+            // frontmatter が不正な YAML でも無視（タイトル等はフォールバックする）。
           }
-        } catch {
-          // frontmatter が不正な YAML でも無視（タイトル等はフォールバックする）。
         }
-      }
-      if (h1 === undefined && node.type === "heading" && (node as MdastHeading).depth === 1) {
-        const text = mdastToString(node).trim();
-        if (text) h1 = text;
-      }
-    });
+        if (h1 === undefined && node.type === "heading" && (node as MdastHeading).depth === 1) {
+          const text = mdastToString(node).trim();
+          if (text) h1 = text;
+        }
+      });
 
-    // タイトル優先順位: frontmatter.title > H1 >（ファイル名は buildPages 側）
-    return toPageMeta(frontmatter, h1);
-  },
+      // タイトル優先順位: frontmatter.title > H1 >（ファイル名は buildPages 側）
+      return toPageMeta(frontmatter, h1);
+    },
 
-  async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
-    const out = { headings: [] as Heading[], text: "", anchors: [] as string[] };
-    let links: LinkRef[] = [];
+    async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
+      const out = { headings: [] as Heading[], text: "", anchors: [] as string[] };
+      let links: LinkRef[] = [];
 
-    const file = await unified()
-      .use(remarkParse)
-      .use(remarkFrontmatter, ["yaml"])
-      .use(remarkGfm)
-      .use(() => (tree: MdastRoot) => {
-        links = collectLinks(tree);
-      })
-      // The page-break marker is picked up before remark-rehype, which is where raw HTML is dropped.
-      .use(remarkPageBreak)
-      .use(remarkRehype)
-      .use(rehypeSlug)
-      // 見出しだけでなく脚注など全要素の ID を page id で prefix し、
-      // 同一文書内アンカーを追従させる（単一 HTML 内の ID 衝突回避）。
-      .use(() => (tree: HastRoot) => {
-        const result = prefixIdsAndCollect(tree, context.page.id);
-        out.headings = result.headings;
-        out.text = result.text;
-        out.anchors = result.anchors;
-      })
-      .use(rehypeStringify)
-      .process(source.raw);
+      const file = await unified()
+        .use(remarkParse)
+        .use(remarkFrontmatter, ["yaml"])
+        .use(remarkGfm)
+        .use(() => (tree: MdastRoot) => {
+          links = collectLinks(tree);
+        })
+        // The page-break marker is picked up before remark-rehype, which is where raw HTML is dropped.
+        .use(remarkPageBreak)
+        .use(lineBreak === "break" ? [remarkSoftBreaksToBreaks] : [])
+        .use(remarkRehype)
+        .use(lineBreak === "join" ? [() => joinSegmentBreaks] : [])
+        .use(rehypeSlug)
+        // 見出しだけでなく脚注など全要素の ID を page id で prefix し、
+        // 同一文書内アンカーを追従させる（単一 HTML 内の ID 衝突回避）。
+        .use(() => (tree: HastRoot) => {
+          const result = prefixIdsAndCollect(tree, context.page.id);
+          out.headings = result.headings;
+          out.text = result.text;
+          out.anchors = result.anchors;
+        })
+        .use(rehypeStringify)
+        .process(source.raw);
 
-    return {
-      html: String(file),
-      text: out.text,
-      headings: out.headings,
-      anchors: out.anchors,
-      links,
-      assets: [],
-    };
-  },
-};
+      return {
+        html: String(file),
+        text: out.text,
+        headings: out.headings,
+        anchors: out.anchors,
+        links,
+        assets: [],
+      };
+    },
+  };
+}
+
+/** 設定を持たない既定の Markdown renderer（core を直接使う呼び出し側向け）。 */
+export const markdownRenderer: SourceRenderer = createMarkdownRenderer();

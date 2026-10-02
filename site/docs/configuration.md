@@ -89,6 +89,8 @@ sources:
   # exclude: [drafts/**]
   # Set false to bundle the fragments that built-in list keeps out
   excludeDefaults: true
+  # What a newline inside a paragraph becomes: space (default) / break / join
+  lineBreak: space
 
 sidebar:
   # "folder" (default) builds the sidebar from the directory structure; "custom" uses the items below
@@ -342,6 +344,7 @@ the bundle entirely.
 | `sources.include`              | string[]   | unset                         | Glob patterns, relative to `root`, selecting what may become a page. Unset, everything under `root` is a candidate. `sources.exclude` subtracts from this, and subtracts last. A negated pattern (`!…`) is refused in both lists: patterns are combined with OR, so a negated one matches almost every path. |
 | `sources.exclude`              | string[]   | `[]`                          | Glob patterns, matched against the path relative to `root`, whose matches are never turned into pages. **Added to the built-in list**, not replacing it. |
 | `sources.excludeDefaults`      | boolean    | `true`                        | Whether the built-in list applies. Set `false` for a tree that really does bundle its `_`-prefixed files. |
+| `sources.lineBreak`            | string     | `space`                       | What a newline inside a paragraph becomes, in Markdown and AsciiDoc alike. `space` leaves it as CommonMark and Asciidoctor do (the browser shows a space). `break` turns it into a `<br>`; in AsciiDoc this sets `hardbreaks-option` as a default, so a document that writes `:hardbreaks-option!:` keeps its own lines joined. `join` removes it between two East Asian characters (East_Asian_Width F, W, or H, neither Hangul), so in any browser and in the PDF there is no space where a Japanese sentence ends on such a character and the next begins with one. Elsewhere the newline stays — next to a Latin letter or digit (a footnote reference such as `[^1]` included), next to an ambiguous-width character such as `…` or `→`, and next to inline code or an image. `break` leaves headings alone, and neither value changes the contents of `pre` and `code`. The search index follows the same value. |
 
 The built-in list is `['_partials/**', 'partials/**', 'includes/**', '**/_*']` — the paths that hold
 include fragments rather than pages. `sources.exclude` adds to it, because a list written to keep one

@@ -73,8 +73,11 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
   Asciidoctor の規則でもある。そしてブラウザはその改行を空白として描く。東アジアの文字に挟まれた場合の
   結果はエンジンによって違う。Firefox はその空白を消し、Chromium と WebKit は残すので、一文一行で書いた
   日本語の段落は、Chromium が作る PDF では文と文のあいだに空白が出る。各形式の明示的な改行の書き方は
-  上記のとおり。実測と、この選択を明示できるようにする設定キーは [roadmap.md](roadmap.md) 12.6 に
-  記録している。
+  上記のとおり。`sources.lineBreak` で、この選択を両形式まとめて明示できる。`break` はその改行をすべて
+  `<br>` にし、`join` は東アジアの文字（East_Asian_Width が F・W・H で、どちらもハングルでないもの）に
+  挟まれた改行を取り除くので、そこでは結果がエンジンに左右されなくなる。それ以外のもの（英字、曖昧幅の文字、
+  インラインコード、画像）に接する改行は残す。`pre` と `code` は書いたまま残す。
+  実測と判断の経緯は [roadmap.md](roadmap.md) 12.6 に記録している。
 - **Admonition / alert の共通化**: Markdown の GFM alerts（`> [!NOTE]` など）と AsciiDoc の admonition
   （Asciidoctor 出力の `.admonitionblock`）を、postprocess で共通の `<div class="admonition admonition-TYPE">`
   構造へ正規化する。5 種（NOTE / TIP / IMPORTANT / WARNING / CAUTION）は両形式で一致するため、
