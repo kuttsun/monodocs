@@ -51,6 +51,7 @@ const EN = {
   "config.invalidPdfPageBreakLevelValue":
     "must be false, or a heading level from 2 to 6 (1 is the page title, whose file already breaks)",
   "config.invalidPdfLineHeightValue": "must be a positive number, without a unit",
+  "config.invalidPdfWatermarkValue": "must be false, or one line of text that is not blank",
   "config.invalidPdfCellPaddingValue": 'must be one or two CSS lengths, as in "0.3rem 0.5rem"',
   "config.invalidPdfLength": 'Invalid pdf.density {key}: "{value}" is not a CSS length.',
   "config.invalidPdfLineHeight":
@@ -342,6 +343,8 @@ const JA: Record<MessageKey, string> = {
   "config.invalidPdfPageBreakLevelValue":
     "false か、2〜6 の見出しレベルである必要があります（1 はページタイトルで、そのファイルは既に改ページします）",
   "config.invalidPdfLineHeightValue": "単位の無い正の数である必要があります",
+  "config.invalidPdfWatermarkValue":
+    "false か、空白だけではない 1 行のテキストである必要があります",
   "config.invalidPdfCellPaddingValue":
     'CSS の長さ 1 つ、または 2 つ（"0.3rem 0.5rem" のように）である必要があります',
   "config.invalidPdfLength":

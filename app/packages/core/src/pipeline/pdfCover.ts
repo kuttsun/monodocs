@@ -12,6 +12,7 @@ import {
 } from "pdf-lib";
 import type { DocumentCoverParts } from "../documentMeta.js";
 import { escapeAttr, escapeHtml } from "../util/html.js";
+import { watermarkRules } from "./watermark.js";
 
 /**
  * The PDF cover (roadmap.md 24.8): what {@link file://./renderPdf.ts} needs to put one in front
@@ -37,6 +38,8 @@ export type PdfCoverInput = {
   lang: string;
   /** The `cover` label: what the viewer's page number box shows on the cover. */
   pageLabel: string;
+  /** `pdf.watermark`, which the cover carries like every other sheet (24.10). */
+  watermark?: string;
 };
 
 /**
@@ -84,7 +87,8 @@ export function buildPdfCover(input: PdfCoverInput): PdfCover {
     "</main>";
   const html =
     `<!doctype html><html lang="${escapeAttr(input.lang)}"><head><meta charset="utf-8">` +
-    `<title>${escapeHtml(input.title)}</title><style>${COVER_STYLE}</style></head>` +
+    `<title>${escapeHtml(input.title)}</title>` +
+    `<style>${COVER_STYLE}${input.watermark ? watermarkRules(input.watermark) : ""}</style></head>` +
     `<body>${fragment}</body></html>`;
   return { html, fragment, pageLabel: input.pageLabel };
 }

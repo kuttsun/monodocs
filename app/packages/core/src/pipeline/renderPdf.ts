@@ -2,6 +2,7 @@ import type { PdfMargin } from "../config.js";
 import { type Diagnostic, warn } from "../diagnostics.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
 import { runFontCheck, type FontCheckMode } from "./fontCheck.js";
+import { watermarkProbe } from "./watermark.js";
 import { DEFAULT_PDF_FOOTER, DEFAULT_PDF_FOOTER_PROBE, EMPTY_PDF_BAND } from "./pdfBands.js";
 import { addOutline, collectDests, remapDests, type PdfOutlineNode } from "./pdfOutline.js";
 import { setPdfMetadata } from "./pdfMetadata.js";
@@ -46,6 +47,11 @@ export type PdfRenderOptions = {
   header?: string;
   /** ページ下部の帯（同上）。未指定は帯なし扱い。 */
   footer?: string;
+  /**
+   * `pdf.watermark`. The rule itself is already in the HTML and the cover; this is only so the font
+   * check can measure the text, which it cannot see as generated content.
+   */
+  watermark?: string;
   /**
    * 版面に必要なフォントがこのマシンに揃っているかの検査。未指定は検査しない（偽ジェネレータを
    * 注入するテスト経路のため）。`error` のときは {@link file://./fontCheck.ts FontCheckError}
@@ -230,6 +236,7 @@ async function renderCover(
       mode: options.fontCheck,
       context: "pdf",
       onWarning: options.onWarning ?? (() => {}),
+      probes: options.watermark ? [watermarkProbe(options.watermark)] : [],
     });
   }
   return page.pdf({
@@ -300,7 +307,10 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
           context: "pdf",
           // 警告の宛先が無くても検査は行う。`error` は宛先の有無に関わらずビルドを止める。
           onWarning: options.onWarning ?? (() => {}),
-          probes: options.footer === DEFAULT_PDF_FOOTER ? [DEFAULT_PDF_FOOTER_PROBE] : [],
+          probes: [
+            ...(options.footer === DEFAULT_PDF_FOOTER ? [DEFAULT_PDF_FOOTER_PROBE] : []),
+            ...(options.watermark ? [watermarkProbe(options.watermark)] : []),
+          ],
         });
       }
 
