@@ -37,6 +37,7 @@ describe("renderSingleHtml", () => {
     expect(html).toContain("__MONODOCS_DATA__");
     expect(html).toContain('id="content-width-toggle"');
     expect(html).toContain('id="image-lightbox"');
+    expect(html).toContain('id="image-lightbox-diagram"');
     expect(html).toContain('class="document-footer"');
     expect(html).toContain(">monodocs</a>");
   });

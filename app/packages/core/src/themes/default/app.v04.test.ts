@@ -49,6 +49,7 @@ async function mountClient(
       ? ""
       : `<dialog id="image-lightbox"><button id="image-lightbox-close"></button>` +
         `<figure><img id="image-lightbox-image" alt="" />` +
+        `<div id="image-lightbox-diagram" hidden></div>` +
         `<figcaption id="image-lightbox-caption" hidden></figcaption></figure></dialog>`;
 
   document.body.innerHTML =
@@ -185,6 +186,162 @@ describe("v0.4 client features (app.js)", () => {
     const trigger = document.getElementById("previewable")!;
     trigger.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
     expect(document.getElementById("image-lightbox")!.hasAttribute("open")).toBe(true);
+  });
+
+  const DIAGRAM_SVG =
+    '<svg id="mermaid-0" viewBox="0 0 400 100" style="max-width: 400px;">' +
+    '<title id="chart-title-mermaid-0">Login flow</title><g id="mermaid-0-node"></g></svg>';
+
+  it("opens a pre-rendered Mermaid diagram by moving its SVG into the lightbox", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml: `<figure id="diagram" class="mermaid">${DIAGRAM_SVG}</figure>`,
+    });
+
+    const block = document.getElementById("diagram")!;
+    expect(block.classList.contains("image-lightbox-trigger")).toBe(true);
+    // The block keeps its own semantics so the diagram stays readable to assistive technology;
+    // a separate button is the keyboard route in.
+    expect(block.hasAttribute("role")).toBe(false);
+    expect(block.hasAttribute("tabindex")).toBe(false);
+    const button = block.querySelector<HTMLButtonElement>("button.diagram-lightbox-open")!;
+    expect(button.getAttribute("aria-label")).toBe("Open image preview: Login flow");
+    expect(button.getAttribute("aria-haspopup")).toBe("dialog");
+
+    button.focus();
+    button.click();
+    const dialog = document.getElementById("image-lightbox")!;
+    const host = document.getElementById("image-lightbox-diagram")!;
+    expect(dialog.hasAttribute("open")).toBe(true);
+    expect(host.hidden).toBe(false);
+    expect(document.getElementById("image-lightbox-image")!.hidden).toBe(true);
+    expect(host.querySelector("svg")!.id).toBe("mermaid-0");
+    expect(block.querySelector("svg")).toBeNull();
+    // Moved, not copied: the SVG's ids stay unique in the document.
+    expect(document.querySelectorAll("#mermaid-0")).toHaveLength(1);
+    expect(document.getElementById("image-lightbox-caption")!.textContent).toBe("Login flow");
+
+    document.getElementById("image-lightbox-close")!.click();
+    expect(dialog.hasAttribute("open")).toBe(false);
+    expect(block.querySelector("svg")!.id).toBe("mermaid-0");
+    expect(host.hidden).toBe(true);
+    expect(host.children).toHaveLength(0);
+    expect(host.hasAttribute("style")).toBe(false);
+    expect(document.getElementById("image-lightbox-image")!.hidden).toBe(false);
+    expect(block.style.height).toBe("");
+    expect(document.activeElement).toBe(button);
+
+    // A click anywhere on the diagram opens it too, and the backdrop puts the SVG back.
+    block.querySelector("g")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(dialog.hasAttribute("open")).toBe(true);
+    dialog.click();
+    expect(dialog.hasAttribute("open")).toBe(false);
+    expect(block.querySelector("svg")).not.toBeNull();
+  });
+
+  it("labels a diagram without a title and lets links drawn in it navigate", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml:
+        '<figure id="diagram" class="mermaid"><svg viewBox="0 0 10 10">' +
+        '<a id="node-link" href="#/faq"><g></g></a></svg></figure>',
+    });
+
+    const button = document.querySelector<HTMLButtonElement>(".diagram-lightbox-open")!;
+    expect(button.hasAttribute("aria-label")).toBe(false);
+    expect(button.textContent).toBe("Open image preview");
+
+    document
+      .getElementById("node-link")!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    expect(document.getElementById("image-lightbox")!.hasAttribute("open")).toBe(false);
+  });
+
+  it("shows an image normally after a diagram was previewed", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml:
+        `<figure id="diagram" class="mermaid">${DIAGRAM_SVG}</figure>` +
+        '<img id="previewable" src="photo.png" alt="Photo" />',
+    });
+
+    document.querySelector<HTMLButtonElement>(".diagram-lightbox-open")!.click();
+    document.getElementById("image-lightbox-close")!.click();
+    document.getElementById("previewable")!.click();
+
+    const host = document.getElementById("image-lightbox-diagram")!;
+    const preview = document.getElementById("image-lightbox-image") as HTMLImageElement;
+    expect(host.hidden).toBe(true);
+    expect(host.children).toHaveLength(0);
+    expect(preview.hidden).toBe(false);
+    expect(preview.getAttribute("src")).toContain("photo.png");
+    expect(document.getElementById("image-lightbox-caption")!.textContent).toBe("Photo");
+  });
+
+  it.each([
+    ["printing", () => window.dispatchEvent(new Event("beforeprint"))],
+    ["leaving the page", () => navigate("/faq")],
+  ])("puts an open diagram back in the page before %s", async (_name, act) => {
+    await mountClient(SAMPLE, {
+      articleHtml: `<figure id="diagram" class="mermaid">${DIAGRAM_SVG}</figure>`,
+    });
+
+    const block = document.getElementById("diagram")!;
+    block.querySelector<HTMLButtonElement>(".diagram-lightbox-open")!.click();
+    expect(block.querySelector("svg")).toBeNull();
+
+    act();
+    expect(document.getElementById("image-lightbox")!.hasAttribute("open")).toBe(false);
+    expect(block.querySelector("svg")!.id).toBe("mermaid-0");
+    expect(block.style.height).toBe("");
+    // Focus is not sent back into a page the reader may have left.
+    expect(document.activeElement).not.toBe(block.querySelector(".diagram-lightbox-open"));
+  });
+
+  it("does not open a diagram when the click ends a text selection", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml:
+        '<figure id="diagram" class="mermaid"><svg viewBox="0 0 10 10">' +
+        '<text id="label">Login</text></svg></figure>',
+    });
+
+    const label = document.getElementById("label")!;
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    window.getSelection()!.addRange(range);
+    label.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(document.getElementById("image-lightbox")!.hasAttribute("open")).toBe(false);
+    window.getSelection()!.removeAllRanges();
+  });
+
+  it("enhances a client-mode Mermaid block once its SVG has been rendered", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml: '<pre id="diagram" class="mermaid">graph TD; A--&gt;B</pre>',
+    });
+
+    const block = document.getElementById("diagram")!;
+    expect(block.classList.contains("image-lightbox-trigger")).toBe(false);
+    expect(block.querySelector("button")).toBeNull();
+    block.click();
+    expect(document.getElementById("image-lightbox")!.hasAttribute("open")).toBe(false);
+
+    // What mermaid.run does when the page is shown.
+    block.innerHTML = DIAGRAM_SVG;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(block.classList.contains("image-lightbox-trigger")).toBe(true);
+    expect(block.querySelectorAll("button.diagram-lightbox-open")).toHaveLength(1);
+    block.click();
+    expect(document.getElementById("image-lightbox")!.hasAttribute("open")).toBe(true);
+    expect(document.getElementById("image-lightbox-diagram")!.querySelector("svg")).not.toBeNull();
+  });
+
+  it("does not enhance Mermaid diagrams when the lightbox is disabled", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml: `<figure id="diagram" class="mermaid">${DIAGRAM_SVG}</figure>`,
+      imageLightbox: false,
+    });
+
+    const block = document.getElementById("diagram")!;
+    expect(block.classList.contains("image-lightbox-trigger")).toBe(false);
+    expect(block.querySelector("button")).toBeNull();
   });
 
   it("does not enhance images when the lightbox is disabled", async () => {

@@ -1471,16 +1471,37 @@
     var caption = document.getElementById("image-lightbox-caption");
     var closeBtn = document.getElementById("image-lightbox-close");
     if (!dialog || !preview || !caption || !closeBtn) return;
+    var diagramHost = document.getElementById("image-lightbox-diagram");
 
     var lastTrigger = null;
+    // Whether focus should return without a focus ring: a diagram opened by a pointer click
+    // records its keyboard-only button as the trigger, which must not pop into view on close.
+    var quietReturn = false;
+    // The diagram SVG shown in the dialog. It is moved rather than cloned: a Mermaid SVG carries
+    // ids that its own <style> and url(#…) references point at, and a copy would duplicate them.
+    var moved = null;
+
+    function restoreDiagram() {
+      if (!moved) return;
+      moved.container.insertBefore(moved.svg, moved.next);
+      moved.container.style.height = "";
+      moved = null;
+      diagramHost.hidden = true;
+      diagramHost.removeAttribute("style");
+      preview.hidden = false;
+    }
 
     function resetPreview() {
+      restoreDiagram();
       preview.removeAttribute("src");
       preview.alt = "";
       caption.textContent = "";
       caption.hidden = true;
-      if (lastTrigger && typeof lastTrigger.focus === "function") lastTrigger.focus();
+      if (lastTrigger && typeof lastTrigger.focus === "function") {
+        lastTrigger.focus(quietReturn ? { focusVisible: false } : undefined);
+      }
       lastTrigger = null;
+      quietReturn = false;
     }
 
     function closeLightbox() {
@@ -1492,15 +1513,10 @@
       }
     }
 
-    function openLightbox(trigger) {
-      var src = trigger.currentSrc || trigger.getAttribute("src");
-      if (!src) return;
-      var alt = trigger.getAttribute("alt") || "";
+    function showDialog(trigger, label) {
       lastTrigger = trigger;
-      preview.src = src;
-      preview.alt = alt;
-      caption.textContent = alt;
-      caption.hidden = alt.length === 0;
+      caption.textContent = label;
+      caption.hidden = label.length === 0;
       if (typeof dialog.showModal === "function") {
         dialog.showModal();
       } else {
@@ -1508,35 +1524,159 @@
       }
     }
 
-    document.querySelectorAll("#content img").forEach(function (img) {
-      // Preserve parent interactions and the semantics of explicitly decorative images.
-      if (img.closest && img.closest("a, button")) return;
-      if (img.hasAttribute("alt") && img.getAttribute("alt") === "") return;
-      img.classList.add("image-lightbox-trigger");
-      img.setAttribute("role", "button");
-      img.setAttribute("tabindex", "0");
-      img.setAttribute("aria-haspopup", "dialog");
-      var alt = img.getAttribute("alt");
-      img.setAttribute(
+    function openLightbox(trigger) {
+      var src = trigger.currentSrc || trigger.getAttribute("src");
+      if (!src) return;
+      var alt = trigger.getAttribute("alt") || "";
+      preview.src = src;
+      preview.alt = alt;
+      showDialog(trigger, alt);
+    }
+
+    function enhance(el, label, open) {
+      el.setAttribute("role", "button");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("aria-haspopup", "dialog");
+      el.setAttribute(
         "aria-label",
-        alt ? LABELS.openImagePreview + ": " + alt : LABELS.openImagePreview,
+        label ? LABELS.openImagePreview + ": " + label : LABELS.openImagePreview,
       );
-      img.addEventListener("click", function () {
-        openLightbox(img);
-      });
-      img.addEventListener("keydown", function (e) {
+      el.addEventListener("click", open);
+      el.addEventListener("keydown", function (e) {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          openLightbox(img);
+          open();
         }
       });
-    });
+    }
 
     closeBtn.addEventListener("click", closeLightbox);
     dialog.addEventListener("click", function (e) {
       if (e.target === dialog) closeLightbox();
     });
     dialog.addEventListener("close", resetPreview);
+
+    document.querySelectorAll("#content img").forEach(function (img) {
+      // Preserve parent interactions and the semantics of explicitly decorative images.
+      if (img.closest && img.closest("a, button")) return;
+      if (img.hasAttribute("alt") && img.getAttribute("alt") === "") return;
+      img.classList.add("image-lightbox-trigger");
+      enhance(img, img.getAttribute("alt"), function () {
+        openLightbox(img);
+      });
+    });
+
+    if (!diagramHost) return;
+
+    /** The rendered SVG of a Mermaid block, or null while it still holds its source. */
+    function diagramSvg(container) {
+      for (var i = 0; i < container.children.length; i++) {
+        var child = container.children[i];
+        if (child.tagName.toLowerCase() === "svg") return child;
+      }
+      return null;
+    }
+
+    /** The diagram's accessible title (Mermaid `accTitle`), if it has one. */
+    function diagramTitle(svg) {
+      for (var i = 0; i < svg.children.length; i++) {
+        var child = svg.children[i];
+        if (child.tagName.toLowerCase() === "title") return (child.textContent || "").trim();
+      }
+      return "";
+    }
+
+    function openDiagram(container, trigger, byPointer) {
+      var svg = diagramSvg(container);
+      if (!svg || moved) return;
+      quietReturn = byPointer;
+      var title = diagramTitle(svg);
+      // Hold the block's height so the page does not reflow behind the dialog.
+      container.style.height = container.getBoundingClientRect().height + "px";
+      moved = { svg: svg, container: container, next: svg.nextSibling };
+      // Size the panel to the diagram's aspect ratio so it grows to fill the viewport, leaving
+      // room for the caption when there is one so the dialog does not scroll. The panel is a
+      // content box, so the ratio applies inside its padding and a very tall or very wide
+      // diagram cannot be squeezed to nothing by it.
+      var height = "calc(100vh - " + (title ? 11 : 9) + "rem)";
+      diagramHost.style.height = height;
+      diagramHost.style.maxHeight = height;
+      var box = svg.viewBox && svg.viewBox.baseVal;
+      if (box && box.width > 0 && box.height > 0) {
+        diagramHost.style.height = "auto";
+        diagramHost.style.aspectRatio = box.width + " / " + box.height;
+        diagramHost.style.width =
+          "min(calc(100% - 2rem), calc(" + height + " * " + box.width / box.height + "))";
+      }
+      diagramHost.appendChild(svg);
+      diagramHost.hidden = false;
+      preview.hidden = true;
+      showDialog(trigger, title);
+    }
+
+    // The dialog must not take a diagram out of the printed page, and a diagram from a page the
+    // reader has left must not stay on screen.
+    function dismiss() {
+      if (!dialog.hasAttribute("open")) return;
+      restoreDiagram();
+      lastTrigger = null;
+      closeLightbox();
+    }
+    window.addEventListener("beforeprint", dismiss);
+    if (typeof window.matchMedia === "function") {
+      var printQuery = window.matchMedia("print");
+      if (printQuery && typeof printQuery.addEventListener === "function") {
+        printQuery.addEventListener("change", function (e) {
+          if (e.matches) dismiss();
+        });
+      }
+    }
+    // Capture, so the diagram is back in its page before the router scrolls to a target in it.
+    window.addEventListener("hashchange", dismiss, true);
+
+    document.querySelectorAll("#content .mermaid").forEach(function (container) {
+      var enhanced = false;
+      // In client mode Mermaid replaces the source with an SVG only once the page is shown, so
+      // the block becomes a trigger when its SVG arrives; a pre-rendered block already has one.
+      // Unlike an image, the block itself is not turned into a button: that would hide the
+      // diagram's text and description from assistive technology. A separate button, visible
+      // only on keyboard focus, opens it instead; a mouse click anywhere on the diagram does too.
+      function check() {
+        if (enhanced) return;
+        var svg = diagramSvg(container);
+        if (!svg) return;
+        enhanced = true;
+        var title = diagramTitle(svg);
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "diagram-lightbox-open";
+        button.textContent = LABELS.openImagePreview;
+        button.setAttribute("aria-haspopup", "dialog");
+        if (title) button.setAttribute("aria-label", LABELS.openImagePreview + ": " + title);
+        button.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openDiagram(container, button, false);
+        });
+        container.insertBefore(button, container.firstChild);
+        container.classList.add("image-lightbox-trigger");
+        container.addEventListener("click", function (e) {
+          // A link drawn in the diagram (Mermaid `click … href`) keeps navigating.
+          var link = e.target && e.target.closest ? e.target.closest("a") : null;
+          if (link && container.contains(link)) return;
+          // Dragging to select a label ends in a click; let the reader copy the text instead.
+          if (window.getSelection && String(window.getSelection())) return;
+          openDiagram(container, button, true);
+        });
+      }
+      check();
+      if (!enhanced && typeof MutationObserver === "function") {
+        var observer = new MutationObserver(function () {
+          check();
+          if (enhanced) observer.disconnect();
+        });
+        observer.observe(container, { childList: true });
+      }
+    });
   }
 
   // ---- init ----

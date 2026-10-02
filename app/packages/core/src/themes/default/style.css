@@ -724,13 +724,47 @@ body.content-wide #content {
   max-width: 100%;
 }
 
-#content img.image-lightbox-trigger {
+#content .image-lightbox-trigger {
   cursor: zoom-in;
 }
 
-#content img.image-lightbox-trigger:focus-visible {
+#content .image-lightbox-trigger:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
+}
+
+#content .mermaid.image-lightbox-trigger {
+  position: relative;
+}
+
+/* The keyboard route into a diagram's lightbox. Hidden until focused, so the diagram looks the
+   same to a mouse user, who opens it by clicking the diagram itself. */
+#content .diagram-lightbox-open {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+#content .diagram-lightbox-open:focus-visible {
+  width: auto;
+  height: auto;
+  padding: 0.25rem 0.6rem;
+  overflow: visible;
+  clip-path: none;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 #image-lightbox {
@@ -783,6 +817,34 @@ body.content-wide #content {
   max-width: 100%;
   max-height: calc(100vh - 7rem);
   object-fit: contain;
+}
+
+/* A Mermaid diagram moved into the dialog. Its own colors assume the page background, so the
+   panel keeps that background instead of the dark backdrop. The script narrows the width to the
+   diagram's aspect ratio; without a viewBox the panel simply fills the dialog. Sizes are of the
+   content box, inside the padding. */
+#image-lightbox-diagram {
+  box-sizing: content-box;
+  width: calc(100% - 2rem);
+  height: calc(100vh - 9rem);
+  max-height: calc(100vh - 9rem);
+  padding: 1rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border-radius: 6px;
+}
+
+#image-lightbox-image[hidden],
+#image-lightbox-diagram[hidden] {
+  display: none;
+}
+
+/* Mermaid caps the SVG with an inline max-width at its natural size; lift it so it can grow. */
+#image-lightbox-diagram > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none !important;
 }
 
 #image-lightbox-caption {
@@ -1186,6 +1248,7 @@ body.content-wide #content {
   #page-nav,
   #search-results,
   #image-lightbox,
+  #content .diagram-lightbox-open,
   #content .code-toolbar {
     display: none !important;
   }
