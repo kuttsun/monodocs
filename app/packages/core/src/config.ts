@@ -15,6 +15,7 @@ import {
 import { t } from "./messages.js";
 import { FONT_CHECK_MODES, type FontCheckMode } from "./pipeline/fontCheck.js";
 import { DEFAULT_PDF_FOOTER, EMPTY_PDF_BAND, resolveBand } from "./pipeline/pdfBands.js";
+import { LINE_BREAKS, type LineBreak } from "./sources/lineBreak.js";
 import type {
   BuildOptions,
   OutputFormat,
@@ -354,6 +355,12 @@ function buildConfigFileSchema() {
           exclude: z.array(z.string()).optional(),
           /** Set false to drop DEFAULT_EXCLUDE, for a tree that really does bundle its `_*` files. */
           excludeDefaults: z.boolean().optional(),
+          /**
+           * What a newline inside a paragraph becomes, in both formats (roadmap 12.6). Under
+           * `sources` rather than `sources.markdown` because `join` is a rule about characters, and
+           * a key reaching one format would leave half of a mixed document reading differently.
+           */
+          lineBreak: z.enum(LINE_BREAKS as [LineBreak, ...LineBreak[]]).optional(),
         })
         .strict()
         .optional(),
@@ -602,6 +609,8 @@ export type ResolvedConfig = {
    * 指定すればそちらが勝つ（17.5）。
    */
   asciidocAttributes: Record<string, string>;
+  /** What a newline inside a paragraph becomes. `space` (the default) changes nothing. */
+  lineBreak: LineBreak;
   exclude: string[];
   /** サイドバーの生成方式（"folder" = フォルダ構造 / "custom" = sidebarItems）。 */
   sidebarMode: SidebarMode;
@@ -1128,6 +1137,7 @@ export async function loadConfig(
     include: fileConfig.sources?.include ?? [],
     exclude,
     asciidocAttributes: resolveAsciidocAttributes(fileConfig.sources?.asciidoc?.attributes),
+    lineBreak: fileConfig.sources?.lineBreak ?? "space",
     sidebarMode: fileConfig.sidebar?.mode ?? "folder",
     sidebarItems: fileConfig.sidebar?.items ?? [],
     sidebarCollapseDepth: fileConfig.sidebar?.collapseDepth,

@@ -13,6 +13,7 @@ import type {
   SourceRenderer,
 } from "../../types.js";
 import { toPageMeta } from "../meta.js";
+import { joinSegmentBreaks, type LineBreak } from "../lineBreak.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
 import {
   createIncludeBoundary,
@@ -57,9 +58,16 @@ function buildOptions(
  * caller reaching core directly gets.
  */
 export function createAsciidocRenderer(
-  attributes: Readonly<Record<string, string>> = {},
+  configured: Readonly<Record<string, string>> = {},
   rootDir?: string,
+  options: { lineBreak?: LineBreak } = {},
 ): SourceRenderer {
+  const lineBreak = options.lineBreak ?? "space";
+  // `break` is Asciidoctor's own hard-break mode, set soft (`@`) like every attribute monodocs
+  // passes, so a document that writes `:hardbreaks-option!:` still wins (17.5). Measured with
+  // @asciidoctor/core 4.1: passed as "" the attribute overrides that line, passed as "@" it does not.
+  const attributes =
+    lineBreak === "break" ? { "hardbreaks-option": "@", ...configured } : configured;
   // ルートを知らされていない呼び出し（core を直接使う場合）は境界を張らない。判定の基準が無い。
   const boundaryFor = (source: SourceFile) =>
     rootDir === undefined ? undefined : createIncludeBoundary(rootDir, source.relativePath);
@@ -101,6 +109,7 @@ export function createAsciidocRenderer(
       // （見出し・xref・脚注などの単一 HTML 内 ID 衝突を回避）。Markdown と共通処理。
       const file = await unified()
         .use(rehypeParse, { fragment: true })
+        .use(lineBreak === "join" ? [() => joinSegmentBreaks] : [])
         .use(() => (tree: HastRoot) => {
           const result = prefixIdsAndCollect(tree, context.page.id);
           out.headings = result.headings;

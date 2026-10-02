@@ -36,6 +36,11 @@ Format-specific renderers are
 `SourceRenderer` interface (`extractMeta` and `render`). Metadata from frontmatter or `:sd-*:` attributes is
 normalized into `PageMeta` by [`sources/meta.ts`](../app/packages/core/src/sources/meta.ts).
 
+`sources.lineBreak` is applied inside each renderer, through one shared helper
+([`sources/lineBreak.ts`](../app/packages/core/src/sources/lineBreak.ts)), before `prefixIdsAndCollect` collects
+the page's text. It must not move into `postprocessPages`, which re-parses `page.html` but does not recompute
+`page.text`, so the search index would describe a document the HTML no longer is.
+
 ## Single-HTML Invariants
 
 ### IDs and anchors

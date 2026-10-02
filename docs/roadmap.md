@@ -784,6 +784,8 @@ sources:
   #   - "drafts/**"
   # Whether the built-in list ("_partials/**", "partials/**", "includes/**", "**/_*") applies.
   excludeDefaults: true
+  # What a newline inside a paragraph becomes: space (default) / break / join (12.6).
+  lineBreak: "space"
 
 sidebar:
   mode: "folder"
@@ -1095,7 +1097,8 @@ sentences.
 be a default the document can override rather than a lock, and the mechanism is measured rather than
 assumed: with `@asciidoctor/core` 4.0.6, and re-measured unchanged on 4.0.11, an attribute passed
 through the API as `""` survives a
-document's own `:hardbreaks-option!:`, and the same attribute passed as `"@"` does not. The `@`
+document's own `:hardbreaks-option!:`, and the same attribute passed as `"@"` does not. Re-measured on
+4.1.0 when the key was implemented, for `:hardbreaks!:` as well. The `@`
 suffix is what 17.5's rule is made of, and this key is its first user.
 
 The asymmetry that follows is recorded rather than hidden: an AsciiDoc document can turn `break` off

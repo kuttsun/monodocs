@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { postprocessPages } from "./postprocess";
-import { markdownRenderer } from "../sources/markdown/renderer";
+import { createMarkdownRenderer, markdownRenderer } from "../sources/markdown/renderer";
 import { MermaidPrerenderSetupError } from "./mermaidPrerender";
 import type { Page } from "../types";
 
@@ -641,6 +641,22 @@ describe("postprocessPages - admonitions", () => {
     await postprocessPages(pages, baseOptions);
     expect(pages[0]!.html).toContain('class="admonition admonition-note"');
     // The body starts with its text, and the break between the body lines survives.
+    expect(pages[0]!.html).toContain("<p>first<br>\nsecond</p>");
+  });
+
+  it("removes the hard break after the marker under sources.lineBreak: break", async () => {
+    const rendered = await createMarkdownRenderer({ lineBreak: "break" }).render(
+      {
+        absolutePath: "/docs/a.md",
+        relativePath: "a.md",
+        raw: "> [!NOTE]\n> first\n> second\n",
+        format: "markdown",
+      },
+      { page: { id: "a", route: "/a", relativePath: "a.md", format: "markdown" } },
+    );
+    const pages: Page[] = [page({ relativePath: "a.md", route: "/a", html: rendered.html })];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toContain('class="admonition admonition-note"');
     expect(pages[0]!.html).toContain("<p>first<br>\nsecond</p>");
   });
 

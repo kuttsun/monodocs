@@ -123,6 +123,21 @@ scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0
 scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/docs.html
 ```
 
+### `sources.lineBreak: join` の Unicode データ
+
+`join` には East_Asian_Width プロパティが要るが、JavaScript の正規表現はこれを扱えない。
+`app/packages/core/src/sources/eastAsianWidth.ts` の表は、同梱の
+`app/packages/core/scripts/data/EastAsianWidth-<version>.txt` から生成しており、両者が食い違うとテストが失敗する。
+データは Unicode License v3 で配布されており、その全文を `LICENSE-Unicode.txt` として隣に同梱している。
+どのパッケージにも含まれないので、`app/scripts/bundle.mjs` が `THIRD-PARTY-NOTICES.txt` へ手で加える。
+既定で "W" とする範囲はデータではなくヘッダーの文章で示されているため、生成スクリプトは、ヘッダーがその範囲を
+挙げなくなったデータファイルを拒否する。Unicode のバージョンを上げるときは、データファイルを差し替え、
+生成スクリプトの参照先を変えて再生成し、`sources/lineBreak.test.ts` のテストが期待するバージョンも更新する。
+
+```bash
+scripts/app.sh sh -c 'cd packages/core && node scripts/generate-east-asian-width.mjs'
+```
+
 ### 単一実行ファイル（ネイティブバイナリ）をビルドする
 
 `scripts/app.sh` / `scripts/app-serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、

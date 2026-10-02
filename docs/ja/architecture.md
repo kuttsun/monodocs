@@ -25,6 +25,8 @@ loadConfig (config.ts)
 
 形式別レンダラーは `sources/markdown/renderer.ts` と `sources/asciidoc/renderer.ts` にあり、どちらも `SourceRenderer` の `extractMeta` と `render` を実装します。frontmatter または `:sd-*:` 属性は `sources/meta.ts` で `PageMeta` へ正規化します。
 
+`sources.lineBreak` は、共通のヘルパー（`sources/lineBreak.ts`）を通して各レンダラーの中で適用し、`prefixIdsAndCollect` がページのテキストを集める前に済ませます。`postprocessPages` へ移してはいけません。`postprocessPages` は `page.html` を再パースしますが `page.text` は再計算しないので、検索インデックスが HTML と食い違います。
+
 ## 単一 HTML の不変条件
 
 ### ID とアンカー

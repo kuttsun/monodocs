@@ -234,6 +234,27 @@ const notices = await collectNotices(
   new Set([...packageDirsFromMetafile(result.metafile), ...embeddedDirs]),
 );
 
+// The East_Asian_Width table behind `sources.lineBreak: join` is first-party source generated from
+// Unicode data, so no package in the graph carries its license. It is added by hand, with the
+// version read from the vendored data file the table was generated from.
+const unicodeDataDir = resolve(appRoot, "packages/core/scripts/data");
+const eawFiles = (await readdir(unicodeDataDir)).filter((f) => /^EastAsianWidth-.+\.txt$/.test(f));
+// Exactly one, so the notice cannot name a version other than the one the table came from.
+if (eawFiles.length !== 1) {
+  throw new Error(
+    `expected one EastAsianWidth-*.txt in ${unicodeDataDir}, found ${eawFiles.length}`,
+  );
+}
+const eawFile = eawFiles[0];
+const unicodeVersion = eawFile.slice("EastAsianWidth-".length, -".txt".length);
+notices.push({
+  name: "Unicode Character Database (EastAsianWidth.txt, derived table)",
+  version: unicodeVersion,
+  license: "Unicode-3.0",
+  url: `https://www.unicode.org/Public/${unicodeVersion}/ucd/`,
+  text: await readFile(resolve(unicodeDataDir, "LICENSE-Unicode.txt"), "utf8"),
+});
+
 const sep = "=".repeat(80);
 const sub = "-".repeat(80);
 const header = [
