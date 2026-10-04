@@ -407,7 +407,7 @@ fixed forward in a patch release.
 
 **Release**
 
-- [ ] Publish `0.13.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.13.0` — not the default `next`, which still points at 0.12.0 until it is moved below and would skip every 0.13 step while passing — confirming that the log says `verifying monodocs 0.13.0` and that the steps that need 0.13 gated on the installed version: `sources.lineBreak`, the size report and `assets.budget`, `pdf.watermark`, and the Mermaid lightbox markup
+- [ ] Publish `0.13.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.13.0` — not the default `next`, which still points at 0.12.0 until it is moved below and would skip every 0.13 step while passing — confirming that the log says `verifying monodocs 0.13.0` and that the steps gated on 0.13 ran rather than being skipped: `sources.lineBreak`, the size report and `assets.budget`, `pdf.watermark`, and the Mermaid lightbox markup
 - [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.13.0` assets on a Windows 11 host
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
