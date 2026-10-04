@@ -446,6 +446,7 @@ jobs:
             const ja = '\u6587\u3002\n\u6b21\u3002\nLatin\nline\n';
             fs.writeFileSync('linebreak/docs/a.md', '# A\n\n' + ja);
             fs.writeFileSync('linebreak/docs/b.adoc', '= B\n:hardbreaks-option!:\n\nfirst\nsecond\n');
+            fs.writeFileSync('linebreak/docs/c.adoc', '= C\n\n' + ja);
             fs.writeFileSync('linebreak/join.yml', 'sources:\n  lineBreak: join\n');
             fs.writeFileSync('linebreak/break.yml', 'sources:\n  lineBreak: break\n');
           "
@@ -456,8 +457,10 @@ jobs:
             const join = fs.readFileSync('linebreak/join.html', 'utf8');
             const brk = fs.readFileSync('linebreak/break.html', 'utf8');
             const fail = (m) => { throw new Error(m); };
-            if (!join.includes('<p>\u6587\u3002\u6b21\u3002\nLatin\nline</p>')) fail('join did not remove the break between East Asian characters only');
-            if (!brk.includes('\u6587\u3002<br>\n\u6b21\u3002<br>')) fail('break did not turn the newline into <br>');
+            // Once from the Markdown page and once from the AsciiDoc one: one key, both formats.
+            const count = (h, s) => h.split(s).length - 1;
+            if (count(join, '<p>\u6587\u3002\u6b21\u3002\nLatin\nline</p>') !== 2) fail('join did not remove the break between East Asian characters only, in both formats');
+            if (count(brk, '\u6587\u3002<br>\n\u6b21\u3002<br>') !== 2) fail('break did not turn the newline into <br>, in both formats');
             if (!brk.includes('<p>first\nsecond</p>')) fail('the AsciiDoc document did not win over break');
           "
           printf 'sources:\n  lineBreak: br\n' > linebreak/bad.yml
@@ -474,10 +477,17 @@ jobs:
           monodocs build examples/en -o size/docs.html > size/report.txt
           cat size/report.txt
           node -e "
-            const r = require('node:fs').readFileSync('size/report.txt', 'utf8');
-            for (const part of ['docs.html', 'images', 'page data', 'document']) {
+            const fs = require('node:fs');
+            const r = fs.readFileSync('size/report.txt', 'utf8');
+            for (const part of ['images', 'page data', 'document']) {
               if (!r.includes(part)) throw new Error('the size report has no ' + part + ' line');
             }
+            // The total is the file on disk, to the precision it is printed with.
+            const m = /docs\.html\s+([\d.]+) (B|KB|MB)/.exec(r);
+            if (!m) throw new Error('the size report has no total for docs.html');
+            const unit = { B: 1, KB: 1024, MB: 1024 * 1024 }[m[2]];
+            const actual = fs.statSync('size/docs.html').size;
+            if (Math.abs(Number(m[1]) * unit - actual) > 0.05 * unit + 1) throw new Error('reported ' + m[0] + ', file is ' + actual + ' bytes');
           "
           printf 'assets:\n  budget: 10KB\n' > size/warn.yml
           monodocs build examples/en -c size/warn.yml -o size/warn.html > size/warn.log 2>&1
