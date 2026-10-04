@@ -35,8 +35,9 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 `assets.budget`、`pdf.watermark`、生成される表紙、`sources.lineBreak` である。いずれも既定では無効か
 従来どおりなので、既存の設定がビルドするものは変わらない。ただし、どのビルドにも関わる点が 2 つ変わる。
 ビルドが書き出したものの大きさを表示するようになり、コードのハイライトが前のブロックに左右されなく
-なったため、コード例に埋め込まれた言語は最初のビルドから色が付く。これまでのリリースと同じく先に
-プレリリースを `next` で出し、`latest` を動かす前に、公開パッケージとリリースバイナリを検証する。
+なったため、コード例に埋め込まれた言語は最初のビルドから色が付く。既存の設定を壊すものが無いので、
+0.13.0 はプレリリースを経ずに出す——そうするのはこのリリースが初めてである。公開パッケージとリリース
+バイナリは `latest` を動かしたあとに検証し、見つかったものはパッチリリースで直す。
 
 ## 完了条件の達成状況
 
@@ -404,13 +405,13 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **リリース**
 
-- [ ] `next` tag で `0.13.0-beta.1` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。0.13 が必要な手順——`sources.lineBreak`、出力サイズの表示と `assets.budget`、`pdf.watermark`、Mermaid の lightbox のマークアップ——はインストールされたバージョンで切り替わる
+- [ ] プレリリースを経ず `latest` tag で `0.13.0` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。0.13 が必要な手順——`sources.lineBreak`、出力サイズの表示と `assets.budget`、`pdf.watermark`、Mermaid の lightbox のマークアップ——はインストールされたバージョンで切り替わる
 - [ ] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証する
-- [ ] 公開済みの `v0.13.0-beta.1` の資産に対し、Windows 11 ホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
+- [ ] 公開済みの `v0.13.0` の資産に対し、Windows 11 ホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
 - [ ] Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）
 - [ ] リリースされた Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新たに加わる 2 つ——Mermaid 図が lightbox で開き、閉じると元に戻ること、`sources.lineBreak: join` でビルドした日本語の段落が文と文のあいだに空白なく読めること——を含む
 - [ ] Windows で人にしかできない確認——生成した HTML が Edge でどう見えるか（とりわけ日本語）、透かし入りの PDF を開いて印刷したときの見え方、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードした資産に対する Mark of the Web と SmartScreen
-- [ ] stable `0.13.0` を公開・検証し、公式サイトの CI ガイドの固定バージョン（英日とも）をそれに合わせる
+- [ ] `next` dist-tag を `0.13.0` へ移し、公式サイトの CI ガイドの固定バージョン（英日とも）をそれに合わせる
 
 ### v0.14: 紙の版面を仕上げる
 
