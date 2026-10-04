@@ -47,20 +47,19 @@ describe("sources.lineBreak", () => {
 
   it("leaves an existing fixture byte for byte as it was under space", async () => {
     // examples/ja is written one sentence per line, so it is the fixture a change here would move.
-    // The first build is a warm-up: Shiki highlights a language embedded in a code sample only once
-    // its grammar has been loaded by an earlier build in the same process, so the first build of a
-    // process differs from the second whatever this key says.
+    // It is also the first build of this process with code samples in it, which is what makes the
+    // comparison honest: highlighting no longer depends on what an earlier build loaded.
     const fixture = fileURLToPath(new URL("../../../../examples/ja", import.meta.url));
     const outputs: string[] = [];
-    for (const body of ["", "", "sources:\n  lineBreak: space\n"]) {
+    for (const body of ["", "sources:\n  lineBreak: space\n"]) {
       const configFile = join(dir, "monodocs.config.yml");
       await writeFile(configFile, body);
       const out = join(dir, "fixture.html");
       await buildSite({ configFile, inputDir: fixture, outputFile: out, format: "html" });
       outputs.push(await readFile(out, "utf8"));
     }
-    expect(outputs[2]).toBe(outputs[1]);
-    expect(outputs[1]).toMatch(/。\n[^\n<]/);
+    expect(outputs[1]).toBe(outputs[0]);
+    expect(outputs[0]).toMatch(/。\n[^\n<]/);
   }, 60_000);
 
   it("applies one rule to Markdown and AsciiDoc alike", async () => {

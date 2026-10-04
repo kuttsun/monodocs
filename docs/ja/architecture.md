@@ -25,6 +25,8 @@ loadConfig (config.ts)
 
 形式別レンダラーは `sources/markdown/renderer.ts` と `sources/asciidoc/renderer.ts` にあり、どちらも `SourceRenderer` の `extractMeta` と `render` を実装します。frontmatter または `:sd-*:` 属性は `sources/meta.ts` で `PageMeta` へ正規化します。
 
+ハイライトはブロックだけで決まらなければなりません。Shiki のショートハンドはプロセスごとに 1 つのハイライターを共有して言語を必要なときに読み込み、AsciiDoc や Markdown のような文法は、埋め込まれた言語を既に誰かが読み込んでいたときだけハイライトします。また、他の言語の scope へ規則を差し込む文法（JavaScript のタグ付きテンプレートへの `lit`）は、それより後に初めて使われた文法にしか届きません。そこで `postprocess.ts` は、ハイライトの前に、各言語を、その文法が埋め込みうる言語と、その scope またはそのドット区切りの前方部分へ差し込む文法（Shiki は `source.js` への差し込みを `source.js.jsx` にも適用する）ごと推移的に読み込みます。また、コードから推測した言語を勝手に読み込む Shiki のショートハンドではなく、ハイライターのインスタンスを通してハイライトします。同じ位置に一致する差し込みは登録順に試される（Vue と Angular はどちらも `{{` に一致する）ので、競合しうる差し込みの文法は、いずれかが初めて必要になった時点で、まとめて決まった順序で登録します。そうしないと `watch` の再ビルドが最初のビルドと食い違います。
+
 `sources.lineBreak` は、共通のヘルパー（`sources/lineBreak.ts`）を通して各レンダラーの中で適用し、`prefixIdsAndCollect` がページのテキストを集める前に済ませます。`postprocessPages` へ移してはいけません。`postprocessPages` は `page.html` を再パースしますが `page.text` は再計算しないので、検索インデックスが HTML と食い違います。
 
 ## 単一 HTML の不変条件
