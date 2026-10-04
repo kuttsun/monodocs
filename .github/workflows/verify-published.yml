@@ -490,7 +490,8 @@ jobs:
           grep -q "page data" size/error.log || { echo "the failure carried no breakdown"; cat size/error.log; exit 1; }
 
       # v0.13. The watermark is core's print rule, so a theme replacing style.css keeps it, and its
-      # text is escaped rather than inserted (24.10). The PDF is built to prove the rule prints.
+      # text is escaped rather than inserted (24.10). The PDF is only built here; what each sheet
+      # draws is asserted by the repository's real-Chromium tests.
       - name: Watermark
         if: env.SUPPORTS_V013 == 'true'
         run: |
@@ -513,7 +514,8 @@ jobs:
             echo "a blank watermark was accepted"; exit 1
           fi
 
-      # v0.13. Mermaid diagrams open in the image lightbox: the dialog carries the diagram host.
+      # v0.13. Mermaid diagrams open in the image lightbox. This checks only that the dialog carries
+      # the diagram host; opening a diagram is a client behaviour the browser pass covers.
       - name: Mermaid lightbox markup
         if: env.SUPPORTS_V013 == 'true'
         run: |

@@ -33,13 +33,13 @@ and it, v0.9, v0.10, v0.11, and v0.12 are released.
 
 0.13.0 has not been released yet. Every item of its checklist has landed: the size report and
 `assets.budget`, `pdf.watermark`, the generated cover, and `sources.lineBreak`. None of them changes
-what an existing configuration builds — each is off or unchanged by default — but two things every
-build does are different: the build now prints the size of what it wrote, and code highlighting no
+what an existing configuration builds — each is off or unchanged by default — but three things every
+build does are different: the build now prints the size of what it wrote, code highlighting no
 longer depends on earlier blocks, so a language embedded in a code sample is now coloured on the
-first build too. Because none of
-it breaks an existing configuration, 0.13.0 goes out without a prerelease — the first release to do
-so — and the published package and the release binaries are verified after `latest` moves; anything
-found is fixed forward in a patch release.
+first build too, and a Mermaid diagram opens in the image lightbox. Because none of it breaks an
+existing configuration, 0.13.0 goes out without a prerelease — the first release to do so — and the
+published package and the release binaries are verified after `latest` moves; anything found is
+fixed forward in a patch release.
 
 ## Completion Criteria Status
 
@@ -407,7 +407,7 @@ found is fixed forward in a patch release.
 
 **Release**
 
-- [ ] Publish `0.13.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml`, with the steps that need 0.13 gated on the installed version: `sources.lineBreak`, the size report and `assets.budget`, `pdf.watermark`, and the Mermaid lightbox markup
+- [ ] Publish `0.13.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.13.0` — not the default `next`, which still points at 0.12.0 until it is moved below and would skip every 0.13 step while passing — confirming that the log says `verifying monodocs 0.13.0` and that the steps that need 0.13 gated on the installed version: `sources.lineBreak`, the size report and `assets.budget`, `pdf.watermark`, and the Mermaid lightbox markup
 - [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.13.0` assets on a Windows 11 host
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))

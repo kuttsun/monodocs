@@ -33,9 +33,9 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 0.13.0 はまだリリースしていない。チェックリストの項目はすべて入った——出力サイズの表示と
 `assets.budget`、`pdf.watermark`、生成される表紙、`sources.lineBreak` である。いずれも既定では無効か
-従来どおりなので、既存の設定がビルドするものは変わらない。ただし、どのビルドにも関わる点が 2 つ変わる。
+従来どおりなので、既存の設定がビルドするものは変わらない。ただし、どのビルドにも関わる点が 3 つ変わる。
 ビルドが書き出したものの大きさを表示するようになり、コードのハイライトが前のブロックに左右されなく
-なったため、コード例に埋め込まれた言語は最初のビルドから色が付く。既存の設定を壊すものが無いので、
+なったため、コード例に埋め込まれた言語は最初のビルドから色が付き、Mermaid 図が画像の lightbox で開く。既存の設定を壊すものが無いので、
 0.13.0 はプレリリースを経ずに出す——そうするのはこのリリースが初めてである。公開パッケージとリリース
 バイナリは `latest` を動かしたあとに検証し、見つかったものはパッチリリースで直す。
 
@@ -405,7 +405,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **リリース**
 
-- [ ] プレリリースを経ず `latest` tag で `0.13.0` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。0.13 が必要な手順——`sources.lineBreak`、出力サイズの表示と `assets.budget`、`pdf.watermark`、Mermaid の lightbox のマークアップ——はインストールされたバージョンで切り替わる
+- [ ] プレリリースを経ず `latest` tag で `0.13.0` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。入力は既定の `next` ではなく `dist_tag: 0.13.0` とする——`next` は後述の項目で移すまで 0.12.0 を指しており、0.13 の手順をすべて飛ばしたまま成功してしまう。ログが `verifying monodocs 0.13.0` を示し、0.13 が必要な手順——`sources.lineBreak`、出力サイズの表示と `assets.budget`、`pdf.watermark`、Mermaid の lightbox のマークアップ——はインストールされたバージョンで切り替わる
 - [ ] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証する
 - [ ] 公開済みの `v0.13.0` の資産に対し、Windows 11 ホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
 - [ ] Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）
