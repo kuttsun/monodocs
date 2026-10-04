@@ -60,7 +60,8 @@ jobs:
       # The version decides which surface exists to be verified: this workflow takes any dist-tag or
       # version as input, and `init`, the message language, and PDF page numbers all arrive in 0.10,
       # the diagnostics JSON and `document` in 0.11, and `root` / `sources.include`, route aliases,
-      # `sources.asciidoc.attributes`, and the include boundary in 0.12. Verifying an older release
+      # `sources.asciidoc.attributes`, and the include boundary in 0.12, and `sources.lineBreak`, the
+      # size report and `assets.budget`, and `pdf.watermark` in 0.13. Verifying an older release
       # must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
@@ -74,12 +75,13 @@ jobs:
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
             const major = Number(m[1]), minor = Number(m[2]);
             const atLeast = (n) => major > 0 || minor >= n;
-            process.stdout.write([atLeast(10), atLeast(11), atLeast(12)].map(String).join(' '));
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V011=$(echo "$gate" | cut -d' ' -f2)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V012=$(echo "$gate" | cut -d' ' -f3)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V013=$(echo "$gate" | cut -d' ' -f4)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -429,3 +431,93 @@ jobs:
           fi
           grep -q "outside the input root" boundary/log || { echo "the error did not say what was wrong"; cat boundary/log; exit 1; }
           grep -q "secret.adoc" boundary/log || { echo "the error did not name the path it resolved to"; cat boundary/log; exit 1; }
+
+      # v0.13. One key decides what a newline inside a paragraph becomes, in both formats (12.6).
+      # `join` removes it only between East Asian characters, `break` makes it a <br>, and an
+      # AsciiDoc document that unsets hard breaks wins over `break`. The Japanese is written as
+      # escapes, as in the message-language step.
+      - name: Line breaks inside a paragraph
+        if: env.SUPPORTS_V013 == 'true'
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            fs.mkdirSync('linebreak/docs', { recursive: true });
+            // 文。 / 次。
+            const ja = '\u6587\u3002\n\u6b21\u3002\nLatin\nline\n';
+            fs.writeFileSync('linebreak/docs/a.md', '# A\n\n' + ja);
+            fs.writeFileSync('linebreak/docs/b.adoc', '= B\n:hardbreaks-option!:\n\nfirst\nsecond\n');
+            fs.writeFileSync('linebreak/join.yml', 'sources:\n  lineBreak: join\n');
+            fs.writeFileSync('linebreak/break.yml', 'sources:\n  lineBreak: break\n');
+          "
+          monodocs build linebreak/docs -c linebreak/join.yml -o linebreak/join.html
+          monodocs build linebreak/docs -c linebreak/break.yml -o linebreak/break.html
+          node -e "
+            const fs = require('node:fs');
+            const join = fs.readFileSync('linebreak/join.html', 'utf8');
+            const brk = fs.readFileSync('linebreak/break.html', 'utf8');
+            const fail = (m) => { throw new Error(m); };
+            if (!join.includes('<p>\u6587\u3002\u6b21\u3002\nLatin\nline</p>')) fail('join did not remove the break between East Asian characters only');
+            if (!brk.includes('\u6587\u3002<br>\n\u6b21\u3002<br>')) fail('break did not turn the newline into <br>');
+            if (!brk.includes('<p>first\nsecond</p>')) fail('the AsciiDoc document did not win over break');
+          "
+          printf 'sources:\n  lineBreak: br\n' > linebreak/bad.yml
+          if monodocs build linebreak/docs -c linebreak/bad.yml -o linebreak/bad.html 2> linebreak/bad.log; then
+            echo "an unknown lineBreak value was accepted"; exit 1
+          fi
+
+      # v0.13. A build reports what it wrote, read from disk, and a budget warns or fails (20.5). The
+      # report is asserted through files, as the message-language step does.
+      - name: Output size and budget
+        if: env.SUPPORTS_V013 == 'true'
+        run: |
+          mkdir -p size
+          monodocs build examples/en -o size/docs.html > size/report.txt
+          cat size/report.txt
+          node -e "
+            const r = require('node:fs').readFileSync('size/report.txt', 'utf8');
+            for (const part of ['docs.html', 'images', 'page data', 'document']) {
+              if (!r.includes(part)) throw new Error('the size report has no ' + part + ' line');
+            }
+          "
+          printf 'assets:\n  budget: 10KB\n' > size/warn.yml
+          monodocs build examples/en -c size/warn.yml -o size/warn.html > size/warn.log 2>&1
+          grep -q "over assets.budget" size/warn.log || { echo "the budget did not warn"; cat size/warn.log; exit 1; }
+          printf 'assets:\n  budget: 10KB\n  onBudget: error\n' > size/error.yml
+          if monodocs build examples/en -c size/error.yml -o size/error.html > size/error.log 2>&1; then
+            echo "onBudget: error did not fail the build"; cat size/error.log; exit 1
+          fi
+          # The breakdown travels with the failure, since a failed build prints no summary.
+          grep -q "page data" size/error.log || { echo "the failure carried no breakdown"; cat size/error.log; exit 1; }
+
+      # v0.13. The watermark is core's print rule, so a theme replacing style.css keeps it, and its
+      # text is escaped rather than inserted (24.10). The PDF is built to prove the rule prints.
+      - name: Watermark
+        if: env.SUPPORTS_V013 == 'true'
+        run: |
+          mkdir -p watermark/theme
+          printf 'body { color: black; }\n' > watermark/theme/style.css
+          printf 'pdf:\n  watermark: "DRAFT \\"x\\""\nhtml:\n  theme: ./theme\n' > watermark/config.yml
+          monodocs build examples/en -c watermark/config.yml -o watermark/out.html
+          monodocs build examples/en -c watermark/config.yml --format pdf -o watermark/out.pdf
+          node -e "
+            const fs = require('node:fs');
+            const h = fs.readFileSync('watermark/out.html', 'utf8');
+            const rule = /@media print \{\s*html::after \{[^}]*\}/.exec(h);
+            if (!rule) throw new Error('the custom theme dropped the watermark rule');
+            if (!rule[0].includes('content: \"DRAFT \\\\22 x\\\\22 \"')) throw new Error('the watermark text was not escaped: ' + rule[0]);
+            const m = fs.readFileSync('watermark/out.pdf').subarray(0, 5).toString('latin1');
+            if (m !== '%PDF-') throw new Error('invalid PDF header: ' + m);
+          "
+          printf 'pdf:\n  watermark: "  "\n' > watermark/blank.yml
+          if monodocs build examples/en -c watermark/blank.yml -o watermark/blank.html 2> watermark/blank.log; then
+            echo "a blank watermark was accepted"; exit 1
+          fi
+
+      # v0.13. Mermaid diagrams open in the image lightbox: the dialog carries the diagram host.
+      - name: Mermaid lightbox markup
+        if: env.SUPPORTS_V013 == 'true'
+        run: |
+          node -e "
+            const h = require('node:fs').readFileSync('out/docs.html', 'utf8');
+            if (!h.includes('id=\"image-lightbox-diagram\"')) throw new Error('the lightbox has no diagram host');
+          "
