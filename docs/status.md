@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-09-24
+Last updated: 2026-10-05
 
 ## Support Status
 
@@ -22,7 +22,7 @@ Last updated: 2026-09-24
 | Page breaks (marker, `pdf.pageBreakLevel`)        | ✅ Done   | v0.11          |
 | Specification sync, diagnostics, `document`       | ✅ Done   | v0.11          |
 | Input root, route aliases, AsciiDoc attributes    | ✅ Done   | v0.12          |
-| Output size and budget, watermark, cover, line breaks | 🚧 Planned| v0.13      |
+| Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
 | Section numbering, printed table of contents      | 🚧 Planned| v0.14          |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
@@ -31,12 +31,13 @@ disproportionate for a single maintainer, and the boundary between the extension
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
 and it, v0.9, v0.10, v0.11, and v0.12 are released.
 
-0.12.0 is released. Two of its changes stop a build that used to succeed — a negated pattern in
-`sources.include` or `sources.exclude` is refused rather than misread, and an `include::` reaching
-outside the input root through a symbolic link stops the build — so `0.12.0-beta.1` went out under
-`next` first and both were seen in a published artifact before `latest` moved. Two release items
-stay open rather than ticked: the Linux host script on a machine without Node.js, which no such
-machine was available for, and the Windows checks only a person can make.
+0.13.0 has not been released yet. Every item of its checklist has landed: the size report and
+`assets.budget`, `pdf.watermark`, the generated cover, and `sources.lineBreak`. None of them changes
+what an existing configuration builds — each is off or unchanged by default — but two things every
+build does are different: the build now prints the size of what it wrote, and code highlighting no
+longer depends on earlier blocks, so a language embedded in a code sample is now coloured on the
+first build too. The prerelease goes out under `next` first, as every release has, so the published
+package and the release binaries are verified before `latest` moves.
 
 ## Completion Criteria Status
 
@@ -401,6 +402,16 @@ machine was available for, and the Windows checks only a person can make.
 - [x] Search is covered for each value: `break` splits a text node, so the result list can match across a split the in-body highlighting ([roadmap.md](roadmap.md) 22.5) cannot mark, and `join` removes the break before the page's text is collected, so the index stops holding the space `hast-util-to-text` folds that newline into today
 - [x] [syntax.md](syntax.md) states the rule instead of listing "line breaks" without one: a newline inside a paragraph joins the lines in both formats, an explicit break is two trailing spaces or a backslash in Markdown and ` +` / `[%hardbreaks]` / `:hardbreaks-option:` in AsciiDoc, and the backslash is the Markdown form that survives an editor trimming trailing whitespace. Every spelling was measured through the pipeline rather than taken from a specification. The cross-format entry records that the space between two East Asian characters is removed by Firefox and kept by Chromium and WebKit, so the PDF shows it
 - [x] The configuration reference on the site and its Japanese mirror carry the key
+
+**Release**
+
+- [ ] Publish `0.13.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`, with the steps that need 0.13 gated on the installed version: `sources.lineBreak`, the size report and `assets.budget`, `pdf.watermark`, and the Mermaid lightbox markup
+- [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.13.0-beta.1` assets on a Windows 11 host
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
+- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the two new for this milestone: a Mermaid diagram opening in the lightbox and coming back on close, and a Japanese paragraph built with `sources.lineBreak: join` reading without spaces between sentences
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a watermarked PDF opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
+- [ ] Publish and verify the stable `0.13.0` release, and pin the CI guide on the documentation site — English and Japanese alike — to it
 
 ### v0.14: Setting the Printed Page
 
