@@ -255,20 +255,21 @@ measurement sets:
 
 1. The font check covers formulas, in both of the ways they fail: it measures the code points
    Chromium actually draws (the mathematical italic letters, not the letters as written), and it
-   reports when the font chosen for `math` has no OpenType MATH table, since layout — stretchy
-   brackets, radicals, limits — depends on one even when every glyph is present.
+   reports when the font chosen for `math` has no OpenType MATH table, since stretchy brackets and
+   radicals depend on one even when every glyph is present (in the image as it is, the matrix
+   parentheses and the `cases` brace did not stretch).
 2. `mathvariant` is resolved at build time into Unicode mathematical alphanumerics (`\mathbf{E}` →
    `𝐄`, `\mathbb{R}` → `ℝ`), since the browser will not apply it.
 3. A MATH font is a stated requirement of monodocs for math, on the machine that prints and in the
    reader's browser — Cambria Math ships with Windows; Linux needs a package such as `fonts-lmodern` —
    documented where the CI guide documents the CJK and emoji fonts (24.3.3).
 4. What a reader copies and what search indexes are designed and verified before math ships. The
-   notation decides what an author writes; it does not decide these, and the copy measured above is
+   notation has to agree with them, but it does not settle them: the copy measured above is
    a browser's selection of MathML, which no choice of delimiter changes.
 
-The Windows check is still to be made. It confirms the conditions rather than reopening the
-decision: Windows ships a MATH font, so it can only do better than the bare Linux image, and the
-`mathvariant` loss is Chromium's on every platform.
+The Windows check is still to be made, and how formulas set there is unknown until it is. The
+decision to make math a 1.x feature stands on the Linux result; what Windows shows updates the
+conditions and the scope. The `mathvariant` loss is Chromium's and is expected there as well.
 
 ---
 
