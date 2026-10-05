@@ -353,19 +353,19 @@ npm install -g monodocs@next
 
 ### 10.1 Release Procedure
 
-1. Create a version update PR.
+1. Create a version update PR, including the official site content for the version.
 2. Update the CHANGELOG or Release notes.
 3. Pass all CI.
 4. Inspect the `npm pack` artifact.
 5. Install the tarball into a fresh environment and smoke test.
 6. Merge the PR into main.
 7. Create the `v0.6.0` tag.
-8. Generate the GitHub Release in CI.
+8. Publish the GitHub Release by hand.
 9. Publish to npm from CI.
 10. Reinstall the published version from npm and verify.
 11. Verify the release binaries on the supported platforms.
 12. Move the `next` dist-tag onto the published stable version.
-13. Update the README, official site, and status documents.
+13. Update the README and status documents.
 
 Step 10 is `verify-published.yml`. No workflow does step 11: that one leaves the release binaries
 and the long-running commands out of its scope, and CI never runs the published asset on a host
@@ -389,9 +389,12 @@ that (the allowed action in the table in 9.1), so moving a dist-tag from CI woul
 long-lived npm write token — which M4 deliberately does not do. The quarterly checklist in
 [maintenance.md](maintenance.md) catches a missed step rather than replacing it.
 
-For step 13, the official site needs no separate deploy: publishing a stable release runs
-`deploy-site.yml` against its tag, and a prerelease does not. Only its content has to be updated
-before the tag.
+Step 8 is done by a person, not by a workflow: a release created with `GITHUB_TOKEN` triggers no
+workflow, so neither `release.yml` nor the site deploy would run.
+
+The official site is deployed by `deploy-site.yml` after `release.yml` succeeds for a stable tag,
+and not for a prerelease. It is built from the tag, so its content belongs in the version update
+PR (step 1); an edit after the tag reaches the live site only with the next release.
 
 ### 10.2 Post-Publish Verification
 

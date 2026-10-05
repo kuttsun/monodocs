@@ -15,7 +15,7 @@ M6 の運用面にあたる。方針そのものはそちらに置く。
 | プルリクエストの検査     | `.github/workflows/pr-ci.yml`（両方の依存セットの audit と、スクリプトの静的解析も実行） |
 | 公開済みパッケージの検証 | `.github/workflows/verify-published.yml`（dist-tag / バージョンを指定して手動実行。0.10・0.11・0.12・0.13 で入った機能を確かめる手順はインストールされたバージョンで切り替わるので、それ以前のリリースも検証できる。include の読み取り境界は Linux でのみ確認する。Windows のランナーでシンボリックリンクを作るにはこのジョブが持たない権限が要るため） |
 | リリースバイナリの検証   | `.github/workflows/verify-release-binaries.yml`（公開時に自動、タグ指定で手動実行）   |
-| ドキュメントサイトの配信 | `.github/workflows/deploy-site.yml`（安定版のリリース時に自動、安定版タグ指定で手動実行。main への push ではデプロイしない） |
+| ドキュメントサイトの配信 | `.github/workflows/deploy-site.yml`（安定版タグの Release が成功した後に自動、main から最新の安定版タグを指定して手動実行。main への push ではデプロイしない） |
 | 棚卸しのリマインダ       | `.github/workflows/quarterly-review.yml`（四半期のチェックリストを Issue として作成） |
 
 定期 audit を別に持つのは、PR CI の audit が PR のあるときしか走らないためである。インストールせずに

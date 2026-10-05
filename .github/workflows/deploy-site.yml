@@ -14,21 +14,27 @@ name: Deploy site
 # The site is served from the project-pages subpath (https://<owner>.github.io/monodocs/),
 # so the build sets SITE_BASE=/monodocs/ (see site/.vitepress/config.ts).
 #
-# The site documents the released package, so it is deployed from a stable release tag and
+# The site documents the released package, so it is deployed from the latest stable release and
 # never from main: a push to main would publish features no installable version has yet.
-# `released` fires for a stable release and for a prerelease promoted to one, but not for a
-# prerelease, which goes to the npm `next` dist-tag and must not replace the `latest` docs.
-# A manual run redeploys an existing stable tag. The github-pages environment therefore
-# allows the `v*` tags as well as main (a release run executes on its tag ref; a manual run
-# executes on the branch it was started from).
+#
+# - Automatically, after the Release workflow (release.yml) succeeds for a stable tag. Waiting
+#   for it keeps the site from describing a version whose npm publish failed. A prerelease
+#   run is skipped: it goes to the npm `next` dist-tag and must not replace the `latest` docs.
+# - By hand, from main, with the tag of the latest stable release; any other tag is refused so
+#   that a redeploy cannot roll the site back.
+#
+# Both run on main (workflow_run always uses the default branch), so the github-pages
+# environment's `main` deployment rule covers them; the tag is only what gets checked out.
+# A site-only fix on main therefore reaches the live site with the next release.
 
 on:
-  release:
-    types: [released]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
-        description: Stable release tag to deploy (for example v0.13.0)
+        description: Latest stable release tag to redeploy (for example v0.13.0)
         required: true
 
 permissions:
@@ -45,18 +51,30 @@ jobs:
   build:
     name: Build site (Docker)
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'release' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       !contains(github.event.workflow_run.head_branch, '-'))
 
     steps:
       - name: Resolve the release tag
         id: release
         shell: bash
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          # For a release-triggered Release run, head_branch is the release tag.
+          RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
           INPUT_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           tag="${RELEASE_TAG:-$INPUT_TAG}"
           if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Expected a stable release tag like v0.13.0, got '$tag'" >&2
+            exit 1
+          fi
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          if [ "$tag" != "$latest" ]; then
+            echo "Only the latest stable release ($latest) is deployed, got '$tag'" >&2
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
