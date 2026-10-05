@@ -2930,7 +2930,11 @@ What the implementation (v0.14) settled that the above leaves open:
 - **Measured on Linux** (Intel Core i7-11700, the development image): a document of 101 sheets in
   Japanese, with twenty client-mode Mermaid diagrams and numbering on, built to PDF in 2.13 s without
   the table and 3.06 s with it at `depth: 3` (106 sheets), the mean of three runs each. The numbers
-  settled on the second print. The Windows measurement is still to be made.
+  settled on the second print. On GitHub's runners (AMD EPYC 7763, 4 threads, Google Chrome 154),
+  the same document took 3.88 s without the table and 6.09 s with it on Windows, against 2.54 s and
+  3.35 s on Ubuntu, the same sheet counts on both. The second print costs more on Windows, +57%
+  against +32%, and stays a matter of seconds; `pdf.toc` stays off by default. (The Ubuntu runner
+  has no Japanese font, so its sheets carried tofu; it is there as a comparison of time only.)
 
 ### 24.10 Watermark (v0.13)
 
