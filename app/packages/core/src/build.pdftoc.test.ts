@@ -25,8 +25,16 @@ import type { Page, SidebarNode } from "./types";
  * has no separators, so the exact string is removed rather than a pattern that could also take a
  * table line's number with it.
  */
+const sheetCounts = new WeakMap<Uint8Array, number>();
+
 async function pageText(bytes: Uint8Array, index: number, cover = 0): Promise<string> {
-  const total = (await PDFDocument.load(bytes)).getPageCount() - cover;
+  // Counted once per PDF: loading it for every sheet made the long-table test time out on Windows.
+  let count = sheetCounts.get(bytes);
+  if (count === undefined) {
+    count = (await PDFDocument.load(bytes)).getPageCount();
+    sheetCounts.set(bytes, count);
+  }
+  const total = count - cover;
   return (await rawPageText(bytes, index)).replace(`${index - cover + 1} / ${total}`, "");
 }
 
@@ -483,6 +491,7 @@ describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => 
     expect(toc).not.toContain("Folded");
   });
 
+  // A longer timeout: it builds a 40-sheet PDF and reads every sheet, and the Windows runner is slow.
   it("numbers every line of a table that runs over several sheets", async () => {
     const files: Record<string, string> = {};
     for (let p = 0; p < 6; p++) {
@@ -511,7 +520,7 @@ describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => 
       }
     }
     expect(table).toBe(expected);
-  });
+  }, 60_000);
 
   it("lists to depth 2 by default and prints nothing when off", async () => {
     const on = await buildPdf("depth", "pdf:\n  toc:\n    enabled: true\n");
