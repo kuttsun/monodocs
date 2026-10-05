@@ -23,7 +23,7 @@ Last updated: 2026-10-05
 | Specification sync, diagnostics, `document`       | ✅ Done   | v0.11          |
 | Input root, route aliases, AsciiDoc attributes    | ✅ Done   | v0.12          |
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
-| Section numbering, printed table of contents      | 🚧 In progress| v0.14      |
+| Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -31,11 +31,15 @@ disproportionate for a single maintainer, and the boundary between the extension
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
 and it, v0.9, v0.10, v0.11, v0.12, and v0.13 are released.
 
-0.13.0 is released: the size report and `assets.budget`, `pdf.watermark`, the generated cover, and
-`sources.lineBreak`. None of them changes what an existing configuration builds, so it went out
-without a prerelease — the first release to do so — and the published package, the release
-binaries, and the HTML they produce were verified after `latest` moved. The Windows checks a person
-has to make are still open.
+0.14.0 has not been released yet. Every item of its checklist has landed: section numbering
+(`numbering.sections`), the printed table of contents (`pdf.toc`), and the math measurement, which
+makes math a 1.x feature on recorded conditions. Neither feature changes what an existing
+configuration builds — both are off by default — and what every build does differently is small:
+the client script carries the code that shows numbers, unused without them, and an error from
+`sidebar.items` is now reported before post-processing rather than after it. As with 0.13.0, it goes
+out without a prerelease, the published package and the release binaries are verified after
+`latest` moves, and anything found is fixed forward in a patch release. 0.13.0's Windows checks a
+person has to make are still open.
 
 ## Completion Criteria Status
 
@@ -438,6 +442,16 @@ has to make are still open.
 - [x] A sample document of real formulas is built to HTML and PDF on both supported platforms with KaTeX's MathML-only output, which puts no JavaScript and no stylesheet in the output — measured on Linux; on Windows the Linux-built HTML was printed from Edge, with monodocs itself not run there; recorded in [roadmap.md](roadmap.md) 6.4
 - [x] Either math becomes a 1.x feature with a notation chosen in the open, or [syntax.md](syntax.md) records the measured reason for the limitation in place of the dependency argument that no longer holds — decided: a 1.x feature, on the conditions [roadmap.md](roadmap.md) 6.4 records
 - [x] Whichever way it goes, the font dependency is stated rather than glossed: MathML is drawn with an OpenType MATH font, which the missing-font check ([roadmap.md](roadmap.md) 24.3.3) would have to cover
+
+**Release**
+
+- [ ] Publish `0.14.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.14.0` — not the default `next`, which still points at 0.13.0 until it is moved below and would skip every 0.14 step while passing — confirming that the log says `verifying monodocs 0.14.0` and that the steps gated on 0.14 ran rather than being skipped: section numbering and the printed table of contents
+- [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.14.0` assets on a Windows 11 host
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
+- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: with `numbering.sections` on, the numbers in the headings, the sidebar, and the in-page table of contents agree, and searching a section number opens that section
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a PDF with `pdf.toc` and numbering on opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
+- [ ] Move the `next` dist-tag onto `0.14.0`. The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.14.0` in the version change itself, since the site is now deployed from the release
 
 ## Supported Syntax
 
