@@ -2079,8 +2079,9 @@ Disadvantages:
 
 The output HTML has carried the inline Mermaid runtime with no third-party notices since it was
 first embedded: under mermaid 11 the only notices in it are the few `/*! */` comments mermaid's own
-build kept. The npm package and the standalone binary carry notices for what they contain, but an
-HTML file is redistributed on its own, by the author, to readers who never see either.
+build kept. The npm package ships `THIRD-PARTY-NOTICES.txt` and a release attaches
+`monodocs-NOTICES.txt` beside the binary, both generated from the dependency tree in `node_modules`,
+but an HTML file is redistributed on its own, by the author, to readers who never see either.
 
 mermaid 12 (Dependabot's #126, recorded in #134) cannot be taken as a version bump:
 
@@ -2091,8 +2092,9 @@ mermaid 12 (Dependabot's #126, recorded in #134) cannot be taken as a version bu
   diagrams. The site's published samples carry it too. `cdn`, `pre-render`, and a document without
   diagrams keep ELK out of the output, not out of the CLI. Forcing `layout: dagre` does not remove it
   from the bundle
-- **The licence statement becomes false.** The site's licence page and the READMEs say monodocs
-  depends only on permissively licensed software
+- **The licence statement becomes false.** The site's licence page and `README.ja.md` say that
+  monodocs depends only on permissively licensed software; `README.md` and the npm READMEs say only
+  that monodocs is MIT
 - **Size.** The inline runtime grows from about 975 KB to about 1.6 MB gzip (3.57 MB → 5.58 MB raw),
   and the CLI bundle by about 2 MB
 - **`lodash-es`.** `chevrotain@11.1.2`, new in mermaid 12, pins `lodash-es` to exactly `4.17.23`, so
@@ -2106,14 +2108,14 @@ mermaid 12 (Dependabot's #126, recorded in #134) cannot be taken as a version bu
 
 The decision is to adopt mermaid 12 with its new default look and to accept the licence change, in
 two steps. First, the inline runtime carries notices generated from what the prebuilt bundle
-contains — the current notice generation walks `node_modules` and would list `lodash-es@4.18.1`
-only — emitted into the output HTML exactly when the runtime is. Then the bump, with ELK's
+contains rather than from `node_modules` — under mermaid 12 a walk of `node_modules` would list
+`lodash-es@4.18.1` alone, not the 4.17.23 the source map shows inside — emitted into the output HTML exactly when the runtime is. Then the bump, with ELK's
 corresponding source identified and named in the notices, the CDN pinned to the full version, and
 the licence statement rewritten to say that monodocs is MIT and that HTML built with the inline
 runtime embeds an EPL-2.0 component with its notices.
 
-What is not an option: `@mermaid-js/tiny` drops mindmap and architecture diagrams and is meant for
-the CDN; making `cdn` the default breaks the offline, self-contained default; making `pre-render`
+What is not an option: `@mermaid-js/tiny` drops mindmap, architecture diagrams, and KaTeX and is
+meant for the CDN; making `cdn` the default breaks the offline, self-contained default; making `pre-render`
 the default requires Chromium and does not work from the standalone binary. A reader-visible
 licence UI, a self-hosted source mirror, a full SBOM, and an ELK-free build of mermaid are deferred
 and do not block the bump.
@@ -4123,18 +4125,21 @@ existing document builds and the other adding markup that 1.0 enumerates.
 
 Mermaid 12 re-lays out and recolours flowchart, state, and class diagrams in documents nobody
 touched, and it brings EPL-2.0 code into the CLI and into every HTML file built with the inline
-runtime, which makes the project's "permissive licences only" statement false. 1.0 claims that the
-documentation describes the tool as it is; a licence statement that stops being true at the next
-dependency bump, and a diagram style that changes in 1.1, are what that claim should not have to
-carry. The inline runtime has also carried no third-party notices since it was first embedded,
-under mermaid 11 as much as 12. That gap is closed first, because it does not depend on the bump and
-the bump depends on it (21.3).
+runtime, which makes the statement on the site's licence page and in `README.ja.md` that monodocs depends
+only on permissively licensed software false. 1.0 claims that the documentation describes the tool as it is; a licence statement
+that stops being true at the next dependency bump, and every existing diagram changing just after
+the number is claimed, are what that claim should not have to carry. The inline runtime has also
+carried no notices generated for what it contains since it was first embedded, under mermaid 11 as
+much as 12. That gap is closed first, because it does not depend on the bump and the bump depends on
+it (21.3).
 
-v0.14 decided that math becomes a feature, on four conditions its measurement set (6.4). Bringing
-it here means its notation is chosen before 1.0 freezes the markup monodocs recognises, so the
-list 1.0 makes is complete when it is made rather than extended in the first minor release.
+v0.14 decided that math becomes a feature, on four conditions its measurement set (6.4). It has to
+come before 1.0 rather than in a minor release because of 12.4: a minor release may add only markup
+that no existing document could already contain, and every candidate delimiter — `$`, `$$`, `\(` —
+can already appear in a document as prose or as an escape. Math added in 1.x would change what an
+existing document means; added here, its notation is part of what 1.0 freezes.
 
-The two halves share a release, not a dependency, as v0.11's and v0.13's did.
+The two halves share a release, not a dependency, as v0.13's did.
 
 Implementation scope:
 
@@ -4143,6 +4148,8 @@ Implementation scope:
 - Adopt mermaid 12: identify ELK's corresponding source, pin the CDN runtime to the verified full
   version, override `lodash-es` with a stated removal condition, and rewrite the licence statement
   (21.3)
+- Commit the formulas v0.14 measured as a Markdown and AsciiDoc fixture, so that the math criteria
+  below can be checked by anyone, on any machine (6.4)
 - Choose the math notation for Markdown and AsciiDoc in the open, and record the choice and the
   alternatives in 6.4
 - Render math at build time with KaTeX's MathML-only output in both renderers, on the four conditions
@@ -4152,49 +4159,58 @@ Completion criteria:
 
 - An HTML build with `mermaid.mode: client`, `mermaid.runtime: inline`, and at least one diagram
   carries the runtime's notices exactly once; `cdn`, `pre-render`, and a document without diagrams
-  carry none. The notices survive a custom theme and `branding: false`, are present when the build
-  runs from the npm package and from the standalone binary, and diagrams still render in a real
-  browser with them in place
+  carry none. The notices are read both from the package and from `embeddedAssets`, survive a custom
+  theme and `branding: false`, are present when the build runs from the npm package and from the
+  standalone binary, and diagrams still render in a real browser with them in place
 - The notices list the packages and versions the prebuilt `mermaid.min.js` contains, not what
-  `node_modules` resolves, and no notice text can close the comment that holds it
+  `node_modules` resolves, and no notice text can close the comment that holds it. The size report
+  (20.5) counts them in the inline Mermaid runtime's line
 - `mermaid` is at 12, and `cdn` loads the same full version `inline` and `pre-render` use, pinned
   rather than `@12`
 - ELK's corresponding source — the `elkjs` version, and the ELK revision and build configuration it
   was generated from — is identified by version and commit, confirmed retrievable, and named in the
   runtime notices and `THIRD-PARTY-NOTICES.txt`
-- `pnpm audit` passes with a scoped `lodash-es` override whose comment names both advisories and the
-  condition for removing it. The generated `mermaid.min.js` is checked for the vulnerable
-  implementations and the result recorded
+- `pnpm audit` passes with a scoped `lodash-es` override with a floor of `>=4.18.0`, whose comment
+  names both advisories and the condition for removing it, documented in development.md in both
+  languages. The generated `mermaid.min.js` is checked for the vulnerable implementations and the
+  result recorded
 - The licence statement in the READMEs, the npm READMEs, and the site's licence page says what is
   true: monodocs is MIT, the bundled Mermaid runtime contains EPL-2.0 `elkjs`, HTML built with the
   inline runtime embeds it with its notices, and document content is unaffected
-- The inline runtime's size is the measured figure for 12 wherever it is stated, maintenance.md says
-  that the lockfile audit cannot see inside a prebuilt bundle, and the site samples are regenerated
-  and carry the notices
+- 21.2 and the site's configuration reference state mermaid 12 and its measured inline size,
+  maintenance.md says that the lockfile audit cannot see inside a prebuilt bundle and no longer says
+  that `site/` never ships, and the site samples are regenerated and carry the notices
 - The math notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are
   recorded in 6.4 with the alternatives and why they lost. Prose about currency is not read as math
-  by the choice itself, rather than by a warning after the fact. What happens to `asciimath` is
-  decided and stated
-- A formula is rendered at build time to MathML only: no script and no stylesheet enters the output,
-  and a document without math builds as it did before, which a test asserts on an existing fixture
+  by the choice itself, rather than by a warning after the fact, and any spelling an existing
+  document could contain whose meaning the choice changes is listed there. What happens to
+  `asciimath` is decided and stated
+- A formula is rendered at build time to MathML only: no script and no stylesheet enters the output.
+  An existing fixture containing neither diagrams nor the chosen delimiters builds as it did before,
+  and a test asserts it
 - `\mathbf`, `\mathbb`, `\mathcal`, and the other styles KaTeX writes as `mathvariant` come out as
   Unicode mathematical alphanumerics, and a test asserts that no `mathvariant` other than `normal`
   reaches the output
 - The font check measures the code points Chromium draws for a formula, not the letters as written,
-  and reports when the font chosen for `math` has no OpenType MATH table. The v0.14 sample, built in
+  and reports when the font chosen for `math` has no OpenType MATH table. The math fixture, built in
   the development image as it is, is reported rather than passing in silence
 - A MATH font is documented as a requirement for math, on the machine that prints and in the
-  reader's browser, where the CI guide documents the CJK and emoji fonts
+  reader's browser, where the CI guide documents the CJK and emoji fonts, in both languages
 - What a reader copies from a formula and what search indexes for it are designed, recorded in 6.4,
   and tested
 - A formula KaTeX cannot parse produces a diagnostic naming the file and the formula, not the error
   box KaTeX renders in its place
 - KaTeX's licence and its size in the CLI bundle and the standalone binary are checked and recorded
-  before it is added, as CONTRIBUTING.md requires of a dependency
-- The v0.14 sample is built to HTML and PDF on Linux and Windows, and reads correctly on both with
-  a MATH font installed
+  before it is added, as CONTRIBUTING.md requires of a dependency, together with whether its version
+  is kept in step with the KaTeX the Mermaid runtime already bundles and how the notices name it
+- The math fixture is built to HTML and PDF on Linux and Windows with a MATH font installed, and on
+  both no variable or Greek letter is tofu, `\mathbb` and `\mathbf` are told apart from a plain
+  variable, and stretchy brackets and radicals stretch. The accent offset and the gap in `aligned`
+  that v0.14 measured are either fixed or recorded in 6.4 as accepted
+- syntax.md describes the notation in both languages
 - Because every existing document with a diagram builds differently, 0.15.0 goes through a beta
-  before `latest`, unlike 0.13.0 and 0.14.0
+  before `latest`, unlike 0.13.0 and 0.14.0, and the release notes state the diagram and licence
+  changes
 
 ---
 

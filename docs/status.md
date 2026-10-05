@@ -38,6 +38,9 @@ builds, so, like 0.13.0, it went out without a prerelease, and the published pac
 binaries, and the HTML they produce were verified after `latest` moved. The Windows host script and
 the Windows checks a person has to make are still open, for 0.14.0 as for 0.13.0.
 
+v0.15 comes next, before 1.0: notices for the inline Mermaid runtime, mermaid 12, and math. The
+reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md).
+
 ## Completion Criteria Status
 
 ### v0.1: Markdown Single-HTML MVP
@@ -459,40 +462,44 @@ the Windows checks a person has to make are still open, for 0.14.0 as for 0.13.0
 - [ ] The output HTML carries the runtime's third-party notices exactly once when `mermaid.mode: client` and `mermaid.runtime: inline` meet a document with diagrams, and none for `cdn`, `pre-render`, or a document without diagrams
 - [ ] The notices list the packages and versions the prebuilt `mermaid.min.js` contains, not what `node_modules` resolves, and are read both from the package and from `embeddedAssets`
 - [ ] The notices survive a custom theme and `branding: false`, are present when the build runs from the npm package and from the standalone binary, and no notice text can close the comment that holds it
+- [ ] The size report ([roadmap.md](roadmap.md) 20.5) counts the notices in the inline Mermaid runtime's line
 - [ ] Diagrams still render in a real browser with the notices in place
 
 **Mermaid 12** ([roadmap.md](roadmap.md) 21.3, #134)
 
 - [ ] ELK's corresponding source — the `elkjs` version, and the ELK revision and build configuration it was generated from — is identified by version and commit, confirmed retrievable, and named in the runtime notices and `THIRD-PARTY-NOTICES.txt`
 - [ ] `mermaid` is at 12, and the CDN runtime is pinned to the verified full version rather than `@12`
-- [ ] A scoped `lodash-es` override with a floor of `>=4.18.0`, a comment naming GHSA-r5fr-rjxr-66jc and GHSA-f23m-r3pf-42rh, and a removal condition, documented in [development.md](development.md); the generated `mermaid.min.js` is checked for the vulnerable implementations and the result recorded
+- [ ] A scoped `lodash-es` override with a floor of `>=4.18.0`, a comment naming GHSA-r5fr-rjxr-66jc and GHSA-f23m-r3pf-42rh, and a removal condition, documented in [development.md](development.md) in English and Japanese; the generated `mermaid.min.js` is checked for the vulnerable implementations and the result recorded
 - [ ] The licence statement in the site's licence page, `README.md`, `README.ja.md`, and the npm READMEs says that monodocs is MIT, the bundled Mermaid runtime contains EPL-2.0 `elkjs`, HTML built with the inline runtime embeds it with its notices, and document content is unaffected
-- [ ] The inline runtime's size is the measured figure for 12 in the site's configuration reference and [roadmap.md](roadmap.md) 21.2
+- [ ] [roadmap.md](roadmap.md) 21.2 and the site's configuration reference state mermaid 12 and its measured inline size
 - [ ] [maintenance.md](maintenance.md) says that the lockfile audit cannot see inside a prebuilt bundle, and no longer says that `site/` never ships, given the published samples
 - [ ] The site samples are regenerated and carry the notices
 
 **Math** ([roadmap.md](roadmap.md) 6.4)
 
-- [ ] The notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are chosen in the open and recorded in [roadmap.md](roadmap.md) 6.4 with the alternatives and why they lost; prose about currency is not read as math. What happens to `asciimath` is decided and stated
-- [ ] KaTeX's licence and its size in the CLI bundle and the standalone binary are checked and recorded before it is added
-- [ ] A formula is rendered at build time to MathML only, with no script and no stylesheet in the output, and a document without math builds as it did before, which a test asserts on an existing fixture
+- [ ] The formulas v0.14 measured are committed as a Markdown and AsciiDoc fixture, so that the criteria below can be checked on any machine
+- [ ] The notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are chosen in the open and recorded in [roadmap.md](roadmap.md) 6.4 with the alternatives and why they lost; prose about currency is not read as math, and any spelling an existing document could contain whose meaning the choice changes is listed there. What happens to `asciimath` is decided and stated
+- [ ] KaTeX's licence and its size in the CLI bundle and the standalone binary are checked and recorded before it is added, together with whether its version is kept in step with the KaTeX the Mermaid runtime already bundles and how the notices name it
+- [ ] A formula is rendered at build time to MathML only, with no script and no stylesheet in the output, and an existing fixture containing neither diagrams nor the chosen delimiters builds as it did before, which a test asserts
 - [ ] `\mathbf`, `\mathbb`, `\mathcal`, and the other styles KaTeX writes as `mathvariant` come out as Unicode mathematical alphanumerics, and a test asserts that no `mathvariant` other than `normal` reaches the output
-- [ ] The font check measures the code points Chromium draws for a formula and reports when the font chosen for `math` has no OpenType MATH table; the v0.14 sample, built in the development image as it is, is reported
+- [ ] The font check measures the code points Chromium draws for a formula and reports when the font chosen for `math` has no OpenType MATH table; the math fixture, built in the development image as it is, is reported
 - [ ] A MATH font is documented as a requirement for math, where the CI guide documents the CJK and emoji fonts, in English and Japanese
 - [ ] What a reader copies from a formula and what search indexes for it are designed, recorded in [roadmap.md](roadmap.md) 6.4, and tested
 - [ ] A formula KaTeX cannot parse produces a diagnostic naming the file and the formula, not KaTeX's error box
-- [ ] The v0.14 sample is built to HTML and PDF on Linux and Windows, and reads correctly on both with a MATH font installed
-- [ ] [syntax.md](syntax.md) and the site's syntax pages describe the notation, in English and Japanese
+- [ ] The math fixture is built to HTML and PDF on Linux and Windows with a MATH font installed, and on both no variable or Greek letter is tofu, `\mathbb` and `\mathbf` are told apart from a plain variable, and stretchy brackets and radicals stretch. The accent offset and the gap in `aligned` that v0.14 measured are either fixed or recorded in [roadmap.md](roadmap.md) 6.4 as accepted
+- [ ] [syntax.md](syntax.md) describes the notation, in English and Japanese
 
 **Release**
 
 Every existing document with a diagram builds differently under mermaid 12, so unlike 0.13.0 and 0.14.0 this release goes through a beta.
 
-- [ ] Publish `0.15.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, with steps for the runtime notices and for math gated on 0.15 and confirmed to have run rather than been skipped
-- [ ] Publish `0.15.0` under the `latest` tag and verify it the same way with `dist_tag: 0.15.0`
-- [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] `verify-published.yml` gains a 0.15 gate and steps for the runtime notices and for math, merged before anything below runs
+- [ ] Publish `0.15.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the log says `verifying monodocs 0.15.0-beta.1` and that the 0.15 steps ran rather than being skipped
+- [ ] During the beta, build the documents this repository publishes — `examples/en`, `examples/ja`, and the site samples — with the beta and look at every diagram under mermaid 12; a diagram that no longer reads is fixed or recorded before `0.15.0` is cut
+- [ ] Publish `0.15.0` under the `latest` tag, with release notes stating the change in diagrams and the licence change, and verify it the same way with `dist_tag: 0.15.0`
+- [ ] Verify the `v0.15.0` release binaries through `verify-release-binaries.yml` on both platforms
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.15.0` assets on a Windows 11 host
-- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.15.0` assets on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
 - [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: diagrams rendering under mermaid 12 with the notices in the source, and formulas drawn with a MATH font
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
 - [ ] Move the `next` dist-tag onto `0.15.0`, and pin the CI guide on the documentation site — English and Japanese alike — to it

@@ -37,6 +37,9 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 パッケージ、リリースバイナリ、それらが生成する HTML は `latest` を動かしたあとに検証した。Windows ホストでの
 スクリプト実行と、Windows で人が行う確認は、0.13.0 と同じく 0.14.0 でも未了である。
 
+次は 1.0 の前の v0.15 である——inline の Mermaid ランタイムの表記、mermaid 12、数式。1.0 の後ではなく前に
+置く理由は [roadmap.md](roadmap.md) にある。
+
 ## 完了条件の達成状況
 
 ### v0.1: Markdown 単一 HTML MVP
@@ -458,40 +461,44 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [ ] `mermaid.mode: client` と `mermaid.runtime: inline` で図を含む文書をビルドすると、出力 HTML がランタイムの第三者表記をちょうど 1 回持つ。`cdn`、`pre-render`、図を含まない文書では持たない
 - [ ] 表記は、`node_modules` が解決するものではなく、ビルド済みの `mermaid.min.js` が含むパッケージとバージョンを挙げ、パッケージからも `embeddedAssets` からも読める
 - [ ] 表記はカスタムテーマと `branding: false` でも残り、npm パッケージからのビルドでもスタンドアロンバイナリからのビルドでも入り、どの表記の文面もそれを収めるコメントを閉じられない
+- [ ] サイズの報告（[roadmap.md](roadmap.md) 20.5）は、表記を inline の Mermaid ランタイムの行に数える
 - [ ] 表記を入れた状態で、図が実際のブラウザで描かれる
 
 **Mermaid 12**（[roadmap.md](roadmap.md) 21.3、#134）
 
 - [ ] ELK の対応するソース——`elkjs` のバージョンと、それを生成した ELK のリビジョンとビルド設定——をバージョンとコミットで特定し、取得できることを確かめ、ランタイムの表記と `THIRD-PARTY-NOTICES.txt` に挙げる
 - [ ] `mermaid` を 12 にし、CDN ランタイムを `@12` ではなく検証した完全なバージョンに固定する
-- [ ] 範囲を限った `lodash-es` の override を入れる。下限は `>=4.18.0`、コメントは GHSA-r5fr-rjxr-66jc と GHSA-f23m-r3pf-42rh と削除の条件を挙げ、[development.md](development.md) に書く。生成された `mermaid.min.js` に脆弱な実装が含まれるかを確かめ、結果を記録する
+- [ ] 範囲を限った `lodash-es` の override を入れる。下限は `>=4.18.0`、コメントは GHSA-r5fr-rjxr-66jc と GHSA-f23m-r3pf-42rh と削除の条件を挙げ、[development.md](development.md) に英語と日本語で書く。生成された `mermaid.min.js` に脆弱な実装が含まれるかを確かめ、結果を記録する
 - [ ] サイトのライセンスのページ、`README.md`、`README.ja.md`、npm の README のライセンスの記述が、monodocs は MIT であり、同梱の Mermaid ランタイムは EPL-2.0 の `elkjs` を含み、inline ランタイムでビルドした HTML はそれを表記とともに埋め込み、文書の内容は影響を受けない、と書く
-- [ ] サイトの設定リファレンスと [roadmap.md](roadmap.md) 21.2 の inline ランタイムのサイズを、12 の実測値にする
+- [ ] [roadmap.md](roadmap.md) 21.2 とサイトの設定リファレンスが、mermaid 12 とその inline の実測サイズを書く
 - [ ] [maintenance.md](maintenance.md) が、ロックファイルの監査はビルド済みバンドルの中を見られないことを書き、公開している見本があるので「`site/` は配布されない」とはもう書かない
 - [ ] サイトの見本を再生成し、表記を持つことを確かめる
 
 **数式**（[roadmap.md](roadmap.md) 6.4）
 
-- [ ] Markdown のインライン数式と別行立て数式の記法、および AsciiDoc の対応物を公開の場で決め、候補とそれが退けられた理由とともに [roadmap.md](roadmap.md) 6.4 に記録する。通貨の話をする散文は数式として読まれない。`asciimath` をどう扱うかを決めて書く
-- [ ] KaTeX のライセンスと、CLI バンドルとスタンドアロンバイナリに対するサイズを、追加する前に確かめて記録する
-- [ ] 数式はビルド時に MathML だけに描かれ、出力にスクリプトもスタイルシートも入らない。数式を含まない文書は以前と同じにビルドされ、それを既存のフィクスチャでテストが主張する
+- [ ] v0.14 が測った数式を Markdown と AsciiDoc のフィクスチャとしてコミットし、以下の条件をどのマシンでも確かめられるようにする
+- [ ] Markdown のインライン数式と別行立て数式の記法、および AsciiDoc の対応物を公開の場で決め、候補とそれが退けられた理由とともに [roadmap.md](roadmap.md) 6.4 に記録する。通貨の話をする散文は数式として読まれず、既存の文書が含みえて、選んだ記法によって意味が変わる書き方はすべてそこに挙げる。`asciimath` をどう扱うかを決めて書く
+- [ ] KaTeX のライセンスと、CLI バンドルとスタンドアロンバイナリに対するサイズを、追加する前に確かめて記録する。あわせて、その版を Mermaid ランタイムがすでに内包する KaTeX と揃えるかどうかと、表記がそれをどう挙げるかを記録する
+- [ ] 数式はビルド時に MathML だけに描かれ、出力にスクリプトもスタイルシートも入らない。図も選んだ区切り記号も含まない既存のフィクスチャは以前と同じにビルドされ、それをテストが主張する
 - [ ] `\mathbf`、`\mathbb`、`\mathcal` など、KaTeX が `mathvariant` として書く書体は Unicode の数学用英数字として出力され、`normal` 以外の `mathvariant` が出力に届かないことをテストが主張する
-- [ ] フォント検査が、Chromium が数式に描く文字を測り、`math` に選ばれたフォントが OpenType MATH テーブルを持たないときに報告する。v0.14 の見本を開発用イメージのままでビルドすると報告される
+- [ ] フォント検査が、Chromium が数式に描く文字を測り、`math` に選ばれたフォントが OpenType MATH テーブルを持たないときに報告する。数式のフィクスチャを開発用イメージのままでビルドすると報告される
 - [ ] 数式には MATH フォントが要ることを、CI ガイドが CJK と絵文字のフォントを書いている場所に、英語と日本語で書く
 - [ ] 読者が数式から何をコピーし、検索が何を索引するかを設計し、[roadmap.md](roadmap.md) 6.4 に記録し、テストする
 - [ ] KaTeX が解釈できない数式は、KaTeX のエラー表示ではなく、ファイルと数式を名指す診断になる
-- [ ] v0.14 の見本を Linux と Windows で HTML と PDF に組み、MATH フォントを入れた状態で両方で正しく読める
-- [ ] [syntax.md](syntax.md) とサイトの記法のページが、英語と日本語で記法を説明する
+- [ ] 数式のフィクスチャを、MATH フォントを入れた Linux と Windows で HTML と PDF に組み、どちらでも、変数とギリシャ文字に豆腐が無く、`\mathbb` と `\mathbf` が通常の変数と区別でき、伸びる括弧と根号が伸びる。v0.14 が測ったアクセントのずれと `aligned` の隙間は、直すか、受け入れたものとして [roadmap.md](roadmap.md) 6.4 に記録する
+- [ ] [syntax.md](syntax.md) が、英語と日本語で記法を説明する
 
 **リリース**
 
 mermaid 12 では図を含む既存の文書がすべて違うものにビルドされるので、このリリースは 0.13.0 や 0.14.0 と違い、ベータを経る。
 
-- [ ] `0.15.0-beta.1` を npm の `next` タグに公開し、`verify-published.yml` を `dist_tag: next` で実行して Linux x64 と Windows x64 で検証する。ランタイムの表記と数式の段は 0.15 で条件分けし、飛ばされずに実行されたことを確かめる
-- [ ] `0.15.0` を `latest` タグに公開し、`dist_tag: 0.15.0` で同じように検証する
-- [ ] `verify-release-binaries.yml` でリリースバイナリを両プラットフォームで検証する
+- [ ] `verify-published.yml` に 0.15 のゲートと、ランタイムの表記と数式の段を加え、以下のどれよりも先にマージする
+- [ ] `0.15.0-beta.1` を npm の `next` タグに公開し、`verify-published.yml` を `dist_tag: next` で実行して Linux x64 と Windows x64 で検証する。ログが `verifying monodocs 0.15.0-beta.1` と出し、0.15 の段が飛ばされずに実行されたことを確かめる
+- [ ] ベータの間に、このリポジトリが公開している文書——`examples/en`、`examples/ja`、サイトの見本——をベータでビルドし、mermaid 12 でのすべての図を見る。読めなくなった図は、`0.15.0` を出す前に直すか記録する
+- [ ] 図の変化とライセンスの変化を書いたリリースノートとともに `0.15.0` を `latest` タグに公開し、`dist_tag: 0.15.0` で同じように検証する
+- [ ] `verify-release-binaries.yml` で `v0.15.0` のリリースバイナリを両プラットフォームで検証する
 - [ ] 公開した `v0.15.0` のアセットに対して、Windows 11 のホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
-- [ ] Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）
+- [ ] 公開した `v0.15.0` のアセットに対して、Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）
 - [ ] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新しいもの——mermaid 12 で図が描かれ、ソースに表記があること、MATH フォントで数式が描かれること——を含む
 - [ ] Windows で人にしか答えられないこと。Edge で生成 HTML がどう見えるか（とりわけ日本語と数式）、数式を含む PDF を開いて印刷すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットの Mark of the Web と SmartScreen
 - [ ] `next` の dist-tag を `0.15.0` へ動かし、ドキュメントサイトの CI ガイド（英語・日本語とも）をそれに固定する
