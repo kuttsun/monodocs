@@ -8,7 +8,9 @@ import { addOutline, collectDests, remapDests, type PdfOutlineNode } from "./pdf
 import { setPdfMetadata } from "./pdfMetadata.js";
 import { prependCover, type PdfCover } from "./pdfCover.js";
 import {
+  describeTarget,
   injectPdfTocScript,
+  probePdfTocScript,
   pdfTocHtml,
   resolveDestPages,
   setPdfTocScript,
@@ -276,6 +278,33 @@ const TOC_MIN_WIDTH = 4;
 const TOC_MAX_PASSES = 4;
 
 /**
+ * Find every target in the page, leave out the lines whose target is not printed, and put the
+ * table in with an empty number column. Returns the table as printed, or undefined when nothing is
+ * left to list. A target that cannot be found at all fails the build: a line with nothing to point
+ * at cannot be given a number, and dropping it silently would hide a section from the table.
+ */
+async function preparePdfToc(page: PageLike, toc: PdfToc): Promise<PdfToc | undefined> {
+  const { targets, targetIndex } = tocTargets(toc);
+  const states = JSON.parse(String(await page.evaluate(probePdfTocScript(targets)))) as string[];
+  const missing = states.indexOf("missing");
+  if (missing !== -1) {
+    throw new MonodocsError(
+      "pdf/toc-unresolved",
+      t("pdf.tocUnresolved", { target: describeTarget(targets[missing]!) }),
+    );
+  }
+  const printed = {
+    title: toc.title,
+    entries: toc.entries.filter((_, i) => states[targetIndex[i]!] !== "hidden"),
+  };
+  if (printed.entries.length === 0) return undefined;
+  await page.evaluate(
+    injectPdfTocScript(tocTargets(printed).targets, pdfTocHtml(printed, undefined, TOC_MIN_WIDTH)),
+  );
+  return printed;
+}
+
+/**
  * Print with the table of contents filled in and verified (24.9).
  *
  * Every print after the first is read back and compared with the numbers it printed. Only a print
@@ -301,7 +330,7 @@ export async function printWithToc(
       // An entry whose target produced no destination cannot be numbered at all.
       throw new MonodocsError(
         "pdf/toc-unresolved",
-        t("pdf.tocUnresolved", { target: targets[missing] ?? "" }),
+        t("pdf.tocUnresolved", { target: describeTarget(targets[missing]!) }),
       );
     }
     const found = targetIndex.map((n) => String(sheets[n]));
@@ -367,12 +396,10 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
 
       // The table goes in before the checks so that the font check measures its heading too. It
       // starts with an empty number column; the passes below fill it in.
-      const toc = options.toc && options.toc.entries.length > 0 ? options.toc : undefined;
-      if (toc) {
-        await page.evaluate(
-          injectPdfTocScript(tocTargets(toc).targets, pdfTocHtml(toc, undefined, TOC_MIN_WIDTH)),
-        );
-      }
+      const toc =
+        options.toc && options.toc.entries.length > 0
+          ? await preparePdfToc(page, options.toc)
+          : undefined;
 
       await warnIfFooterDoesNotFit(page, options);
 

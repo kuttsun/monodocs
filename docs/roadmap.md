@@ -2915,6 +2915,11 @@ What the implementation (v0.14) settled that the above leaves open:
   document past 9999 sheets. At most four prints are made; a document still disagreeing with itself
   after that fails with `pdf/toc-not-converged`. A target with no destination at all fails with
   `pdf/toc-unresolved`.
+- **A target is looked up inside its own page**, by the article's route and then the element's ID,
+  not by ID across the document: a page ID joins route segments with `-`, so `setup.md`'s "Install
+  Guide" and `setup/install.md`'s "Guide" are both `setup-install-guide`, and the first match would
+  be the wrong heading with a destination that verifies against itself. A heading inside a closed
+  `<details>` (an AsciiDoc collapsible block) is not on the paper, so its line is left out.
 - **Measured on Linux** (Intel Core i7-11700, the development image): a document of 101 sheets in
   Japanese, with twenty client-mode Mermaid diagrams and numbering on, built to PDF in 2.13 s without
   the table and 3.06 s with it at `depth: 3` (106 sheets), the mean of three runs each. The numbers

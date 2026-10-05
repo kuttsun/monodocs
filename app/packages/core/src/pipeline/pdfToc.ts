@@ -13,14 +13,23 @@ import { escapeHtml } from "../util/html.js";
  * rest. The PDF only — the HTML has the sidebar, and no page to number.
  */
 
-/** One line of the table. `target` is the ID of the element the line points at. */
+/**
+ * What a line points at: a page's article, or an element inside it. Looked up within the page
+ * rather than by ID across the document, because two pages can produce the same element ID — a
+ * page ID joins route segments with `-`, so `setup.md`'s "Install Guide" and `setup/install.md`'s
+ * "Guide" are both `setup-install-guide` — and the first match would be the wrong heading, on the
+ * wrong sheet, with a destination that verifies against itself.
+ */
+export type PdfTocTarget = { route: string; id?: string };
+
+/** One line of the table. */
 export type PdfTocEntry = {
   /** 1 for a top-level sidebar entry; a heading is one deeper than its page per level below h1. */
   depth: number;
   /** The section number `numbering.sections` gave the entry (19.1), if any. */
   number?: string;
   title: string;
-  target: string;
+  target: PdfTocTarget;
 };
 
 export type PdfToc = {
@@ -43,8 +52,8 @@ export function buildPdfToc(
   const byId = new Map(pages.map((page) => [page.id, page]));
   const entries: PdfTocEntry[] = [];
 
-  const firstPage = (node: SidebarNode): string | undefined => {
-    if (node.type === "page") return node.pageId;
+  const firstPage = (node: SidebarNode): Extract<SidebarNode, { type: "page" }> | undefined => {
+    if (node.type === "page") return node;
     for (const child of node.children) {
       const found = firstPage(child);
       if (found !== undefined) return found;
@@ -54,13 +63,13 @@ export function buildPdfToc(
 
   const walk = (nodes: SidebarNode[], level: number): void => {
     for (const node of nodes) {
-      const pageId = firstPage(node);
-      if (pageId === undefined) continue;
+      const first = firstPage(node);
+      if (first === undefined) continue;
       entries.push({
         depth: level,
         number: node.number,
         title: node.title,
-        target: `page-${pageId}`,
+        target: { route: first.route },
       });
       if (node.type === "dir") {
         walk(node.children, level + 1);
@@ -72,7 +81,7 @@ export function buildPdfToc(
           depth: level + heading.level - 1,
           number: heading.number,
           title: heading.text,
-          target: heading.id,
+          target: { route: node.route, id: heading.id },
         });
       }
     }
@@ -92,15 +101,16 @@ export function tocAnchor(n: number): string {
 }
 
 /** The distinct targets, in order: entry `i` points at `tocAnchor(targetIndex[i])`. */
-export function tocTargets(toc: PdfToc): { targets: string[]; targetIndex: number[] } {
-  const targets: string[] = [];
+export function tocTargets(toc: PdfToc): { targets: PdfTocTarget[]; targetIndex: number[] } {
+  const targets: PdfTocTarget[] = [];
   const index = new Map<string, number>();
   const targetIndex = toc.entries.map((entry) => {
-    let n = index.get(entry.target);
+    const key = `${entry.target.route}\u0000${entry.target.id ?? ""}`;
+    let n = index.get(key);
     if (n === undefined) {
       n = targets.length;
       targets.push(entry.target);
-      index.set(entry.target, n);
+      index.set(key, n);
     }
     return n;
   });
@@ -120,6 +130,10 @@ function tocStyle(width: number): string {
     `#${PDF_TOC_ID} li{margin:0;padding:0;break-inside:avoid}` +
     `#${PDF_TOC_ID} a{display:flex;align-items:baseline;gap:0.4em;color:inherit;` +
     `text-decoration:none;padding-left:calc((var(--monodocs-toc-depth) - 1) * 1.5em)}` +
+    // A title must be able to shrink and wrap, or one long unbreakable word (an identifier, a URL)
+    // would push the leader and the number past the edge of the sheet.
+    `#${PDF_TOC_ID} .monodocs-toc-title{flex:0 1 auto;min-width:0;overflow-wrap:anywhere}` +
+    `#${PDF_TOC_ID} .monodocs-toc-heading{margin-top:0}` +
     `#${PDF_TOC_ID} .monodocs-toc-leader{flex:1 1 1em;min-width:1em;` +
     `border-bottom:1px dotted currentColor;opacity:0.5}` +
     `#${PDF_TOC_ID} .monodocs-toc-page{flex:none;width:${width}ch;text-align:right;` +
@@ -150,9 +164,37 @@ export function pdfTocHtml(toc: PdfToc, numbers: string[] | undefined, width: nu
     })
     .join("");
   return (
-    `<style>${tocStyle(width)}</style>` +
+    // The heading first, so a theme's `h1:first-child` rule sees it as the first thing on the sheet.
     `<h1 class="monodocs-toc-heading">${escapeHtml(toc.title)}</h1>` +
+    `<style>${tocStyle(width)}</style>` +
     `<ol>${items}</ol>`
+  );
+}
+
+/**
+ * Browser-side lookup of a target, shared by the probe and the injection so the two cannot find
+ * different elements: the article whose `data-route` is the route, and inside it the element whose
+ * ID is the ID — compared as a string, so no ID has to survive being written as a selector.
+ */
+const FIND_TARGET =
+  `function findTarget(t){var arts=document.querySelectorAll('article.page');` +
+  `for(var i=0;i<arts.length;i++){if(arts[i].getAttribute('data-route')!==t.route)continue;` +
+  `if(t.id===undefined)return arts[i];var all=arts[i].querySelectorAll('[id]');` +
+  `for(var k=0;k<all.length;k++){if(all[k].id===t.id)return all[k];}return null;}return null;}`;
+
+/**
+ * For each target, whether it was found and whether it is printed: "missing", "hidden", or "ok".
+ * A heading inside a closed `<details>` — an AsciiDoc collapsible block — is not on paper, though
+ * Chromium still writes a destination for it, so a line for it would point at a sheet that does
+ * not show it. A heading in the block's own `<summary>` is shown and is not hidden.
+ */
+export function probePdfTocScript(targets: PdfTocTarget[]): string {
+  return (
+    `(function(){${FIND_TARGET}var ts=${JSON.stringify(targets)};` +
+    `return JSON.stringify(ts.map(function(t){var el=findTarget(t);if(!el)return 'missing';` +
+    `for(var d=el.parentElement;d;d=d.parentElement){if(d.tagName==='DETAILS'&&!d.open){` +
+    `var s=d.querySelector(':scope>summary');if(!s||!s.contains(el))return 'hidden';}}` +
+    `return 'ok';}));})()`
   );
 }
 
@@ -161,16 +203,21 @@ export function pdfTocHtml(toc: PdfToc, numbers: string[] | undefined, width: nu
  * Chromium makes a named destination of every internal link's target, which is what the pages
  * are read back from. Run once; {@link setPdfTocScript} replaces the table's contents afterwards.
  */
-export function injectPdfTocScript(targets: string[], html: string): string {
+export function injectPdfTocScript(targets: PdfTocTarget[], html: string): string {
   return (
-    `(function(){var ids=${JSON.stringify(targets)};` +
-    `for(var n=0;n<ids.length;n++){var t=document.getElementById(ids[n]);` +
+    `(function(){${FIND_TARGET}var ts=${JSON.stringify(targets)};` +
+    `for(var n=0;n<ts.length;n++){var t=findTarget(ts[n]);` +
     `if(t){var a=document.createElement('a');a.id=${JSON.stringify(TOC_ANCHOR_PREFIX)}+n;` +
     `t.insertBefore(a,t.firstChild);}}` +
     `var first=document.querySelector('article.page');if(!first)return;` +
     `var nav=document.createElement('nav');nav.id=${JSON.stringify(PDF_TOC_ID)};` +
     `nav.innerHTML=${JSON.stringify(html)};first.parentNode.insertBefore(nav,first);})()`
   );
+}
+
+/** How a target is named in a message: the element ID, or the route of a page. */
+export function describeTarget(target: PdfTocTarget): string {
+  return target.id ?? target.route;
 }
 
 export function setPdfTocScript(html: string): string {

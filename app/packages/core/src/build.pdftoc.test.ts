@@ -69,17 +69,22 @@ describe("the entries", () => {
   it("follow the sidebar, with headings down to the depth under each page", () => {
     const toc = buildPdfToc(sidebar, pages, 2, "Contents");
     expect(toc.entries).toEqual([
-      { depth: 1, number: "1", title: "A", target: "page-a" },
-      { depth: 2, number: "1.1", title: "X", target: "a-x" },
+      { depth: 1, number: "1", title: "A", target: { route: "/a" } },
+      { depth: 2, number: "1.1", title: "X", target: { route: "/a", id: "a-x" } },
       // A directory points at its first page, as its bookmark does.
-      { depth: 1, number: "2", title: "guide", target: "page-b" },
-      { depth: 2, number: "2.1", title: "B", target: "page-b" },
-      { depth: 3, number: undefined, title: "Z", target: "b-z" },
+      { depth: 1, number: "2", title: "guide", target: { route: "/b" } },
+      { depth: 2, number: "2.1", title: "B", target: { route: "/b" } },
+      { depth: 3, number: undefined, title: "Z", target: { route: "/b", id: "b-z" } },
     ]);
     expect(buildPdfToc(sidebar, pages, 3, "Contents").entries.map((e) => e.title)).toContain("Y");
     // One destination per element, however many lines point at it.
     expect(tocTargets(toc)).toEqual({
-      targets: ["page-a", "a-x", "page-b", "b-z"],
+      targets: [
+        { route: "/a" },
+        { route: "/a", id: "a-x" },
+        { route: "/b" },
+        { route: "/b", id: "b-z" },
+      ],
       targetIndex: [0, 1, 2, 2, 3],
     });
   });
@@ -88,7 +93,7 @@ describe("the entries", () => {
     const html = pdfTocHtml(
       {
         title: "<b>Contents</b>",
-        entries: [{ depth: 1, title: '<img src=x onerror="x">', target: "t" }],
+        entries: [{ depth: 1, title: '<img src=x onerror="x">', target: { route: "/" } }],
       },
       ["12"],
       4,
@@ -136,7 +141,11 @@ function fakePage(prints: number[][]): {
       waitForFunction: async () => undefined,
       pdf: async () => new Uint8Array(),
     },
-    print: () => fakePdf(9, prints[Math.min(n++, prints.length - 1)]!),
+    // Each print has one more sheet than the last, so a test can tell which one came back.
+    print: () => {
+      const k = n++;
+      return fakePdf(9 + k, prints[Math.min(k, prints.length - 1)]!);
+    },
   };
 }
 
@@ -144,8 +153,8 @@ describe("the passes", () => {
   const toc = {
     title: "Contents",
     entries: [
-      { depth: 1, title: "A", target: "page-a" },
-      { depth: 2, title: "X", target: "a-x" },
+      { depth: 1, title: "A", target: { route: "/a" } },
+      { depth: 2, title: "X", target: { route: "/a", id: "a-x" } },
     ],
   };
 
@@ -155,6 +164,8 @@ describe("the passes", () => {
       [2, 3],
     ]);
     const pdf = await printWithToc(fake.page, toc, fake.print);
+    // The second print — the one carrying the numbers, and verified — not the first.
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBe(10);
     expect(await resolveDestPages(pdf, ["mdtoc-0", "mdtoc-1"])).toEqual([2, 3]);
     // One rewrite of the column, carrying the numbers the first print was read as.
     expect(fake.set).toHaveLength(1);
@@ -168,7 +179,8 @@ describe("the passes", () => {
       [2, 4],
       [2, 4],
     ]);
-    await printWithToc(fake.page, toc, fake.print);
+    const pdf = await printWithToc(fake.page, toc, fake.print);
+    expect((await PDFDocument.load(pdf)).getPageCount()).toBe(11);
     expect(fake.set).toHaveLength(2);
     expect(fake.set[1]).toContain('monodocs-toc-page\\">4<');
   });
@@ -330,6 +342,80 @@ describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => 
     expect(await sheetOf(bytes, "1.2 Beta section", cover, 1)).toBeGreaterThan(
       (await sheetOf(bytes, "1.1 Alpha section", cover, 1))!,
     );
+  });
+
+  /** Write `files` under a fresh root and build them to PDF with `config`. */
+  async function buildFiles(name: string, files: Record<string, string>, config: string) {
+    const root = join(dir, name);
+    for (const [path, body] of Object.entries(files)) {
+      await mkdir(dirname(join(root, path)), { recursive: true });
+      await writeFile(join(root, path), body);
+    }
+    const configFile = join(dir, `${name}.yml`);
+    await writeFile(configFile, config);
+    const out = join(dir, `${name}.pdf`);
+    await buildSite({ inputDir: root, configFile, outputFile: out, format: "pdf" });
+    return readFile(out);
+  }
+
+  it("finds a heading inside its own page when another page has an element with the same ID", async () => {
+    // Page IDs join route segments with "-", so both headings are `setup-install-guide`. The first
+    // match across the document would be the wrong heading, verified against itself.
+    const bytes = await buildFiles(
+      "same-id",
+      {
+        "setup.md": "# Setup\n\n## Install Guide\n\nShort.\n",
+        "setup/install.md": `# Install\n\n${filler(80, "lorem")}\n\n## Guide\n\nEnd.\n`,
+      },
+      "numbering:\n  sections: 2\npdf:\n  toc:\n    enabled: true\n",
+    );
+    const guide = await sheetOf(bytes, "2.1.1 Guide", 0, 1);
+    expect(guide).toBeGreaterThan(3);
+    expect(await pageText(bytes, 0)).toMatch(new RegExp(`2\\.1\\.1 Guide${guide}$`));
+  });
+
+  it("leaves out a heading that a collapsed block keeps off the paper", async () => {
+    const bytes = await buildFiles(
+      "collapsed",
+      {
+        "doc.adoc":
+          "= Doc\n\n== Shown\n\nText.\n\n.Click\n[%collapsible]\n====\n[discrete]\n== Folded\n\nInside.\n====\n",
+      },
+      "pdf:\n  toc:\n    enabled: true\n",
+    );
+    const toc = await pageText(bytes, 0);
+    expect(toc).toContain("Shown");
+    expect(toc).not.toContain("Folded");
+  });
+
+  it("numbers every line of a table that runs over several sheets", async () => {
+    const files: Record<string, string> = {};
+    for (let p = 0; p < 6; p++) {
+      let body = `# Page ${p}\n\n`;
+      for (let h = 0; h < 30; h++) body += `## Heading ${p}-${h}\n\n${filler(3, "text")}\n\n`;
+      files[`p${p}.md`] = body;
+    }
+    const bytes = await buildFiles("long", files, "pdf:\n  toc:\n    enabled: true\n");
+    // Every sheet's text, read once.
+    const total = (await PDFDocument.load(bytes)).getPageCount();
+    const sheets: string[] = [];
+    for (let i = 0; i < total; i++) sheets.push(await pageText(bytes, i));
+    // The table takes the sheets before the first page. Headings are matched with what follows
+    // them, so "Heading 0-1" is not found inside "Heading 0-10".
+    const sheetOfText = (text: string, from: number) =>
+      sheets.findIndex((sheet, i) => i >= from && new RegExp(`${text}(?!\\d)`).test(sheet)) + 1;
+    const tableSheets = sheetOfText("Heading 0-0", 1) - 1;
+    expect(tableSheets).toBeGreaterThan(1);
+    const table = sheets.slice(0, tableSheets).join("");
+
+    let expected = "Contents";
+    for (let p = 0; p < 6; p++) {
+      expected += `Page ${p}${sheetOfText(`Page ${p}`, tableSheets)}`;
+      for (let h = 0; h < 30; h++) {
+        expected += `Heading ${p}-${h}${sheetOfText(`Heading ${p}-${h}`, tableSheets)}`;
+      }
+    }
+    expect(table).toBe(expected);
   });
 
   it("lists to depth 2 by default and prints nothing when off", async () => {

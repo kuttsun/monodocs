@@ -945,7 +945,8 @@ pdf:
 - **What it lists.** The same tree as the sidebar and the bookmarks: each directory and page, and
   under each page its headings down to `depth`. A directory shows the sheet of its first page. With
   [`numbering.sections`](#numbering) on, each line carries its section number. A page with no place
-  in the sidebar is not listed. Each line is a link to its section.
+  in the sidebar is not listed, and neither is a heading inside a collapsed block (an AsciiDoc
+  `[%collapsible]` example), which is not on the paper. Each line is a link to its section.
 - **Where it goes.** On sheets of its own, in front of the body and after the [cover](#pdf-cover).
   Its sheets are part of the body, so they are numbered in the footer and the first page starts on the
   sheet after them. The heading is the [`contents`](#html-labels) label (`Contents` / `目次`).
@@ -955,7 +956,8 @@ pdf:
   has a fixed width in tabular figures, so filling it in does not rewrap a line and the second print
   settles. If it ever does not, monodocs prints again a bounded number of times, and a document that
   still disagrees with itself **fails the build** (`pdf/toc-not-converged`) rather than shipping a
-  table that is usually right.
+  table that is usually right. A line whose section cannot be found in the page fails the build too
+  (`pdf/toc-unresolved`).
 - **It costs a second print.** Measured on Linux with a document of about a hundred sheets in
   Japanese with client-mode Mermaid diagrams, the PDF build took about 2.1 s without the table and
   3.1 s with it. That is why it is off by default.
