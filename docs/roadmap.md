@@ -2934,8 +2934,8 @@ What the implementation (v0.14) settled that the above leaves open:
   GitHub-hosted Windows runner (AMD EPYC 7763, 4 threads, Google Chrome 154) the same document took
   3.88 s and 6.09 s, also the mean of three runs after a warm-up, with the same sheet counts: the
   table added 2.2 s (+57%). On an Ubuntu runner of the same kind it added 0.8 s (+32%), but that
-  runner has no Japanese font and printed tofu, so the two are not strictly comparable. Either way it
-  stays a matter of seconds, and `pdf.toc` stays off by default.
+  runner has no Japanese font and printed tofu, so the two are not strictly comparable. Either way
+  it stays a matter of seconds, and `pdf.toc` stays off by default.
 
 ### 24.10 Watermark (v0.13)
 
