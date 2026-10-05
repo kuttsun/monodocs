@@ -435,9 +435,9 @@ has to make are still open.
 
 **Math** ([roadmap.md](roadmap.md) 6.4)
 
-- [ ] A sample document of real formulas is built to HTML and PDF on both supported platforms with KaTeX's MathML-only output, which puts no JavaScript and no stylesheet in the output
-- [ ] Either math becomes a 1.x feature with a notation chosen in the open, or [syntax.md](syntax.md) records the measured reason for the limitation in place of the dependency argument that no longer holds
-- [ ] Whichever way it goes, the font dependency is stated rather than glossed: MathML is drawn with an OpenType MATH font, which the missing-font check ([roadmap.md](roadmap.md) 24.3.3) would have to cover
+- [x] A sample document of real formulas is built to HTML and PDF on both supported platforms with KaTeX's MathML-only output, which puts no JavaScript and no stylesheet in the output — measured on Linux; on Windows the Linux-built HTML was printed from Edge, with monodocs itself not run there; recorded in [roadmap.md](roadmap.md) 6.4
+- [x] Either math becomes a 1.x feature with a notation chosen in the open, or [syntax.md](syntax.md) records the measured reason for the limitation in place of the dependency argument that no longer holds — decided: a 1.x feature, on the conditions [roadmap.md](roadmap.md) 6.4 records
+- [x] Whichever way it goes, the font dependency is stated rather than glossed: MathML is drawn with an OpenType MATH font, which the missing-font check ([roadmap.md](roadmap.md) 24.3.3) would have to cover
 
 ## Supported Syntax
 

@@ -434,9 +434,9 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **数式**（[roadmap.md](roadmap.md) 6.4）
 
-- [ ] 実際の数式を並べた見本文書を、出力に JavaScript もスタイルシートも入れない KaTeX の MathML のみの出力で、対応する両プラットフォームの HTML と PDF に組む
-- [ ] その結果として、数式が 1.x の機能になって記法を公開の場で決めるか、[syntax.md](syntax.md) が、成り立たなくなった依存の議論に代えて実測に基づく制限の理由を記録するか、どちらかになる
-- [ ] どちらに転んでも、フォント依存はぼかさず明示する。MathML は OpenType MATH フォントで描かれ、フォント欠落の検査（[roadmap.md](roadmap.md) 24.3.3）がそれを対象に加える必要がある
+- [x] 実際の数式を並べた見本文書を、出力に JavaScript もスタイルシートも入れない KaTeX の MathML のみの出力で、対応する両プラットフォームの HTML と PDF に組む——Linux で測った。Windows では Linux でビルドした HTML を Edge から印刷した（monodocs 自体は Windows で実行していない）。[roadmap.md](roadmap.md) 6.4 に記録した
+- [x] その結果として、数式が 1.x の機能になって記法を公開の場で決めるか、[syntax.md](syntax.md) が、成り立たなくなった依存の議論に代えて実測に基づく制限の理由を記録するか、どちらかになる——1.x の機能とすることに決めた。条件は [roadmap.md](roadmap.md) 6.4 に記録した
+- [x] どちらに転んでも、フォント依存はぼかさず明示する。MathML は OpenType MATH フォントで描かれ、フォント欠落の検査（[roadmap.md](roadmap.md) 24.3.3）がそれを対象に加える必要がある
 
 ## 対応記法
 
