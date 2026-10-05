@@ -482,7 +482,7 @@ reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md)
 - [ ] KaTeX's licence and its size in the CLI bundle and the standalone binary are checked and recorded before it is added, together with whether its version is kept in step with the KaTeX the Mermaid runtime already bundles and how the notices name it
 - [ ] A formula is rendered at build time to MathML only, with no script and no stylesheet in the output, and an existing fixture containing neither diagrams nor the chosen delimiters builds as it did before, which a test asserts
 - [ ] `\mathbf`, `\mathbb`, `\mathcal`, and the other styles KaTeX writes as `mathvariant` come out as Unicode mathematical alphanumerics, and a test asserts that no `mathvariant` other than `normal` reaches the output
-- [ ] The font check measures the code points Chromium draws for a formula and reports when the font chosen for `math` has no OpenType MATH table; the math fixture, built in the development image as it is, is reported
+- [ ] The font check measures the code points Chromium draws for a formula and reports when the font chosen for `math` has no OpenType MATH table; the math fixture, built where no MATH font is installed (the development image as v0.14 measured it), is reported
 - [ ] A MATH font is documented as a requirement for math, where the CI guide documents the CJK and emoji fonts, in English and Japanese
 - [ ] What a reader copies from a formula and what search indexes for it are designed, recorded in [roadmap.md](roadmap.md) 6.4, and tested
 - [ ] A formula KaTeX cannot parse produces a diagnostic naming the file and the formula, not KaTeX's error box

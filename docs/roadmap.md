@@ -278,9 +278,9 @@ output, its font check, and copying were not tried on Windows; the layout is Bli
 so the conditions do not depend on it, and the decision stands on both platforms.
 
 **Brought forward to v0.15.** Math arrives before 1.0 rather than in a 1.x release, on the same four
-conditions, so that its notation is chosen before 1.0 freezes the markup monodocs recognises. The
-notation, the alternatives it was chosen over, and the design of copying and search are recorded
-here when v0.15 settles them.
+conditions. It cannot be added in 1.x: 12.4 lets a minor release add only markup no existing document
+could already contain, and every candidate delimiter can (v0.15). The notation, the alternatives it
+was chosen over, and the design of copying and search are recorded here when v0.15 settles them.
 
 ---
 
@@ -2108,15 +2108,16 @@ mermaid 12 (Dependabot's #126, recorded in #134) cannot be taken as a version bu
 
 The decision is to adopt mermaid 12 with its new default look and to accept the licence change, in
 two steps. First, the inline runtime carries notices generated from what the prebuilt bundle
-contains rather than from `node_modules` — under mermaid 12 a walk of `node_modules` would list
-`lodash-es@4.18.1` alone, not the 4.17.23 the source map shows inside — emitted into the output HTML exactly when the runtime is. Then the bump, with ELK's
+contains rather than from `node_modules`, whose versions need not be the ones inside — under
+mermaid 12 the source map shows `lodash-es` 4.17.23 inside while the override leaves only 4.18.1 in
+`node_modules` — emitted into the output HTML exactly when the runtime is. Then the bump, with ELK's
 corresponding source identified and named in the notices, the CDN pinned to the full version, and
 the licence statement rewritten to say that monodocs is MIT and that HTML built with the inline
 runtime embeds an EPL-2.0 component with its notices.
 
 What is not an option: `@mermaid-js/tiny` drops mindmap, architecture diagrams, and KaTeX and is
-meant for the CDN; making `cdn` the default breaks the offline, self-contained default; making `pre-render`
-the default requires Chromium and does not work from the standalone binary. A reader-visible
+meant for the CDN; making `cdn` the default breaks the offline, self-contained default; making
+`pre-render` the default requires Chromium and does not work from the standalone binary. A reader-visible
 licence UI, a self-hosted source mirror, a full SBOM, and an ELK-free build of mermaid are deferred
 and do not block the bump.
 
@@ -4125,10 +4126,11 @@ existing document builds and the other adding markup that 1.0 enumerates.
 
 Mermaid 12 re-lays out and recolours flowchart, state, and class diagrams in documents nobody
 touched, and it brings EPL-2.0 code into the CLI and into every HTML file built with the inline
-runtime, which makes the statement on the site's licence page and in `README.ja.md` that monodocs depends
-only on permissively licensed software false. 1.0 claims that the documentation describes the tool as it is; a licence statement
-that stops being true at the next dependency bump, and every existing diagram changing just after
-the number is claimed, are what that claim should not have to carry. The inline runtime has also
+runtime, which makes the statement on the site's licence page and in `README.ja.md` that monodocs
+depends only on permissively licensed software false. 1.0 claims that the documentation describes
+the tool as it is; a licence statement that stops being true at the next dependency bump, and every
+existing diagram changing just after the number is claimed, are what that claim should not have to
+carry. The inline runtime has also
 carried no notices generated for what it contains since it was first embedded, under mermaid 11 as
 much as 12. That gap is closed first, because it does not depend on the bump and the bump depends on
 it (21.3).
@@ -4192,8 +4194,9 @@ Completion criteria:
   Unicode mathematical alphanumerics, and a test asserts that no `mathvariant` other than `normal`
   reaches the output
 - The font check measures the code points Chromium draws for a formula, not the letters as written,
-  and reports when the font chosen for `math` has no OpenType MATH table. The math fixture, built in
-  the development image as it is, is reported rather than passing in silence
+  and reports when the font chosen for `math` has no OpenType MATH table. The math fixture, built
+  where no MATH font is installed (the development image as v0.14 measured it), is reported rather
+  than passing in silence
 - A MATH font is documented as a requirement for math, on the machine that prints and in the
   reader's browser, where the CI guide documents the CJK and emoji fonts, in both languages
 - What a reader copies from a formula and what search indexes for it are designed, recorded in 6.4,
