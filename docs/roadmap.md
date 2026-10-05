@@ -234,12 +234,12 @@ image is and then with Latin Modern Math (`fonts-lmodern`) installed:
   mathematical italic `𝑥` (U+1D465), and no font in the image covers those code points, so every
   variable came out as tofu. **The font check (24.3.3) missed it**, reporting three characters
   (`⃗ ⋮ ⋱`): it measures the text as written, `x`, not the code point Chromium substitutes.
-- **With Latin Modern Math installed, the formulas set well, apart from accents.** Chromium picked it
-  up through the `math` generic family with no configuration, and the font check reported nothing.
-  Fractions, radicals, limits on integrals and sums, the matrix, `cases`, stretchy brackets, Japanese
-  inside `\text{}`, and the wide series all set properly on A4. With Latin Modern Math, accents sit off-centre on
-  italic letters (the `\vec` arrow left of its letter, the `\dot` dot shifted), and `aligned` leaves a wide
-  gap before `=`.
+- **With Latin Modern Math installed, the formulas set well, apart from accents.** Chromium picked
+  it up through the `math` generic family with no configuration, and the font check reported
+  nothing. Fractions, radicals, limits on integrals and sums, the matrix, `cases`, stretchy
+  brackets, Japanese inside `\text{}`, and the wide series all set properly on A4. With Latin Modern
+  Math, accents sit off-centre on italic letters (the `\vec` arrow left of its letter, the `\dot`
+  dot shifted), and `aligned` leaves a wide gap before `=`.
 - **`\mathbb` and `\mathbf` are lost.** KaTeX writes them as `mathvariant` attributes. MathML Core,
   and so Chromium, honours only `mathvariant="normal"`, which turns the automatic italic off, and
   ignores the other values: `ℝ` and `ℕ` print as italic 𝑅 and 𝑁, and the bold vectors `𝐄`, `𝐁` as
@@ -274,9 +274,8 @@ Linux set as well, and the accents sat centred over their letters, better than w
 Math. `\mathbb` and `\mathbf` were lost in the same way — italic 𝑅, 𝑁, 𝐸, 𝐵, 𝑧 — confirming that
 condition 2 is needed on every platform. `aligned` kept its wide gap before `=`, and the brackets of
 the continued fraction printed heavier than the rest, possibly the driver's doing. monodocs' own PDF
-output, its font check, and copying were not tried on Windows; the layout is Blink's in both cases, so the
-conditions do not depend on it. The decision stands on both platforms, and the conditions are
-unchanged.
+output, its font check, and copying were not tried on Windows; the layout is Blink's in both cases,
+so the conditions do not depend on it, and the decision stands on both platforms.
 
 ---
 
