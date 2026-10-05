@@ -26,6 +26,10 @@ name: Deploy site
 # Both run on main (workflow_run always uses the default branch), so the github-pages
 # environment's `main` deployment rule covers them; the tag is only what gets checked out.
 # A site-only fix on main therefore reaches the live site with the next release.
+#
+# The gate is the whole Release run, binaries included. If a job fails after npm publish
+# succeeded, re-run the failed jobs of that Release run (its completion triggers this again)
+# or redeploy by hand.
 
 on:
   workflow_run:
@@ -41,11 +45,6 @@ permissions:
   contents: read
   pages: write
   id-token: write
-
-# Allow one concurrent deployment; let an in-progress run finish rather than cancel it.
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build:
@@ -74,7 +73,7 @@ jobs:
           fi
           latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
           if [ "$tag" != "$latest" ]; then
-            echo "Only the latest stable release ($latest) is deployed, got '$tag'" >&2
+            echo "Only the release marked latest ($latest) is deployed, got '$tag'" >&2
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -103,6 +102,11 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    # Allow one concurrent deployment; let an in-progress run finish rather than cancel it.
+    # Set on the job so that runs whose build is skipped never join the group.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
