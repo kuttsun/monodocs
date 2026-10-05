@@ -2927,14 +2927,15 @@ What the implementation (v0.14) settled that the above leaves open:
   an empty inline: measured with Google Chrome on Windows (the CI runner), an empty inline at the
   start of a heading that begins a sheet was placed on the previous sheet, one lower than the
   heading's text, and a destination verified against itself cannot see that.
-- **Measured on Linux** (Intel Core i7-11700, the development image): a document of 101 sheets in
-  Japanese, with twenty client-mode Mermaid diagrams and numbering on, built to PDF in 2.13 s without
-  the table and 3.06 s with it at `depth: 3` (106 sheets), the mean of three runs each. The numbers
-  settled on the second print. On GitHub's runners (AMD EPYC 7763, 4 threads, Google Chrome 154),
-  the same document took 3.88 s without the table and 6.09 s with it on Windows, against 2.54 s and
-  3.35 s on Ubuntu, the same sheet counts on both. The second print costs more on Windows, +57%
-  against +32%, and stays a matter of seconds; `pdf.toc` stays off by default. (The Ubuntu runner
-  has no Japanese font, so its sheets carried tofu; it is there as a comparison of time only.)
+- **Measured on Linux and Windows.** A document of 101 sheets in Japanese, with twenty client-mode
+  Mermaid diagrams and numbering on, built to PDF in 2.13 s without the table and 3.06 s with it at
+  `depth: 3` (106 sheets) on a Linux workstation (Intel Core i7-11700, the development image,
+  Chromium 151), the mean of three runs each. The numbers settled on the second print. On a
+  GitHub-hosted Windows runner (AMD EPYC 7763, 4 threads, Google Chrome 154) the same document took
+  3.88 s and 6.09 s, also the mean of three runs after a warm-up, with the same sheet counts: the
+  table added 2.2 s (+57%). On an Ubuntu runner of the same kind it added 0.8 s (+32%), but that
+  runner has no Japanese font and printed tofu, so the two are not strictly comparable. Either way it
+  stays a matter of seconds, and `pdf.toc` stays off by default.
 
 ### 24.10 Watermark (v0.13)
 
