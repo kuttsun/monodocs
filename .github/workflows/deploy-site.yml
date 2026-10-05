@@ -50,6 +50,8 @@ jobs:
   build:
     name: Build site (Docker)
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.event == 'release' &&
@@ -64,16 +66,10 @@ jobs:
           # For a release-triggered Release run, head_branch is the release tag.
           RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
           INPUT_TAG: ${{ inputs.tag }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           tag="${RELEASE_TAG:-$INPUT_TAG}"
           if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Expected a stable release tag like v0.13.0, got '$tag'" >&2
-            exit 1
-          fi
-          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
-          if [ "$tag" != "$latest" ]; then
-            echo "Only the release marked latest ($latest) is deployed, got '$tag'" >&2
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -112,6 +108,25 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      # Checked here, inside the concurrency group, rather than before the build: a run whose
+      # build finishes after a newer release's deploy must not overwrite it. The npm check also
+      # covers a manual run, which does not go through the Release run's success.
+      - name: Confirm the tag is still the latest release on GitHub and npm
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          if [ "$TAG" != "$latest" ]; then
+            echo "Only the release marked latest ($latest) is deployed, got '$TAG'" >&2
+            exit 1
+          fi
+          npm_latest="$(curl -fsSL https://registry.npmjs.org/monodocs/latest | jq -r .version)"
+          if [ "${TAG#v}" != "$npm_latest" ]; then
+            echo "npm latest is $npm_latest, not ${TAG#v}; the site follows what npm installs" >&2
+            exit 1
+          fi
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
