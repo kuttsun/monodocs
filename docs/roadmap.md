@@ -267,9 +267,13 @@ measurement sets:
    notation has to agree with them, but it does not settle them: the copy measured above is
    a browser's selection of MathML, which no choice of delimiter changes.
 
-The Windows check is still to be made, and how formulas set there is unknown until it is. The
-decision to make math a 1.x feature stands on the Linux result; what Windows shows updates the
-conditions and the scope. The `mathvariant` loss is Chromium's and is expected there as well.
+**On Windows** the same HTML, opened in a Chromium-based browser and printed to PDF, set well:
+every variable and Greek letter was drawn (Cambria Math ships with Windows), the structures that set
+well on Linux set as well, and the accents sat centred over their letters, better than with Latin
+Modern Math. `\mathbb` and `\mathbf` were lost in the same way — italic 𝑅, 𝑁, 𝐸, 𝐵, 𝑧 — confirming
+that condition 2 is needed on every platform. `aligned` kept its wide gap before `=`, and the
+brackets of the continued fraction printed heavier than the rest. The decision stands on both
+platforms, and the conditions are unchanged.
 
 ---
 
