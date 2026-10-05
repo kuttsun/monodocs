@@ -174,13 +174,20 @@ export function pdfTocHtml(toc: PdfToc, numbers: string[] | undefined, width: nu
 /**
  * Browser-side lookup of a target, shared by the probe and the injection so the two cannot find
  * different elements: the article whose `data-route` is the route, and inside it the element whose
- * ID is the ID — compared as a string, so no ID has to survive being written as a selector.
+ * ID is the ID — compared as a string, so no ID has to survive being written as a selector. Where
+ * one page holds two elements with that ID (an explicit `[[h1]]` anchor and the ID an untitled
+ * heading is given), a heading wins, since every line with an ID points at a heading. The index is
+ * built once per script, so a page with thousands of IDs is walked once rather than per line.
  */
 const FIND_TARGET =
-  `function findTarget(t){var arts=document.querySelectorAll('article.page');` +
-  `for(var i=0;i<arts.length;i++){if(arts[i].getAttribute('data-route')!==t.route)continue;` +
-  `if(t.id===undefined)return arts[i];var all=arts[i].querySelectorAll('[id]');` +
-  `for(var k=0;k<all.length;k++){if(all[k].id===t.id)return all[k];}return null;}return null;}`;
+  `var index=null;function findTarget(t){if(!index){index={};` +
+  `document.querySelectorAll('article.page').forEach(function(a){var r=a.getAttribute('data-route');` +
+  `if(Object.prototype.hasOwnProperty.call(index,r))return;var ids=new Map();` +
+  `a.querySelectorAll('[id]').forEach(function(el){var prev=ids.get(el.id);` +
+  `if(!prev||(!/^H[1-6]$/.test(prev.tagName)&&/^H[1-6]$/.test(el.tagName)))ids.set(el.id,el);});` +
+  `index[r]={article:a,ids:ids};});}` +
+  `if(!Object.prototype.hasOwnProperty.call(index,t.route))return null;var e=index[t.route];` +
+  `return t.id===undefined?e.article:e.ids.get(t.id)||null;}`;
 
 /**
  * For each target, whether it was found and whether it is printed: "missing", "hidden", or "ok".
