@@ -13,37 +13,71 @@ name: Deploy site
 #
 # The site is served from the project-pages subpath (https://<owner>.github.io/monodocs/),
 # so the build sets SITE_BASE=/monodocs/ (see site/.vitepress/config.ts).
+#
+# The site documents the released package, so it is deployed from the latest stable release and
+# never from main: a push to main would publish features no installable version has yet.
+#
+# - Automatically, after the Release workflow (release.yml) succeeds for a stable tag. Waiting
+#   for it keeps the site from describing a version whose npm publish failed. A prerelease
+#   run is skipped: it goes to the npm `next` dist-tag and must not replace the `latest` docs.
+# - By hand, from main, with the tag of the latest stable release; any other tag is refused so
+#   that a redeploy cannot roll the site back.
+#
+# Both run on main (workflow_run always uses the default branch), so the github-pages
+# environment's `main` deployment rule covers them; the tag is only what gets checked out.
+# A site-only fix on main therefore reaches the live site with the next release.
+#
+# The gate is the whole Release run, binaries included. If a job fails after npm publish
+# succeeded, re-run the failed jobs of that Release run (its completion triggers this again)
+# or redeploy by hand.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'site/**'
-      - 'app/**'
-      - 'examples/**'
-      - 'scripts/**'
-      - 'Dockerfile.dev'
-      - '.github/workflows/deploy-site.yml'
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Latest stable release tag to redeploy (for example v0.13.0)
+        required: true
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow one concurrent deployment; let an in-progress run finish rather than cancel it.
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   build:
     name: Build site (Docker)
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'release' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       !contains(github.event.workflow_run.head_branch, '-'))
 
     steps:
-      - name: Check out repository
+      - name: Resolve the release tag
+        id: release
+        shell: bash
+        env:
+          # For a release-triggered Release run, head_branch is the release tag.
+          RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="${RELEASE_TAG:-$INPUT_TAG}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a stable release tag like v0.13.0, got '$tag'" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the release tag
         uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ steps.release.outputs.tag }}
 
       # First use of scripts/app.sh builds the monodocs-dev image from Dockerfile.dev.
       # site-build.sh assumes app dependencies are present, so install them here.
@@ -64,11 +98,39 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    # Allow one concurrent deployment; let an in-progress run finish rather than cancel it.
+    # Set on the job so that runs whose build is skipped never join the group. `queue: max`
+    # keeps a pending deploy from being replaced by a later one: with the default single
+    # slot, a stale run arriving last would cancel the pending latest deploy and then fail
+    # its own check below, leaving the site on the old release.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+      queue: max
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      # Checked here, inside the concurrency group, rather than before the build: a run whose
+      # build finishes after a newer release's deploy must not overwrite it. The npm check also
+      # covers a manual run, which does not go through the Release run's success.
+      - name: Confirm the tag is still the latest release on GitHub and npm
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
+          if [ "$TAG" != "$latest" ]; then
+            echo "Only the release marked latest ($latest) is deployed, got '$TAG'" >&2
+            exit 1
+          fi
+          npm_latest="$(curl -fsSL https://registry.npmjs.org/monodocs/latest | jq -r .version)"
+          if [ "${TAG#v}" != "$npm_latest" ]; then
+            echo "npm latest is $npm_latest, not ${TAG#v}; the site follows what npm installs" >&2
+            exit 1
+          fi
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-monodocs 公式サイト（ランディング + ドキュメント）。**VitePress** で構築し、`.github/workflows/deploy-site.yml` が GitHub Pages へデプロイする。
+monodocs 公式サイト（ランディング + ドキュメント）。**VitePress** で構築し、`.github/workflows/deploy-site.yml` が、安定版のリリースで Release ワークフローが成功した後に GitHub Pages へデプロイする。そのため公開サイトは `main` ではなく最新のリリース済みバージョンを説明する。再デプロイは、`main` から最新の安定版タグを指定してワークフローを手動実行する。サイトだけの修正（`site/` の依存更新を含む）も、公開サイトに載るのは次のリリース時になる。
 
 `app/`（ツール本体の pnpm workspace）とは独立したスタンドアロン npm パッケージ。ビルドはすべて Docker 内で行い、ホストに Node / npm を入れる必要はない。
 
