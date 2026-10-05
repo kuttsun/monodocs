@@ -367,6 +367,15 @@ describe(":sectnums: while numbering is on", () => {
     await expect(build(root, "numbering:\n  sections: 3\n")).resolves.toContain("I: First Part");
   });
 
+  it("does not take a book's part for the page title when the book has no title", async () => {
+    const root = await tree("partnums-untitled", {
+      "book.adoc": ":doctype: book\n:partnums:\n\nIntro.\n\n= First Part\n\n== Chapter\n",
+    });
+    const html = await build(root, "numbering:\n  sections: 3\n");
+    expect(html).toMatch(/<h1 id="book-_first_part" class="sect0">I: First Part<\/h1>/);
+    expect(siteData(html).pages[0]!.headings.find((h) => h.text === "Chapter")!.number).toBe("1.1");
+  });
+
   it("leaves a discrete heading alone", async () => {
     const root = await tree("sectnums-discrete", { "doc.adoc": "= T\n\n[discrete]\n== D\n" });
     await expect(build(root, "numbering:\n  sections: 3\n")).resolves.toContain("<h2");

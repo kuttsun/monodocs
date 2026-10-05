@@ -44,11 +44,12 @@ export function numberSidebar(nodes: SidebarNode[]): {
 }
 
 /**
- * The classes Asciidoctor gives a heading that is not a section: `[discrete]`, and its older
- * spelling `[float]`, which it renders with `class="float"` rather than `discrete` (measured with
- * @asciidoctor/core 4.1).
+ * The classes of headings that are neither a numbered section nor the page title: `[discrete]`, and
+ * its older spelling `[float]`, which Asciidoctor renders with `class="float"` rather than
+ * `discrete`; and `sect0`, a book's part, an h1 that `:partnums:` labels by a scheme of its own and
+ * that is the first h1 of a book with no document title (measured with @asciidoctor/core 4.1).
  */
-const NOT_A_SECTION = ["discrete", "float"];
+const NOT_A_SECTION = ["discrete", "float", "sect0"];
 
 function hasClass(node: Element, name: string): boolean {
   const value: unknown = node.properties?.className;
