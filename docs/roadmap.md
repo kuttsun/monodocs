@@ -225,40 +225,51 @@ this reason instead of the one that has stopped being true.
 quadratic formula, an integral and a sum with limits, a 4×4 matrix with dots, `cases`, `aligned`,
 a limit with stretchy parentheses, a nested continued fraction, `\operatorname`, `\text{速度}`, and a
 series wider than half the page — was built with monodocs, each formula rendered by KaTeX 0.16.47
-with `output: "mathml"`, and printed by the development image's Chromium 151 on Linux:
+with `output: "mathml"`, and printed by the development image's Chromium 151 on Linux, first as the
+image is and then with Latin Modern Math (`fonts-lmodern`) installed:
 
-- **The output carries no script and no stylesheet.** 21 formulas came to 13.6 KB of MathML, the
-  largest 2.7 KB.
-- **Without a MATH font the document is unreadable.** The development image has none, and every
-  variable came out as tofu: Chromium draws `<mi>x</mi>` as the mathematical italic `𝑥` (U+1D465),
-  which no installed font covers. **The font check (24.3.3) missed it**, reporting three characters
+- **KaTeX's MathML output adds no script and no stylesheet.** 21 formulas came to 13.6 KB of MathML,
+  the largest 2.7 KB.
+- **As the image is, the document is unreadable.** Chromium draws a single-letter `<mi>x</mi>` as the
+  mathematical italic `𝑥` (U+1D465), and no font in the image covers those code points, so every
+  variable came out as tofu. **The font check (24.3.3) missed it**, reporting three characters
   (`⃗ ⋮ ⋱`): it measures the text as written, `x`, not the code point Chromium substitutes.
-- **With Latin Modern Math installed, the formulas are good.** Chromium picked it up through the
-  `math` generic family with no configuration. Fractions, radicals, limits on integrals and sums,
-  the matrix, `cases`, `aligned`, stretchy brackets, Japanese inside `\text{}`, and the wide series
-  all set properly on A4, and the font check stayed silent.
-- **`\mathbb`, `\mathbf`, and `\mathcal` are lost.** KaTeX writes them as `mathvariant`
-  attributes, which MathML Core — and so Chromium — ignores apart from the automatic italic: `ℝ`
-  prints as a plain R and the bold vectors `𝐄`, `𝐁` as ordinary letters, which changes what the
-  formula says.
-- **Copying is poor.** A copied formula is its tokens one per line, as mathematical italic code
-  points, with the radical and the fraction bar gone. The text search would index the rendered
-  characters and the TeX annotation run together.
+- **With Latin Modern Math installed, the formulas set well, apart from accents.** Chromium picked it
+  up through the `math` generic family with no configuration, and the font check reported nothing.
+  Fractions, radicals, limits on integrals and sums, the matrix, `cases`, stretchy brackets, Japanese
+  inside `\text{}`, and the wide series all set properly on A4. Accents sit off-centre on italic
+  letters (the `\vec` arrow left of its letter, the `\dot` dot shifted), and `aligned` leaves a wide
+  gap before `=`.
+- **`\mathbb` and `\mathbf` are lost.** KaTeX writes them as `mathvariant` attributes. MathML Core,
+  and so Chromium, honours only `mathvariant="normal"`, which turns the automatic italic off, and
+  ignores the other values: `ℝ` and `ℕ` print as italic 𝑅 and 𝑁, and the bold vectors `𝐄`, `𝐁` as
+  italic 𝐸, 𝐵, the same letters as a plain variable. That changes what the formula says.
+  `\mathcal` becomes the same kind of attribute (`mathvariant="script"`); it was not on the page.
+- **Copying is poor.** A copied formula is its tokens one per line, the letters as mathematical
+  italic code points, with the radical and the fraction bar gone. The search index was not measured:
+  a plain `textContent` of a formula gives the characters as written run together with the TeX
+  annotation, which is not something to index as it is.
 
-**Decision: math becomes a 1.x feature**, with the notation chosen in the open, on three conditions
-the measurement sets:
+**Decision: math becomes a 1.x feature**, with the notation chosen in the open, on conditions the
+measurement sets:
 
-1. The font check covers formulas: it detects the absence of an OpenType MATH font, or measures the
-   code points Chromium actually draws, so a machine without one fails loudly rather than shipping
-   tofu.
+1. The font check covers formulas, in both of the ways they fail: it measures the code points
+   Chromium actually draws (the mathematical italic letters, not the letters as written), and it
+   reports when the font chosen for `math` has no OpenType MATH table, since layout — stretchy
+   brackets, radicals, limits — depends on one even when every glyph is present.
 2. `mathvariant` is resolved at build time into Unicode mathematical alphanumerics (`\mathbf{E}` →
    `𝐄`, `\mathbb{R}` → `ℝ`), since the browser will not apply it.
-3. The font requirement is stated where an author will read it: PDF output and a reader's browser
-   both need a MATH font (Cambria Math ships with Windows; Linux needs a package such as
-   `fonts-lmodern`), as CJK and emoji already do (24.3.3).
+3. A MATH font is a stated requirement of monodocs for math, on the machine that prints and in the
+   reader's browser — Cambria Math ships with Windows; Linux needs a package such as `fonts-lmodern` —
+   documented where the CI guide documents the CJK and emoji fonts (24.3.3).
+4. What a reader copies and what search indexes are designed and verified before math ships. The
+   notation decides what an author writes; it does not decide these, and the copy measured above is
+   a browser's selection of MathML, which no choice of delimiter changes.
 
-Copying and search are part of the notation discussion rather than conditions: what a reader copies
-and what search indexes follow from what an author writes. The Windows check is still to be made.
+The Windows check is still to be made. It confirms the conditions rather than reopening the
+decision: Windows ships a MATH font, so it can only do better than the bare Linux image, and the
+`mathvariant` loss is Chromium's on every platform.
+
 ---
 
 ## 7. Output Formats
