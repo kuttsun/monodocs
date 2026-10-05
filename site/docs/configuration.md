@@ -958,9 +958,10 @@ pdf:
   still disagrees with itself **fails the build** (`pdf/toc-not-converged`) rather than shipping a
   table that is usually right. A line whose section cannot be found in the page fails the build too
   (`pdf/toc-unresolved`).
-- **It costs a second print.** Measured on Linux with a document of about a hundred sheets in
-  Japanese with client-mode Mermaid diagrams, the PDF build took about 2.1 s without the table and
-  3.1 s with it. That is why it is off by default.
+- **It costs a second print.** Measured with a document of about a hundred sheets in Japanese with
+  client-mode Mermaid diagrams, the PDF build took about 2.1 s without the table and 3.1 s with it
+  on a Linux workstation, and 3.9 s and 6.1 s on a GitHub-hosted Windows runner (different machines,
+  so compare each pair, not the two platforms). That is why it is off by default.
 - **PDF only.** The HTML has the sidebar, and no sheet to number; printing the HTML from a browser
   does not add a table.
 - **No running headers.** "The current chapter at the top of every sheet" needs a different
