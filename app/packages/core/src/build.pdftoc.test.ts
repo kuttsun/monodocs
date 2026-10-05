@@ -10,7 +10,12 @@ import { MonodocsError } from "./diagnostics";
 import { pageText } from "./pdfText.testutil";
 import type { PageLike } from "./pipeline/browser";
 import { buildPdfToc, pdfTocHtml, resolveDestPages, tocTargets } from "./pipeline/pdfToc";
-import { printWithToc, type PdfGenerator, type PdfRenderOptions } from "./pipeline/renderPdf";
+import {
+  createPuppeteerPdfGenerator,
+  printWithToc,
+  type PdfGenerator,
+  type PdfRenderOptions,
+} from "./pipeline/renderPdf";
 import type { Page, SidebarNode } from "./types";
 
 /**
@@ -339,6 +344,23 @@ describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => 
       expected += `${number} ${title}${sheet}`;
     }
     expect(tocText).toBe(expected);
+
+    // The bookmarks and the viewer's page labels agree with the table: the first bookmark opens the
+    // sheet the table lists for "1 Opening", and the labels number the body — the table's own
+    // sheets included — from 1 after the cover, so the viewer shows the number the table prints.
+    const doc = await PDFDocument.load(bytes);
+    const outlines = doc.catalog.lookup(PDFName.of("Outlines"), PDFDict);
+    const firstMark = outlines.lookup(PDFName.of("First"), PDFDict);
+    const markDest = firstMark.lookup(PDFName.of("Dest"), PDFArray).get(0);
+    const markSheet = doc.getPages().findIndex((p) => p.ref === markDest) - cover + 1;
+    expect(markSheet).toBe(await sheetOf(bytes, "1 Opening", cover, 1));
+    const nums = doc.catalog
+      .lookup(PDFName.of("PageLabels"), PDFDict)
+      .lookup(PDFName.of("Nums"), PDFArray);
+    expect(nums.get(2)?.toString()).toBe(String(cover));
+    const bodyLabel = nums.lookup(3, PDFDict);
+    expect(bodyLabel.get(PDFName.of("S"))?.toString()).toBe("/D");
+    expect(bodyLabel.get(PDFName.of("St"))?.toString() ?? "1").toBe("1");
     // pageBreakLevel put each h2 on a sheet of its own, so the sheets differ.
     expect(await sheetOf(bytes, "1.2 Beta section", cover, 1)).toBeGreaterThan(
       (await sheetOf(bytes, "1.1 Alpha section", cover, 1))!,
@@ -373,6 +395,35 @@ describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => 
     const guide = await sheetOf(bytes, "2.1.1 Guide", 0, 1);
     expect(guide).toBeGreaterThan(3);
     expect(await pageText(bytes, 0)).toMatch(new RegExp(`2\\.1\\.1 Guide${guide}$`));
+  });
+
+  it("fails before printing when a line's section is not in the document", async () => {
+    const generator = createPuppeteerPdfGenerator();
+    try {
+      const error = await generator
+        .render(
+          '<html><body><main id="content"><article class="page" data-route="/">' +
+            '<h1 id="index">Home</h1></article></main></body></html>',
+          {
+            pageSize: "A4",
+            margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
+            printBackground: true,
+            waitForMermaid: false,
+            toc: {
+              title: "Contents",
+              entries: [
+                { depth: 1, title: "Home", target: { route: "/" } },
+                { depth: 2, title: "Gone", target: { route: "/", id: "index-gone" } },
+              ],
+            },
+          },
+        )
+        .catch((e) => e);
+      expect((error as MonodocsError).code).toBe("pdf/toc-unresolved");
+      expect((error as Error).message).toContain("index-gone");
+    } finally {
+      await generator.close();
+    }
   });
 
   it("names its anchors so that no ID in the document can be taken for one", async () => {
