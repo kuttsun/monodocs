@@ -220,6 +220,45 @@ v0.14 answers this with a measurement rather than an opinion: a sample document 
 built to HTML and PDF, on both supported platforms, looked at. If the result is good, math is a 1.x
 feature with a notation chosen in the open; if it is not, the limitation stays and syntax.md records
 this reason instead of the one that has stopped being true.
+
+**Measured (v0.14).** A Japanese page with seven inline and fourteen display formulas — the
+quadratic formula, an integral and a sum with limits, a 4×4 matrix with dots, `cases`, `aligned`,
+a limit with stretchy parentheses, a nested continued fraction, `\operatorname`, `\text{速度}`, and a
+series wider than half the page — was built with monodocs, each formula rendered by KaTeX 0.16.47
+with `output: "mathml"`, and printed by the development image's Chromium 151 on Linux:
+
+- **The output carries no script and no stylesheet.** 21 formulas came to 13.6 KB of MathML, the
+  largest 2.7 KB.
+- **Without a MATH font the document is unreadable.** The development image has none, and every
+  variable came out as tofu: Chromium draws `<mi>x</mi>` as the mathematical italic `𝑥` (U+1D465),
+  which no installed font covers. **The font check (24.3.3) missed it**, reporting three characters
+  (`⃗ ⋮ ⋱`): it measures the text as written, `x`, not the code point Chromium substitutes.
+- **With Latin Modern Math installed, the formulas are good.** Chromium picked it up through the
+  `math` generic family with no configuration. Fractions, radicals, limits on integrals and sums,
+  the matrix, `cases`, `aligned`, stretchy brackets, Japanese inside `\text{}`, and the wide series
+  all set properly on A4, and the font check stayed silent.
+- **`\mathbb`, `\mathbf`, and `\mathcal` are lost.** KaTeX writes them as `mathvariant`
+  attributes, which MathML Core — and so Chromium — ignores apart from the automatic italic: `ℝ`
+  prints as a plain R and the bold vectors `𝐄`, `𝐁` as ordinary letters, which changes what the
+  formula says.
+- **Copying is poor.** A copied formula is its tokens one per line, as mathematical italic code
+  points, with the radical and the fraction bar gone. The text search would index the rendered
+  characters and the TeX annotation run together.
+
+**Decision: math becomes a 1.x feature**, with the notation chosen in the open, on three conditions
+the measurement sets:
+
+1. The font check covers formulas: it detects the absence of an OpenType MATH font, or measures the
+   code points Chromium actually draws, so a machine without one fails loudly rather than shipping
+   tofu.
+2. `mathvariant` is resolved at build time into Unicode mathematical alphanumerics (`\mathbf{E}` →
+   `𝐄`, `\mathbb{R}` → `ℝ`), since the browser will not apply it.
+3. The font requirement is stated where an author will read it: PDF output and a reader's browser
+   both need a MATH font (Cambria Math ships with Windows; Linux needs a package such as
+   `fonts-lmodern`), as CJK and emoji already do (24.3.3).
+
+Copying and search are part of the notation discussion rather than conditions: what a reader copies
+and what search indexes follow from what an author writes. The Windows check is still to be made.
 ---
 
 ## 7. Output Formats
