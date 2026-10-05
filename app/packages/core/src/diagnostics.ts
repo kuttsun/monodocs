@@ -57,6 +57,8 @@ export const DIAGNOSTIC_CODES = [
   "page/no-renderer",
   "page/no-title",
   "pdf/margin-too-small",
+  "pdf/toc-not-converged",
+  "pdf/toc-unresolved",
   "sidebar/group-empty",
   "sidebar/item-duplicate",
   "sidebar/item-hidden",

@@ -518,6 +518,18 @@ function buildConfigFileSchema() {
             .strict()
             .optional(),
           /**
+           * A table of contents printed in front of the body, with the sheet each entry starts on
+           * (24.9). PDF only. `depth` is the deepest heading level listed; it defaults to 2 because
+           * a deeper table is longer and has more lines that could wrap.
+           */
+          toc: z
+            .object({
+              enabled: z.boolean().optional(),
+              depth: z.number().int().min(2).max(6).optional(),
+            })
+            .strict()
+            .optional(),
+          /**
            * One line of text printed diagonally behind the content of every sheet (24.10), or
            * `false`. Nothing else is configurable: no image, angle, font, or opacity (24.6).
            */
@@ -726,6 +738,8 @@ export type ResolvedConfig = {
   pdfFooter: string;
   /** Whether the PDF starts with a cover generated from `title` and `document` (24.8). */
   pdfCover: boolean;
+  /** The printed table of contents (24.9): whether it is on, and the deepest heading listed. */
+  pdfToc: { enabled: boolean; depth: number };
   /** The watermark printed on every sheet (24.10); undefined for none. */
   pdfWatermark?: string;
 };
@@ -1251,6 +1265,10 @@ export async function loadConfig(
     pdfHeader: resolveBand(fileConfig.pdf?.header, EMPTY_PDF_BAND),
     pdfFooter: resolveBand(fileConfig.pdf?.footer, DEFAULT_PDF_FOOTER),
     pdfCover: fileConfig.pdf?.cover?.enabled ?? false,
+    pdfToc: {
+      enabled: fileConfig.pdf?.toc?.enabled ?? false,
+      depth: fileConfig.pdf?.toc?.depth ?? 2,
+    },
     pdfWatermark: fileConfig.pdf?.watermark || undefined,
   };
 }

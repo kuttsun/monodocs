@@ -425,13 +425,13 @@ has to make are still open.
 
 **A table of contents on paper** ([roadmap.md](roadmap.md) 24.9)
 
-- [ ] Every heading that can be listed gets a named destination (`h-{id}`), the way pages already get `page-{id}`
-- [ ] `pdf.toc.enabled: true` prints a table of contents whose page numbers are read from the delivered PDF, not from the first pass
-- [ ] After substitution the destinations are read again and compared against the numbers printed. A mismatch retries within a fixed bound, and a document that does not converge **fails** rather than shipping a plausible list — a page number that is usually right is worse than none
-- [ ] The placeholder reserves the width of the largest possible page number and the column is set in tabular figures, so a number growing a digit cannot move the page it points at
-- [ ] The cost of the second render is measured on a document of a hundred-odd sheets, on Linux and Windows, with CJK text and with client-mode Mermaid, and recorded. `pdf.toc` stays off by default
-- [ ] A document with `pageBreakLevel`, a cover, a table of contents, and numbering on comes out with the four agreeing: the number in the table of contents is the sheet the section starts on
-- [ ] Running headers are not implemented, and [roadmap.md](roadmap.md) 24.9 records why the two-pass machinery does not reach them: Chromium implements neither `string-set` nor `string()`, and its own header template substitutes only its fixed classes
+- [x] Every heading that can be listed gets a named destination (`h-{id}`), the way pages already get `page-{id}` — as built, an ASCII `mdtoc-{n}` per target, the way the bookmarks use `mdpdf-{n}` ([roadmap.md](roadmap.md) 24.9)
+- [x] `pdf.toc.enabled: true` prints a table of contents whose page numbers are read from the delivered PDF, not from the first pass
+- [x] After substitution the destinations are read again and compared against the numbers printed. A mismatch retries within a fixed bound, and a document that does not converge **fails** rather than shipping a plausible list — a page number that is usually right is worse than none
+- [x] The placeholder reserves the width of the largest possible page number and the column is set in tabular figures, so a number growing a digit cannot move the page it points at
+- [ ] The cost of the second render is measured on a document of a hundred-odd sheets, on Linux and Windows, with CJK text and with client-mode Mermaid, and recorded. `pdf.toc` stays off by default — Linux measured and recorded in [roadmap.md](roadmap.md) 24.9 (2.13 s → 3.06 s for 101 sheets); Windows still to be measured
+- [x] A document with `pageBreakLevel`, a cover, a table of contents, and numbering on comes out with the four agreeing: the number in the table of contents is the sheet the section starts on
+- [x] Running headers are not implemented, and [roadmap.md](roadmap.md) 24.9 records why the two-pass machinery does not reach them: Chromium implements neither `string-set` nor `string()`, and its own header template substitutes only its fixed classes
 
 **Math** ([roadmap.md](roadmap.md) 6.4)
 

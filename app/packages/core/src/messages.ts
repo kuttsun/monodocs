@@ -192,6 +192,12 @@ const EN = {
 
   // ---- PDF ----
   "pdf.pageLoadFailed": "Failed to load the page for PDF output: {detail}",
+  "pdf.tocNotConverged":
+    "The table of contents did not settle within {passes} prints: filling in its page numbers " +
+    "kept moving a section to another sheet. No PDF was written, because a page number that is " +
+    "usually right is worse than none. Lower pdf.toc.depth, or turn pdf.toc off.",
+  "pdf.tocUnresolved":
+    'The table of contents cannot number "{target}": the PDF has no destination for it.',
   "pdf.footerMarginTooSmall":
     "pdf.margin.bottom ({margin}) is smaller than the page-number footer needs ({needed}). The " +
     "footer is still drawn, against the paper edge — a supplied fragment does not hide itself the " +
@@ -486,6 +492,11 @@ const JA: Record<MessageKey, string> = {
     "`pnpm add puppeteer-core` を実行してください。",
 
   "pdf.pageLoadFailed": "PDF 用ページの読み込みに失敗しました: {detail}",
+  "pdf.tocNotConverged":
+    "目次が {passes} 回の印刷で定まりませんでした。ページ番号を書き込むたびに、節が別の紙へ" +
+    "移ります。たいてい正しいページ番号は無いより悪いので、PDF は書き出していません。" +
+    "pdf.toc.depth を浅くするか、pdf.toc を無効にしてください。",
+  "pdf.tocUnresolved": '目次が "{target}" に番号を付けられません。PDF にその宛先がありません。',
   "pdf.footerMarginTooSmall":
     "pdf.margin.bottom（{margin}）がページ番号フッタに必要な高さ（{needed}）より小さいです。" +
     "フッタは描かれますが紙の端に貼りつきます（渡したフラグメントは Chromium 組み込みのものと" +

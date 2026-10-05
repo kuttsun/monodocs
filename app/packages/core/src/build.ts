@@ -32,6 +32,7 @@ import {
 import { createPuppeteerPdfGenerator, type PdfGenerator } from "./pipeline/renderPdf.js";
 import { sidebarToOutline } from "./pipeline/pdfOutline.js";
 import { buildPdfCover } from "./pipeline/pdfCover.js";
+import { buildPdfToc } from "./pipeline/pdfToc.js";
 import { renderSingleHtmlParts } from "./pipeline/renderSingleHtml.js";
 import {
   checkBudget,
@@ -341,6 +342,9 @@ export async function buildSite(
               pageLabel: resolvedLabels.labels.cover,
               watermark: config.pdfWatermark,
             })
+          : undefined,
+        toc: config.pdfToc.enabled
+          ? buildPdfToc(sidebar, pages, config.pdfToc.depth, resolvedLabels.labels.contents)
           : undefined,
         header: config.pdfHeader,
         footer: config.pdfFooter,
