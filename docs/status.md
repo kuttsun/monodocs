@@ -29,18 +29,13 @@ Last updated: 2026-10-05
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
-and it, v0.9, v0.10, v0.11, v0.12, and v0.13 are released.
+and it, v0.9, v0.10, v0.11, v0.12, v0.13, and v0.14 are released.
 
-0.14.0 has not been released yet. Every item of its checklist has landed: section numbering
-(`numbering.sections`), the printed table of contents (`pdf.toc`), and the math measurement, which
-makes math a 1.x feature on recorded conditions. Neither feature changes what an existing
-configuration builds — both are off by default — and what every build does differently is small:
-the client script carries the code that shows numbers, unused without them; the page data carries
-the label for the printed table of contents (`contents`); and an error from
-`sidebar.items` is now reported before post-processing rather than after it. As with 0.13.0, it goes
-out without a prerelease, the published package and the release binaries are verified after
-`latest` moves, and anything found is fixed forward in a patch release. 0.13.0's Windows checks a
-person has to make are still open.
+0.14.0 is released: section numbering (`numbering.sections`), the printed table of contents
+(`pdf.toc`), and the math measurement. Neither feature changes what an existing configuration
+builds, so, like 0.13.0, it went out without a prerelease, and the published package, the release
+binaries, and the HTML they produce were verified after `latest` moved. The Windows checks a person
+has to make are still open, for 0.14.0 as for 0.13.0.
 
 ## Completion Criteria Status
 
@@ -446,13 +441,13 @@ person has to make are still open.
 
 **Release**
 
-- [ ] Publish `0.14.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.14.0` — not the default `next`, which still points at 0.13.0 until it is moved below and would skip every 0.14 step while passing — confirming that the log says `verifying monodocs 0.14.0` and that the steps gated on 0.14 ran rather than being skipped: section numbering and the printed table of contents, which #150 adds, so it is merged before this runs
-- [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms
+- [x] Publish `0.14.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.14.0` — not the default `next`, which still points at 0.13.0 until it is moved below and would skip every 0.14 step while passing — confirming that the log says `verifying monodocs 0.14.0` and that the steps gated on 0.14 ran rather than being skipped: section numbering and the printed table of contents, which #150 adds, so it is merged before this runs. Published from CI on the `v0.14.0` tag, after the `npm` environment was approved, carrying the `latest` dist-tag. The run with `dist_tag: 0.14.0` logs `verifying monodocs 0.14.0`, and both 0.14 steps ran and passed on Linux x64 and Windows x64: `:sectnums:` was reported as `numbering/sectnums`, and the printed table read Alpha 2, Alpha one 2, Alpha two 4, Beta 5, Beta one 7 on both, each the sheet its heading is on
+- [x] Verify the release binaries through `verify-release-binaries.yml` on both platforms: the run the release triggered passes sixteen checks on each
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.14.0` assets on a Windows 11 host
-- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
-- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: with `numbering.sections` on, the numbers in the headings, the sidebar, and the in-page table of contents agree, and searching a section number opens that section
+- [x] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md)). Run in a `debian:stable-slim` container with no Node.js, against the published `v0.14.0` assets: all sixteen checks pass
+- [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: with `numbering.sections` on, the numbers in the headings, the sidebar, and the in-page table of contents agree, and searching a section number opens that section. The asset was checked against its `.sha256`, run with a minimal environment on `examples/en` with `numbering.sections: 3`, and its output driven in Chromium: on all 20 pages the sidebar, the h1, and every h2/h3 in the in-page table of contents carry the same numbers (79 headings, no mismatch); searching `1.1` lists that section first and `Enter` opens it; a word search returns results; previous/next and dark mode work; the footer reads `monodocs v0.14.0`; and there are no script errors
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a PDF with `pdf.toc` and numbering on opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
-- [ ] Move the `next` dist-tag onto `0.14.0`. The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.14.0` in the version change itself, since the site is now deployed from the release; if a fix-forward version ships instead of 0.14.0, its own version change re-pins it
+- [x] Move the `next` dist-tag onto `0.14.0`. The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.14.0` in the version change itself, since the site is now deployed from the release; if a fix-forward version ships instead of 0.14.0, its own version change re-pins it: `next` and `latest` both point at `0.14.0`, and the deployed CI guide pins `monodocs@0.14.0` in English and Japanese
 
 ## Supported Syntax
 
