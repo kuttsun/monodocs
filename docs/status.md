@@ -29,17 +29,13 @@ Last updated: 2026-10-05
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
-and it, v0.9, v0.10, v0.11, and v0.12 are released.
+and it, v0.9, v0.10, v0.11, v0.12, and v0.13 are released.
 
-0.13.0 has not been released yet. Every item of its checklist has landed: the size report and
-`assets.budget`, `pdf.watermark`, the generated cover, and `sources.lineBreak`. None of them changes
-what an existing configuration builds — each is off or unchanged by default — but three things every
-build does are different: the build now prints the size of what it wrote, code highlighting no
-longer depends on earlier blocks, so a language embedded in a code sample is now coloured on the
-first build too, and a Mermaid diagram opens in the image lightbox. Because none of it breaks an
-existing configuration, 0.13.0 goes out without a prerelease — the first release to do so — and the
-published package and the release binaries are verified after `latest` moves; anything found is
-fixed forward in a patch release.
+0.13.0 is released: the size report and `assets.budget`, `pdf.watermark`, the generated cover, and
+`sources.lineBreak`. None of them changes what an existing configuration builds, so it went out
+without a prerelease — the first release to do so — and the published package, the release
+binaries, and the HTML they produce were verified after `latest` moved. The Windows checks a person
+has to make are still open.
 
 ## Completion Criteria Status
 
@@ -407,11 +403,11 @@ fixed forward in a patch release.
 
 **Release**
 
-- [ ] Publish `0.13.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.13.0` — not the default `next`, which still points at 0.12.0 until it is moved below and would skip every 0.13 step while passing — confirming that the log says `verifying monodocs 0.13.0` and that the steps gated on 0.13 ran rather than being skipped: `sources.lineBreak`, the size report and `assets.budget`, `pdf.watermark`, and the Mermaid lightbox markup
-- [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms
+- [x] Publish `0.13.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.13.0` — not the default `next`, which still points at 0.12.0 until it is moved below and would skip every 0.13 step while passing — confirming that the log says `verifying monodocs 0.13.0` and that the steps gated on 0.13 ran rather than being skipped: `sources.lineBreak`, the size report and `assets.budget`, `pdf.watermark`, and the Mermaid lightbox markup. Published from CI on the `v0.13.0` tag with provenance, carrying the `latest` dist-tag. The run with `dist_tag: 0.13.0` logs `verifying monodocs 0.13.0`, and the four 0.13 steps ran and passed on both Linux x64 and Windows x64
+- [x] Verify the release binaries through `verify-release-binaries.yml` on both platforms: the run the release triggered passes sixteen checks on each
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.13.0` assets on a Windows 11 host
-- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
-- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the two new for this milestone: a Mermaid diagram opening in the lightbox and coming back on close, and a Japanese paragraph built with `sources.lineBreak: join` reading without spaces between sentences
+- [x] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md)). Run in a `debian:stable-slim` container on a Linux x64 host, with no Node.js in it, against the published `v0.13.0` assets: all sixteen checks pass. A container rather than a bare host, but it is the environment the item is about — the binary had no runtime but its own — and it closes the item 0.12.0 had to leave open
+- [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the two new for this milestone: a Mermaid diagram opening in the lightbox and coming back on close, and a Japanese paragraph built with `sources.lineBreak: join` reading without spaces between sentences. The asset was checked against its `.sha256`, run with a minimal environment, and its output opened in Chromium through thirteen checks: the sidebar rendering, navigating and marking the current page, previous/next, search returning results and highlighting them in the page it opens, `Escape` clearing the box and restoring the tree, dark mode surviving a reload, the drawer at 375px opening from the toggle and closing after a link, an alias rendering its page and rewriting the hash, an alias keeping its anchor, the footer reading `monodocs v0.13.0`, no script errors, and the two new ones — a Mermaid diagram opening in the lightbox at full width and returning to its block on close, and `examples/ja` built under `join` with no newline left between two Japanese sentences, while a hard break the author wrote and a sentence followed by Latin text keep theirs
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a watermarked PDF opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
 - [ ] Move the `next` dist-tag onto `0.13.0`, and pin the CI guide on the documentation site — English and Japanese alike — to it
 
