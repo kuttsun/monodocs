@@ -8,6 +8,15 @@ import { buildSite } from "./build";
 import { loadConfig } from "./config";
 import { MonodocsError } from "./diagnostics";
 import { pageText as rawPageText } from "./pdfText.testutil";
+import type { PageLike } from "./pipeline/browser";
+import { buildPdfToc, pdfTocHtml, resolveDestPages, tocTargets } from "./pipeline/pdfToc";
+import {
+  createPuppeteerPdfGenerator,
+  printWithToc,
+  type PdfGenerator,
+  type PdfRenderOptions,
+} from "./pipeline/renderPdf";
+import type { Page, SidebarNode } from "./types";
 
 /**
  * A sheet's text without the footer band's "n / total", the sheet's own number among the body's
@@ -20,15 +29,6 @@ async function pageText(bytes: Uint8Array, index: number, cover = 0): Promise<st
   const total = (await PDFDocument.load(bytes)).getPageCount() - cover;
   return (await rawPageText(bytes, index)).replace(`${index - cover + 1} / ${total}`, "");
 }
-import type { PageLike } from "./pipeline/browser";
-import { buildPdfToc, pdfTocHtml, resolveDestPages, tocTargets } from "./pipeline/pdfToc";
-import {
-  createPuppeteerPdfGenerator,
-  printWithToc,
-  type PdfGenerator,
-  type PdfRenderOptions,
-} from "./pipeline/renderPdf";
-import type { Page, SidebarNode } from "./types";
 
 /**
  * `pdf.toc` (roadmap 24.9): a table of contents on paper, whose page numbers are read back from
