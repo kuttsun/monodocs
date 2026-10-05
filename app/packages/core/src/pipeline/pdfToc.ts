@@ -20,7 +20,16 @@ import { escapeHtml } from "../util/html.js";
  * "Guide" are both `setup-install-guide` — and the first match would be the wrong heading, on the
  * wrong sheet, with a destination that verifies against itself.
  */
-export type PdfTocTarget = { route: string; id?: string };
+export type PdfTocTarget = {
+  route: string;
+  id?: string;
+  /**
+   * Which heading carrying `id`, counting from 0 in document order. Asciidoctor only warns about an
+   * ID used twice in one file, and both headings reach the output; without this both lines would
+   * point at the first.
+   */
+  nth?: number;
+};
 
 /** One line of the table. */
 export type PdfTocEntry = {
@@ -75,13 +84,20 @@ export function buildPdfToc(
         walk(node.children, level + 1);
         continue;
       }
+      const seen = new Map<string, number>();
       for (const heading of byId.get(node.pageId)?.headings ?? []) {
+        // Counted over every heading, listed or not, so it matches the heading's place in the page.
+        const nth = seen.get(heading.id) ?? 0;
+        seen.set(heading.id, nth + 1);
         if (heading.level < 2 || heading.level > depth) continue;
         entries.push({
           depth: level + heading.level - 1,
           number: heading.number,
           title: heading.text,
-          target: { route: node.route, id: heading.id },
+          target:
+            nth === 0
+              ? { route: node.route, id: heading.id }
+              : { route: node.route, id: heading.id, nth },
         });
       }
     }
@@ -94,10 +110,8 @@ export function buildPdfToc(
 export const PDF_TOC_ID = "monodocs-print-toc";
 
 /** The named destination for the n-th distinct target. ASCII, whatever the element ID is. */
-const TOC_ANCHOR_PREFIX = "mdtoc-";
-
-export function tocAnchor(n: number): string {
-  return `${TOC_ANCHOR_PREFIX}${n}`;
+export function tocAnchor(prefix: string, n: number): string {
+  return `${prefix}${n}`;
 }
 
 /** The distinct targets, in order: entry `i` points at `tocAnchor(targetIndex[i])`. */
@@ -105,7 +119,7 @@ export function tocTargets(toc: PdfToc): { targets: PdfTocTarget[]; targetIndex:
   const targets: PdfTocTarget[] = [];
   const index = new Map<string, number>();
   const targetIndex = toc.entries.map((entry) => {
-    const key = `${entry.target.route}\u0000${entry.target.id ?? ""}`;
+    const key = `${entry.target.route}\u0000${entry.target.id ?? ""}\u0000${entry.target.nth ?? 0}`;
     let n = index.get(key);
     if (n === undefined) {
       n = targets.length;
@@ -145,7 +159,12 @@ function tocStyle(width: number): string {
  * The table's HTML. `numbers` is undefined on the first pass, which prints the column empty.
  * Every value is escaped: titles come from documents and the label from configuration.
  */
-export function pdfTocHtml(toc: PdfToc, numbers: string[] | undefined, width: number): string {
+export function pdfTocHtml(
+  toc: PdfToc,
+  numbers: string[] | undefined,
+  width: number,
+  prefix: string,
+): string {
   const { targetIndex } = tocTargets(toc);
   const items = toc.entries
     .map((entry, i) => {
@@ -155,7 +174,7 @@ export function pdfTocHtml(toc: PdfToc, numbers: string[] | undefined, width: nu
           : `<span class="section-number">${escapeHtml(entry.number)}</span> `;
       return (
         `<li style="--monodocs-toc-depth:${entry.depth}">` +
-        `<a href="#${tocAnchor(targetIndex[i]!)}">` +
+        `<a href="#${tocAnchor(prefix, targetIndex[i]!)}">` +
         `<span class="monodocs-toc-title">${number}${escapeHtml(entry.title)}</span>` +
         `<span class="monodocs-toc-leader"></span>` +
         `<span class="monodocs-toc-page">${escapeHtml(numbers?.[i] ?? "")}</span>` +
@@ -173,35 +192,48 @@ export function pdfTocHtml(toc: PdfToc, numbers: string[] | undefined, width: nu
 
 /**
  * Browser-side lookup of a target, shared by the probe and the injection so the two cannot find
- * different elements: the article whose `data-route` is the route, and inside it the element whose
- * ID is the ID — compared as a string, so no ID has to survive being written as a selector. Where
- * one page holds two elements with that ID (an explicit `[[h1]]` anchor and the ID an untitled
- * heading is given), a heading wins, since every line with an ID points at a heading. The index is
- * built once per script, so a page with thousands of IDs is walked once rather than per line.
+ * different elements: the article whose `data-route` is the route, and inside it the `nth` heading
+ * whose ID is the ID — compared as a string, so no ID has to survive being written as a selector.
+ * Only headings are candidates, since every line with an ID points at one: another element sharing
+ * the ID (an explicit `[[h1]]` anchor and the ID an untitled heading is given) cannot be taken for
+ * it. The index is built once per script, so a page is walked once rather than once per line.
  */
 const FIND_TARGET =
   `var index=null;function findTarget(t){if(!index){index={};` +
   `document.querySelectorAll('article.page').forEach(function(a){var r=a.getAttribute('data-route');` +
   `if(Object.prototype.hasOwnProperty.call(index,r))return;var ids=new Map();` +
-  `a.querySelectorAll('[id]').forEach(function(el){var prev=ids.get(el.id);` +
-  `if(!prev||(!/^H[1-6]$/.test(prev.tagName)&&/^H[1-6]$/.test(el.tagName)))ids.set(el.id,el);});` +
+  `a.querySelectorAll('h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]').forEach(function(el){` +
+  `var list=ids.get(el.id);if(list)list.push(el);else ids.set(el.id,[el]);});` +
   `index[r]={article:a,ids:ids};});}` +
   `if(!Object.prototype.hasOwnProperty.call(index,t.route))return null;var e=index[t.route];` +
-  `return t.id===undefined?e.article:e.ids.get(t.id)||null;}`;
+  `if(t.id===undefined)return e.article;var list=e.ids.get(t.id);` +
+  `return (list&&list[t.nth||0])||null;}`;
 
 /**
- * For each target, whether it was found and whether it is printed: "missing", "hidden", or "ok".
+ * A prefix for the anchors that no ID in the document starts with. The anchors are added to a
+ * document whose IDs come from its authors — a page `mdtoc.md` with a heading "3" has the ID
+ * `mdtoc-3` — and Chromium resolves a link to the first element with its ID, so an anchor sharing
+ * one would put a line on another section's sheet, and verify there.
+ */
+const FREE_PREFIX =
+  `function freePrefix(){var ids=[];document.querySelectorAll('[id]').forEach(function(el){` +
+  `ids.push(el.id);});for(var k=0;;k++){var p='mdtoc'+(k?k:'')+'-';` +
+  `if(!ids.some(function(id){return id.indexOf(p)===0;}))return p;}}`;
+
+/**
+ * For each target, whether it was found and whether it is printed — "missing", "hidden", or "ok" —
+ * and a free prefix for the anchors ({@link FREE_PREFIX}).
  * A heading inside a closed `<details>` — an AsciiDoc collapsible block — is not on paper, though
  * Chromium still writes a destination for it, so a line for it would point at a sheet that does
  * not show it. A heading in the block's own `<summary>` is shown and is not hidden.
  */
 export function probePdfTocScript(targets: PdfTocTarget[]): string {
   return (
-    `(function(){${FIND_TARGET}var ts=${JSON.stringify(targets)};` +
-    `return JSON.stringify(ts.map(function(t){var el=findTarget(t);if(!el)return 'missing';` +
+    `(function(){${FIND_TARGET}${FREE_PREFIX}var ts=${JSON.stringify(targets)};` +
+    `var states=ts.map(function(t){var el=findTarget(t);if(!el)return 'missing';` +
     `for(var d=el.parentElement;d;d=d.parentElement){if(d.tagName==='DETAILS'&&!d.open){` +
     `var s=d.querySelector(':scope>summary');if(!s||!s.contains(el))return 'hidden';}}` +
-    `return 'ok';}));})()`
+    `return 'ok';});return JSON.stringify({states:states,prefix:freePrefix()});})()`
   );
 }
 
@@ -210,11 +242,11 @@ export function probePdfTocScript(targets: PdfTocTarget[]): string {
  * Chromium makes a named destination of every internal link's target, which is what the pages
  * are read back from. Run once; {@link setPdfTocScript} replaces the table's contents afterwards.
  */
-export function injectPdfTocScript(targets: PdfTocTarget[], html: string): string {
+export function injectPdfTocScript(targets: PdfTocTarget[], html: string, prefix: string): string {
   return (
     `(function(){${FIND_TARGET}var ts=${JSON.stringify(targets)};` +
     `for(var n=0;n<ts.length;n++){var t=findTarget(ts[n]);` +
-    `if(t){var a=document.createElement('a');a.id=${JSON.stringify(TOC_ANCHOR_PREFIX)}+n;` +
+    `if(t){var a=document.createElement('a');a.id=${JSON.stringify(prefix)}+n;` +
     `t.insertBefore(a,t.firstChild);}}` +
     `var first=document.querySelector('article.page');if(!first)return;` +
     `var nav=document.createElement('nav');nav.id=${JSON.stringify(PDF_TOC_ID)};` +

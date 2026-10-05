@@ -283,9 +283,14 @@ const TOC_MAX_PASSES = 4;
  * left to list. A target that cannot be found at all fails the build: a line with nothing to point
  * at cannot be given a number, and dropping it silently would hide a section from the table.
  */
-async function preparePdfToc(page: PageLike, toc: PdfToc): Promise<PdfToc | undefined> {
+async function preparePdfToc(
+  page: PageLike,
+  toc: PdfToc,
+): Promise<{ toc: PdfToc; prefix: string } | undefined> {
   const { targets, targetIndex } = tocTargets(toc);
-  const states = JSON.parse(String(await page.evaluate(probePdfTocScript(targets)))) as string[];
+  const { states, prefix } = JSON.parse(
+    String(await page.evaluate(probePdfTocScript(targets))),
+  ) as { states: string[]; prefix: string };
   const missing = states.indexOf("missing");
   if (missing !== -1) {
     throw new MonodocsError(
@@ -299,9 +304,13 @@ async function preparePdfToc(page: PageLike, toc: PdfToc): Promise<PdfToc | unde
   };
   if (printed.entries.length === 0) return undefined;
   await page.evaluate(
-    injectPdfTocScript(tocTargets(printed).targets, pdfTocHtml(printed, undefined, TOC_MIN_WIDTH)),
+    injectPdfTocScript(
+      tocTargets(printed).targets,
+      pdfTocHtml(printed, undefined, TOC_MIN_WIDTH, prefix),
+      prefix,
+    ),
   );
-  return printed;
+  return { toc: printed, prefix };
 }
 
 /**
@@ -315,14 +324,15 @@ export async function printWithToc(
   page: PageLike,
   toc: PdfToc,
   print: () => Promise<Uint8Array>,
+  prefix = "mdtoc-",
 ): Promise<Uint8Array> {
   const { targets, targetIndex } = tocTargets(toc);
-  const names = targets.map((_, n) => tocAnchor(n));
+  const names = targets.map((_, n) => tocAnchor(prefix, n));
   let printed: string[] | undefined;
   let width = TOC_MIN_WIDTH;
 
   for (let pass = 1; pass <= TOC_MAX_PASSES; pass++) {
-    if (pass > 1) await page.evaluate(setPdfTocScript(pdfTocHtml(toc, printed, width)));
+    if (pass > 1) await page.evaluate(setPdfTocScript(pdfTocHtml(toc, printed, width, prefix)));
     const pdf = await print();
     const sheets = await resolveDestPages(pdf, names);
     const missing = sheets.findIndex((sheet) => sheet === undefined);
@@ -429,7 +439,7 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
           headerTemplate: options.header ?? EMPTY_PDF_BAND,
           footerTemplate: options.footer ?? EMPTY_PDF_BAND,
         });
-      const pdf = toc ? await printWithToc(page, toc, print) : await print();
+      const pdf = toc ? await printWithToc(page, toc.toc, print, toc.prefix) : await print();
 
       // The cover goes in before the outline: inserting pages leaves the body's page objects, and
       // so the named destinations the outline resolves, where they were.

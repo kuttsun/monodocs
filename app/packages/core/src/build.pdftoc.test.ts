@@ -97,6 +97,7 @@ describe("the entries", () => {
       },
       ["12"],
       4,
+      "mdtoc-",
     );
     expect(html).not.toContain("<img");
     expect(html).not.toContain("<b>");
@@ -372,6 +373,37 @@ describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => 
     const guide = await sheetOf(bytes, "2.1.1 Guide", 0, 1);
     expect(guide).toBeGreaterThan(3);
     expect(await pageText(bytes, 0)).toMatch(new RegExp(`2\\.1\\.1 Guide${guide}$`));
+  });
+
+  it("names its anchors so that no ID in the document can be taken for one", async () => {
+    // The heading "3" on page `mdtoc` has the ID `mdtoc-3`, which is the name the fourth line's
+    // anchor would otherwise get. Chromium resolves a link to the first element with an ID.
+    const bytes = await buildFiles(
+      "anchor-name",
+      {
+        "mdtoc.md": "# M\n\n## 3\n\nShort.\n",
+        "z.md": `# Z\n\n${filler(80, "lorem")}\n\n## Last\n\nEnd.\n`,
+      },
+      "pdf:\n  toc:\n    enabled: true\n",
+    );
+    const last = await sheetOf(bytes, "Last", 0, 1);
+    expect(last).toBeGreaterThan(3);
+    expect(await pageText(bytes, 0)).toMatch(new RegExp(`Last${last}$`));
+  });
+
+  it("tells apart two headings in one page that share an ID", async () => {
+    // Asciidoctor only warns about the second [[dup]].
+    const bytes = await buildFiles(
+      "dup-in-page",
+      {
+        "c.adoc": `= C\n\n[[dup]]\n== First\n\n${filler(80, "lorem")}\n\n[[dup]]\n== Second\n\nEnd.\n`,
+      },
+      "pdf:\n  toc:\n    enabled: true\n",
+    );
+    const first = await sheetOf(bytes, "First", 0, 1);
+    const second = await sheetOf(bytes, "Second", 0, 1);
+    expect(second).toBeGreaterThan(first!);
+    expect(await pageText(bytes, 0)).toBe(`ContentsC${first}First${first}Second${second}`);
   });
 
   it("leaves out a heading that a collapsed block keeps off the paper", async () => {

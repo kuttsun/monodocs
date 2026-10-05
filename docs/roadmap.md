@@ -2919,7 +2919,11 @@ What the implementation (v0.14) settled that the above leaves open:
   not by ID across the document: a page ID joins route segments with `-`, so `setup.md`'s "Install
   Guide" and `setup/install.md`'s "Guide" are both `setup-install-guide`, and the first match would
   be the wrong heading with a destination that verifies against itself. A heading inside a closed
-  `<details>` (an AsciiDoc collapsible block) is not on the paper, so its line is left out.
+  `<details>` (an AsciiDoc collapsible block) is not on the paper, so its line is left out. Within a
+  page only headings are candidates, and two headings sharing an ID (Asciidoctor only warns) are told
+  apart by their order. The anchors' prefix is chosen so that no ID in the document starts with it —
+  a page `mdtoc.md` with a heading "3" already has the ID `mdtoc-3`, and a link resolves to the first
+  element with its ID.
 - **Measured on Linux** (Intel Core i7-11700, the development image): a document of 101 sheets in
   Japanese, with twenty client-mode Mermaid diagrams and numbering on, built to PDF in 2.13 s without
   the table and 3.06 s with it at `depth: 3` (106 sheets), the mean of three runs each. The numbers
