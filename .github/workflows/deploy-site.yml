@@ -99,10 +99,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     # Allow one concurrent deployment; let an in-progress run finish rather than cancel it.
-    # Set on the job so that runs whose build is skipped never join the group.
+    # Set on the job so that runs whose build is skipped never join the group. `queue: max`
+    # keeps a pending deploy from being replaced by a later one: with the default single
+    # slot, a stale run arriving last would cancel the pending latest deploy and then fail
+    # its own check below, leaving the site on the old release.
     concurrency:
       group: pages
       cancel-in-progress: false
+      queue: max
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
