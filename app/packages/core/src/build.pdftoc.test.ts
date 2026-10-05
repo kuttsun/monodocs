@@ -7,7 +7,19 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildSite } from "./build";
 import { loadConfig } from "./config";
 import { MonodocsError } from "./diagnostics";
-import { pageText } from "./pdfText.testutil";
+import { pageText as rawPageText } from "./pdfText.testutil";
+
+/**
+ * A sheet's text without the footer band's "n / total", the sheet's own number among the body's
+ * sheets (the cover has none). Whether the band's glyphs are readable depends on the browser
+ * build — they are on the CI runners and not in the development image — and the extracted text
+ * has no separators, so the exact string is removed rather than a pattern that could also take a
+ * table line's number with it.
+ */
+async function pageText(bytes: Uint8Array, index: number, cover = 0): Promise<string> {
+  const total = (await PDFDocument.load(bytes)).getPageCount() - cover;
+  return (await rawPageText(bytes, index)).replace(`${index - cover + 1} / ${total}`, "");
+}
 import type { PageLike } from "./pipeline/browser";
 import { buildPdfToc, pdfTocHtml, resolveDestPages, tocTargets } from "./pipeline/pdfToc";
 import {
@@ -303,7 +315,7 @@ describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => 
   async function sheetOf(bytes: Uint8Array, text: string, cover: number, from: number) {
     const total = (await PDFDocument.load(bytes)).getPageCount();
     for (let i = cover + from; i < total; i++) {
-      if ((await pageText(bytes, i)).includes(text)) return i - cover + 1;
+      if ((await pageText(bytes, i, cover)).includes(text)) return i - cover + 1;
     }
     return undefined;
   }
@@ -315,7 +327,7 @@ describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => 
         "pdf:\n  pageBreakLevel: 2\n  cover:\n    enabled: true\n  toc:\n    enabled: true\n    depth: 3\n",
     );
     const cover = 1;
-    const tocText = await pageText(bytes, cover);
+    const tocText = await pageText(bytes, cover, cover);
     expect(tocText).toContain("Contents");
 
     // Every line of the table, in order: pages, the directory (pointing at its first page), and

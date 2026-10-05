@@ -247,6 +247,12 @@ export function injectPdfTocScript(targets: PdfTocTarget[], html: string, prefix
     `(function(){${FIND_TARGET}var ts=${JSON.stringify(targets)};` +
     `for(var n=0;n<ts.length;n++){var t=findTarget(ts[n]);` +
     `if(t){var a=document.createElement('a');a.id=${JSON.stringify(prefix)}+n;` +
+    // In a heading the anchor is an atomic box on its first line, so it is laid out on the sheet
+    // the heading's text is. Measured with Google Chrome on Windows: an empty inline anchor at the
+    // start of a heading that begins a sheet was given the previous sheet, one lower than the
+    // heading, and verifying the destination against itself could not see it. A page's anchor
+    // stays an empty inline, which adds no line at the top of the article.
+    `if(ts[n].id!==undefined)a.style.cssText='display:inline-block;width:0;height:0;vertical-align:top';` +
     `t.insertBefore(a,t.firstChild);}}` +
     `var first=document.querySelector('article.page');if(!first)return;` +
     `var nav=document.createElement('nav');nav.id=${JSON.stringify(PDF_TOC_ID)};` +

@@ -2923,7 +2923,10 @@ What the implementation (v0.14) settled that the above leaves open:
   page only headings are candidates, and two headings sharing an ID (Asciidoctor only warns) are told
   apart by their order. The anchors' prefix is chosen so that no ID in the document starts with it —
   a page `mdtoc.md` with a heading "3" already has the ID `mdtoc-3`, and a link resolves to the first
-  element with its ID.
+  element with its ID. A heading's anchor is a zero-size inline-block on its first line rather than
+  an empty inline: measured with Google Chrome on Windows (the CI runner), an empty inline at the
+  start of a heading that begins a sheet was placed on the previous sheet, one lower than the
+  heading's text, and a destination verified against itself cannot see that.
 - **Measured on Linux** (Intel Core i7-11700, the development image): a document of 101 sheets in
   Japanese, with twenty client-mode Mermaid diagrams and numbering on, built to PDF in 2.13 s without
   the table and 3.06 s with it at `depth: 3` (106 sheets), the mean of three runs each. The numbers
