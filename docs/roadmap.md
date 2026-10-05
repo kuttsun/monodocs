@@ -237,8 +237,8 @@ image is and then with Latin Modern Math (`fonts-lmodern`) installed:
 - **With Latin Modern Math installed, the formulas set well, apart from accents.** Chromium picked it
   up through the `math` generic family with no configuration, and the font check reported nothing.
   Fractions, radicals, limits on integrals and sums, the matrix, `cases`, stretchy brackets, Japanese
-  inside `\text{}`, and the wide series all set properly on A4. Accents sit off-centre on italic
-  letters (the `\vec` arrow left of its letter, the `\dot` dot shifted), and `aligned` leaves a wide
+  inside `\text{}`, and the wide series all set properly on A4. With Latin Modern Math, accents sit off-centre on
+  italic letters (the `\vec` arrow left of its letter, the `\dot` dot shifted), and `aligned` leaves a wide
   gap before `=`.
 - **`\mathbb` and `\mathbf` are lost.** KaTeX writes them as `mathvariant` attributes. MathML Core,
   and so Chromium, honours only `mathvariant="normal"`, which turns the automatic italic off, and
@@ -256,8 +256,8 @@ measurement sets:
 1. The font check covers formulas, in both of the ways they fail: it measures the code points
    Chromium actually draws (the mathematical italic letters, not the letters as written), and it
    reports when the font chosen for `math` has no OpenType MATH table, since without one stretchy
-   brackets and radicals are not guaranteed to set properly even when every glyph is present (in the image as it is, the matrix
-   parentheses and the `cases` brace did not stretch).
+   brackets and radicals are not guaranteed to set properly even when every glyph is present (in
+   the image as it is, the matrix parentheses and the `cases` brace did not stretch).
 2. `mathvariant` is resolved at build time into Unicode mathematical alphanumerics (`\mathbf{E}` →
    `𝐄`, `\mathbb{R}` → `ℝ`), since the browser will not apply it.
 3. A MATH font is a stated requirement of monodocs for math, on the machine that prints and in the
@@ -267,13 +267,16 @@ measurement sets:
    notation has to agree with them, but it does not settle them: the copy measured above is
    a browser's selection of MathML, which no choice of delimiter changes.
 
-**On Windows** the same HTML, opened in a Chromium-based browser and printed to PDF, set well:
-every variable and Greek letter was drawn (Cambria Math ships with Windows), the structures that set
-well on Linux set as well, and the accents sat centred over their letters, better than with Latin
-Modern Math. `\mathbb` and `\mathbf` were lost in the same way — italic 𝑅, 𝑁, 𝐸, 𝐵, 𝑧 — confirming
-that condition 2 is needed on every platform. `aligned` kept its wide gap before `=`, and the
-brackets of the continued fraction printed heavier than the rest. The decision stands on both
-platforms, and the conditions are unchanged.
+**On Windows** the HTML built above, opened in Microsoft Edge and printed through a PDF printer
+driver, set well: every variable and Greek letter was drawn (the glyphs are Cambria Math's, which
+ships with Windows; the driver embeds no fonts, so this is by eye), the structures that set well on
+Linux set as well, and the accents sat centred over their letters, better than with Latin Modern
+Math. `\mathbb` and `\mathbf` were lost in the same way — italic 𝑅, 𝑁, 𝐸, 𝐵, 𝑧 — confirming that
+condition 2 is needed on every platform. `aligned` kept its wide gap before `=`, and the brackets of
+the continued fraction printed heavier than the rest, possibly the driver's doing. monodocs' own PDF
+output, its font check, and copying were not tried on Windows; the layout is Blink's in both cases, so the
+conditions do not depend on it. The decision stands on both platforms, and the conditions are
+unchanged.
 
 ---
 
