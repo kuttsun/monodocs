@@ -587,7 +587,7 @@ jobs:
       - name: Printed table of contents
         if: env.SUPPORTS_V014 == 'true'
         run: |
-          npm install --no-save --no-package-lock pdf-lib pdfjs-dist
+          npm install --no-save --no-package-lock pdf-lib@1 pdfjs-dist@6
           node -e "
             const fs = require('node:fs');
             fs.mkdirSync('toc/docs', { recursive: true });
@@ -616,17 +616,21 @@ jobs:
               const sheets = [];
               for (let i = 1; i <= doc.numPages; i++) {
                 const content = await (await doc.getPage(i)).getTextContent();
-                sheets.push(content.items.map((item) => item.str).join('\\n'));
+                // Text items are not lines and may split a title anywhere, so a sheet is read as one
+                // string, items joined by a space and whitespace collapsed (a split title reads whole,
+                // and the footer's page count cannot run into a number), and titles are found by substring.
+                sheets.push(content.items.map((item) => item.str).join(' ').replace(/\\s+/g, ' '));
               }
               const table = sheets[0];
               if (!table.includes('Contents')) fail('the first sheet is not the table: ' + table);
               for (const title of ['Alpha', 'Alpha one', 'Alpha two', 'Beta', 'Beta one']) {
                 // The sheet the heading is on, found by reading the body, past the table.
-                const at = sheets.findIndex((text, i) => i > 0 && text.split('\\n').includes(title)) + 1;
+                const at = sheets.findIndex((text, i) => i > 0 && text.includes(title)) + 1;
                 if (at < 2) fail('the body has no heading ' + title);
-                const line = new RegExp('(^|\\\\n)' + title + '\\\\s*(\\\\d+)(?!\\\\d)').exec(table);
+                // The title directly followed by its number: 'Alpha' does not match 'Alpha one 2'.
+                const line = new RegExp(title + '\\\\s*(\\\\d+)(?!\\\\d)').exec(table);
                 if (!line) fail('the table has no line for ' + title + ': ' + JSON.stringify(table));
-                if (Number(line[2]) !== at) fail('the table says ' + title + ' is on ' + line[2] + ', the body has it on ' + at);
+                if (Number(line[1]) !== at) fail('the table says ' + title + ' is on ' + line[1] + ', the body has it on ' + at);
                 console.log(title + ': ' + at);
               }
             })().catch((e) => { console.error(e.message); process.exit(1); });
