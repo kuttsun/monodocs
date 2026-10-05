@@ -35,7 +35,8 @@ and it, v0.9, v0.10, v0.11, v0.12, and v0.13 are released.
 (`numbering.sections`), the printed table of contents (`pdf.toc`), and the math measurement, which
 makes math a 1.x feature on recorded conditions. Neither feature changes what an existing
 configuration builds — both are off by default — and what every build does differently is small:
-the client script carries the code that shows numbers, unused without them, and an error from
+the client script carries the code that shows numbers, unused without them; the page data carries
+the label for the printed table of contents (`contents`); and an error from
 `sidebar.items` is now reported before post-processing rather than after it. As with 0.13.0, it goes
 out without a prerelease, the published package and the release binaries are verified after
 `latest` moves, and anything found is fixed forward in a patch release. 0.13.0's Windows checks a
@@ -445,13 +446,13 @@ person has to make are still open.
 
 **Release**
 
-- [ ] Publish `0.14.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.14.0` — not the default `next`, which still points at 0.13.0 until it is moved below and would skip every 0.14 step while passing — confirming that the log says `verifying monodocs 0.14.0` and that the steps gated on 0.14 ran rather than being skipped: section numbering and the printed table of contents
+- [ ] Publish `0.14.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.14.0` — not the default `next`, which still points at 0.13.0 until it is moved below and would skip every 0.14 step while passing — confirming that the log says `verifying monodocs 0.14.0` and that the steps gated on 0.14 ran rather than being skipped: section numbering and the printed table of contents, which #150 adds, so it is merged before this runs
 - [ ] Verify the release binaries through `verify-release-binaries.yml` on both platforms
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.14.0` assets on a Windows 11 host
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
 - [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: with `numbering.sections` on, the numbers in the headings, the sidebar, and the in-page table of contents agree, and searching a section number opens that section
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a PDF with `pdf.toc` and numbering on opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
-- [ ] Move the `next` dist-tag onto `0.14.0`. The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.14.0` in the version change itself, since the site is now deployed from the release
+- [ ] Move the `next` dist-tag onto `0.14.0`. The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.14.0` in the version change itself, since the site is now deployed from the release; if a fix-forward version ships instead of 0.14.0, its own version change re-pins it
 
 ## Supported Syntax
 
