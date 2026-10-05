@@ -523,7 +523,8 @@ numbering:
   where a group counts as a directory does. A page with no place in the sidebar — `hidden`, or left
   out of `sidebar.items` — is not numbered at all.
 - **`h1` carries the page's number**, not a heading number of its own: it is the page title. Only the
-  first `h1` of a page does.
+  first `h1` of a page does. A page without an `h1` shows its number in the sidebar, and its sections
+  still carry it (`2.1`, `2.2`).
 - **Where it appears.** In the heading itself, as `<span class="section-number">2.3</span>` followed
   by a space, so a stylesheet can hide it and copying the heading copies the number. In the sidebar,
   the in-page table of contents, and the PDF bookmarks, so no list disagrees with the body. In
@@ -532,10 +533,11 @@ numbering:
 - **Never in an address.** Routes, page IDs, and heading IDs are exactly what they are without
   numbering. A number is a label; an address that changed whenever a page moved would break every
   link anyone had copied.
-- **Which headings count.** The headings that appear in the table of contents do. An AsciiDoc
-  `[discrete]` heading is not a section, so it is not numbered and the count passes over it. A
-  skipped level is counted as zero — an `h4` directly under the first `h2` is `x.1.0.1` — and is
-  already reported as `heading/level-skipped`.
+- **Which headings count.** Every heading from `h2` down to `numbering.sections`, whatever
+  [`toc.maxLevel`](#toc) is. An AsciiDoc `[discrete]` heading is not a section, so it is not numbered
+  and the count passes over it. An `[appendix]` section is counted like any other, and keeps the
+  `Appendix A:` caption Asciidoctor gives it. A skipped level is counted as zero — an `h4` directly
+  under the first `h2` is `x.1.0.1` — and is already reported as `heading/level-skipped`.
 - **`:sectnums:` is refused while this is on**, naming this key, whether a document sets it or
   [`sources.asciidoc.attributes`](#asciidoc-attributes) does. Two numberings over one document give a
   heading two numbers. The check asks Asciidoctor which sections it numbered, so a `:sectnums:`

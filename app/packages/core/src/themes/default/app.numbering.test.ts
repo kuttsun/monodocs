@@ -23,7 +23,13 @@ async function mountClient(pages: ClientPage[]): Promise<void> {
     .map(
       (p, i) =>
         `<article class="page" data-route="${p.route}"${i === 0 ? "" : " hidden"}>` +
-        p.headings.map((h) => `<h${h.level} id="${h.id}">${h.text}</h${h.level}>`).join("") +
+        p.headings
+          .map((h) => {
+            // As core writes it into the body.
+            const number = h.number ? `<span class="section-number">${h.number}</span> ` : "";
+            return `<h${h.level} id="${h.id}">${number}${h.text}</h${h.level}>`;
+          })
+          .join("") +
         `</article>`,
     )
     .join("");
@@ -134,6 +140,16 @@ describe("search by section number", () => {
     expect(results()).toEqual([]);
     typeQuery("2.1.");
     expect(results()).toEqual([]);
+  });
+
+  it("does not mark digits inside a number in the body", async () => {
+    await mountClient(PAGES);
+    typeQuery("1.1 overview");
+    (document.querySelector("#search-results a") as HTMLElement).click();
+    const article = document.querySelector('article[data-route="/"]')!;
+    expect(article.querySelectorAll("mark").length).toBeGreaterThan(0);
+    // "1.1" is inside both "1.1" and "1.1.1"; neither number is marked.
+    expect(article.querySelectorAll(".section-number mark").length).toBe(0);
   });
 
   it("does not let a number change how a word scores", async () => {

@@ -760,7 +760,14 @@
   // Subtrees left alone. A Mermaid block is source the runtime reads and replaces with a diagram
   // (an svg), and the code-block toolbar and its copy toast are UI text the theme injects.
   var BODY_HIGHLIGHT_SKIP_TAGS = ["SVG", "SCRIPT", "STYLE", "TEXTAREA", "CANVAS"];
-  var BODY_HIGHLIGHT_SKIP_CLASSES = ["mermaid", "code-toolbar", "code-copied-toast"];
+  // A section number is matched only as a whole (see scoreEntry), so marking "1" inside "13.2"
+  // would show a match search did not make.
+  var BODY_HIGHLIGHT_SKIP_CLASSES = [
+    "mermaid",
+    "code-toolbar",
+    "code-copied-toast",
+    "section-number",
+  ];
 
   function skipsBodyHighlight(el) {
     // An SVG element keeps its lower-case tagName, so compare in one case.

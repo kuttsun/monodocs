@@ -230,10 +230,47 @@ describe("numbering.sections", () => {
   it("refuses an unknown value", async () => {
     for (const value of ["1", "7", "true", '"3"']) {
       await expect(build(docs, `numbering:\n  sections: ${value}\n`)).rejects.toThrow(
-        /numbering\.sections|sections/,
+        /deepest heading level numbered, from 2 to 6/,
       );
     }
     await expect(build(docs, "numbering:\n  depth: 3\n")).rejects.toThrow(/depth/);
+  });
+
+  it("pairs headings sharing an ID with their own entries, in document order", async () => {
+    // Asciidoctor only warns about an ID used twice, so both headings reach the output.
+    const root = await tree("duplicate-id", {
+      "c.adoc": "= C\n\n[[dup]]\n== First\n\n[[dup]]\n== Second\n\n=== Sub\n",
+    });
+    const html = await build(root, "numbering:\n  sections: 3\n");
+    const [page] = siteData(html).pages;
+    expect(page!.headings.map((h) => [h.text, h.number])).toEqual([
+      ["First", "1.1"],
+      ["Second", "1.2"],
+      ["Sub", "1.2.1"],
+    ]);
+    // The body says the same, heading by heading.
+    expect(html).toMatch(/<h2 id="c-dup"><span class="section-number">1\.1<\/span> First<\/h2>/);
+    expect(html).toMatch(/<h2 id="c-dup"><span class="section-number">1\.2<\/span> Second<\/h2>/);
+  });
+
+  it("numbers a page with no h1 in the sidebar and its sections", async () => {
+    const root = await tree("no-h1", { "a.md": "# A\n", "b.md": "## Sec\n" });
+    const html = await build(root, "numbering:\n  sections: 2\n");
+    const b = siteData(html).pages.find((page) => page.route === "/b")!;
+    expect([b.number, b.headings[0]!.number]).toEqual(["2", "2.1"]);
+    expect(html).toContain('data-route="/b"><span class="section-number">2</span> ');
+  });
+
+  it("counts an AsciiDoc appendix as a section, keeping Asciidoctor's own caption", async () => {
+    const root = await tree("appendix", {
+      "doc.adoc": "= T\n\n== A\n\n[appendix]\n== Extra\n\n=== Sub\n",
+    });
+    const html = await build(root, "numbering:\n  sections: 3\n");
+    expect(siteData(html).pages[0]!.headings.map((h) => [h.text, h.number])).toEqual([
+      ["A", "1.1"],
+      ["Appendix A: Extra", "1.2"],
+      ["Sub", "1.2.1"],
+    ]);
   });
 });
 
@@ -274,6 +311,18 @@ describe(":sectnums: while numbering is on", () => {
     expect(result.errors.map((d) => [d.code, d.path])).toEqual([
       ["numbering/sectnums", "doc.adoc"],
     ]);
+  });
+
+  it("is not tripped by an appendix, which Asciidoctor letters without :sectnums:", async () => {
+    const root = await tree("sectnums-appendix", {
+      "doc.adoc": "= T\n\n== A\n\n[appendix]\n== Extra\n",
+    });
+    await expect(build(root, "numbering:\n  sections: 3\n")).resolves.toContain("Extra");
+    // With :sectnums: as well, the ordinary sections are numbered and it is still refused.
+    const both = await tree("sectnums-appendix-both", {
+      "doc.adoc": "= T\n:sectnums:\n\n== A\n\n[appendix]\n== Extra\n",
+    });
+    await expect(build(both, "numbering:\n  sections: 3\n")).rejects.toThrow(/sectnums/);
   });
 
   it("leaves a discrete heading alone", async () => {

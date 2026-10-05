@@ -1,7 +1,7 @@
 import { visit } from "unist-util-visit";
 import type { Element, Root as HastRoot } from "hast";
 import type { SectionNumbering } from "../config.js";
-import type { Page, SidebarNode } from "../types.js";
+import type { Heading, Page, SidebarNode } from "../types.js";
 import { headingLevel } from "./pageBreakHeadings.js";
 
 /**
@@ -83,7 +83,15 @@ export function numberHeadings(
   pageNumber: string,
   depth: Exclude<SectionNumbering, false>,
 ): void {
-  const byId = new Map(page.headings.map((heading) => [heading.id, heading]));
+  // A queue per ID rather than one entry: Asciidoctor only warns about an ID used twice, and both
+  // headings must pair with their own entry, in document order, or the body and the table of
+  // contents would number different headings.
+  const byId = new Map<string, Heading[]>();
+  for (const heading of page.headings) {
+    const queue = byId.get(heading.id);
+    if (queue === undefined) byId.set(heading.id, [heading]);
+    else queue.push(heading);
+  }
   const counters: number[] = [];
   let titled = false;
 
@@ -91,8 +99,8 @@ export function numberHeadings(
     const level = headingLevel(node);
     if (level === 0) return;
     const id = node.properties?.id;
-    const heading = typeof id === "string" ? byId.get(id) : undefined;
-    if (heading === undefined || heading.number !== undefined) return;
+    const heading = typeof id === "string" ? byId.get(id)?.shift() : undefined;
+    if (heading === undefined) return;
 
     if (level === 1) {
       if (titled) return;

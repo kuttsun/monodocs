@@ -149,11 +149,16 @@ export function createAsciidocRenderer(
  * on the loaded document while that section still carries a number. Measured with
  * @asciidoctor/core 4.1. A `[discrete]` heading is not a section and is never numbered, so it
  * cannot trip this. The same check catches `sectnums` set in `sources.asciidoc.attributes`.
+ *
+ * An `[appendix]` section is left out: Asciidoctor numbers it with a letter whether or not
+ * `sectnums` is set (measured: "Appendix A: Extra", or "A. Extra" without the caption), so it says
+ * nothing about `sectnums`. Under `numbering.sections` it is counted as any other section.
  */
 function refuseNumberedSections(doc: Document, source: SourceFile): void {
-  const numbered = doc
-    .findBy({ context: "section" })
-    .some((block) => (block as Section).isNumbered());
+  const numbered = doc.findBy({ context: "section" }).some((block) => {
+    const section = block as Section;
+    return section.isNumbered() && section.getSectionName() !== "appendix";
+  });
   if (!numbered) return;
   throw new MonodocsError(
     "numbering/sectnums",
