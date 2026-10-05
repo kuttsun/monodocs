@@ -255,8 +255,8 @@ measurement sets:
 
 1. The font check covers formulas, in both of the ways they fail: it measures the code points
    Chromium actually draws (the mathematical italic letters, not the letters as written), and it
-   reports when the font chosen for `math` has no OpenType MATH table, since stretchy brackets and
-   radicals depend on one even when every glyph is present (in the image as it is, the matrix
+   reports when the font chosen for `math` has no OpenType MATH table, since without one stretchy
+   brackets and radicals are not guaranteed to set properly even when every glyph is present (in the image as it is, the matrix
    parentheses and the `cases` brace did not stretch).
 2. `mathvariant` is resolved at build time into Unicode mathematical alphanumerics (`\mathbf{E}` →
    `𝐄`, `\mathbb{R}` → `ℝ`), since the browser will not apply it.
