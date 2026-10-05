@@ -278,8 +278,10 @@ output, its font check, and copying were not tried on Windows; the layout is Bli
 so the conditions do not depend on it, and the decision stands on both platforms.
 
 **Brought forward to v0.15.** Math arrives before 1.0 rather than in a 1.x release, on the same four
-conditions. It cannot be added in 1.x: 12.4 lets a minor release add only markup no existing document
-could already contain, and every candidate delimiter can (v0.15). The notation, the alternatives it
+conditions. 1.x could add it only behind an opt-in key, since every candidate delimiter can already
+appear in a document and 12.4 lets a minor release add only markup that none could contain; and a
+default that 1.0 sets cannot change before 2.0. Bringing it forward keeps the choice of recognising
+math by default open, to be made with the notation (v0.15). The notation, the alternatives it
 was chosen over, and the design of copying and search are recorded here when v0.15 settles them.
 
 ---
@@ -2083,7 +2085,10 @@ build kept. The npm package ships `THIRD-PARTY-NOTICES.txt` and a release attach
 `monodocs-NOTICES.txt` beside the binary, both generated from the dependency tree in `node_modules`,
 but an HTML file is redistributed on its own, by the author, to readers who never see either.
 
-mermaid 12 (Dependabot's #126, recorded in #134) cannot be taken as a version bump:
+mermaid 12 (Dependabot's #126, recorded in #134) cannot be taken as a version bump. #134 measured
+12.0.0; 12.1.0, published on 2026-10-02, moves to `chevrotain@13.2.0`, which no longer depends on
+`lodash-es`, and still depends on `elkjs@^0.9.3`. What follows is the 12.0.0 measurement, and every
+figure in it is taken again on the version adopted:
 
 - **EPL-2.0 enters the distribution.** mermaid 12 bundles ELK (`elkjs@0.9.3`, EPL-2.0 only, with no
   Secondary License) into `mermaid/dist/mermaid.min.js`. That file is embedded in the npm single
@@ -2097,7 +2102,7 @@ mermaid 12 (Dependabot's #126, recorded in #134) cannot be taken as a version bu
   that monodocs is MIT
 - **Size.** The inline runtime grows from about 975 KB to about 1.6 MB gzip (3.57 MB → 5.58 MB raw),
   and the CLI bundle by about 2 MB
-- **`lodash-es`.** `chevrotain@11.1.2`, new in mermaid 12, pins `lodash-es` to exactly `4.17.23`, so
+- **`lodash-es` (12.0.0).** `chevrotain@11.1.2`, new in mermaid 12.0.0, pins `lodash-es` to exactly `4.17.23`, so
   `pnpm audit` fails on GHSA-r5fr-rjxr-66jc (`_.template` code injection, high) and
   GHSA-f23m-r3pf-42rh (moderate), both fixed in 4.18.0. An override fixes `node_modules` but not the
   prebuilt `mermaid.min.js`, whose source map shows both 4.17.23 and 4.18.1 inside; the vulnerable
@@ -2109,8 +2114,8 @@ mermaid 12 (Dependabot's #126, recorded in #134) cannot be taken as a version bu
 The decision is to adopt mermaid 12 with its new default look and to accept the licence change, in
 two steps. First, the inline runtime carries notices generated from what the prebuilt bundle
 contains rather than from `node_modules`, whose versions need not be the ones inside — under
-mermaid 12 the source map shows `lodash-es` 4.17.23 inside while the override leaves only 4.18.1 in
-`node_modules` — emitted into the output HTML exactly when the runtime is. Then the bump, with ELK's
+mermaid 12.0.0 the source map shows `lodash-es` 4.17.23 inside while an override would leave only
+4.18.1 in `node_modules` — emitted into the output HTML exactly when the runtime is. Then the bump, with ELK's
 corresponding source identified and named in the notices, the CDN pinned to the full version, and
 the licence statement rewritten to say that monodocs is MIT and that HTML built with the inline
 runtime embeds an EPL-2.0 component with its notices.
@@ -4135,11 +4140,13 @@ carried no notices generated for what it contains since it was first embedded, u
 much as 12. That gap is closed first, because it does not depend on the bump and the bump depends on
 it (21.3).
 
-v0.14 decided that math becomes a feature, on four conditions its measurement set (6.4). It has to
-come before 1.0 rather than in a minor release because of 12.4: a minor release may add only markup
+v0.14 decided that math becomes a feature, on four conditions its measurement set (6.4). A minor
+release could still add it, but only behind an opt-in key: 12.4 lets a minor release add only markup
 that no existing document could already contain, and every candidate delimiter — `$`, `$$`, `\(` —
-can already appear in a document as prose or as an escape. Math added in 1.x would change what an
-existing document means; added here, its notation is part of what 1.0 freezes.
+can already appear in a document as prose or as an escape. Math would then stay off by default until
+2.0, since a default that 1.0 sets does not change in a minor release. Adding it here keeps open
+whether math is recognised by default; that is decided with the notation, and either way the
+notation is part of what 1.0 freezes.
 
 The two halves share a release, not a dependency, as v0.13's did.
 
@@ -4148,12 +4155,13 @@ Implementation scope:
 - Emit third-party notices for the inline Mermaid runtime into the output HTML exactly when the
   runtime is emitted, generated from what the prebuilt bundle contains (21.3)
 - Adopt mermaid 12: identify ELK's corresponding source, pin the CDN runtime to the verified full
-  version, override `lodash-es` with a stated removal condition, and rewrite the licence statement
+  version, remove any vulnerable `lodash-es` the adopted version still carries, and rewrite the
+  licence statement
   (21.3)
 - Commit the formulas v0.14 measured as a Markdown and AsciiDoc fixture, so that the math criteria
   below can be checked by anyone, on any machine (6.4)
-- Choose the math notation for Markdown and AsciiDoc in the open, and record the choice and the
-  alternatives in 6.4
+- Choose the math notation for Markdown and AsciiDoc in the open, and whether math is recognised by
+  default or behind a key, and record the choice and the alternatives in 6.4
 - Render math at build time with KaTeX's MathML-only output in both renderers, on the four conditions
   6.4 sets (6.4, 24.3.3)
 
@@ -4172,10 +4180,12 @@ Completion criteria:
 - ELK's corresponding source — the `elkjs` version, and the ELK revision and build configuration it
   was generated from — is identified by version and commit, confirmed retrievable, and named in the
   runtime notices and `THIRD-PARTY-NOTICES.txt`
-- `pnpm audit` passes with a scoped `lodash-es` override with a floor of `>=4.18.0`, whose comment
-  names both advisories and the condition for removing it, documented in development.md in both
-  languages. The generated `mermaid.min.js` is checked for the vulnerable implementations and the
-  result recorded
+- The 21.3 measurement — `lodash-es`, size, and ELK — is taken again on the adopted 12.x version
+  and recorded. `pnpm audit` passes; if a vulnerable `lodash-es` is still resolved, it passes through
+  a scoped override with a floor of `>=4.18.0`, whose comment names both advisories and the condition
+  for removing it, documented in development.md in both languages. The prebuilt `mermaid.min.js` is
+  shown, against the generated code rather than the source map's file list, to contain no
+  implementation the two advisories describe, or only a fixed one, or one no code path reaches
 - The licence statement in the READMEs, the npm READMEs, and the site's licence page says what is
   true: monodocs is MIT, the bundled Mermaid runtime contains EPL-2.0 `elkjs`, HTML built with the
   inline runtime embeds it with its notices, and document content is unaffected
@@ -4185,7 +4195,8 @@ Completion criteria:
 - The math notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are
   recorded in 6.4 with the alternatives and why they lost. Prose about currency is not read as math
   by the choice itself, rather than by a warning after the fact, and any spelling an existing
-  document could contain whose meaning the choice changes is listed there. What happens to
+  document could contain whose meaning the choice changes is listed there. Whether math is
+  recognised by default or only behind a key is decided there with its reason, and what happens to
   `asciimath` is decided and stated
 - A formula is rendered at build time to MathML only: no script and no stylesheet enters the output.
   An existing fixture containing neither diagrams nor the chosen delimiters builds as it did before,

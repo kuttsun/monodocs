@@ -468,8 +468,10 @@ reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md)
 **Mermaid 12** ([roadmap.md](roadmap.md) 21.3, #134)
 
 - [ ] ELK's corresponding source — the `elkjs` version, and the ELK revision and build configuration it was generated from — is identified by version and commit, confirmed retrievable, and named in the runtime notices and `THIRD-PARTY-NOTICES.txt`
-- [ ] `mermaid` is at 12, and the CDN runtime is pinned to the verified full version rather than `@12`
-- [ ] A scoped `lodash-es` override with a floor of `>=4.18.0`, a comment naming GHSA-r5fr-rjxr-66jc and GHSA-f23m-r3pf-42rh, and a removal condition, documented in [development.md](development.md) in English and Japanese; the generated `mermaid.min.js` is checked for the vulnerable implementations and the result recorded
+- [ ] `mermaid` is at 12, and the CDN runtime loads the same full version `inline` and `pre-render` use, pinned rather than `@12`
+- [ ] The [roadmap.md](roadmap.md) 21.3 measurement — `lodash-es`, size, and ELK, taken on 12.0.0 — is taken again on the adopted 12.x version and recorded (12.1.0 no longer depends on `lodash-es`)
+- [ ] `pnpm audit` passes. If a vulnerable `lodash-es` is still resolved, it passes through a scoped override with a floor of `>=4.18.0`, a comment naming GHSA-r5fr-rjxr-66jc and GHSA-f23m-r3pf-42rh, and a removal condition, documented in [development.md](development.md) in English and Japanese
+- [ ] The prebuilt `mermaid.min.js` is shown, against the generated code rather than the source map's file list, to contain no implementation the two advisories describe, or only a fixed one, or one no code path reaches
 - [ ] The licence statement in the site's licence page, `README.md`, `README.ja.md`, and the npm READMEs says that monodocs is MIT, the bundled Mermaid runtime contains EPL-2.0 `elkjs`, HTML built with the inline runtime embeds it with its notices, and document content is unaffected
 - [ ] [roadmap.md](roadmap.md) 21.2 and the site's configuration reference state mermaid 12 and its measured inline size
 - [ ] [maintenance.md](maintenance.md) says that the lockfile audit cannot see inside a prebuilt bundle, and no longer says that `site/` never ships, given the published samples
@@ -478,12 +480,12 @@ reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md)
 **Math** ([roadmap.md](roadmap.md) 6.4)
 
 - [ ] The formulas v0.14 measured are committed as a Markdown and AsciiDoc fixture, so that the criteria below can be checked on any machine
-- [ ] The notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are chosen in the open and recorded in [roadmap.md](roadmap.md) 6.4 with the alternatives and why they lost; prose about currency is not read as math, and any spelling an existing document could contain whose meaning the choice changes is listed there. What happens to `asciimath` is decided and stated
+- [ ] The notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are chosen in the open and recorded in [roadmap.md](roadmap.md) 6.4 with the alternatives and why they lost; prose about currency is not read as math, and any spelling an existing document could contain whose meaning the choice changes is listed there. Whether math is recognised by default or only behind a key is decided there with its reason, and what happens to `asciimath` is decided and stated
 - [ ] KaTeX's licence and its size in the CLI bundle and the standalone binary are checked and recorded before it is added, together with whether its version is kept in step with the KaTeX the Mermaid runtime already bundles and how the notices name it
 - [ ] A formula is rendered at build time to MathML only, with no script and no stylesheet in the output, and an existing fixture containing neither diagrams nor the chosen delimiters builds as it did before, which a test asserts
 - [ ] `\mathbf`, `\mathbb`, `\mathcal`, and the other styles KaTeX writes as `mathvariant` come out as Unicode mathematical alphanumerics, and a test asserts that no `mathvariant` other than `normal` reaches the output
 - [ ] The font check measures the code points Chromium draws for a formula and reports when the font chosen for `math` has no OpenType MATH table; the math fixture, built where no MATH font is installed (the development image as v0.14 measured it), is reported
-- [ ] A MATH font is documented as a requirement for math, where the CI guide documents the CJK and emoji fonts, in English and Japanese
+- [ ] A MATH font is documented as a requirement for math, on the machine that prints and in the reader's browser, where the CI guide documents the CJK and emoji fonts, in English and Japanese
 - [ ] What a reader copies from a formula and what search indexes for it are designed, recorded in [roadmap.md](roadmap.md) 6.4, and tested
 - [ ] A formula KaTeX cannot parse produces a diagnostic naming the file and the formula, not KaTeX's error box
 - [ ] The math fixture is built to HTML and PDF on Linux and Windows with a MATH font installed, and on both no variable or Greek letter is tofu, `\mathbb` and `\mathbf` are told apart from a plain variable, and stretchy brackets and radicals stretch. The accent offset and the gap in `aligned` that v0.14 measured are either fixed or recorded in [roadmap.md](roadmap.md) 6.4 as accepted
