@@ -495,6 +495,7 @@ reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md)
 
 Every existing document with a diagram builds differently under mermaid 12, so unlike 0.13.0 and 0.14.0 this release goes through a beta.
 
+- [ ] The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.15.0` in the version change itself, before the `v0.15.0` tag is created, since the site is deployed from the release
 - [ ] `verify-published.yml` gains a 0.15 gate and steps for the runtime notices and for math, merged before anything below runs
 - [ ] Publish `0.15.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the log says `verifying monodocs 0.15.0-beta.1` and that the 0.15 steps ran rather than being skipped
 - [ ] During the beta, build the documents this repository publishes — `examples/en`, `examples/ja`, and the site samples — with the beta and look at every diagram under mermaid 12; a diagram that no longer reads is fixed or recorded before `0.15.0` is cut
@@ -504,7 +505,7 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.15.0` assets on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
 - [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: diagrams rendering under mermaid 12 with the notices in the source, and formulas drawn with a MATH font
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
-- [ ] Move the `next` dist-tag onto `0.15.0`, and pin the CI guide on the documentation site — English and Japanese alike — to it
+- [ ] Move the `next` dist-tag onto `0.15.0`, and confirm that the deployed CI guide pins `monodocs@0.15.0` in English and Japanese
 
 ## Supported Syntax
 

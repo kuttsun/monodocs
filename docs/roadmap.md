@@ -4130,8 +4130,9 @@ Land before 1.0 the two changes that would otherwise arrive just after it, one c
 existing document builds and the other adding markup that 1.0 enumerates.
 
 Mermaid 12 re-lays out and recolours flowchart, state, and class diagrams in documents nobody
-touched, and it brings EPL-2.0 code into the CLI and into every HTML file built with the inline
-runtime, which makes the statement on the site's licence page and in `README.ja.md` that monodocs
+touched, and it brings EPL-2.0 code into the CLI and into every HTML file the inline runtime is
+emitted into — a document with diagrams under `mermaid.mode: client` and `mermaid.runtime: inline`,
+the default — which makes the statement on the site's licence page and in `README.ja.md` that monodocs
 depends only on permissively licensed software false. 1.0 claims that the documentation describes
 the tool as it is; a licence statement that stops being true at the next dependency bump, and every
 existing diagram changing just after the number is claimed, are what that claim should not have to
