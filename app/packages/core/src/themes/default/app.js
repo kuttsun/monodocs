@@ -539,19 +539,27 @@
     // キーが Object.prototype のプロパティ名（"constructor" など）でも壊れないよう
     // プロトタイプ無しのマップを使う。
     var headingHits = Object.create(null);
+    // 見出し ID → 番号が語と完全に一致したか。番号で探した読者はその節へ行きたいので、
+    // 見出しの本文が語を含むだけの見出しより優先する。
+    var numberHits = Object.create(null);
+    var pageNumberHit = false;
 
     for (var i = 0; i < terms.length; i++) {
       var term = terms[i];
       var matched = false;
 
-      if (entry.titleFolded.indexOf(term) !== -1 || (entry.number && entry.number === term)) {
+      var pageNumberMatched = Boolean(entry.number) && entry.number === term;
+      if (pageNumberMatched) pageNumberHit = true;
+      if (entry.titleFolded.indexOf(term) !== -1 || pageNumberMatched) {
         score += SCORE_TITLE;
         matched = true;
       }
 
       var headingMatched = false;
       entry.headings.forEach(function (h) {
-        if (h.folded.indexOf(term) === -1 && !(h.number && h.number === term)) return;
+        var numberMatched = Boolean(h.number) && h.number === term;
+        if (h.folded.indexOf(term) === -1 && !numberMatched) return;
+        if (numberMatched) numberHits[h.id] = true;
         headingHits[h.id] = (headingHits[h.id] || 0) + 1;
         headingMatched = true;
       });
@@ -581,14 +589,31 @@
       else if (phrase.test(entry.textFolded)) score += SCORE_PHRASE_TEXT;
     }
 
-    return { score: score, textHits: textHits, headingHits: headingHits };
+    return {
+      score: score,
+      textHits: textHits,
+      headingHits: headingHits,
+      numberHits: numberHits,
+      pageNumberHit: pageNumberHit,
+    };
   }
 
-  // 最も多くの語に一致した見出しを選ぶ（同数なら文書順で先のもの）。
-  function bestHeading(entry, headingHits) {
+  /**
+   * 最も多くの語に一致した見出しを選ぶ（同数なら文書順で先のもの）。番号が語と完全に一致した
+   * 見出しがあれば、その中から選ぶ。ページ自身の番号が一致し、見出しの番号はどれも一致しない
+   * ときは、見出しではなくページの先頭へ飛ばす（そのページを番号で探したのだから）。
+   */
+  function bestHeading(entry, scored) {
+    var headingHits = scored.headingHits;
+    var numberHits = scored.numberHits;
+    var anyNumberHit = entry.headings.some(function (h) {
+      return numberHits[h.id];
+    });
+    if (!anyNumberHit && scored.pageNumberHit) return null;
     var best = null;
     var bestCount = 0;
     entry.headings.forEach(function (h) {
+      if (anyNumberHit && !numberHits[h.id]) return;
       var count = headingHits[h.id] || 0;
       if (count > bestCount) {
         best = h;
@@ -721,7 +746,7 @@
     buildSearchIndex().forEach(function (entry, index) {
       var scored = scoreEntry(entry, terms, phrase);
       if (!scored) return;
-      var heading = bestHeading(entry, scored.headingHits);
+      var heading = bestHeading(entry, scored);
       results.push({
         route: entry.route,
         title:

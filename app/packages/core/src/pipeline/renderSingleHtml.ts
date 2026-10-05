@@ -78,6 +78,18 @@ function numberLabel(number: string | undefined): string {
 }
 
 /**
+ * A directory's title, with its number held in one element alongside the name. The title is a flex
+ * row that pushes its items to both ends to put the caret at the right, so a number and a name
+ * left as two items would be pushed apart. Unnumbered, the title is the bare text it always was.
+ */
+function dirLabel(node: Extract<SidebarNode, { type: "dir" }>): string {
+  const title = escapeHtml(node.title);
+  return node.number === undefined
+    ? title
+    : `<span class="sidebar-dir-label">${numberLabel(node.number)}${title}</span>`;
+}
+
+/**
  * サイドバーのツリーを ul/li の HTML に変換する。
  * `collapseDepth` 指定時は、その階層より深いディレクトリに `collapsed` を付けて
  * 既定で畳む（クライアントの開閉トグルでいつでも開ける）。`depth` はトップレベルを 1 とする。
@@ -90,7 +102,7 @@ function renderSidebar(nodes: SidebarNode[], collapseDepth?: number, depth = 1):
         const collapsed = collapseDepth !== undefined && depth > collapseDepth ? " collapsed" : "";
         return (
           `<li class="sidebar-dir${collapsed}">` +
-          `<span class="sidebar-dir-title">${numberLabel(node.number)}${escapeHtml(node.title)}</span>` +
+          `<span class="sidebar-dir-title">${dirLabel(node)}</span>` +
           renderSidebar(node.children, collapseDepth, depth + 1) +
           `</li>`
         );

@@ -155,16 +155,31 @@ export function createAsciidocRenderer(
  * nothing about `sectnums`. Under `numbering.sections` it is counted as any other section.
  */
 function refuseNumberedSections(doc: Document, source: SourceFile): void {
-  const numbered = doc.findBy({ context: "section" }).some((block) => {
-    const section = block as Section;
-    return section.isNumbered() && section.getSectionName() !== "appendix";
-  });
-  if (!numbered) return;
+  if (!numbersSections(doc)) return;
   throw new MonodocsError(
     "numbering/sectnums",
     t("asciidoc.sectnumsWithNumbering", { path: source.relativePath }),
     { path: source.relativePath },
   );
+}
+
+/**
+ * Whether Asciidoctor numbered a section of `doc`, or of a document nested in one of its `a|`
+ * table cells. `findBy` does not enter those, and in @asciidoctor/core 4.1 neither does its
+ * `traverseDocuments` option (measured), so each cell's inner document is searched in turn —
+ * a `:sectnums:` set inside a cell numbers that cell's sections and nothing outside it.
+ */
+function numbersSections(doc: Document): boolean {
+  const numbered = doc.findBy({ context: "section" }).some((block) => {
+    const section = block as Section;
+    return section.isNumbered() && section.getSectionName() !== "appendix";
+  });
+  if (numbered) return true;
+  return doc.findBy({ context: "table_cell" }).some((cell) => {
+    // A table cell; its class is not exported from the package entry point.
+    const inner = (cell as unknown as { getInnerDocument(): Document | null }).getInnerDocument();
+    return inner !== null && numbersSections(inner);
+  });
 }
 
 /**

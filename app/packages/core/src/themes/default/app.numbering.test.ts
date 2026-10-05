@@ -152,19 +152,67 @@ describe("search by section number", () => {
     expect(article.querySelectorAll(".section-number mark").length).toBe(0);
   });
 
+  it("opens the heading whose number matched, not one whose text contains it", async () => {
+    await mountClient([
+      {
+        route: "/r",
+        title: "Releases",
+        number: "3",
+        hidden: false,
+        headings: [
+          { id: "r-old", text: "Release 13.2", level: 2, number: "3.1" },
+          { id: "r-target", text: "Target", level: 2, number: "3.2" },
+        ],
+        text: "Releases Release 13.2 Target",
+      },
+    ]);
+    typeQuery("3.2");
+    expect(results().map((r) => r.heading)).toEqual(["r-target"]);
+    // The page's own number opens the page, not a heading whose text happens to contain it.
+    typeQuery("3");
+    expect(results().map((r) => r.heading)).toEqual([null]);
+  });
+
   it("does not let a number change how a word scores", async () => {
-    await mountClient(PAGES);
-    typeQuery("basics");
-    const numbered = results().map((r) => r.route);
-    await mountClient(
-      PAGES.map((page) => ({
+    // "basics" in a title, in a heading, and in body text, on three pages.
+    const pages: ClientPage[] = [
+      {
+        route: "/text",
+        title: "Text",
+        hidden: false,
+        headings: [{ id: "t-h", text: "Other", level: 2 }],
+        text: "Text Other mentions basics once",
+      },
+      {
+        route: "/heading",
+        title: "Heading",
+        hidden: false,
+        headings: [{ id: "h-h", text: "Basics", level: 2 }],
+        text: "Heading Basics",
+      },
+      {
+        route: "/title",
+        title: "Basics",
+        hidden: false,
+        headings: [{ id: "ti-h", text: "Intro", level: 2 }],
+        text: "Basics Intro",
+      },
+    ];
+    const numbered = (order: string[]) =>
+      pages.map((page, i) => ({
         ...page,
-        number: undefined,
-        headings: page.headings.map((h) => ({ ...h, number: undefined })),
-      })),
-    );
-    typeQuery("basics");
-    expect(results().map((r) => r.route)).toEqual(numbered);
-    expect(numbered).toEqual(["/guide/usage"]);
+        number: order[i],
+        headings: page.headings.map((h) => ({ ...h, number: `${order[i]}.1` })),
+      }));
+    const ranking = async (list: ClientPage[]) => {
+      await mountClient(list);
+      typeQuery("basics");
+      return results().map((r) => r.route);
+    };
+
+    const plain = await ranking(pages);
+    expect(plain).toEqual(["/title", "/heading", "/text"]);
+    expect(await ranking(numbered(["1", "2", "3"]))).toEqual(plain);
+    expect(await ranking(numbered(["3", "1", "2"]))).toEqual(plain);
   });
 });

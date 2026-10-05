@@ -153,9 +153,12 @@ describe("numbering.sections", () => {
   });
 
   it("shows the number in the sidebar, for directories and pages", () => {
+    // One label holding number and name: the title is a flex row that pushes its items apart.
     expect(on).toContain(
-      '<span class="sidebar-dir-title"><span class="section-number">2</span> guide</span>',
+      '<span class="sidebar-dir-title"><span class="sidebar-dir-label">' +
+        '<span class="section-number">2</span> guide</span></span>',
     );
+    expect(off).toContain('<span class="sidebar-dir-title">guide</span>');
     expect(on).toContain(
       'data-route="/guide/usage"><span class="section-number">2.2</span> Usage</a>',
     );
@@ -276,6 +279,12 @@ describe("numbering.sections", () => {
 
 describe(":sectnums: while numbering is on", () => {
   const cases: [string, string, string][] = [
+    ["inside a table cell", "= T\n\n== Outer\n\n|===\na|\n:sectnums:\n\n== Inner\n|===\n", ""],
+    [
+      "inside a table nested in a table cell",
+      "= T\n\n|===\na|\n!===\na!\n:sectnums:\n\n== Deep\n!===\n|===\n",
+      "",
+    ],
     ["in the header", "= T\n:sectnums:\n\n== A\n", ""],
     [
       "turned on above one section only",
