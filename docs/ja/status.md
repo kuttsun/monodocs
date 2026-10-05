@@ -28,17 +28,13 @@
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
 メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
-[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9・v0.10・v0.11・v0.12 は
+[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9・v0.10・v0.11・v0.12・v0.13 は
 いずれもリリース済みである。
 
-0.13.0 はまだリリースしていない。チェックリストの項目はすべて入った——出力サイズの表示と
-`assets.budget`、`pdf.watermark`、生成される表紙、`sources.lineBreak` である。いずれも既定では無効か
-従来どおりなので、既存の設定がビルドするものは変わらない。ただし、どのビルドにも関わる点が 3 つ変わる。
-ビルドが書き出したものの大きさを表示するようになった。コードのハイライトが前のブロックに左右されなく
-なったため、コード例に埋め込まれた言語は最初のビルドから色が付く。また、Mermaid 図が画像の lightbox
-で開く。既存の設定を壊すものが無いので、
-0.13.0 はプレリリースを経ずに出す——そうするのはこのリリースが初めてである。公開パッケージとリリース
-バイナリは `latest` を動かしたあとに検証し、見つかったものはパッチリリースで直す。
+0.13.0 はリリース済みである——出力サイズの表示と `assets.budget`、`pdf.watermark`、生成される表紙、
+`sources.lineBreak`。いずれも既存の設定がビルドするものを変えないので、プレリリースを経ずに出した
+（そうしたのはこのリリースが初めてである）。公開パッケージ、リリースバイナリ、それらが生成する HTML は、
+`latest` を動かしたあとに検証した。Windows で人が行う確認は未了である。
 
 ## 完了条件の達成状況
 
@@ -406,13 +402,13 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **リリース**
 
-- [ ] プレリリースを経ず `latest` tag で `0.13.0` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。入力は既定の `next` ではなく `dist_tag: 0.13.0` とする——`next` は後述の項目で移すまで 0.12.0 を指しており、0.13 の手順をすべて飛ばしたまま成功してしまう。ログが `verifying monodocs 0.13.0` を示し、0.13 が必要な手順——`sources.lineBreak`、出力サイズの表示と `assets.budget`、`pdf.watermark`、Mermaid の lightbox のマークアップ——が飛ばされずに実行されたことを確かめる
-- [ ] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証する
+- [x] プレリリースを経ず `latest` tag で `0.13.0` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。入力は既定の `next` ではなく `dist_tag: 0.13.0` とする——`next` は後述の項目で移すまで 0.12.0 を指しており、0.13 の手順をすべて飛ばしたまま成功してしまう。ログが `verifying monodocs 0.13.0` を示し、0.13 が必要な手順——`sources.lineBreak`、出力サイズの表示と `assets.budget`、`pdf.watermark`、Mermaid の lightbox のマークアップ——が飛ばされずに実行されたことを確かめる。`v0.13.0` タグから CI で provenance 付きで公開し、`latest` dist-tag が付いた。`dist_tag: 0.13.0` での実行はログに `verifying monodocs 0.13.0` を示し、0.13 の 4 つの手順は Linux x64 / Windows x64 の両方で実行されて成功した
+- [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証する。リリースが起動した実行で、両プラットフォームとも 16 項目が PASS した
 - [ ] 公開済みの `v0.13.0` の資産に対し、Windows 11 ホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
-- [ ] Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）
-- [ ] リリースされた Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新たに加わる 2 つ——Mermaid 図が lightbox で開き、閉じると元に戻ること、`sources.lineBreak: join` でビルドした日本語の段落が文と文のあいだに空白なく読めること——を含む
+- [x] Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）。Linux x64 ホスト上の、Node.js を入れていない `debian:stable-slim` コンテナで、公開済みの `v0.13.0` の資産に対して実行し、16 項目すべて PASS した。素のホストではなくコンテナだが、この項目が問うている環境——バイナリが自前のランタイム以外を持たない環境——であり、0.12.0 が未了で残した項目をこれで閉じる
+- [x] リリースされた Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新たに加わる 2 つ——Mermaid 図が lightbox で開き、閉じると元に戻ること、`sources.lineBreak: join` でビルドした日本語の段落が文と文のあいだに空白なく読めること——を含む。資産を `.sha256` と照合し、最小限の環境で実行して、その出力を Chromium で 13 項目確かめた——サイドバーの表示、ページの移動と現在ページの印、前後ナビ、検索結果と開いたページ内のハイライト、`Escape` による検索欄のクリアと目次の復帰、再読み込み後も保たれるダークモード、375px でトグルから開きリンクの後に閉じるドロワー、別名がページを表示して hash を書き換えること、別名がアンカーを保つこと、フッターの `monodocs v0.13.0`、スクリプトエラーが無いこと、そして新しい 2 つ——Mermaid 図が lightbox で全幅に開き、閉じるとブロックに戻ること、`join` でビルドした `examples/ja` で日本語の文と文のあいだに改行が残らず、書き手が書いた明示的な改行と、英字が続く文の改行は残ること
 - [ ] Windows で人にしかできない確認——生成した HTML が Edge でどう見えるか（とりわけ日本語）、透かし入りの PDF を開いて印刷したときの見え方、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードした資産に対する Mark of the Web と SmartScreen
-- [ ] `next` dist-tag を `0.13.0` へ移し、公式サイトの CI ガイドの固定バージョン（英日とも）をそれに合わせる
+- [x] `next` dist-tag を `0.13.0` へ移し、公式サイトの CI ガイドの固定バージョン（英日とも）をそれに合わせる。`next` と `latest` はどちらも `0.13.0` を指し、CI ガイドは `monodocs@0.13.0` を固定している
 
 ### v0.14: 紙の版面を仕上げる
 
