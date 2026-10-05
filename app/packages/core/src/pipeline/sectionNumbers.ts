@@ -62,7 +62,9 @@ function prependNumber(heading: Element, number: string): void {
     {
       type: "element",
       tagName: "span",
-      properties: { className: [SECTION_NUMBER_CLASS] },
+      // The attribute tells the client this number is core's, not a document's own markup that
+      // happens to use the class: search leaves only core's numbers unhighlighted.
+      properties: { className: [SECTION_NUMBER_CLASS], dataMonodocsSectionNumber: "" },
       children: [{ type: "text", value: number }],
     },
     // A space in the text rather than a margin, so that copying a heading copies "2.3 Usage" and

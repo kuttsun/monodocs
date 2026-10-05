@@ -72,7 +72,10 @@ Multiple source files share one HTML document, so every element ID must be globa
   `page.text`, and heading text are left exactly as they are without numbering. That is why the
   sidebar is built before post-processing: it needs only titles and paths. The client receives the
   number beside the title and heading text, never inside them, so search matches a number as a
-  whole and digits cannot change how a word scores. AsciiDoc `:sectnums:` is refused while numbering
+  whole and digits cannot change how a word scores; a result whose number matched is listed before
+  any that did not. The span core writes carries `data-monodocs-section-number`, which is how the
+  client leaves those digits out of the in-body highlight without touching a document's own markup
+  that uses the class. AsciiDoc `:sectnums:` is refused while numbering
   is on, by asking Asciidoctor which sections it numbered rather than reading the attribute.
 
 ### Routing and link rewriting

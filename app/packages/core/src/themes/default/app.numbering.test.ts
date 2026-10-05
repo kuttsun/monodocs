@@ -26,7 +26,9 @@ async function mountClient(pages: ClientPage[]): Promise<void> {
         p.headings
           .map((h) => {
             // As core writes it into the body.
-            const number = h.number ? `<span class="section-number">${h.number}</span> ` : "";
+            const number = h.number
+              ? `<span class="section-number" data-monodocs-section-number="">${h.number}</span> `
+              : "";
             return `<h${h.level} id="${h.id}">${number}${h.text}</h${h.level}>`;
           })
           .join("") +
@@ -171,6 +173,52 @@ describe("search by section number", () => {
     // The page's own number opens the page, not a heading whose text happens to contain it.
     typeQuery("3");
     expect(results().map((r) => r.heading)).toEqual([null]);
+  });
+
+  it("ranks the section a number names above pages that merely mention it", async () => {
+    // Many pages carrying "3.2" in a heading and their text outscore a bare number match on
+    // points; the section the reader asked for must not fall below them, or out of the list.
+    const noise: ClientPage[] = Array.from({ length: 25 }, (_, i) => ({
+      route: `/n${i}`,
+      title: `Release 13.2 notes ${i}`,
+      hidden: false,
+      headings: [{ id: `n${i}-h`, text: "Release 13.2", level: 2 }],
+      text: "Release 13.2 notes Release 13.2",
+    }));
+    await mountClient([
+      ...noise,
+      {
+        route: "/target",
+        title: "Target",
+        number: "3",
+        hidden: false,
+        headings: [{ id: "t-h", text: "Scope", level: 2, number: "3.2" }],
+        text: "Target Scope",
+      },
+    ]);
+    typeQuery("3.2");
+    expect(results()[0]).toMatchObject({ route: "/target", heading: "t-h" });
+  });
+
+  it("still marks a word inside a document's own .section-number element", async () => {
+    await mountClient([
+      {
+        route: "/own",
+        title: "Own",
+        hidden: false,
+        headings: [{ id: "own-h", text: "Heading", level: 2 }],
+        text: "Own Heading widget",
+      },
+    ]);
+    // Markup a document wrote itself (an AsciiDoc passthrough), not a number core added.
+    document
+      .querySelector('article[data-route="/own"]')!
+      .insertAdjacentHTML("beforeend", '<p><span class="section-number">widget</span></p>');
+    typeQuery("widget");
+    (document.querySelector("#search-results a") as HTMLElement).click();
+    expect(
+      document.querySelectorAll('article[data-route="/own"] .section-number mark').length,
+    ).toBe(1);
   });
 
   it("does not let a number change how a word scores", async () => {

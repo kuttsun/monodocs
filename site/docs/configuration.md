@@ -528,8 +528,9 @@ numbering:
 - **Where it appears.** In the heading itself, as `<span class="section-number">2.3</span>` followed
   by a space, so a stylesheet can hide it and copying the heading copies the number. In the sidebar,
   the in-page table of contents, and the PDF bookmarks, so no list disagrees with the body. In
-  search: typing `3.2` finds section 3.2, matched as a whole number, while the digits are kept out of
-  the text words are matched against, so they never change how a word ranks.
+  search: typing `3.2` finds section 3.2, matched as a whole number and listed first, ahead of pages
+  that only mention "13.2", while the digits are kept out of the text words are matched against, so
+  they never change how a word ranks.
 - **Never in an address.** Routes, page IDs, and heading IDs are exactly what they are without
   numbering. A number is a label; an address that changed whenever a page moved would break every
   link anyone had copied.

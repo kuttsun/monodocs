@@ -759,13 +759,16 @@
           : "",
         snippet: snippet(entry, terms, scored.textHits),
         score: scored.score,
+        numberHit: scored.pageNumberHit || Object.keys(scored.numberHits).length > 0,
         index: index,
       });
     });
 
-    // スコア降順。同点は閲覧順（文書順）を保つ。
+    // 番号が語と完全に一致した結果が先。番号で探した読者が求めているのはその節であり、
+    // 別のページが同じ数字を何度書いていても、点数で上回らせない。次にスコア降順、
+    // 同点は閲覧順（文書順）を保つ。番号の一致が無い検索の順位は変わらない。
     results.sort(function (a, b) {
-      return b.score - a.score || a.index - b.index;
+      return Number(b.numberHit) - Number(a.numberHit) || b.score - a.score || a.index - b.index;
     });
     return results.slice(0, SEARCH_LIMIT);
   }
@@ -785,18 +788,16 @@
   // Subtrees left alone. A Mermaid block is source the runtime reads and replaces with a diagram
   // (an svg), and the code-block toolbar and its copy toast are UI text the theme injects.
   var BODY_HIGHLIGHT_SKIP_TAGS = ["SVG", "SCRIPT", "STYLE", "TEXTAREA", "CANVAS"];
-  // A section number is matched only as a whole (see scoreEntry), so marking "1" inside "13.2"
-  // would show a match search did not make.
-  var BODY_HIGHLIGHT_SKIP_CLASSES = [
-    "mermaid",
-    "code-toolbar",
-    "code-copied-toast",
-    "section-number",
-  ];
+  var BODY_HIGHLIGHT_SKIP_CLASSES = ["mermaid", "code-toolbar", "code-copied-toast"];
+  // The section number core put in a heading. It is matched only as a whole (see scoreEntry), so
+  // marking "1" inside "13.2" would show a match search did not make. Recognised by an attribute
+  // core sets rather than by the class, which a document's own markup may also use.
+  var SECTION_NUMBER_ATTRIBUTE = "data-monodocs-section-number";
 
   function skipsBodyHighlight(el) {
     // An SVG element keeps its lower-case tagName, so compare in one case.
     if (BODY_HIGHLIGHT_SKIP_TAGS.indexOf(String(el.tagName).toUpperCase()) !== -1) return true;
+    if (el.hasAttribute && el.hasAttribute(SECTION_NUMBER_ATTRIBUTE)) return true;
     for (var i = 0; i < BODY_HIGHLIGHT_SKIP_CLASSES.length; i++) {
       if (el.classList && el.classList.contains(BODY_HIGHLIGHT_SKIP_CLASSES[i])) return true;
     }

@@ -69,7 +69,7 @@ function addresses(html: string): { ids: string[]; hrefs: string[]; routes: stri
 function headingNumber(html: string, id: string): string | undefined {
   const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = new RegExp(
-    `<h[1-6] id="${escaped}"[^>]*><span class="section-number">([^<]*)</span> `,
+    `<h[1-6] id="${escaped}"[^>]*><span class="section-number" data-monodocs-section-number="">([^<]*)</span> `,
   ).exec(html);
   return match?.[1];
 }
@@ -91,7 +91,7 @@ afterAll(async () => {
 
 describe("numbering.sections", () => {
   it("is off by default, and false builds what leaving it out builds", async () => {
-    expect(off).not.toMatch(/<span class="section-number">\d/);
+    expect(off).not.toMatch(/<span class="section-number"[^>]*>\d/);
     expect(await build(docs, "numbering:\n  sections: false\n")).toBe(off);
   });
 
@@ -131,8 +131,12 @@ describe("numbering.sections", () => {
       expect(headingNumber(on, heading.id)).toBe(heading.number);
     }
     // The page title: the AsciiDoc document title and a Markdown h1 alike.
-    expect(on).toMatch(/<h1[^>]*><span class="section-number">2\.2<\/span> Usage<\/h1>/);
-    expect(on).toMatch(/<h1[^>]*><span class="section-number">1<\/span> Home<\/h1>/);
+    expect(on).toMatch(
+      /<h1[^>]*><span class="section-number" data-monodocs-section-number="">2\.2<\/span> Usage<\/h1>/,
+    );
+    expect(on).toMatch(
+      /<h1[^>]*><span class="section-number" data-monodocs-section-number="">1<\/span> Home<\/h1>/,
+    );
   });
 
   it("leaves routes, page IDs, heading IDs, and links exactly as they were", () => {
@@ -252,8 +256,12 @@ describe("numbering.sections", () => {
       ["Sub", "1.2.1"],
     ]);
     // The body says the same, heading by heading.
-    expect(html).toMatch(/<h2 id="c-dup"><span class="section-number">1\.1<\/span> First<\/h2>/);
-    expect(html).toMatch(/<h2 id="c-dup"><span class="section-number">1\.2<\/span> Second<\/h2>/);
+    expect(html).toMatch(
+      /<h2 id="c-dup"><span class="section-number" data-monodocs-section-number="">1\.1<\/span> First<\/h2>/,
+    );
+    expect(html).toMatch(
+      /<h2 id="c-dup"><span class="section-number" data-monodocs-section-number="">1\.2<\/span> Second<\/h2>/,
+    );
   });
 
   it("numbers a page with no h1 in the sidebar and its sections", async () => {
