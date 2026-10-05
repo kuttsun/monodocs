@@ -152,7 +152,9 @@ export function createAsciidocRenderer(
  *
  * An `[appendix]` section is left out: Asciidoctor numbers it with a letter whether or not
  * `sectnums` is set (measured: "Appendix A: Extra", or "A. Extra" without the caption), so it says
- * nothing about `sectnums`. Under `numbering.sections` it is counted as any other section.
+ * nothing about `sectnums`. Under `numbering.sections` it is counted as any other section. A book's
+ * part is left out for the same reason: `:partnums:` labels it "I: First Part" without `sectnums`,
+ * and a part is a level-0 heading, which `numbering.sections` does not number.
  */
 function refuseNumberedSections(doc: Document, source: SourceFile): void {
   if (!numbersSections(doc)) return;
@@ -169,10 +171,13 @@ function refuseNumberedSections(doc: Document, source: SourceFile): void {
  * `traverseDocuments` option (measured), so each cell's inner document is searched in turn —
  * a `:sectnums:` set inside a cell numbers that cell's sections and nothing outside it.
  */
+/** Sections Asciidoctor labels by a scheme of their own rather than by `sectnums`. */
+const LABELLED_APART = new Set(["appendix", "part"]);
+
 function numbersSections(doc: Document): boolean {
   const numbered = doc.findBy({ context: "section" }).some((block) => {
     const section = block as Section;
-    return section.isNumbered() && section.getSectionName() !== "appendix";
+    return section.isNumbered() && !LABELLED_APART.has(section.getSectionName() ?? "");
   });
   if (numbered) return true;
   return doc.findBy({ context: "table_cell" }).some((cell) => {

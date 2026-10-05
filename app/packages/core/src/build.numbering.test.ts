@@ -360,6 +360,13 @@ describe(":sectnums: while numbering is on", () => {
     await expect(build(both, "numbering:\n  sections: 3\n")).rejects.toThrow(/sectnums/);
   });
 
+  it("is not tripped by :partnums:, which labels a book's parts rather than its sections", async () => {
+    const root = await tree("partnums", {
+      "book.adoc": "= Book\n:doctype: book\n:partnums:\n\n= First Part\n\n== Chapter\n",
+    });
+    await expect(build(root, "numbering:\n  sections: 3\n")).resolves.toContain("I: First Part");
+  });
+
   it("leaves a discrete heading alone", async () => {
     const root = await tree("sectnums-discrete", { "doc.adoc": "= T\n\n[discrete]\n== D\n" });
     await expect(build(root, "numbering:\n  sections: 3\n")).resolves.toContain("<h2");
