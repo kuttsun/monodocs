@@ -43,6 +43,13 @@ export function numberSidebar(nodes: SidebarNode[]): {
   return { sidebar: walk(nodes, ""), pageNumbers };
 }
 
+/**
+ * The classes Asciidoctor gives a heading that is not a section: `[discrete]`, and its older
+ * spelling `[float]`, which it renders with `class="float"` rather than `discrete` (measured with
+ * @asciidoctor/core 4.1).
+ */
+const NOT_A_SECTION = ["discrete", "float"];
+
 function hasClass(node: Element, name: string): boolean {
   const value: unknown = node.properties?.className;
   if (Array.isArray(value)) return value.map(String).includes(name);
@@ -70,7 +77,7 @@ function prependNumber(heading: Element, number: string): void {
  *
  * Only the headings the renderer collected are numbered, matched by ID: those are the headings the
  * table of contents and search know, so the body and the lists can never disagree. A heading
- * Asciidoctor marked `discrete` is not a section, so it is skipped and does not move the count —
+ * Asciidoctor marked `discrete` or `float` is not a section, so it is skipped and does not move the count —
  * the same thing `:sectnums:` does. The first h1 is the page title and carries the page's own
  * number; a later h1 is left alone.
  *
@@ -101,6 +108,8 @@ export function numberHeadings(
     const id = node.properties?.id;
     const heading = typeof id === "string" ? byId.get(id)?.shift() : undefined;
     if (heading === undefined) return;
+    // Not a section, at any level — a discrete h1 is not the page title either.
+    if (NOT_A_SECTION.some((name) => hasClass(node, name))) return;
 
     if (level === 1) {
       if (titled) return;
@@ -108,7 +117,7 @@ export function numberHeadings(
       prependNumber(node, pageNumber);
       return;
     }
-    if (level > depth || hasClass(node, "discrete")) return;
+    if (level > depth) return;
 
     // counters[0] is h2. Deeper levels restart whenever a shallower one advances.
     counters[level - 2] = (counters[level - 2] ?? 0) + 1;

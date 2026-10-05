@@ -264,6 +264,24 @@ describe("numbering.sections", () => {
     expect(html).toContain('data-route="/b"><span class="section-number">2</span> ');
   });
 
+  it("passes over [float] as it does [discrete], at h2 and at h1", async () => {
+    const root = await tree("float", {
+      "doc.adoc": "= T\n\n== A\n\n[float]\n== Aside\n\n[discrete]\n= Top\n\n== B\n",
+      "untitled.adoc": "[discrete]\n= Loose\n\n== S\n",
+    });
+    const html = await build(root, "numbering:\n  sections: 3\n");
+    const pages = siteData(html).pages;
+    expect(pages[0]!.headings.map((h) => [h.text, h.number])).toEqual([
+      ["A", "1.1"],
+      ["Aside", undefined],
+      ["B", "1.2"],
+    ]);
+    expect(html).toMatch(/<h2 id="doc-_aside" class="float">Aside<\/h2>/);
+    // A discrete h1 is not the page title, so it does not take the page's number.
+    expect(html).toMatch(/<h1 id="untitled-_loose" class="discrete">Loose<\/h1>/);
+    expect(pages[1]!.headings.find((h) => h.text === "S")!.number).toBe("2.1");
+  });
+
   it("counts an AsciiDoc appendix as a section, keeping Asciidoctor's own caption", async () => {
     const root = await tree("appendix", {
       "doc.adoc": "= T\n\n== A\n\n[appendix]\n== Extra\n\n=== Sub\n",

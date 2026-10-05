@@ -1828,8 +1828,8 @@ What the implementation (v0.14) settled that the above leaves open:
 - **The PDF bookmarks carry the numbers too.** They are a table of contents, and the reason the
   sidebar shows numbers applies to them unchanged.
 - **Every heading from h2 down to the configured level is counted**, whatever `toc.maxLevel` is.
-  An AsciiDoc `[discrete]` heading is not a section, so it is neither numbered nor counted, which is
-  also what `:sectnums:` does. An `[appendix]` section is counted like any other and keeps its
+  An AsciiDoc `[discrete]` (or `[float]`) heading is not a section, so it is neither numbered nor
+  counted, which is also what `:sectnums:` does. An `[appendix]` section is counted like any other and keeps its
   `Appendix A:` caption: Asciidoctor letters appendices whether or not `:sectnums:` is set, so the
   letter is not a second numbering of the document's sections and is not refused. A skipped level
   counts as zero (`1.0.1`), keeping a number as deep as its heading; the structure is already
