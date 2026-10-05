@@ -13,7 +13,7 @@ What keeps running after a release, and what a person has to check. This is the 
 | Vulnerable versions    | Dependabot alerts and automated security fixes, enabled in the repository settings    |
 | Advisories on the tree | `.github/workflows/scheduled-audit.yml`, weekly, opening an issue when it fails       |
 | Pull request checks    | `.github/workflows/pr-ci.yml`, which also audits both dependency sets and lints the scripts |
-| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version. Steps that verify a feature added in 0.10, 0.11, 0.12, or 0.13 are gated on the installed version, so an older release can still be verified. The include read boundary is checked on Linux only, because creating a symbolic link on a Windows runner needs privileges the job does not have |
+| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version. Steps that verify a feature added in 0.10, 0.11, 0.12, 0.13, or 0.14 are gated on the installed version, so an older release can still be verified. The include read boundary is checked on Linux only, because creating a symbolic link on a Windows runner needs privileges the job does not have |
 | Release binaries       | `.github/workflows/verify-release-binaries.yml`, on publish and by hand against a tag |
 | Documentation site     | `.github/workflows/deploy-site.yml`, after a successful Release run for a stable tag, and by hand from main against the latest stable tag; a push to main does not deploy |
 | Review reminder        | `.github/workflows/quarterly-review.yml`, opening the quarterly checklist as an issue |

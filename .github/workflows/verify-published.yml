@@ -60,9 +60,10 @@ jobs:
       # The version decides which surface exists to be verified: this workflow takes any dist-tag or
       # version as input, and `init`, the message language, and PDF page numbers all arrive in 0.10,
       # the diagnostics JSON and `document` in 0.11, and `root` / `sources.include`, route aliases,
-      # `sources.asciidoc.attributes`, and the include boundary in 0.12, and `sources.lineBreak`, the
-      # size report and `assets.budget`, and `pdf.watermark` in 0.13. Verifying an older release
-      # must stay possible, so those steps ask rather than assume.
+      # `sources.asciidoc.attributes`, and the include boundary in 0.12, `sources.lineBreak`, the
+      # size report and `assets.budget`, and `pdf.watermark` in 0.13, and `numbering.sections` and
+      # `pdf.toc` in 0.14. Verifying an older release must stay possible, so those steps ask rather
+      # than assume.
       - name: Record the published version
         run: |
           version="$(monodocs --version | tr -d '\r')"
@@ -75,13 +76,14 @@ jobs:
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
             const major = Number(m[1]), minor = Number(m[2]);
             const atLeast = (n) => major > 0 || minor >= n;
-            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13)].map(String).join(' '));
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V011=$(echo "$gate" | cut -d' ' -f2)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V012=$(echo "$gate" | cut -d' ' -f3)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V013=$(echo "$gate" | cut -d' ' -f4)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V014=$(echo "$gate" | cut -d' ' -f5)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -533,3 +535,108 @@ jobs:
             const h = require('node:fs').readFileSync('out/docs.html', 'utf8');
             if (!h.includes('id=\"image-lightbox-diagram\"')) throw new Error('the lightbox has no diagram host');
           "
+
+      # v0.14. One numbering across Markdown and AsciiDoc, in sidebar order, written into the headings
+      # and the sidebar and never into an ID (19.1). The off build is the control for the addresses:
+      # every id= and data-route must be what it is without numbering. `:sectnums:` is refused while
+      # numbering is on, and validate reports it by its code.
+      - name: Section numbering
+        if: env.SUPPORTS_V014 == 'true'
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            fs.mkdirSync('numbering/docs/guide', { recursive: true });
+            fs.writeFileSync('numbering/docs/index.md', '# Home\n\n## Overview\n');
+            fs.writeFileSync('numbering/docs/guide/usage.adoc', '= Usage\n\n== Basics\n');
+            fs.writeFileSync('numbering/on.yml', 'numbering:\n  sections: 3\n');
+            fs.mkdirSync('numbering/sectnums', { recursive: true });
+            fs.writeFileSync('numbering/sectnums/doc.adoc', '= T\n:sectnums:\n\n== A\n');
+          "
+          monodocs build numbering/docs -o numbering/off.html
+          monodocs build numbering/docs -c numbering/on.yml -o numbering/on.html
+          node -e "
+            const fs = require('node:fs');
+            const on = fs.readFileSync('numbering/on.html', 'utf8');
+            const off = fs.readFileSync('numbering/off.html', 'utf8');
+            const fail = (m) => { throw new Error(m); };
+            const num = '<span class=\\\"section-number\\\" data-monodocs-section-number=\\\"\\\">';
+            if (!new RegExp('<h2[^>]*>' + num + '1\\\\.1</span> Overview</h2>').test(on)) fail('the Markdown h2 was not numbered 1.1');
+            if (!new RegExp('<h2[^>]*>' + num + '2\\\\.1\\\\.1</span> Basics</h2>').test(on)) fail('the AsciiDoc h2 was not numbered 2.1.1');
+            if (!on.includes('<span class=\\\"section-number\\\">2</span> guide')) fail('the sidebar directory carries no number');
+            const addresses = (h) => [...h.matchAll(/\\s(?:id|data-route)=\\\"([^\\\"]*)\\\"/g)].map((m) => m[1]).join('|');
+            if (addresses(on) !== addresses(off)) fail('numbering changed an ID or a route');
+          "
+          # An error fails validate with exit code 1; anything else is a different failure.
+          status=0
+          monodocs validate numbering/sectnums -c numbering/on.yml --format json > numbering/sectnums.json || status=$?
+          cat numbering/sectnums.json
+          if [ "$status" -ne 1 ]; then echo "validate exited $status, not 1"; exit 1; fi
+          node -e "
+            const r = JSON.parse(require('node:fs').readFileSync('numbering/sectnums.json', 'utf8'));
+            if (!r.diagnostics.some((d) => d.code === 'numbering/sectnums' && d.severity === 'error')) {
+              throw new Error(':sectnums: was not refused with numbering/sectnums');
+            }
+          "
+
+      # v0.14. A table of contents in front of the PDF body, its page numbers read back from the PDF
+      # and verified (24.9). The printed numbers are checked from outside: the table's text is read
+      # with pdfjs-dist and each line's number compared with the sheet its heading is found on in the
+      # body. The table's sheets make the PDF longer than the same document without one, and it
+      # carries the named destinations the build read the numbers from. A depth outside 2-6 is
+      # refused by the configuration.
+      - name: Printed table of contents
+        if: env.SUPPORTS_V014 == 'true'
+        run: |
+          npm install --no-save --no-package-lock pdf-lib@1 pdfjs-dist@6
+          node -e "
+            const fs = require('node:fs');
+            fs.mkdirSync('toc/docs', { recursive: true });
+            const filler = Array.from({ length: 60 }, (_, i) => 'Filler paragraph ' + i + ' of plain text.').join('\\n\\n');
+            fs.writeFileSync('toc/docs/a.md', '# Alpha\\n\\n## Alpha one\\n\\n' + filler + '\\n\\n## Alpha two\\n\\nEnd.\\n');
+            fs.writeFileSync('toc/docs/b.md', '# Beta\\n\\n' + filler + '\\n\\n## Beta one\\n\\nEnd.\\n');
+            fs.writeFileSync('toc/on.yml', 'pdf:\\n  toc:\\n    enabled: true\\n');
+          "
+          monodocs build toc/docs --format pdf -o toc/off.pdf
+          monodocs build toc/docs -c toc/on.yml --format pdf -o toc/on.pdf
+          node -e "
+            const fs = require('node:fs');
+            const { PDFDocument, PDFDict, PDFName } = require('pdf-lib');
+            const fail = (m) => { throw new Error(m); };
+            (async () => {
+              const off = await PDFDocument.load(fs.readFileSync('toc/off.pdf'));
+              const on = await PDFDocument.load(fs.readFileSync('toc/on.pdf'));
+              console.log('sheets without the table: ' + off.getPageCount() + ', with it: ' + on.getPageCount());
+              if (!(on.getPageCount() > off.getPageCount())) fail('the table added no sheet');
+              const dests = on.catalog.lookup(PDFName.of('Dests'));
+              const names = dests instanceof PDFDict ? dests.keys().map((k) => k.asString()) : [];
+              if (!names.some((n) => n.startsWith('/mdtoc'))) fail('the PDF carries no table destinations');
+
+              const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+              const doc = await pdfjs.getDocument({ data: new Uint8Array(fs.readFileSync('toc/on.pdf')) }).promise;
+              const sheets = [];
+              for (let i = 1; i <= doc.numPages; i++) {
+                const content = await (await doc.getPage(i)).getTextContent();
+                // Text items are not lines and may split a title anywhere, so a sheet is read as one
+                // string, items joined by a space and whitespace collapsed (a split title reads whole,
+                // and the footer's page count cannot run into a number), and titles are found by substring.
+                sheets.push(content.items.map((item) => item.str).join(' ').replace(/\\s+/g, ' '));
+              }
+              const table = sheets[0];
+              if (!table.includes('Contents')) fail('the first sheet is not the table: ' + table);
+              for (const title of ['Alpha', 'Alpha one', 'Alpha two', 'Beta', 'Beta one']) {
+                // The sheet the heading is on, found by reading the body, past the table.
+                const at = sheets.findIndex((text, i) => i > 0 && text.includes(title)) + 1;
+                if (at < 2) fail('the body has no heading ' + title);
+                // The title directly followed by its number: 'Alpha' does not match 'Alpha one 2'.
+                const line = new RegExp(title + '\\\\s*(\\\\d+)(?!\\\\d)').exec(table);
+                if (!line) fail('the table has no line for ' + title + ': ' + JSON.stringify(table));
+                if (Number(line[1]) !== at) fail('the table says ' + title + ' is on ' + line[1] + ', the body has it on ' + at);
+                console.log(title + ': ' + at);
+              }
+            })().catch((e) => { console.error(e.message); process.exit(1); });
+          "
+          printf 'pdf:\n  toc:\n    depth: 7\n' > toc/bad.yml
+          if monodocs build toc/docs -c toc/bad.yml --format pdf -o toc/bad.pdf 2> toc/bad.log; then
+            echo "a pdf.toc depth of 7 was accepted"; exit 1
+          fi
+          grep -q "pdf.toc.depth" toc/bad.log || { echo "the failure was not about pdf.toc.depth"; cat toc/bad.log; exit 1; }
