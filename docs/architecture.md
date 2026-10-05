@@ -20,11 +20,12 @@ The central build function is `preparePages()` in
 loadConfig (config.ts)
   -> scanSourceFiles (scan.ts)           scan inputs, detect formats, apply exclusions
   -> buildPages (pipeline/buildPages.ts) render with each SourceRenderer and normalize to Page[]
-  -> postprocessPages (pipeline/postprocess.ts)
-                                         rewrite links, embed images, transform Mermaid,
-                                         and apply Shiki highlighting on HAST
   -> buildSidebar (pipeline/buildSidebar.ts)
                                          build the sidebar tree from the directory structure
+                                         (numberSidebar numbers it under numbering.sections)
+  -> postprocessPages (pipeline/postprocess.ts)
+                                         rewrite links, embed images, transform Mermaid,
+                                         apply Shiki highlighting, and number headings on HAST
   -> renderSingleHtml (pipeline/renderSingleHtml.ts)
                                          inject content into the template
   -> writeOutput (build.ts)
@@ -65,6 +66,14 @@ Multiple source files share one HTML document, so every element ID must be globa
 - `buildPages` must reject both route collisions and page-ID collisions. For example, `a-b.md` and `a/b.md`
   produce the same page ID.
 - Prefixing also applies to generated IDs such as footnotes, not only heading IDs.
+- Section numbers (`numbering.sections`) are labels and never addresses. They are decided from the
+  sidebar the reader sees, on the shared `Page` model rather than in either renderer, and written
+  into the heading as a `.section-number` element in post-processing; routes, page IDs, heading IDs,
+  `page.text`, and heading text are left exactly as they are without numbering. That is why the
+  sidebar is built before post-processing: it needs only titles and paths. The client receives the
+  number beside the title and heading text, never inside them, so search matches a number as a
+  whole and digits cannot change how a word scores. AsciiDoc `:sectnums:` is refused while numbering
+  is on, by asking Asciidoctor which sections it numbered rather than reading the attribute.
 
 ### Routing and link rewriting
 

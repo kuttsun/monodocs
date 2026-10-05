@@ -23,7 +23,7 @@ Last updated: 2026-10-05
 | Specification sync, diagnostics, `document`       | ✅ Done   | v0.11          |
 | Input root, route aliases, AsciiDoc attributes    | ✅ Done   | v0.12          |
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
-| Section numbering, printed table of contents      | 🚧 Planned| v0.14          |
+| Section numbering, printed table of contents      | 🚧 In progress| v0.14      |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -417,11 +417,11 @@ has to make are still open.
 
 **Section numbering** ([roadmap.md](roadmap.md) 19.1)
 
-- [ ] `numbering.sections: 3` numbers headings continuously across the whole document, decided in the shared `Page` model rather than per file in either renderer — AsciiDoc's `:sectnums:` restarts in every file, and Markdown has nothing at all
-- [ ] The number follows the sidebar order, a directory contributes a level, and `h1` carries the page's own number rather than a heading number
-- [ ] Routes, page IDs, and heading IDs are unchanged, and a test asserts it. An address that changes when a page is reordered would break every link ever copied
-- [ ] The number is an element inside the heading, appears in the sidebar and the in-page table of contents, and does not outweigh a word in search
-- [ ] `:sectnums:` in a document is refused while numbering is on, naming the configuration key
+- [x] `numbering.sections: 3` numbers headings continuously across the whole document, decided in the shared `Page` model rather than per file in either renderer — AsciiDoc's `:sectnums:` restarts in every file, and Markdown has nothing at all
+- [x] The number follows the sidebar order, a directory contributes a level, and `h1` carries the page's own number rather than a heading number
+- [x] Routes, page IDs, and heading IDs are unchanged, and a test asserts it. An address that changes when a page is reordered would break every link ever copied
+- [x] The number is an element inside the heading, appears in the sidebar and the in-page table of contents, and does not outweigh a word in search
+- [x] `:sectnums:` in a document is refused while numbering is on, naming the configuration key
 
 **A table of contents on paper** ([roadmap.md](roadmap.md) 24.9)
 

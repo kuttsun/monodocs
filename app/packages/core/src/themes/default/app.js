@@ -227,6 +227,17 @@
     showPage(route || "/");
   }
 
+  /**
+   * The section number in front of a title or heading (numbering.sections), shaped as core shapes
+   * it in the body and the sidebar. `marked` is the number when the search query named it, so the
+   * result shows why it matched. Empty when there is no number.
+   */
+  function sectionNumberHtml(number, marked) {
+    if (typeof number !== "string" || number === "") return "";
+    var inner = number === marked ? "<mark>" + escapeHtml(number) + "</mark>" : escapeHtml(number);
+    return '<span class="section-number">' + inner + "</span> ";
+  }
+
   // ---- in-page table of contents ----
   function renderToc(route) {
     var toc = document.getElementById("toc");
@@ -262,6 +273,7 @@
         '" data-heading="' +
         escapeHtml(h.id) +
         '">' +
+        sectionNumberHtml(h.number, "") +
         escapeHtml(h.text) +
         "</a></li>";
     });
@@ -482,13 +494,21 @@
       var text = p.text || "";
       return {
         route: p.route,
+        // A section number is matched as a whole and on its own, never folded into the title or
+        // heading text: "3.2" asks for a section, and digits must not change how a word scores.
+        number: typeof p.number === "string" ? fold(p.number) : "",
         title: title,
         titleFolded: fold(title),
         text: text,
         textFolded: fold(text),
         headings: (p.headings || []).map(function (h) {
           var htext = h.text || "";
-          return { id: h.id, text: htext, folded: fold(htext) };
+          return {
+            id: h.id,
+            number: typeof h.number === "string" ? fold(h.number) : "",
+            text: htext,
+            folded: fold(htext),
+          };
         }),
       };
     });
@@ -524,14 +544,14 @@
       var term = terms[i];
       var matched = false;
 
-      if (entry.titleFolded.indexOf(term) !== -1) {
+      if (entry.titleFolded.indexOf(term) !== -1 || (entry.number && entry.number === term)) {
         score += SCORE_TITLE;
         matched = true;
       }
 
       var headingMatched = false;
       entry.headings.forEach(function (h) {
-        if (h.folded.indexOf(term) === -1) return;
+        if (h.folded.indexOf(term) === -1 && !(h.number && h.number === term)) return;
         headingHits[h.id] = (headingHits[h.id] || 0) + 1;
         headingMatched = true;
       });
@@ -686,6 +706,11 @@
     );
   }
 
+  // The number when one of the terms is exactly it, for sectionNumberHtml to mark.
+  function matchedNumber(number, terms) {
+    return number && terms.indexOf(number) !== -1 ? number : "";
+  }
+
   function search(query) {
     var terms = tokenize(query);
     if (terms.length === 0) return [];
@@ -699,9 +724,14 @@
       var heading = bestHeading(entry, scored.headingHits);
       results.push({
         route: entry.route,
-        title: markMatches(entry.title, entry.titleFolded, terms),
+        title:
+          sectionNumberHtml(entry.number, matchedNumber(entry.number, terms)) +
+          markMatches(entry.title, entry.titleFolded, terms),
         headingId: heading ? heading.id : null,
-        heading: heading ? markMatches(heading.text, heading.folded, terms) : "",
+        heading: heading
+          ? sectionNumberHtml(heading.number, matchedNumber(heading.number, terms)) +
+            markMatches(heading.text, heading.folded, terms)
+          : "",
         snippet: snippet(entry, terms, scored.textHits),
         score: scored.score,
         index: index,

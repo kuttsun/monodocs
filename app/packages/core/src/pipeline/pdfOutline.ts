@@ -22,11 +22,14 @@ export type PdfOutlineNode = { title: string; dest?: string; children: PdfOutlin
  * ページの `dest` は本文 `<article>` の要素 id（`page-{page.id}`）。
  */
 export function sidebarToOutline(nodes: SidebarNode[]): PdfOutlineNode[] {
-  return nodes.map((n) =>
-    n.type === "dir"
-      ? { title: n.title, children: sidebarToOutline(n.children) }
-      : { title: n.title, dest: `page-${n.pageId}`, children: [] },
-  );
+  return nodes.map((n) => {
+    // A bookmark is a table of contents too, and one whose numbers disagree with the body is worse
+    // than one with none (19.1), so it carries the number the sidebar does.
+    const title = n.number === undefined ? n.title : `${n.number} ${n.title}`;
+    return n.type === "dir"
+      ? { title, children: sidebarToOutline(n.children) }
+      : { title, dest: `page-${n.pageId}`, children: [] };
+  });
 }
 
 /** ツリー内の全ページ `dest` を出現順（重複なし）に集める。 */

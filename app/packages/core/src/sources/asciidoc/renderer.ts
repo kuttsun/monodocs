@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { convert, load } from "@asciidoctor/core";
+import { convert, load, type Document, type Section } from "@asciidoctor/core";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
@@ -12,6 +12,8 @@ import type {
   SourceFile,
   SourceRenderer,
 } from "../../types.js";
+import { MonodocsError } from "../../diagnostics.js";
+import { t } from "../../messages.js";
 import { toPageMeta } from "../meta.js";
 import { joinSegmentBreaks, type LineBreak } from "../lineBreak.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
@@ -60,7 +62,14 @@ function buildOptions(
 export function createAsciidocRenderer(
   configured: Readonly<Record<string, string>> = {},
   rootDir?: string,
-  options: { lineBreak?: LineBreak } = {},
+  options: {
+    lineBreak?: LineBreak;
+    /**
+     * `numbering.sections` is on (19.1), so a file numbering its own sections with `:sectnums:` is
+     * refused: two schemes over one document give one heading two numbers.
+     */
+    refuseSectnums?: boolean;
+  } = {},
 ): SourceRenderer {
   const lineBreak = options.lineBreak ?? "space";
   // `break` is Asciidoctor's own hard-break mode, set soft (`@`) like every attribute monodocs
@@ -81,6 +90,7 @@ export function createAsciidocRenderer(
       const doc = await withBoundary(boundary, source, () =>
         load(source.raw, buildOptions(source, attributes, boundary?.registry)),
       );
+      if (options.refuseSectnums) refuseNumberedSections(doc, source);
       const rawTitle = doc.getDocumentTitle();
       const docTitle = typeof rawTitle === "string" ? rawTitle : undefined;
 
@@ -129,6 +139,27 @@ export function createAsciidocRenderer(
       };
     },
   };
+}
+
+/**
+ * Refuse a document in which Asciidoctor numbered a section.
+ *
+ * Asked of the sections rather than of the `sectnums` attribute: an attribute entry can turn
+ * numbering on above one section and off again before the end, which leaves the attribute unset
+ * on the loaded document while that section still carries a number. Measured with
+ * @asciidoctor/core 4.1. A `[discrete]` heading is not a section and is never numbered, so it
+ * cannot trip this. The same check catches `sectnums` set in `sources.asciidoc.attributes`.
+ */
+function refuseNumberedSections(doc: Document, source: SourceFile): void {
+  const numbered = doc
+    .findBy({ context: "section" })
+    .some((block) => (block as Section).isNumbered());
+  if (!numbered) return;
+  throw new MonodocsError(
+    "numbering/sectnums",
+    t("asciidoc.sectnumsWithNumbering", { path: source.relativePath }),
+    { path: source.relativePath },
+  );
 }
 
 /**

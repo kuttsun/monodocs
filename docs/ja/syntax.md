@@ -67,6 +67,10 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 - **ファイル間リンク変換**: Markdown の `.md` / `.adoc` リンク、AsciiDoc の `xref:`、変換後 `.html` 相当の
   リンクを `#/route`（hash route）へ変換する。アンカー付きリンク（`other.md#sec`）は route ではなく
   リンク先ページの prefix 済み要素 ID（`#{page-id}-sec`）へ変換し、HTML でも PDF でもアンカー位置に着地する。
+- **見出し番号**（v0.14）: `numbering.sections` は、サイドバー順に全ファイルを通して見出しに番号を付ける。
+  Markdown と AsciiDoc で同じ扱いになる。番号は見出しの中の要素（`<span class="section-number">`）で、
+  ID や route には入らない。有効な間は AsciiDoc の `:sectnums:` を拒否する。`:sectnums:` はファイルごと
+  に番号を付けるので、1 つの見出しに番号が 2 つ付いてしまう（[roadmap.md](roadmap.md) 19.1）。
 - **ページ内アンカー**: `#id`（`/` で始まらない hash）はページ内アンカーとして扱い、該当要素を含む
   ページを表示してスクロールする。脚注・内部参照・直接 URL（`docs.html#id`）で機能する。
 - **段落の中の改行**: 両形式とも、段落の中の改行は行を分けるのではなく繋ぐ。CommonMark の規則であり

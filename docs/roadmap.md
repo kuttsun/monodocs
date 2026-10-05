@@ -816,6 +816,10 @@ toc:
   # h1 is always excluded because it corresponds to the page title. Headings themselves are always shown in the body.
   maxLevel: 3
 
+numbering:
+  # Number headings across the whole document down to this level: false (default) or 2–6 (v0.14, 19.1).
+  sections: false
+
 assets:
   embedImages: true
   maxInlineSize: "5MB"
@@ -1814,6 +1818,24 @@ and no way to tell which one a cross-reference meant.
 This is the smallest of the printed-document features and the one the others lean on: 24.9's table
 of contents lists numbered sections, and a cross-reference that says "3.2" is only useful in a
 document where 3.2 is written on the page.
+
+What the implementation (v0.14) settled that the above leaves open:
+
+- **The sidebar counted is the one the reader sees** — after `flattenSingleChild`, or as
+  `sidebar.items` writes it, where a group is a level as a directory is. A page with no place in it
+  (`hidden`, or unlisted) has no number, because a number nobody can find in the list is not a place
+  in the document.
+- **The PDF bookmarks carry the numbers too.** They are a table of contents, and the reason the
+  sidebar shows numbers applies to them unchanged.
+- **The headings counted are the ones the table of contents lists.** An AsciiDoc `[discrete]`
+  heading is not a section, so it is neither numbered nor counted, which is also what `:sectnums:`
+  does. A skipped level counts as zero (`1.0.1`), keeping a number as deep as its heading; the
+  structure is already reported as `heading/level-skipped`.
+- **Search matches a number only as a whole.** `3.2` finds section 3.2 and not 13.2 or 3.21, and
+  the number is carried beside the text rather than in it, so no word's score moves.
+- **`:sectnums:` is detected by asking Asciidoctor which sections it numbered**, not by reading the
+  attribute: measured, a document that turns it on above one section and off again ends with the
+  attribute unset while that section is numbered.
 ---
 
 ## 20. Image Embedding
