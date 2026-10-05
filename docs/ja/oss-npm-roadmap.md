@@ -379,6 +379,9 @@ npm dist-tag add monodocs@0.9.0 next
 長期有効な npm write token が必要になるためである。[maintenance.md](maintenance.md) の四半期棚卸しは
 この手順の代わりではなく、抜けたときに気づくための網である。
 
+手順 13 のうち公式サイトは、別途デプロイする必要が無い。安定版のリリースを公開すると
+`deploy-site.yml` がそのタグを対象に走り、prerelease では走らない。タグを打つ前に内容を更新しておけばよい。
+
 ### 10.2 公開後の確認
 
 ```bash

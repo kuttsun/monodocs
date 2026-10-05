@@ -389,6 +389,10 @@ that (the allowed action in the table in 9.1), so moving a dist-tag from CI woul
 long-lived npm write token — which M4 deliberately does not do. The quarterly checklist in
 [maintenance.md](maintenance.md) catches a missed step rather than replacing it.
 
+For step 13, the official site needs no separate deploy: publishing a stable release runs
+`deploy-site.yml` against its tag, and a prerelease does not. Only its content has to be updated
+before the tag.
+
 ### 10.2 Post-Publish Verification
 
 ```bash

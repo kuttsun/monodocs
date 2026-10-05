@@ -13,18 +13,23 @@ name: Deploy site
 #
 # The site is served from the project-pages subpath (https://<owner>.github.io/monodocs/),
 # so the build sets SITE_BASE=/monodocs/ (see site/.vitepress/config.ts).
+#
+# The site documents the released package, so it is deployed from a stable release tag and
+# never from main: a push to main would publish features no installable version has yet.
+# `released` fires for a stable release and for a prerelease promoted to one, but not for a
+# prerelease, which goes to the npm `next` dist-tag and must not replace the `latest` docs.
+# A manual run redeploys an existing stable tag. The github-pages environment therefore
+# allows the `v*` tags as well as main (a release run executes on its tag ref; a manual run
+# executes on the branch it was started from).
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'site/**'
-      - 'app/**'
-      - 'examples/**'
-      - 'scripts/**'
-      - 'Dockerfile.dev'
-      - '.github/workflows/deploy-site.yml'
+  release:
+    types: [released]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable release tag to deploy (for example v0.13.0)
+        required: true
 
 permissions:
   contents: read
@@ -42,8 +47,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Resolve the release tag
+        id: release
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="${RELEASE_TAG:-$INPUT_TAG}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a stable release tag like v0.13.0, got '$tag'" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the release tag
         uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ steps.release.outputs.tag }}
 
       # First use of scripts/app.sh builds the monodocs-dev image from Dockerfile.dev.
       # site-build.sh assumes app dependencies are present, so install them here.

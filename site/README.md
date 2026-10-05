@@ -2,7 +2,7 @@
 
 [日本語](README.ja.md)
 
-The official monodocs landing page and documentation site. It is built with **VitePress** and deployed to GitHub Pages by `.github/workflows/deploy-site.yml`.
+The official monodocs landing page and documentation site. It is built with **VitePress** and deployed to GitHub Pages by `.github/workflows/deploy-site.yml` when a stable release is published, so it always describes the latest released version rather than `main`. To redeploy, run the workflow by hand with an existing stable tag; a site-only fix reaches the live site with the next release.
 
 The site is a standalone npm package, separate from the `app/` pnpm workspace. All builds run in Docker, so Node.js and npm are not required on the host.
 
