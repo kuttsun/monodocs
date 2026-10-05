@@ -1831,8 +1831,9 @@ What the implementation (v0.14) settled that the above leaves open:
   An AsciiDoc `[discrete]` heading is not a section, so it is neither numbered nor counted, which is
   also what `:sectnums:` does. An `[appendix]` section is counted like any other and keeps its
   `Appendix A:` caption: Asciidoctor letters appendices whether or not `:sectnums:` is set, so the
-  letter is not a second numbering of the document's sections and is not refused. A skipped level counts as zero (`1.0.1`), keeping a number as deep as its heading; the
-  structure is already reported as `heading/level-skipped`.
+  letter is not a second numbering of the document's sections and is not refused. A skipped level
+  counts as zero (`1.0.1`), keeping a number as deep as its heading; the structure is already
+  reported as `heading/level-skipped`.
 - **Search matches a number only as a whole.** `3.2` finds section 3.2 and not 13.2 or 3.21, and
   the number is carried beside the text rather than in it, so no word's score moves.
 - **`:sectnums:` is detected by asking Asciidoctor which sections it numbered**, not by reading the
