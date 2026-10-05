@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { convert, load } from "@asciidoctor/core";
+import { convert, load, type Document, type Section } from "@asciidoctor/core";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
@@ -12,6 +12,8 @@ import type {
   SourceFile,
   SourceRenderer,
 } from "../../types.js";
+import { MonodocsError } from "../../diagnostics.js";
+import { t } from "../../messages.js";
 import { toPageMeta } from "../meta.js";
 import { joinSegmentBreaks, type LineBreak } from "../lineBreak.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
@@ -60,7 +62,14 @@ function buildOptions(
 export function createAsciidocRenderer(
   configured: Readonly<Record<string, string>> = {},
   rootDir?: string,
-  options: { lineBreak?: LineBreak } = {},
+  options: {
+    lineBreak?: LineBreak;
+    /**
+     * `numbering.sections` is on (19.1), so a file numbering its own sections with `:sectnums:` is
+     * refused: two schemes over one document give one heading two numbers.
+     */
+    refuseSectnums?: boolean;
+  } = {},
 ): SourceRenderer {
   const lineBreak = options.lineBreak ?? "space";
   // `break` is Asciidoctor's own hard-break mode, set soft (`@`) like every attribute monodocs
@@ -81,6 +90,7 @@ export function createAsciidocRenderer(
       const doc = await withBoundary(boundary, source, () =>
         load(source.raw, buildOptions(source, attributes, boundary?.registry)),
       );
+      if (options.refuseSectnums) refuseNumberedSections(doc, source);
       const rawTitle = doc.getDocumentTitle();
       const docTitle = typeof rawTitle === "string" ? rawTitle : undefined;
 
@@ -129,6 +139,52 @@ export function createAsciidocRenderer(
       };
     },
   };
+}
+
+/**
+ * Refuse a document in which Asciidoctor numbered a section.
+ *
+ * Asked of the sections rather than of the `sectnums` attribute: an attribute entry can turn
+ * numbering on above one section and off again before the end, which leaves the attribute unset
+ * on the loaded document while that section still carries a number. Measured with
+ * @asciidoctor/core 4.1. A `[discrete]` heading is not a section and is never numbered, so it
+ * cannot trip this. The same check catches `sectnums` set in `sources.asciidoc.attributes`.
+ *
+ * An `[appendix]` section is left out: Asciidoctor numbers it with a letter whether or not
+ * `sectnums` is set (measured: "Appendix A: Extra", or "A. Extra" without the caption), so it says
+ * nothing about `sectnums`. Under `numbering.sections` it is counted as any other section. A book's
+ * part is left out for the same reason: `:partnums:` labels it "I: First Part" without `sectnums`,
+ * and a part is a level-0 heading, which `numbering.sections` does not number.
+ */
+function refuseNumberedSections(doc: Document, source: SourceFile): void {
+  if (!numbersSections(doc)) return;
+  throw new MonodocsError(
+    "numbering/sectnums",
+    t("asciidoc.sectnumsWithNumbering", { path: source.relativePath }),
+    { path: source.relativePath },
+  );
+}
+
+/**
+ * Whether Asciidoctor numbered a section of `doc`, or of a document nested in one of its `a|`
+ * table cells. `findBy` does not enter those, and in @asciidoctor/core 4.1 neither does its
+ * `traverseDocuments` option (measured), so each cell's inner document is searched in turn —
+ * a `:sectnums:` set inside a cell numbers that cell's sections and nothing outside it.
+ */
+/** Sections Asciidoctor labels by a scheme of their own rather than by `sectnums`. */
+const LABELLED_APART = new Set(["appendix", "part"]);
+
+function numbersSections(doc: Document): boolean {
+  const numbered = doc.findBy({ context: "section" }).some((block) => {
+    const section = block as Section;
+    return section.isNumbered() && !LABELLED_APART.has(section.getSectionName() ?? "");
+  });
+  if (numbered) return true;
+  return doc.findBy({ context: "table_cell" }).some((cell) => {
+    // A table cell; its class is not exported from the package entry point.
+    const inner = (cell as unknown as { getInnerDocument(): Document | null }).getInnerDocument();
+    return inner !== null && numbersSections(inner);
+  });
 }
 
 /**

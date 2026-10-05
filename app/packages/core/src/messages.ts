@@ -52,6 +52,8 @@ const EN = {
     "must be false, or a heading level from 2 to 6 (1 is the page title, whose file already breaks)",
   "config.invalidPdfLineHeightValue": "must be a positive number, without a unit",
   "config.invalidPdfWatermarkValue": "must be false, or one line of text that is not blank",
+  "config.invalidNumberingSectionsValue":
+    "must be false, or the deepest heading level numbered, from 2 to 6 (1 is the page title, which carries the page's own number)",
   "config.invalidPdfCellPaddingValue": 'must be one or two CSS lengths, as in "0.3rem 0.5rem"',
   "config.invalidPdfLength": 'Invalid pdf.density {key}: "{value}" is not a CSS length.',
   "config.invalidPdfLineHeight":
@@ -106,6 +108,10 @@ const EN = {
     'include::{target}[] in "{path}" resolves outside the input root: "{resolved}" is not under ' +
     '"{root}". Asciidoctor\'s safe mode does not resolve symbolic links, so a link inside the tree ' +
     "pointing outside it would be followed.",
+  "asciidoc.sectnumsWithNumbering":
+    '"{path}" numbers its own sections with :sectnums:, and numbering.sections numbers the whole ' +
+    "document. Two numberings would give one heading two numbers. Remove :sectnums: (from the file, " +
+    "or from sources.asciidoc.attributes), or set numbering.sections to false.",
   "build.inputNotFound": "Input path not found: {path}",
   "build.inputUnsupportedFile":
     "Input file is not a supported source: {path} (supported extensions: {extensions}).",
@@ -345,6 +351,8 @@ const JA: Record<MessageKey, string> = {
   "config.invalidPdfLineHeightValue": "単位の無い正の数である必要があります",
   "config.invalidPdfWatermarkValue":
     "false か、空白だけではない 1 行のテキストである必要があります",
+  "config.invalidNumberingSectionsValue":
+    "false か、番号を付ける最も深い見出しレベル 2〜6 である必要があります（1 はページタイトルで、ページ自身の番号が付きます）",
   "config.invalidPdfCellPaddingValue":
     'CSS の長さ 1 つ、または 2 つ（"0.3rem 0.5rem" のように）である必要があります',
   "config.invalidPdfLength":
@@ -399,6 +407,11 @@ const JA: Record<MessageKey, string> = {
     '"{path}" の include::{target}[] が入力ルートの外へ解決されます: "{resolved}" は "{root}" の' +
     "配下ではありません。Asciidoctor の safe mode はシンボリックリンクを解決しないため、" +
     "ツリーの内側から外側を指すリンクはたどられてしまいます。",
+  "asciidoc.sectnumsWithNumbering":
+    '"{path}" は :sectnums: で自分のセクションに番号を付けていますが、numbering.sections が文書' +
+    "全体に番号を付けます。番号付けが 2 つあると、1 つの見出しに 2 つの番号が付きます。" +
+    ":sectnums: を（ファイルから、または sources.asciidoc.attributes から）外すか、" +
+    "numbering.sections を false にしてください。",
   "build.inputNotFound": "入力パスが見つかりません: {path}",
   "build.inputUnsupportedFile":
     "入力ファイルの形式に対応していません: {path}（対応する拡張子: {extensions}）。",

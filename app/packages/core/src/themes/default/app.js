@@ -227,6 +227,17 @@
     showPage(route || "/");
   }
 
+  /**
+   * The section number in front of a title or heading (numbering.sections), shaped as core shapes
+   * it in the body and the sidebar. `marked` is the number when the search query named it, so the
+   * result shows why it matched. Empty when there is no number.
+   */
+  function sectionNumberHtml(number, marked) {
+    if (typeof number !== "string" || number === "") return "";
+    var inner = number === marked ? "<mark>" + escapeHtml(number) + "</mark>" : escapeHtml(number);
+    return '<span class="section-number">' + inner + "</span> ";
+  }
+
   // ---- in-page table of contents ----
   function renderToc(route) {
     var toc = document.getElementById("toc");
@@ -262,6 +273,7 @@
         '" data-heading="' +
         escapeHtml(h.id) +
         '">' +
+        sectionNumberHtml(h.number, "") +
         escapeHtml(h.text) +
         "</a></li>";
     });
@@ -482,13 +494,21 @@
       var text = p.text || "";
       return {
         route: p.route,
+        // A section number is matched as a whole and on its own, never folded into the title or
+        // heading text: "3.2" asks for a section, and digits must not change how a word scores.
+        number: typeof p.number === "string" ? fold(p.number) : "",
         title: title,
         titleFolded: fold(title),
         text: text,
         textFolded: fold(text),
         headings: (p.headings || []).map(function (h) {
           var htext = h.text || "";
-          return { id: h.id, text: htext, folded: fold(htext) };
+          return {
+            id: h.id,
+            number: typeof h.number === "string" ? fold(h.number) : "",
+            text: htext,
+            folded: fold(htext),
+          };
         }),
       };
     });
@@ -519,19 +539,27 @@
     // キーが Object.prototype のプロパティ名（"constructor" など）でも壊れないよう
     // プロトタイプ無しのマップを使う。
     var headingHits = Object.create(null);
+    // 見出し ID → 番号が語と完全に一致したか。番号で探した読者はその節へ行きたいので、
+    // 見出しの本文が語を含むだけの見出しより優先する。
+    var numberHits = Object.create(null);
+    var pageNumberHit = false;
 
     for (var i = 0; i < terms.length; i++) {
       var term = terms[i];
       var matched = false;
 
-      if (entry.titleFolded.indexOf(term) !== -1) {
+      var pageNumberMatched = Boolean(entry.number) && entry.number === term;
+      if (pageNumberMatched) pageNumberHit = true;
+      if (entry.titleFolded.indexOf(term) !== -1 || pageNumberMatched) {
         score += SCORE_TITLE;
         matched = true;
       }
 
       var headingMatched = false;
       entry.headings.forEach(function (h) {
-        if (h.folded.indexOf(term) === -1) return;
+        var numberMatched = Boolean(h.number) && h.number === term;
+        if (h.folded.indexOf(term) === -1 && !numberMatched) return;
+        if (numberMatched) numberHits[h.id] = true;
         headingHits[h.id] = (headingHits[h.id] || 0) + 1;
         headingMatched = true;
       });
@@ -561,14 +589,31 @@
       else if (phrase.test(entry.textFolded)) score += SCORE_PHRASE_TEXT;
     }
 
-    return { score: score, textHits: textHits, headingHits: headingHits };
+    return {
+      score: score,
+      textHits: textHits,
+      headingHits: headingHits,
+      numberHits: numberHits,
+      pageNumberHit: pageNumberHit,
+    };
   }
 
-  // 最も多くの語に一致した見出しを選ぶ（同数なら文書順で先のもの）。
-  function bestHeading(entry, headingHits) {
+  /**
+   * 最も多くの語に一致した見出しを選ぶ（同数なら文書順で先のもの）。番号が語と完全に一致した
+   * 見出しがあれば、その中から選ぶ。ページ自身の番号が一致し、見出しの番号はどれも一致しない
+   * ときは、見出しではなくページの先頭へ飛ばす（そのページを番号で探したのだから）。
+   */
+  function bestHeading(entry, scored) {
+    var headingHits = scored.headingHits;
+    var numberHits = scored.numberHits;
+    var anyNumberHit = entry.headings.some(function (h) {
+      return numberHits[h.id];
+    });
+    if (!anyNumberHit && scored.pageNumberHit) return null;
     var best = null;
     var bestCount = 0;
     entry.headings.forEach(function (h) {
+      if (anyNumberHit && !numberHits[h.id]) return;
       var count = headingHits[h.id] || 0;
       if (count > bestCount) {
         best = h;
@@ -686,6 +731,11 @@
     );
   }
 
+  // The number when one of the terms is exactly it, for sectionNumberHtml to mark.
+  function matchedNumber(number, terms) {
+    return number && terms.indexOf(number) !== -1 ? number : "";
+  }
+
   function search(query) {
     var terms = tokenize(query);
     if (terms.length === 0) return [];
@@ -696,21 +746,29 @@
     buildSearchIndex().forEach(function (entry, index) {
       var scored = scoreEntry(entry, terms, phrase);
       if (!scored) return;
-      var heading = bestHeading(entry, scored.headingHits);
+      var heading = bestHeading(entry, scored);
       results.push({
         route: entry.route,
-        title: markMatches(entry.title, entry.titleFolded, terms),
+        title:
+          sectionNumberHtml(entry.number, matchedNumber(entry.number, terms)) +
+          markMatches(entry.title, entry.titleFolded, terms),
         headingId: heading ? heading.id : null,
-        heading: heading ? markMatches(heading.text, heading.folded, terms) : "",
+        heading: heading
+          ? sectionNumberHtml(heading.number, matchedNumber(heading.number, terms)) +
+            markMatches(heading.text, heading.folded, terms)
+          : "",
         snippet: snippet(entry, terms, scored.textHits),
         score: scored.score,
+        numberHit: scored.pageNumberHit || Object.keys(scored.numberHits).length > 0,
         index: index,
       });
     });
 
-    // スコア降順。同点は閲覧順（文書順）を保つ。
+    // 番号が語と完全に一致した結果が先。番号で探した読者が求めているのはその節であり、
+    // 別のページが同じ数字を何度書いていても、点数で上回らせない。次にスコア降順、
+    // 同点は閲覧順（文書順）を保つ。番号の一致が無い検索の順位は変わらない。
     results.sort(function (a, b) {
-      return b.score - a.score || a.index - b.index;
+      return Number(b.numberHit) - Number(a.numberHit) || b.score - a.score || a.index - b.index;
     });
     return results.slice(0, SEARCH_LIMIT);
   }
@@ -731,10 +789,15 @@
   // (an svg), and the code-block toolbar and its copy toast are UI text the theme injects.
   var BODY_HIGHLIGHT_SKIP_TAGS = ["SVG", "SCRIPT", "STYLE", "TEXTAREA", "CANVAS"];
   var BODY_HIGHLIGHT_SKIP_CLASSES = ["mermaid", "code-toolbar", "code-copied-toast"];
+  // The section number core put in a heading. It is matched only as a whole (see scoreEntry), so
+  // marking "1" inside "13.2" would show a match search did not make. Recognised by an attribute
+  // core sets rather than by the class, which a document's own markup may also use.
+  var SECTION_NUMBER_ATTRIBUTE = "data-monodocs-section-number";
 
   function skipsBodyHighlight(el) {
     // An SVG element keeps its lower-case tagName, so compare in one case.
     if (BODY_HIGHLIGHT_SKIP_TAGS.indexOf(String(el.tagName).toUpperCase()) !== -1) return true;
+    if (el.hasAttribute && el.hasAttribute(SECTION_NUMBER_ATTRIBUTE)) return true;
     for (var i = 0; i < BODY_HIGHLIGHT_SKIP_CLASSES.length; i++) {
       if (el.classList && el.classList.contains(BODY_HIGHLIGHT_SKIP_CLASSES[i])) return true;
     }

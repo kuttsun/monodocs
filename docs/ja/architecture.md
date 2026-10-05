@@ -14,10 +14,11 @@
 loadConfig (config.ts)
   -> scanSourceFiles (scan.ts)           入力走査、形式判定、除外
   -> buildPages (pipeline/buildPages.ts) 各 SourceRenderer で Page[] へ正規化
-  -> postprocessPages (pipeline/postprocess.ts)
-                                         リンク、画像、Mermaid、Shiki を HAST 上で処理
   -> buildSidebar (pipeline/buildSidebar.ts)
                                          ディレクトリ構造からサイドバーを生成
+                                         （numbering.sections のとき numberSidebar が番号を付ける）
+  -> postprocessPages (pipeline/postprocess.ts)
+                                         リンク、画像、Mermaid、Shiki、見出し番号を HAST 上で処理
   -> renderSingleHtml (pipeline/renderSingleHtml.ts)
                                          テンプレートへ内容を注入
   -> writeOutput (build.ts)
@@ -39,6 +40,7 @@ loadConfig (config.ts)
 - 両レンダラーは `sources/prefixIds.ts` の `prefixIdsAndCollect` を使い、ID の接頭辞付与、同一ページアンカーの書き換え、見出しと検索テキストの収集を行います。
 - `buildPages` はルート衝突とページ ID 衝突を拒否します。たとえば `a-b.md` と `a/b.md` は同じページ ID になります。
 - 脚注など自動生成された ID にも接頭辞を付けます。
+- 見出し番号（`numbering.sections`）はラベルであり、アドレスではありません。番号は読者が見るサイドバーから、どちらかのレンダラーではなく共有の `Page` モデルの上で決め、後処理で `.section-number` 要素として見出しへ書き込みます。route・ページ ID・見出し ID・`page.text`・見出しテキストは、番号付けが無いときのままです。サイドバーを後処理より前に組み立てるのはこのためで、サイドバーに要るのはタイトルとパスだけです。クライアントには番号をタイトルや見出しテキストの中ではなく横に渡すので、検索は番号を番号全体として照合し、数字が語の順位を変えることはありません。番号が一致した結果は、一致しなかった結果より先に並べます。core が書く span には `data-monodocs-section-number` を付けます。クライアントはこれを目印に、文書自身が同じクラスを使ったマークアップには触れずに、その数字を本文ハイライトの対象から外します。番号付けが有効な間は AsciiDoc の `:sectnums:` を拒否します。判定は属性を読むのではなく、Asciidoctor が番号を付けた節を問い合わせて行います。
 
 ### ルーティングとリンク変換
 

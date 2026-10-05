@@ -50,6 +50,12 @@ export type Heading = {
   level: number;
   id: string;
   text: string;
+  /**
+   * The section number `numbering.sections` gave this heading (19.1), such as `"2.3.1"`. A label,
+   * not an address: the ID above never carries it. Undefined when numbering is off or the heading
+   * is not numbered.
+   */
+  number?: string;
 };
 
 /** リンク参照。最終 HTML では hash route に変換する。 */
@@ -111,6 +117,11 @@ export type Page = {
   rawSource: string;
   html: string;
   text: string;
+  /**
+   * The page's own section number under `numbering.sections` (19.1), from its place in the
+   * sidebar. Undefined when numbering is off or the page has no place in the sidebar.
+   */
+  number?: string;
 
   headings: Heading[];
   /**
@@ -129,12 +140,16 @@ export type SidebarNode =
       title: string;
       path: string;
       children: SidebarNode[];
+      /** The section number `numbering.sections` gave this directory (19.1). */
+      number?: string;
     }
   | {
       type: "page";
       title: string;
       route: string;
       pageId: string;
+      /** The section number `numbering.sections` gave this page (19.1). */
+      number?: string;
     };
 
 /**

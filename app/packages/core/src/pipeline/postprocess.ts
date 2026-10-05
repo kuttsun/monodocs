@@ -6,7 +6,7 @@ import rehypeStringify from "rehype-stringify";
 import { toText } from "hast-util-to-text";
 import { EXIT, SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
-import type { MermaidMode, OnLargeImage, PdfPageBreakLevel } from "../config.js";
+import type { MermaidMode, OnLargeImage, PdfPageBreakLevel, SectionNumbering } from "../config.js";
 import type { Page } from "../types.js";
 import { type Diagnostic, type DiagnosticSource, MonodocsError, warn } from "../diagnostics.js";
 import { type MermaidPrerenderer } from "./mermaidPrerender.js";
@@ -14,6 +14,7 @@ import type { EmbeddedImage } from "./outputSize.js";
 import { BrowserSetupError } from "./browser.js";
 import { markPageBreakHeadings } from "./pageBreakHeadings.js";
 import { checkHeadingLevels, checkImageAlt } from "./pageChecks.js";
+import { numberHeadings } from "./sectionNumbers.js";
 import { t } from "../messages.js";
 
 /** コードハイライトに使う配色（shiki の dual theme。ダークは CSS で切替）。 */
@@ -212,6 +213,14 @@ export type PostprocessOptions = {
    * （{@link file://./pageBreakHeadings.ts}）。`false` なら何も印を付けない。
    */
   pdfPageBreakLevel: PdfPageBreakLevel;
+  /**
+   * `numbering.sections` (19.1): the deepest heading level numbered, and each page's own number
+   * taken from the sidebar ({@link numberSidebar}). Omitted, nothing is numbered.
+   */
+  sectionNumbers?: {
+    depth: Exclude<SectionNumbering, false>;
+    pageNumbers: ReadonlyMap<string, string>;
+  };
 };
 
 export type PostprocessResult = {
@@ -1066,6 +1075,11 @@ export async function postprocessPages(
     // 印は最後に付ける。見出しの前に何があるかは、リンク書き換えや画像埋め込みのあとの姿で決まる。
     if (options.pdfPageBreakLevel !== false) {
       markPageBreakHeadings(tree, options.pdfPageBreakLevel);
+    }
+    // Numbers go in after the checks, which quote heading text and must quote what the author wrote.
+    const pageNumber = options.sectionNumbers?.pageNumbers.get(page.id);
+    if (options.sectionNumbers !== undefined && pageNumber !== undefined) {
+      numberHeadings(tree, page, pageNumber, options.sectionNumbers.depth);
     }
     page.html = serializer.stringify(tree);
   }

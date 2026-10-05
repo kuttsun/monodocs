@@ -117,6 +117,9 @@ toc:
   # Deepest heading level shown in the in-page table of contents (2–6)
   maxLevel: 3
 
+numbering:
+  sections: false # false, or the deepest heading level numbered (2–6)
+
 assets:
   embedImages: true
   maxInlineSize: 5MB # "500KB", "5MB", or a raw byte count
@@ -387,6 +390,9 @@ That is the opposite of what Asciidoctor's API does by default, and it is what a
 a configuration file: the file states what every document gets *unless it says otherwise*. A document
 turns one off for itself the same way, with `:sectnums!:`.
 
+`sectnums` numbers each file on its own and restarts in the next. To number the whole document as one,
+use [`numbering.sections`](#numbering) instead; while it is on, `sectnums` is refused.
+
 The contents are classified rather than passed through, because some attributes move the boundary
 monodocs relies on:
 
@@ -494,6 +500,50 @@ sidebar:
 | Key            | Type    | Default | Description                                                                                  |
 | -------------- | ------- | ------- | -------------------------------------------------------------------------------------------- |
 | `toc.maxLevel` | integer | `3`     | Deepest heading level (2–6) shown in the in-page table of contents. `h1` is always excluded (it is the page title). Headings only affect the TOC, never reachability — the body always shows them. |
+
+### `numbering` {#numbering}
+
+| Key                  | Type              | Default | Description |
+| -------------------- | ----------------- | ------- | ----------- |
+| `numbering.sections` | `false` / integer | `false` | Number headings continuously across the whole document, down to this level (2–6). See below. |
+
+A specification refers to itself by number — "see 3.2" — and a document made of many files cannot
+number itself from inside any one of them: AsciiDoc's `:sectnums:` restarts in every file, and
+Markdown has no numbering at all. `numbering.sections` numbers the bundled document as one:
+
+```yaml
+numbering:
+  sections: 3 # h2 and h3 are numbered; h4 and deeper are not
+```
+
+- **The sidebar decides the numbers.** A page's number is its position in the sidebar, and a
+  directory contributes a level of its own, so the third page of the second top-level entry is `2.3`
+  and its `h2`s are `2.3.1`, `2.3.2`, and so on. The sidebar counted is the one the reader sees:
+  after [`sidebar.flattenSingleChild`](#sidebar), or in the order [`sidebar.items`](#sidebar) writes,
+  where a group counts as a directory does. A page with no place in the sidebar — `hidden`, or left
+  out of `sidebar.items` — is not numbered at all.
+- **`h1` carries the page's number**, not a heading number of its own: it is the page title. Only the
+  first `h1` of a page does. A page without an `h1` shows its number in the sidebar, and its sections
+  still carry it (`2.1`, `2.2`).
+- **Where it appears.** In the heading itself, as `<span class="section-number">2.3</span>` followed
+  by a space, so a stylesheet can hide it and copying the heading copies the number. In the sidebar,
+  the in-page table of contents, and the PDF bookmarks, so no list disagrees with the body. In
+  search: typing `3.2` finds section 3.2, matched as a whole number and listed first, ahead of pages
+  that only mention "13.2", while the digits are kept out of the text words are matched against, so
+  they never change how a word ranks.
+- **Never in an address.** Routes, page IDs, and heading IDs are exactly what they are without
+  numbering. A number is a label; an address that changed whenever a page moved would break every
+  link anyone had copied.
+- **Which headings count.** Every heading from `h2` down to `numbering.sections`, whatever
+  [`toc.maxLevel`](#toc) is. An AsciiDoc `[discrete]` (or `[float]`) heading is not a section, so it
+  is not numbered and the count passes over it. An `[appendix]` section is counted like any other, and keeps the
+  `Appendix A:` caption Asciidoctor gives it. A skipped level is counted as zero — an `h4` directly
+  under the first `h2` is `x.1.0.1` — and is already reported as `heading/level-skipped`.
+- **`:sectnums:` is refused while this is on**, naming this key, whether a document sets it or
+  [`sources.asciidoc.attributes`](#asciidoc-attributes) does. Two numberings over one document give a
+  heading two numbers. The check asks Asciidoctor which sections it numbered, so a `:sectnums:`
+  turned on above one section and off again below it is caught too. With `numbering.sections: false`,
+  `:sectnums:` works as before.
 
 ### `assets`
 

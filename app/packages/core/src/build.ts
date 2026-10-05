@@ -23,7 +23,8 @@ import { createMarkdownRenderer } from "./sources/markdown/renderer.js";
 import { createAsciidocRenderer } from "./sources/asciidoc/renderer.js";
 import { buildPages } from "./pipeline/buildPages.js";
 import { buildCustomSidebar, buildSidebar, orderPagesBySidebar } from "./pipeline/buildSidebar.js";
-import { postprocessPages } from "./pipeline/postprocess.js";
+import { postprocessPages, type PostprocessOptions } from "./pipeline/postprocess.js";
+import { numberSidebar } from "./pipeline/sectionNumbers.js";
 import {
   createPuppeteerPrerenderer,
   type MermaidPrerenderer,
@@ -124,7 +125,10 @@ export async function preparePages(
     sources,
     [
       createMarkdownRenderer({ lineBreak: config.lineBreak }),
-      createAsciidocRenderer(config.asciidocAttributes, rootDir, { lineBreak: config.lineBreak }),
+      createAsciidocRenderer(config.asciidocAttributes, rootDir, {
+        lineBreak: config.lineBreak,
+        refuseSectnums: config.numberingSections !== false,
+      }),
     ],
     {
       titleTransform: config.sidebarTitleTransform.page,
@@ -132,6 +136,23 @@ export async function preparePages(
       sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
     },
   );
+  // The sidebar comes first: it needs only titles and paths, and with numbering on it decides
+  // every page's number, which post-processing writes into the headings (19.1).
+  const custom =
+    config.sidebarMode === "custom" ? buildCustomSidebar(pages, config.sidebarItems) : undefined;
+  let sidebar =
+    custom?.sidebar ??
+    buildSidebar(pages, {
+      titleTransform: config.sidebarTitleTransform.directory,
+      flattenSingleChild: config.sidebarFlattenSingleChild,
+    });
+  let sectionNumbers: PostprocessOptions["sectionNumbers"];
+  if (config.numberingSections !== false) {
+    const numbered = numberSidebar(sidebar);
+    sidebar = numbered.sidebar;
+    sectionNumbers = { depth: config.numberingSections, pageNumbers: numbered.pageNumbers };
+  }
+
   const post = await postprocessPages(pages, {
     inputDir: rootDir,
     sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
@@ -143,24 +164,19 @@ export async function preparePages(
     mermaidPrerenderer: opts.mermaidPrerenderer,
     codeHighlight: config.codeHighlight,
     pdfPageBreakLevel: config.pdfPageBreakLevel,
+    sectionNumbers,
   });
   // custom はサイドバーが閲覧順そのものになるため、ページの並びもそれに合わせる
   // （前後ナビ・PDF のページ順・初期表示ページが一致する）。
-  if (config.sidebarMode === "custom") {
-    const custom = buildCustomSidebar(pages, config.sidebarItems);
+  if (custom !== undefined) {
     return {
       pages: orderPagesBySidebar(pages, custom.orderedPages),
-      sidebar: custom.sidebar,
+      sidebar,
       warnings: [...config.warnings, ...warnings, ...post.warnings, ...custom.warnings],
       hasMermaid: post.hasMermaid,
       embeddedImages: post.embeddedImages,
     };
   }
-
-  const sidebar = buildSidebar(pages, {
-    titleTransform: config.sidebarTitleTransform.directory,
-    flattenSingleChild: config.sidebarFlattenSingleChild,
-  });
 
   return {
     pages,

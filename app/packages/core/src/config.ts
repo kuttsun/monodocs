@@ -128,6 +128,12 @@ export const PDF_DENSITY_PRESETS = {
  */
 export type PdfPageBreakLevel = false | 2 | 3 | 4 | 5 | 6;
 
+/**
+ * `numbering.sections`: the deepest heading level given a section number (19.1), or `false` for
+ * none. Spelled out for the reason {@link PdfPageBreakLevel} is.
+ */
+export type SectionNumbering = false | 2 | 3 | 4 | 5 | 6;
+
 /** Names accepted by `pdf.density`, and by `base` inside its object form. Loosest first. */
 export const PDF_DENSITY_NAMES = ["relaxed", "normal", "compact", "tight"] as const;
 export type PdfDensityName = (typeof PDF_DENSITY_NAMES)[number];
@@ -413,6 +419,29 @@ function buildConfigFileSchema() {
         })
         .strict()
         .optional(),
+      numbering: z
+        .object({
+          /**
+           * Number headings continuously across the whole document, down to this level (19.1).
+           * `false` (the default) numbers nothing. h1 is the page title and carries the page's own
+           * number, so the levels start at 2, as `toc.maxLevel` and `pdf.pageBreakLevel` do.
+           */
+          sections: z
+            .union(
+              [
+                z.literal(false),
+                z.literal(2),
+                z.literal(3),
+                z.literal(4),
+                z.literal(5),
+                z.literal(6),
+              ],
+              { message: t("config.invalidNumberingSectionsValue") },
+            )
+            .optional(),
+        })
+        .strict()
+        .optional(),
       assets: z
         .object({
           embedImages: z.boolean().optional(),
@@ -648,6 +677,8 @@ export type ResolvedConfig = {
   sidebarFlattenSingleChild: boolean;
   /** ページ内目次に出す見出しの最深レベル（2〜6）。 */
   tocMaxLevel: number;
+  /** The deepest heading level given a section number (19.1); `false` numbers nothing. */
+  numberingSections: SectionNumbering;
   /**
    * テーマ。組み込みテーマ名（"default"）か、カスタムテーマディレクトリの絶対パス。
    * 設定ファイルにパスらしき値が書かれていれば設定ファイル基準で解決する。
@@ -1179,6 +1210,7 @@ export async function loadConfig(
     sidebarTitleFrom: fileConfig.sidebar?.titleFrom ?? "heading",
     sidebarFlattenSingleChild: fileConfig.sidebar?.flattenSingleChild ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
+    numberingSections: fileConfig.numbering?.sections ?? false,
     theme: resolveTheme(configBaseDir, fileConfig.html?.theme),
     colorScheme: fileConfig.html?.colorScheme ?? "light",
     contentWidth: parseContentWidth(fileConfig.html?.contentWidth),

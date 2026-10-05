@@ -13,6 +13,7 @@ import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, escapeLabel, renderTemplate } from "../util/html.js";
 import { documentFooterLine, type DocumentMetadata } from "../documentMeta.js";
 import { watermarkRules } from "./watermark.js";
+import { SECTION_NUMBER_CLASS } from "./sectionNumbers.js";
 
 export type RenderHtmlInput = {
   title: string;
@@ -67,6 +68,28 @@ export type RenderHtmlInput = {
 };
 
 /**
+ * The section number in front of a sidebar entry (19.1), in the element and with the space the
+ * heading itself carries, so the list and the body read the same. Empty when there is none.
+ */
+function numberLabel(number: string | undefined): string {
+  return number === undefined
+    ? ""
+    : `<span class="${SECTION_NUMBER_CLASS}">${escapeHtml(number)}</span> `;
+}
+
+/**
+ * A directory's title, with its number held in one element alongside the name. The title is a flex
+ * row that pushes its items to both ends to put the caret at the right, so a number and a name
+ * left as two items would be pushed apart. Unnumbered, the title is the bare text it always was.
+ */
+function dirLabel(node: Extract<SidebarNode, { type: "dir" }>): string {
+  const title = escapeHtml(node.title);
+  return node.number === undefined
+    ? title
+    : `<span class="sidebar-dir-label">${numberLabel(node.number)}${title}</span>`;
+}
+
+/**
  * サイドバーのツリーを ul/li の HTML に変換する。
  * `collapseDepth` 指定時は、その階層より深いディレクトリに `collapsed` を付けて
  * 既定で畳む（クライアントの開閉トグルでいつでも開ける）。`depth` はトップレベルを 1 とする。
@@ -79,7 +102,7 @@ function renderSidebar(nodes: SidebarNode[], collapseDepth?: number, depth = 1):
         const collapsed = collapseDepth !== undefined && depth > collapseDepth ? " collapsed" : "";
         return (
           `<li class="sidebar-dir${collapsed}">` +
-          `<span class="sidebar-dir-title">${escapeHtml(node.title)}</span>` +
+          `<span class="sidebar-dir-title">${dirLabel(node)}</span>` +
           renderSidebar(node.children, collapseDepth, depth + 1) +
           `</li>`
         );
@@ -89,7 +112,7 @@ function renderSidebar(nodes: SidebarNode[], collapseDepth?: number, depth = 1):
         // href は encodeURI（route の "/" は保持）。data-route はクライアントで
         // decode 後に比較するため生の route を保持する。
         `<a href="#${escapeAttr(encodeURI(node.route))}" data-route="${escapeAttr(node.route)}">` +
-        `${escapeHtml(node.title)}</a></li>`
+        `${numberLabel(node.number)}${escapeHtml(node.title)}</a></li>`
       );
     })
     .join("");
@@ -241,20 +264,25 @@ function printDensityRules(density: PdfDensity | undefined): string {
 function pageData(page: Page): {
   route: string;
   title: string;
+  number?: string;
   hidden: boolean;
-  headings: { id: string; text: string; level: number }[];
+  headings: { id: string; text: string; level: number; number?: string }[];
   text: string;
 } {
   return {
     route: page.route,
     title: page.title,
+    // The section number (19.1) travels beside the title and the heading text, never inside them:
+    // search matches a number as a whole, and digits must not change how a word scores. Absent
+    // when numbering is off, so the payload is what it was.
+    number: page.number,
     hidden: page.hidden === true,
     // h2 以降の見出しをすべて渡す（h1 はページタイトル相当のため除外）。検索は
     // 一致した見出しへ直接飛ばすため深い見出しも必要で、目次側は tocMaxLevel で
     // クライアントが絞り込む。
     headings: page.headings
       .filter((h) => h.level >= 2)
-      .map((h) => ({ id: h.id, text: h.text, level: h.level })),
+      .map((h) => ({ id: h.id, text: h.text, level: h.level, number: h.number })),
     text: page.text,
   };
 }
