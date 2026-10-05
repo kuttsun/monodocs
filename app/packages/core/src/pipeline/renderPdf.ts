@@ -7,6 +7,16 @@ import { DEFAULT_PDF_FOOTER, DEFAULT_PDF_FOOTER_PROBE, EMPTY_PDF_BAND } from "./
 import { addOutline, collectDests, remapDests, type PdfOutlineNode } from "./pdfOutline.js";
 import { setPdfMetadata } from "./pdfMetadata.js";
 import { prependCover, type PdfCover } from "./pdfCover.js";
+import {
+  injectPdfTocScript,
+  pdfTocHtml,
+  resolveDestPages,
+  setPdfTocScript,
+  tocAnchor,
+  tocTargets,
+  type PdfToc,
+} from "./pdfToc.js";
+import { MonodocsError } from "../diagnostics.js";
 import { t } from "../messages.js";
 
 /** {@link PdfGenerator.render} のオプション。 */
@@ -43,6 +53,11 @@ export type PdfRenderOptions = {
    * body's footer numbers from 1 and the cover carries no number. Omitted means no cover.
    */
   cover?: PdfCover;
+  /**
+   * The table of contents printed in front of the body (24.9), with page numbers read back from
+   * the PDF and verified against it. Omitted means none.
+   */
+  toc?: PdfToc;
   /** ページ上部の帯（HTML フラグメント）。未指定は帯なし扱い。 */
   header?: string;
   /** ページ下部の帯（同上）。未指定は帯なし扱い。 */
@@ -248,6 +263,59 @@ async function renderCover(
 }
 
 /**
+ * The number column's width in digits before anything is known. Four covers 9999 sheets; a longer
+ * document widens it after the first pass, and the verification below catches what that moves.
+ */
+const TOC_MIN_WIDTH = 4;
+
+/**
+ * Prints that many times at most: the first with an empty column, then with the numbers read from
+ * the previous print, until a print carries the numbers it is read back as. The column's fixed
+ * width means the second print almost always settles; the bound is for the document that does not.
+ */
+const TOC_MAX_PASSES = 4;
+
+/**
+ * Print with the table of contents filled in and verified (24.9).
+ *
+ * Every print after the first is read back and compared with the numbers it printed. Only a print
+ * that matches is returned — the one that will be delivered — and a document that has not settled
+ * within {@link TOC_MAX_PASSES} fails the build rather than shipping a plausible list.
+ */
+export async function printWithToc(
+  page: PageLike,
+  toc: PdfToc,
+  print: () => Promise<Uint8Array>,
+): Promise<Uint8Array> {
+  const { targets, targetIndex } = tocTargets(toc);
+  const names = targets.map((_, n) => tocAnchor(n));
+  let printed: string[] | undefined;
+  let width = TOC_MIN_WIDTH;
+
+  for (let pass = 1; pass <= TOC_MAX_PASSES; pass++) {
+    if (pass > 1) await page.evaluate(setPdfTocScript(pdfTocHtml(toc, printed, width)));
+    const pdf = await print();
+    const sheets = await resolveDestPages(pdf, names);
+    const missing = sheets.findIndex((sheet) => sheet === undefined);
+    if (missing !== -1) {
+      // An entry whose target produced no destination cannot be numbered at all.
+      throw new MonodocsError(
+        "pdf/toc-unresolved",
+        t("pdf.tocUnresolved", { target: targets[missing] ?? "" }),
+      );
+    }
+    const found = targetIndex.map((n) => String(sheets[n]));
+    if (printed !== undefined && found.every((value, i) => value === printed![i])) return pdf;
+    printed = found;
+    width = Math.max(width, ...found.map((value) => value.length));
+  }
+  throw new MonodocsError(
+    "pdf/toc-not-converged",
+    t("pdf.tocNotConverged", { passes: String(TOC_MAX_PASSES) }),
+  );
+}
+
+/**
  * Puppeteer で単一 HTML を PDF 化するジェネレータを作る。
  * `page.pdf()` は既定で print メディアをエミュレートするため、テーマの `@media print`
  * （全ページ縦展開・サイドバー/目次/ツールバー非表示）がそのまま適用される。
@@ -297,6 +365,15 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
         await page.evaluate(injectSurrogatesScript(destIds));
       }
 
+      // The table goes in before the checks so that the font check measures its heading too. It
+      // starts with an empty number column; the passes below fill it in.
+      const toc = options.toc && options.toc.entries.length > 0 ? options.toc : undefined;
+      if (toc) {
+        await page.evaluate(
+          injectPdfTocScript(tocTargets(toc).targets, pdfTocHtml(toc, undefined, TOC_MIN_WIDTH)),
+        );
+      }
+
       await warnIfFooterDoesNotFit(page, options);
 
       // 紙に載る文字だけを測る。帯は文書とは別の文脈で描かれるため、内容を monodocs が
@@ -314,16 +391,18 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
         });
       }
 
-      const pdf = await page.pdf({
-        format: options.pageSize,
-        margin: options.margin,
-        printBackground: options.printBackground,
-        // 帯を出す。フラグメントは常に渡す（空でも）。渡さないと Chromium が組み込みの
-        // 日付＋タイトルのヘッダへフォールバックし、「出さない」指定が逆の結果になる。
-        displayHeaderFooter: true,
-        headerTemplate: options.header ?? EMPTY_PDF_BAND,
-        footerTemplate: options.footer ?? EMPTY_PDF_BAND,
-      });
+      const print = () =>
+        page.pdf({
+          format: options.pageSize,
+          margin: options.margin,
+          printBackground: options.printBackground,
+          // 帯を出す。フラグメントは常に渡す（空でも）。渡さないと Chromium が組み込みの
+          // 日付＋タイトルのヘッダへフォールバックし、「出さない」指定が逆の結果になる。
+          displayHeaderFooter: true,
+          headerTemplate: options.header ?? EMPTY_PDF_BAND,
+          footerTemplate: options.footer ?? EMPTY_PDF_BAND,
+        });
+      const pdf = toc ? await printWithToc(page, toc, print) : await print();
 
       // The cover goes in before the outline: inserting pages leaves the body's page objects, and
       // so the named destinations the outline resolves, where they were.

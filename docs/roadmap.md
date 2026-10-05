@@ -879,6 +879,10 @@ pdf:
   header: false
   # One line of text printed behind every sheet: false (default) or the text (v0.13, 24.10).
   watermark: false
+  # A table of contents in front of the body, with the sheet each entry starts on (v0.14, 24.9).
+  toc:
+    enabled: false
+    depth: 2
 ```
 
 **This example is a test fixture (v0.11).** Until then it was prose, and it drifted: it carried
@@ -2894,6 +2898,27 @@ into each physical sheet's margin. CSS has `string-set` and `string()` for exact
 Chromium does not implement them; Chromium's own header template substitutes only its fixed classes
 (24.5). What remains is rendering the document in chapter-sized pieces and concatenating them, which
 is a different feature with a different cost, and it is not scheduled.
+
+What the implementation (v0.14) settled that the above leaves open:
+
+- **The destinations are ASCII anchors, not `h-{id}`.** Each distinct target gets `mdtoc-{n}`
+  inserted as its first child and linked from its line, the way the bookmarks use `mdpdf-{n}` rather
+  than `page-{id}`: a page or heading ID can be Unicode, and the names have to survive the catalog.
+  A link is what makes Chromium write a destination, so each line is also a link to its section.
+- **It lists the sidebar's tree**, as the bookmarks do — directories, pages, and each page's headings
+  down to `depth` — with the section numbers of 19.1 when they are on. A directory shows the sheet of
+  its first page.
+- **It sits in front of the first page, on sheets of its own, and counts as body.** The cover is
+  rendered apart (24.8), so the table's sheets carry footer numbers and the numbers it prints are the
+  ones in the footer.
+- **The column is four digits wide to start with**, in tabular figures, and widens only for a
+  document past 9999 sheets. At most four prints are made; a document still disagreeing with itself
+  after that fails with `pdf/toc-not-converged`. A target with no destination at all fails with
+  `pdf/toc-unresolved`.
+- **Measured on Linux** (Intel Core i7-11700, the development image): a document of 101 sheets in
+  Japanese, with twenty client-mode Mermaid diagrams and numbering on, built to PDF in 2.13 s without
+  the table and 3.06 s with it at `depth: 3` (106 sheets), the mean of three runs each. The numbers
+  settled on the second print. The Windows measurement is still to be made.
 
 ### 24.10 Watermark (v0.13)
 

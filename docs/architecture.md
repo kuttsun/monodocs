@@ -292,6 +292,12 @@ PDF generation expands the single HTML document in Chromium's print layout. Pres
 - Bookmark destinations use ASCII surrogate IDs so Unicode page IDs remain reliable in PDF outlines.
 - Images required by PDF output are embedded when possible, even if normal HTML image embedding is disabled.
 - Browser setup failures fail fast and remain distinguishable from document-specific rendering failures.
+- The printed table of contents (`pdf.toc`, [`pipeline/pdfToc.ts`](../app/packages/core/src/pipeline/pdfToc.ts))
+  exists only in the PDF. It is injected into the page before the font check, with an ASCII anchor
+  (`mdtoc-{n}`) at each target, and its page numbers are read from the catalog `/Dests` of a print.
+  Only a print whose destinations match the numbers it carries is returned; a document that does not
+  settle within a bounded number of prints fails. The number column keeps a fixed width so that
+  filling it in cannot rewrap a line.
 
 PDF output uses system fonts. The development image includes Noto CJK and Noto Color Emoji; other runtime
 environments must install fonts appropriate for their document content. Since v0.10 the build measures what
