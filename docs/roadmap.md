@@ -4202,8 +4202,11 @@ Completion criteria:
   An existing fixture containing neither diagrams nor the chosen delimiters builds as it did before,
   and a test asserts it
 - `\mathbf`, `\mathbb`, `\mathcal`, and the other styles KaTeX writes as `mathvariant` come out as
-  Unicode mathematical alphanumerics, and a test asserts that no `mathvariant` other than `normal`
-  reaches the output
+  Unicode mathematical alphanumerics wherever Unicode has one for that style and character. Where it
+  has none — italic digits from `\mathit{123}`, for one — the formula produces a diagnostic rather
+  than losing the style in silence. Which styles and character ranges convert is recorded in 6.4, and
+  tests cover a combination that converts, one that does not, and that no `mathvariant` other than
+  `normal` reaches the output
 - The font check measures the code points Chromium draws for a formula, not the letters as written,
   and reports when the font chosen for `math` has no OpenType MATH table. The math fixture, built
   where no MATH font is installed (the development image as v0.14 measured it), is reported rather
