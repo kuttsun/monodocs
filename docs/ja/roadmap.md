@@ -2071,7 +2071,7 @@ Chromium が要り、スタンドアロンバイナリからは動かない。�
 
 - `lodash-es`：ランタイムが含むのは、両方の advisory が修正済みの `lodash-es@4.18.1` だけで、4.17.23 は
   chevrotain 11 とともに無くなった。ソースマップのファイル一覧ではなく生成された `mermaid.min.js` に対して
-  読むと、`_.template`（`templateSettings` も `sourceURL` も無い）も `_.unset` / `_.omit` もも tree-shaking を生き残っていない。cytoscape が取り込む `lodash@4.17.21` の
+  読むと、`_.template`（`templateSettings` も `sourceURL` も無い）も `_.unset` / `_.omit` も tree-shaking を生き残っていない。cytoscape が取り込む `lodash@4.17.21` の
   コードは `debounce`、`memoize` とその補助である。関数名は minify で残らないので、根拠は、template・unset・
   omit のモジュールを挙げないモジュール一覧とパーサーのチャンクのパスコメント、そして `_.template` の文字列
   リテラルが無いことである。`pnpm audit` は `lodash-es` の override 無しで通るので、override は加えない。
@@ -2087,10 +2087,11 @@ Chromium が要り、スタンドアロンバイナリからは動かない。�
   ELK のメタコンパイラ 0.10.0-SNAPSHOT とともにビルドしたものである。バンドルは ELK のコミットを記録して
   いない。リリース v0.9.1 ではない。ワーカーは master が `7ca51784`（2024-04-09）で取り込んだ変更を含み、
   それはそれ以前のどのリリースにも無い。そこから elkjs 0.9.3 のタグ付け前の最後のコミット `9bc93474` まで
-  の変更はメタコンパイラだけで、コンパイルされない。EMF for GWT のソースは Maven Central の sources jar と
-  github.com/Axellience/emfgwt で、Xtext のソースは github.com/eclipse/xtext-lib で公開されている。表記は
+  の変更はメタコンパイラだけで、コンパイルされない。EMF for GWT の 2.12.4 のソースは Maven Central の
+  sources jar で公開されている（プロジェクトの github.com/Axellience/emfgwt はその版をタグ付けしていない）。
+  Xtext のソースは github.com/eclipse/xtext-lib で公開されている。表記は
   これらをすべて書き、minify でランタイムから落ちる ELK 自身の著作権表示と、EPL-1.0 の全文も持つ。
-  EMF の XML Schema の正規表現エンジンは Apache Xerces に由来し、Apache Software License 1.1 でもあるので、
+  EMF の XML Schema の正規表現エンジンと Base64 / hexBinary の変換は Apache Xerces に由来し、Apache Software License 1.1 でもあるので、
   その表示と、それが求める謝辞も持つ。
 - CDN ランタイムは、`inline` と `pre-render` が埋め込むのと同じ `mermaid@12.1.0` を読み込む。
 

@@ -2153,10 +2153,12 @@ and do not block the bump.
   The bundle does not record the ELK commit. It is not the v0.9.1 release: the worker contains the
   change master took in `7ca51784` (2024-04-09), which no release before it has, and the commits from
   there to `9bc93474`, the last before elkjs 0.9.3 was tagged, change only the meta-compiler, which is
-  not compiled in. EMF for GWT's source is published as sources jars on Maven Central and at
-  github.com/Axellience/emfgwt, and Xtext's at github.com/eclipse/xtext-lib. The notices say all of
+  not compiled in. EMF for GWT's source at 2.12.4 is published as sources jars on Maven Central (its
+  project, github.com/Axellience/emfgwt, does not tag that version), and Xtext's at
+  github.com/eclipse/xtext-lib. The notices say all of
   this, with ELK's own copyright line, which minification drops from the runtime, and the full EPL-1.0.
-  EMF's XML Schema regular-expression engine derives from Apache Xerces and is also under the Apache
+  EMF's XML Schema regular-expression engine and Base64 / hexBinary conversions derive from Apache
+  Xerces and are also under the Apache
   Software License 1.1, so its notice and the acknowledgement it asks for are carried too.
 - The CDN runtime loads `mermaid@12.1.0`, the version `inline` and `pre-render` embed.
 

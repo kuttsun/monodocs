@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildSite } from "./build";
 import { pageText } from "./pdfText.testutil";
+import { renderHelper } from "./themes/mermaid";
 
 /**
  * A PDF with client-mode diagrams waits for mermaid's run to finish, not for a sign in the DOM:
@@ -49,4 +50,41 @@ describe.skipIf(!chromium)("diagrams in a PDF (real Chromium)", () => {
       expect(text).toContain(label);
     }
   }, 120_000);
+});
+
+describe("__sdRenderMermaid", () => {
+  it("resolves only when mermaid's run, and every run before it, has finished", async () => {
+    // A stand-in mermaid whose run settles only when the test says so.
+    const settle: Array<() => void> = [];
+    const fake = {
+      run: () => new Promise<void>((resolve) => settle.push(resolve)),
+    };
+    const win: Record<string, unknown> = { fake };
+    new Function("window", renderHelper("window.fake"))(win);
+    const render = win.__sdRenderMermaid as () => Promise<unknown>;
+
+    let first = false;
+    void render().then(() => (first = true));
+    await Promise.resolve();
+    await Promise.resolve();
+    let second = false;
+    void render().then(() => (second = true));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(settle).toHaveLength(2);
+    // The second run returns at once on a diagram the first one marked; its promise still waits.
+    settle[1]!();
+    await new Promise((r) => setTimeout(r, 10));
+    expect([first, second]).toEqual([false, false]);
+    settle[0]!();
+    await new Promise((r) => setTimeout(r, 10));
+    expect([first, second]).toEqual([true, true]);
+  });
+
+  it("settles even when a run fails", async () => {
+    const win: Record<string, unknown> = {
+      fake: { run: () => Promise.reject(new Error("parse")) },
+    };
+    new Function("window", renderHelper("window.fake"))(win);
+    await expect((win.__sdRenderMermaid as () => Promise<unknown>)()).resolves.toBeDefined();
+  });
 });

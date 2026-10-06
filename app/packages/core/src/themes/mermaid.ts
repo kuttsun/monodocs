@@ -30,7 +30,7 @@ const VISIBLE_MERMAID = "#content article:not([hidden]) .mermaid";
  * earlier, such as the one a late runtime starts itself, skips diagrams already marked, which is why
  * the earlier runs are chained in.
  */
-function renderHelper(mermaidExpr: string): string {
+export function renderHelper(mermaidExpr: string): string {
   return (
     `window.__sdRenderMermaid=function(){` +
     `var run=Promise.resolve().then(function(){` +
