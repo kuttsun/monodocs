@@ -282,7 +282,7 @@ conditions. 1.x could add it only behind an opt-in key, since every candidate de
 appear in a document and 12.4 lets a minor release add only markup that none could contain; and a
 default that 1.0 sets cannot change before 2.0. Bringing it forward keeps the choice of recognising
 math by default open, to be made with the notation (v0.15). The notation and the alternatives
-it was chosen over follow; the design of copying and search is recorded here when v0.15 settles it.
+it was chosen over follow, and then the design of copying, search, and headings.
 
 **The notation (decided in v0.15).**
 
@@ -344,6 +344,9 @@ Captured on 2026-10-06 (math: what GitHub renders as a formula):
 | a paragraph that is only `$$x$$`; `$$` on lines around `x`; `$$x$$` and `$$y$$` on two lines | display math |
 | `$$x$$` on a line between two lines of text in one paragraph | inline math |
 | `To split <span>$</span>100 in half, we calculate $100/2$` | math: `100/2` |
+| `$a &lt; b$`, `$a &#60; b$`, `$a < b$`, `$$a &lt; b$$` | math: `a < b` (references decoded) |
+| ``$`a &lt; b`$``, a fenced `math` block holding `a &lt; b` | math, TeX `a &lt; b` (code: not decoded) |
+| `$&alpha;$`, `$&#x3B1;$` | math: `α` |
 | `$x$` in a table cell | inline math |
 | a fenced `math` block | display math |
 
@@ -383,8 +386,8 @@ asciimath its `\$...\$`, and no asciimath warning is raised.
 What an existing document could contain whose meaning this changes:
 
 - in Markdown, a `$...$` or `$$...$$` that GitHub reads as math (with a `\$` in it, by the rule above),
-  which printed as text, including in a heading (its text, and so its slug, its table-of-contents
-  entry, and what search indexes), a table cell, or bold or struck-through text
+  which printed as text, including in a heading (where the lists of headings show it as `$TeX$` and
+  its ID stays as it was, below), a table cell, or bold or struck-through text
 - `$` immediately followed by a code span and then `$`, which printed a code span between two dollar
   signs
 - a fenced code block whose language is `math`, which printed as code
@@ -411,6 +414,72 @@ Alternatives considered:
   `\(` is an escaped `(`, so an existing document's text changes. Rejected.
 - **Off by default, behind a key.** No existing document changes, but every author who wants math has
   to find the key, until 2.0. Rejected in favour of on by default with a key to turn it off.
+
+**Copying, search, and headings (decided in v0.15).** Copying works from the formula's source as
+written — for AsciiDoc, a source rebuilt as `latexmath`, below — and search and the lists of headings
+from its TeX as interpreted, so that what a reader copies and what search finds agree wherever the two
+are the same text.
+
+- **Where the source lives.** Each rendered formula carries two things in the HTML, on the element that
+  wraps its MathML: its source exactly as written, delimiters included, which copying uses, and its TeX
+  as interpreted — character references decoded, as GitHub does in `$...$` and `$$...$$` — which
+  rendering, search, and the lists of headings use. The two differ where the source had a reference:
+  `$&alpha;$` is copied as written and indexed as `α`. For Markdown the source is the text the formula
+  was written as (`$...$`, ``$`...`$``, `$$...$$`, or a fenced block). For AsciiDoc, monodocs replaces
+  the converter's output for a formula inside Asciidoctor's conversion with a marker element whose text
+  is the formula's text as Asciidoctor gives it, already escaped, so it goes out as it is — `node.text`
+  for an inline formula, and for a `[latexmath]` or `[stem]` block the block's content after its
+  substitutions, the marker keeping the block's ID, title, and roles — and renders the markers
+  afterwards; text an author wrote as `\(x\)` is not a marker and stays text. The same converter is used
+  where monodocs reads a document's title, so a formula there can be shown as `$TeX$`. asciimath is not
+  marked: the converter leaves it to Asciidoctor, whose output it keeps, and only notes the formula for
+  the warning. A macro given its own substitutions, such as `latexmath:a[...]`, carries what those
+  substitutions made of the text rather than the bare TeX. Asciidoctor has already resolved `stem` by
+  then — `stem:[x]` under `:stem: latexmath` arrives as latexmath — so the source recorded is
+  `latexmath:[...]` inline, with `]` escaped as `\]`, and a `[latexmath]` block with `++++` delimiters
+  for display, which also keeps a pasted formula from being read as asciimath where `:stem:` is unset.
+- **Copying.** On `copy`, when the selection includes a formula, the script writes both formats
+  itself, since replacing the plain text discards the browser's own HTML. The plain text has each
+  formula replaced by its source in that form; a display formula sits on lines of its own, without the
+  `> ` or indentation of a quote or list around it. A selection that starts or ends inside a formula
+  takes the whole formula. The HTML is the selection's own markup with the MathML in it and no computed
+  styles. This is the page's script, so it does not reach a PDF, whose copying is the viewer's. What a
+  browser copies without it, measured in v0.14, is the formula's tokens one per line, with the radical
+  and the fraction bar gone.
+- **Search.** A formula is indexed as its TeX without delimiters, with whitespace runs collapsed and a
+  display formula separated from the text around it, and a result's snippet shows that TeX. Pasting a
+  copied one-line formula, delimiters removed, finds it when that text is the interpreted TeX — not when
+  the source had a character reference, an HTML comment, or AsciiDoc's `\]` escape; a multi-line one
+  does not reliably, because a search box drops the newlines of what is pasted into it. A heading in the
+  search data is shown as the lists of headings show it, `$TeX$`. In-page highlighting skips formulas,
+  as it skips diagrams, because an HTML `<mark>` cannot sit inside MathML; `math` joins the elements the
+  highlighter skips. A result has to open the section that holds the formula, and today a result opens
+  the section whose heading matched, or the page's top; so the search data lists each formula's TeX with
+  the ID of the section it falls in, and a query that matches a formula opens that section.
+- **Headings and titles shown as text.** Wherever a heading or a page title appears as text — the
+  sidebar, the in-page table of contents, previous/next, search results, the tab's `<title>`, the
+  PDF's bookmarks and printed table of contents — a formula in it is shown as its TeX between single
+  `$`, `$\frac{a}{b}$`. The heading itself renders the formula. Math in a heading is rare, and one
+  plain form everywhere is simpler than rendering it in some places and not others.
+- **Heading IDs.** In Markdown, an ID comes from the heading's text with each formula replaced by its
+  TeX without delimiters, which is the ID it had before math existed, since the slug already drops `$`:
+  measured with monodocs' own pipeline on the TeX text, before the page prefix is added, `# Let $x$ be
+  real`, `# Energy $E=mc^2$`, and `# Cost $\frac{a}{b}$` get `let-x-be-real`, `energy-emc2`, and
+  `cost-fracab`, as they did before. Character references in a formula are decoded as Markdown decodes
+  them anywhere — so does GitHub, whose capture shows `$a &lt; b$`, `$a &#60; b$`, and `$a < b$` as the
+  same formula — so they do not change an ID either. The replacement has to happen before rehype-slug
+  reads the heading, which would otherwise see MathML tokens and the TeX annotation together. In
+  AsciiDoc, Asciidoctor makes the IDs; because the marker's text is the TeX, it makes the same ones:
+  measured with a converter that emits the marker, `== Let latexmath:[x] be real`, `== Energy
+  latexmath:[E=mc^2]`, and `== Lt latexmath:[a < b]` keep `_let_x_be_real`, `_energy_emc2`, and
+  `_lt_a_b` before the page prefix, the last because the marker carries `node.text` as Asciidoctor
+  escaped it; unescaped, `<` would end the ID at `_lt_a`.
+- **Size.** A formula's TeX appears four times — in the MathML's annotation, in the stored source and
+  the stored TeX, and in the search data — and a formula in a heading once more in each list of
+  headings; the size report counts it where it falls, in the document and the page data.
+- **Accessibility.** The MathML is what assistive technology reads; no `alttext` is added, since TeX
+  read aloud would be worse than the MathML it duplicates.
+
 
 
 ---

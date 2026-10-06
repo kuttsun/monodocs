@@ -1,7 +1,7 @@
 {
   "capturedOn": "2026-10-06",
   "method": "gh api markdown -f mode=gfm -f text=<input> (GitHub's comment rendering; the API's file mode renders no math)",
-  "reading": "A formula is a <math-renderer> element; class js-inline-math is inline and js-display-math is display; its text is the formula with its delimiters.",
+  "reading": "A formula is a <math-renderer> element; class js-inline-math is inline and js-display-math is display. The element's text, once the HTML is parsed, is the formula with its delimiters (a fenced block is shown between $$). For js-inline-math that text is escaped once more for <, >, and &, so decode it once more to get the TeX; for js-display-math it is the TeX as it stands. GitHub decodes character references in $...$ and $$...$$ but not in $`...`$ or a fenced block, as CommonMark does not in code.",
   "cases": [
     {
       "input": "Let $x$ be real.",
@@ -178,6 +178,58 @@
     {
       "input": "$$x\ny$$",
       "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"174a70f6f460e6e670fd89de9a5138ca\">$$x\ny$$</math-renderer></p>"
+    },
+    {
+      "input": "$a &lt; b$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"82d1fefcb198f82029663b6b00e08047\">$a &amp;lt; b$</math-renderer></p>"
+    },
+    {
+      "input": "$&alpha;$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"70ebaa9821bb29f58e5d2e0bca2be0ef\">$α$</math-renderer></p>"
+    },
+    {
+      "input": "$a < b$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"34d29fff5a39f61d6a18f216c5ffe3ac\">$a &amp;lt; b$</math-renderer></p>"
+    },
+    {
+      "input": "$a &#60; b$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"a3527ebdeea3f4577da52d45badb83d9\">$a &amp;lt; b$</math-renderer></p>"
+    },
+    {
+      "input": "$a & b$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"25529969d96a7c9ad73ce6735a01afa8\">$a &amp;amp; b$</math-renderer></p>"
+    },
+    {
+      "input": "$&#x3B1;$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"4377481cdd9965fe5e4dd377dab0807b\">$α$</math-renderer></p>"
+    },
+    {
+      "input": "$$a < b$$",
+      "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"5327d0bca08b6c35955156aec07255a2\">$$a &lt; b$$</math-renderer></p>"
+    },
+    {
+      "input": "$$a &lt; b$$",
+      "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"f2d46333d75c3e926693988aeb86e1e1\">$$a &lt; b$$</math-renderer></p>"
+    },
+    {
+      "input": "$$a &amp;lt; b$$",
+      "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"73e53d95870b0a900f09ad7849a65bea\">$$a &amp;lt; b$$</math-renderer></p>"
+    },
+    {
+      "input": "x $$a &lt; b$$ y",
+      "html": "<p>x <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"404a7ff5cfb6d4264c2a4dae6e0f74d2\">$$a &amp;lt; b$$</math-renderer> y</p>"
+    },
+    {
+      "input": "```math\na < b\n```",
+      "html": "<math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"02f8f2da326c9d2b544c32180c02e3a4\">$$a &lt; b$$</math-renderer>"
+    },
+    {
+      "input": "```math\na &lt; b\n```",
+      "html": "<math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"ca256617f3f3e0ddd97165bd4d5b756a\">$$a &amp;lt; b$$</math-renderer>"
+    },
+    {
+      "input": "$`a &lt; b`$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"344457e77599ed00ae107f004933e34d\">$a &amp;amp;lt; b$</math-renderer></p>"
     }
   ]
 }
