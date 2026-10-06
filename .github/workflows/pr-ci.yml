@@ -98,7 +98,7 @@ jobs:
           node -e "const html = require('node:fs').readFileSync('dist/bin-smoke.html', 'utf8'); if (!html.includes('__MONODOCS_DATA__')) throw new Error('Binary produced no document');"
           node -e "const html = require('node:fs').readFileSync('dist/bin-smoke.html', 'utf8'); if (html.split('Third-party notices for the Mermaid runtime').length !== 2) throw new Error('The binary did not embed the Mermaid runtime notices exactly once');"
           # 再配布に必要なライセンス通知（monodocs / Node.js / npm 依存）が揃っているか。
-          node -e "const notices = require('node:fs').readFileSync('dist/monodocs-NOTICES.txt', 'utf8'); for (const needle of ['MIT License', 'Node.js runtime', 'Components:']) { if (!notices.includes(needle)) throw new Error('Binary notices missing: ' + needle); }"
+          node -e "const notices = require('node:fs').readFileSync('dist/monodocs-NOTICES.txt', 'utf8'); for (const needle of ['MIT License', 'Node.js runtime', 'Components:', 'Components inside the prebuilt Mermaid runtime']) { if (!notices.includes(needle)) throw new Error('Binary notices missing: ' + needle); }"
           # PDF / Mermaid pre-render はブラウザ依存のためバンドル版では使えない。
           # 黙って壊れるのではなく、はっきり失敗することを確認する。
           if "$bin" build ../examples/en --format pdf -o dist/bin-smoke.pdf; then

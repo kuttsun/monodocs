@@ -216,9 +216,13 @@ const header = [
   "The Mermaid runtime embedded in the distribution carries further components, listed in",
   'the last section, "Components inside the prebuilt Mermaid runtime".',
   "",
-  'Note: "dompurify" is dual-licensed under "MPL-2.0 OR Apache-2.0";',
-  "monodocs elects the Apache-2.0 terms.",
-  "",
+  ...(notices.some((n) => n.name === "dompurify")
+    ? [
+        'Note: "dompurify" is dual-licensed under "MPL-2.0 OR Apache-2.0";',
+        "monodocs elects the Apache-2.0 terms.",
+        "",
+      ]
+    : []),
 ].join("\n");
 
 const body = notices
@@ -235,7 +239,11 @@ const runtimeSection = [
   "Components inside the prebuilt Mermaid runtime",
   "#".repeat(80),
   "",
-  mermaidNotices,
+  // Written for the output HTML, where "this file" is the HTML; here it is the distribution.
+  mermaidNotices.replace(
+    /^(Third-party notices for the Mermaid runtime \([^)]*\)) embedded in this file\./,
+    "$1 embedded in dist/monodocs.cjs and the standalone binary.",
+  ),
 ].join("\n");
 await writeFile(noticesFile, `${header}\n${body}\n${runtimeSection}`, "utf8");
 console.log(`notices: ${noticesFile} (${notices.length} components)`);
