@@ -321,6 +321,8 @@ function fixFrameSides(math: Element): void {
   visit(math, "element", (node: Element) => {
     if (node.tagName !== "menclose" || !holdsTable(node)) return;
     const notation = String(node.properties.notation ?? "");
+    // Only the sides KaTeX's array frame uses; `\\cancel` around a table is not a frame.
+    if (!notation.split(/\s+/).every((n) => n in swap)) return;
     node.properties.notation = notation
       .split(/\s+/)
       .map((n) => swap[n] ?? n)
@@ -373,6 +375,7 @@ function rewriteTable(table: Element): void {
     return length ? cssLength({ ...length, size: length.size / 2, relative: false }) : "0";
   };
   const framed = isFramed(table);
+  padRows(table, align.length);
   const rows = table.children.filter(
     (c): c is Element =>
       c.type === "element" && (c.tagName === "mtr" || c.tagName === "mlabeledtr"),
@@ -416,6 +419,25 @@ function rewriteTable(table: Element): void {
   });
 }
 
+/**
+ * KaTeX writes a row with fewer cells than the table has columns (`a\\\\b&c` in a two-column array)
+ * as it is; the missing cells are added, empty, so that a column's line and spacing reach every row.
+ */
+function padRows(table: Element, declared: number): void {
+  const rows = table.children.filter(
+    (c): c is Element =>
+      c.type === "element" && (c.tagName === "mtr" || c.tagName === "mlabeledtr"),
+  );
+  const cellsOf = (row: Element) =>
+    row.children.filter((c): c is Element => c.type === "element" && c.tagName === "mtd").length;
+  const columns = Math.max(declared, ...rows.map(cellsOf));
+  for (const row of rows) {
+    for (let n = cellsOf(row); n < columns; n++) {
+      row.children.push({ type: "element", tagName: "mtd", properties: {}, children: [] });
+    }
+  }
+}
+
 /** Whether a table sits in a frame (`\\begin{array}{|c|}`), whose lines need room from the cells. */
 function isFramed(table: Element): boolean {
   return framedTables.has(table);
@@ -440,16 +462,21 @@ function breakLines(math: Element, constructs: Set<string>): void {
       : undefined;
   if (top?.tagName === "mrow" && top.children.some(isBreak)) {
     const lines: ElementContent[][] = [[]];
+    // `\\\\[2em]` asks for room below its line, which becomes the line's cell padding.
+    const extra: (string | undefined)[] = [];
     for (const child of top.children) {
-      if (isBreak(child)) lines.push([]);
-      else lines[lines.length - 1]!.push(child);
+      if (isBreak(child)) {
+        const height = parseLength((child as Element).properties.height);
+        extra[lines.length - 1] = height ? cssLength({ ...height, relative: false }) : undefined;
+        lines.push([]);
+      } else lines[lines.length - 1]!.push(child);
     }
     top.children = [
       {
         type: "element",
         tagName: "mtable",
         properties: {},
-        children: lines.map((line) => ({
+        children: lines.map((line, i) => ({
           type: "element",
           tagName: "mtr",
           properties: {},
@@ -457,7 +484,9 @@ function breakLines(math: Element, constructs: Set<string>): void {
             {
               type: "element",
               tagName: "mtd",
-              properties: { style: "padding: 0" },
+              properties: {
+                style: extra[i] ? `padding: 0 0 ${extra[i]} 0` : "padding: 0",
+              },
               children: [{ type: "element", tagName: "mrow", properties: {}, children: line }],
             },
           ],

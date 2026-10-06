@@ -141,6 +141,7 @@ export function renderFormula(
   if (!math) return { error: "KaTeX produced no <math> element" };
   const unsupported = resolveMathvariants(math);
   const { notations, constructs } = rewriteForCore(math, tex);
+  if (boldSymbolLost(tex)) constructs.push("\\boldsymbol on a relation, bracket, or punctuation");
   const numbered = dropClasses(math);
   return { math, unsupported, numbered, notations, constructs };
 }
@@ -158,6 +159,34 @@ function dropClasses(math: Element): boolean {
     delete node.properties.className;
   });
   return numbered;
+}
+
+/**
+ * KaTeX writes `\\boldsymbol` (and `\\bm`) into MathML only for letters, digits, and binary
+ * operators; on a relation, a bracket, or punctuation (`\\boldsymbol{\\rightarrow}`) it writes nothing,
+ * so the MathML cannot show it. KaTeX's parse tree still has it, and is read for this.
+ */
+function boldSymbolLost(tex: string): boolean {
+  if (!/\\(?:boldsymbol|bm)(?![a-zA-Z])/.test(tex)) return false;
+  let tree: unknown;
+  try {
+    tree = (katex as unknown as { __parse(tex: string, options: object): unknown }).__parse(tex, {
+      strict: "ignore",
+      trust: false,
+    });
+  } catch {
+    return false;
+  }
+  const lost = new Set(["rel", "open", "close", "punct", "inner"]);
+  const walk = (node: unknown, bold: boolean): boolean => {
+    if (Array.isArray(node)) return node.some((n) => walk(n, bold));
+    if (!node || typeof node !== "object") return false;
+    const record = node as Record<string, unknown>;
+    if (bold && record.type === "atom" && lost.has(String(record.family))) return true;
+    const inside = bold || (record.type === "font" && record.font === "boldsymbol");
+    return Object.entries(record).some(([key, value]) => key !== "loc" && walk(value, inside));
+  };
+  return walk(tree, false);
 }
 
 // --- mathvariant --------------------------------------------------------------------------------

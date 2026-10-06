@@ -575,9 +575,11 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   - an array's `columnalign`, `columnspacing`, `rowspacing`, `columnlines`, and `rowlines` become cell
     CSS — `text-align` in the `-webkit-` values Chromium aligns a cell's content by (`columnalign`
     stays for Firefox, which reads it), padding, and borders — and the frame KaTeX draws around an
-    array with its sides named crosswise (`top` for a leading `|`) gets them put right;
+    array with its sides named crosswise (`top` for a leading `|`) gets them put right; a row with
+    fewer cells than the array has columns, which KaTeX writes as it is, gets the missing cells, so
+    that a column's line reaches it;
   - `\\` and `\newline` outside an array, which Core does not break at, become the rows of a
-    one-column table at the top of a formula;
+    one-column table at the top of a formula, with the room `\\[2em]` asks for below its line;
   - a negative space (`\!`, a negative `\kern`), which Core cannot draw, becomes a negative margin;
   - `\overbrace` and `\underbrace` are set as accents, as in TeX, rather than as small scripts;
   - a `\tag` outside an environment is set at the right margin, its table and the boxes above it
@@ -586,7 +588,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   What cannot be rewritten is reported as `math/construct-unsupported`: `\vcenter`, whose centring
   KaTeX leaves to its stylesheet; `\mathchoice`, whose branch KaTeX picks by a style it does not carry
   into scripts and fractions; `\overlinesegment` and `\underlinesegment`, which KaTeX writes as the
-  text "undefined" and monodocs as an overline; and a line break inside part of a formula. Accepted as
+  text "undefined" and monodocs as an overline; a line break inside part of a formula; and `\boldsymbol` on a relation, a bracket, or punctuation
+  (`\boldsymbol{\rightarrow}`), which KaTeX writes into MathML only for letters, digits, and binary
+  operators — found in KaTeX's parse tree, since the MathML no longer shows it. Accepted as
   KaTeX's own and not detected: a dashed frame around an array is drawn solid, `\xrightequilibrium` and
   `\xleftequilibrium` are drawn as ordinary harpoons, and nested size commands compound.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a

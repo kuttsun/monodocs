@@ -539,16 +539,20 @@ TeX を文字として持っており、見出しの ID はそのため TeX か�
   - 配列の `columnalign`、`columnspacing`、`rowspacing`、`columnlines`、`rowlines` はセルの CSS にする——
     `text-align` は Chromium がセルの中身を揃える `-webkit-` の値で（`columnalign` は、それを読む Firefox の
     ために残す）、padding と罫線にする。KaTeX が辺の名前を取り違えて（先頭の `|` を `top` として）配列の
-    周りに描く枠は、辺を正しくする
-  - Core が改行しない、配列の外の `\\` と `\newline` は、数式の最上位で 1 列の表の行にする
+    周りに描く枠は、辺を正しくする。配列の列数よりセルの少ない行（KaTeX はそのまま書く）には欠けたセルを
+    補い、列の罫線がその行まで届くようにする
+  - Core が改行しない、配列の外の `\\` と `\newline` は、数式の最上位で 1 列の表の行にし、`\\[2em]` が求める
+    場所を、その行の下に空ける
   - Core が描けない負の空き（`\!`、負の `\kern`）は、負の margin にする
   - `\overbrace` と `\underbrace` は、小さな添字ではなく、TeX と同じくアクセントとして置く
   - 環境の外の `\tag` は、その表と上の箱を行の幅にして、右端に置く
 
   書き換えられないものは `math/construct-unsupported` として報告する。中央寄せを KaTeX がスタイルシートに
   任せる `\vcenter`、添字や分数に伝えないスタイルで KaTeX が枝を選ぶ `\mathchoice`、KaTeX が "undefined" と
-  いう文字として書き、monodocs が上線として描く `\overlinesegment` と `\underlinesegment`、そして数式の一部の
-  中の改行である。KaTeX 自身のものとして受け入れ、検出しないもの：配列の周りの破線の枠は実線で描かれ、
+  いう文字として書き、monodocs が上線として描く `\overlinesegment` と `\underlinesegment`、数式の一部の中の
+  改行、そして関係記号、括弧、句読点に付けた `\boldsymbol`（`\boldsymbol{\rightarrow}`）である。KaTeX は
+  `\boldsymbol` を、文字、数字、二項演算子にしか MathML に書かないので、MathML からはもう分からず、KaTeX の
+  構文木から見つける。KaTeX 自身のものとして受け入れ、検出しないもの：配列の周りの破線の枠は実線で描かれ、
   `\xrightequilibrium` と `\xleftequilibrium` は普通の銛矢印として描かれ、入れ子の大きさの指定は積み重なる。
 - **数式の隣の改行。** `sources.lineBreak: join`（12.6）では、数式は境界である。その前後の改行は 2 つの東アジアの
   文字の間ではないので、文字でないほかの要素の隣と同じく空白のまま残る。

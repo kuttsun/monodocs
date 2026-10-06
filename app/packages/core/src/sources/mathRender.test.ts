@@ -134,6 +134,15 @@ describe("renderFormula", () => {
     expect(array).toContain("border-bottom: 0.06em dashed");
     expect(array).toContain("text-align: -webkit-left");
     expect(array).toContain('columnalign="center left right"');
+    // A short row gets its missing cells, so that a column's line reaches it.
+    const short = render("\\begin{array}{c|c} a \\\\ b & c \\end{array}", true).html!;
+    expect(short.match(/border-right: 0.06em solid/g)).toHaveLength(2);
+    // \\cancel around a table is not a frame: no edge spacing is added for it.
+    expect(render("\\cancel{\\begin{matrix} a & b \\end{matrix}}", true).html).toMatch(
+      /<mtd style="padding-left: 0;/,
+    );
+    // A line break's extra height is room below its line.
+    expect(render("a\\\\[2em]b", true).html).toContain('style="padding: 0 0 2em 0"');
     // Line breaks at the top become rows; one deeper in is reported.
     expect(render("a\\\\b", true).html).toMatch(
       /<mtable><mtr><mtd[^>]*><mrow><mi>a<\/mi><\/mrow><\/mtd><\/mtr><mtr>/,
@@ -168,6 +177,11 @@ describe("renderFormula", () => {
     ]);
     expect(render("\\overlinesegment{AB}").html).not.toContain("undefined");
     expect(constructs("\\frac{a}{b} + \\begin{array}{c} x \\end{array}")).toEqual([]);
+    expect(constructs("\\boldsymbol{\\rightarrow}")).toEqual([
+      expect.stringContaining("\\boldsymbol"),
+    ]);
+    expect(constructs("\\bm{=}")).toEqual([expect.stringContaining("\\boldsymbol")]);
+    expect(constructs("\\boldsymbol{x + y}")).toEqual([]);
   });
 
   it("returns KaTeX's reason for a formula it cannot parse", () => {
