@@ -351,7 +351,7 @@ Captured on 2026-10-06 (math: what GitHub renders as a formula):
 | a fenced `math` block | display math |
 
 **The rules, measured (v0.15).** The table above does not settle where a formula may start and end, so
-2,779 more inputs were captured the same way on the same day, varying the character before and after
+2,782 more inputs were captured the same way on the same day, varying the character before and after
 each delimiter systematically and covering the containers a formula can sit in; they are kept in
 `app/packages/core/scripts/data/github-math-probes-2026-10-06.json`. monodocs' parser reproduces every
 captured case, apart from the differences listed at the end of this paragraph. GitHub looks for formulas after

@@ -13723,6 +13723,18 @@
     {
       "input": "> a $x$ \\>\n> &gt; $y$ b",
       "html": "<blockquote>\n<p>a <math-renderer class=\"js-inline-math\">$x$</math-renderer> &gt;<br>\n&gt; <math-renderer class=\"js-inline-math\">$y$</math-renderer> b</p>\n</blockquote>"
+    },
+    {
+      "input": "x<br>www.x.com/($x$) w",
+      "html": "<p>x<br>www.x.com/(<math-renderer class=\"js-inline-math\">$x$</math-renderer>) w</p>"
+    },
+    {
+      "input": "x<br>www.x.com/a ($x$) w",
+      "html": "<p>x<br>www.x.com/a (<math-renderer class=\"js-inline-math\">$x$</math-renderer>) w</p>"
+    },
+    {
+      "input": "x<br>a@b.com ($x$)",
+      "html": "<p>x<br><a href=\"mailto:a@b.com\">a@b.com</a> (<math-renderer class=\"js-inline-math\">$x$</math-renderer>)</p>"
     }
   ]
 }

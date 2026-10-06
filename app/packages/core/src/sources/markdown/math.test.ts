@@ -162,8 +162,8 @@ const TEXT_DIFFERENCES: Record<string, string> = {
 describe("Markdown math against GitHub's captured output", () => {
   it("reads both captures in full", () => {
     // A data file emptied, or GitHub's markup no longer matched, would let every case pass vacuously.
-    expect(CAPTURED).toHaveLength(2836);
-    expect(CAPTURED.filter((c) => githubFormulas(c.html).length > 0)).toHaveLength(925);
+    expect(CAPTURED).toHaveLength(2839);
+    expect(CAPTURED.filter((c) => githubFormulas(c.html).length > 0)).toHaveLength(928);
   });
 
   it("lists every difference against an input that was captured", () => {
@@ -288,6 +288,12 @@ describe("what a formula leaves behind", () => {
   it("never reads `\\$` as a delimiter, also in the texts GFM splits around an autolink", () => {
     expect(formulasOf(parse("x<br>www.x.com a \\$x$ b"))).toEqual([]);
     expect(formulasOf(parse("Price:$www.x.com a \\$x$ b"))).toEqual([]);
+    // GFM finds these emails after mdast is built, as micromark does not after `_` or `.`.
+    expect(formulasOf(parse("w \\_a@b.com\\$x$ y"))).toEqual([]);
+    expect(formulasOf(parse("w \\.a@b.com\\$x$ y"))).toEqual([]);
+    expect(formulasOf(parse("**<br>www.x.com and $x$ \\$5**"))).toEqual([
+      { display: false, tex: "x" },
+    ]);
     expect(formulasWithSource("x<br>www.x.com a $x$ b")).toEqual([{ source: "$x$", at: "$x$" }]);
     expect(formulasWithSource("x<br>a $x$ www.x.com b $y$")).toEqual([
       { source: "$x$", at: "$x$" },
@@ -321,6 +327,17 @@ describe("what a formula leaves behind", () => {
       c.type === "html" ? c.value : c.type,
     );
     expect(types).toEqual(["text", "<!-- k -->", "text", "inlineMath", "text"]);
+  });
+});
+
+describe("the plugin used before remark-parse", () => {
+  it("still finds the formulas, after mdast is built", () => {
+    const processor = unified().use(remarkMath).use(remarkParse).use(remarkGfm);
+    const input = "Let $x$ be \\$5 and $$y$$.";
+    expect(formulasOf(processor.runSync(processor.parse(input), input) as Root)).toEqual([
+      { display: false, tex: "x" },
+      { display: false, tex: "y" },
+    ]);
   });
 });
 

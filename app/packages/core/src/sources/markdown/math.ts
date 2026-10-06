@@ -81,33 +81,53 @@ declare module "mdast" {
 }
 
 /**
- * remark plugin: finds the formulas and replaces them with `inlineMath` and `math` nodes. It must be
- * used before the document is parsed, since it records where `\$` was written while mdast is built.
+ * remark plugin: finds the formulas and replaces them with `inlineMath` and `math` nodes. Use it after
+ * remark-parse.
+ *
+ * The formulas are found while mdast is built, as its first transform, before GFM's autolink literals
+ * split text nodes into nodes without a position; every text is then still where it was written,
+ * which is how a `\$` is told from a `$`. GitHub, too, reads a formula in text an autolink literal
+ * could otherwise have taken (`www.x.com/($x$)`).
  */
 export function remarkMath(this: Processor) {
-  const data = this.data();
-  (data.fromMarkdownExtensions ??= []).push(escapeRecorder);
+  const state: { raw?: string } = {};
+  const extension: FromMarkdownExtension = {
+    enter: {
+      characterEscape(this: CompileContext, token: Token) {
+        if (this.sliceSerialize(token) === "\\$") {
+          const root = this.stack[0] as Root;
+          ((root.data ??= {}).mathEscapes ??= []).push(token.start.offset);
+        }
+        this.config.enter.data!.call(this, token);
+      },
+    },
+    transforms: [
+      (tree) => {
+        if (state.raw !== undefined) findMath(tree as Root, state.raw);
+      },
+    ],
+  };
+  (this.data().fromMarkdownExtensions ??= []).unshift(extension);
+
+  const parse = this.parser;
+  if (parse) {
+    this.parser = (doc, file) => {
+      state.raw = doc;
+      try {
+        return parse(doc, file);
+      } finally {
+        state.raw = undefined;
+      }
+    };
+    return;
+  }
+  // Used before remark-parse: there is no parser to read the document from, so the formulas are found
+  // after mdast is built. A text an autolink literal split off then cannot be lined up with the
+  // Markdown, and every `$` in it is read as escaped if the document has a `\$` anywhere.
   return (tree: Root, file: { value: unknown }) => {
     findMath(tree, String(file.value));
   };
 }
-
-/**
- * Records the offset of each `\$` on the root, so that the formula rules can tell it from a `$`; the
- * text is built as it would be without the plugin, so nothing that reads it before the formulas are
- * found (GFM's autolink literals) sees a difference.
- */
-const escapeRecorder: FromMarkdownExtension = {
-  enter: {
-    characterEscape(this: CompileContext, token: Token) {
-      if (this.sliceSerialize(token) === "\\$") {
-        const root = this.stack[0] as Root;
-        ((root.data ??= {}).mathEscapes ??= []).push(token.start.offset);
-      }
-      this.config.enter.data!.call(this, token);
-    },
-  },
-};
 
 // --- The tree -----------------------------------------------------------------------------------
 
@@ -215,7 +235,6 @@ interface Found {
 
 function inlineMath(parent: Parent, doc: Doc, display: boolean): void {
   const children = parent.children as PhrasingContent[];
-  locateTexts(parent, doc);
   if (display) {
     const run = toRun(children, doc);
     if (startsAndEndsWithDoubleDollar(run.units)) {
@@ -224,29 +243,6 @@ function inlineMath(parent: Parent, doc: Doc, display: boolean): void {
     }
   }
   parent.children = splitRuns(children, doc) as never;
-}
-
-/**
- * GFM's autolink literals split text nodes after mdast is built and leave the new ones without a
- * position. Each is given the stretch between its neighbours, so that a `\$` in it is still known.
- */
-function locateTexts(parent: Parent, doc: Doc): void {
-  const children = parent.children as PhrasingContent[];
-  children.forEach((child, i) => {
-    if (child.type === "text" && !child.position) {
-      // A neighbour's edge is exact; the parent's is not (it includes markers such as `**`), and a
-      // neighbour made by the same transform has no position at all.
-      const before = children[i - 1]?.position?.end.offset;
-      const after = children[i + 1]?.position?.start.offset;
-      const start = before ?? parent.position?.start.offset;
-      const end = after ?? parent.position?.end.offset;
-      if (start !== undefined && end !== undefined) {
-        doc.locate(child, start, end, before !== undefined);
-      }
-    } else if ("children" in child) {
-      locateTexts(child, doc);
-    }
-  });
 }
 
 function startsAndEndsWithDoubleDollar(units: Unit[]): boolean {
@@ -554,8 +550,6 @@ interface Alignment {
 class Doc {
   private readonly alignments = new Map<Text, Alignment | null>();
   private readonly heads = new Map<Text, number>();
-  private readonly located = new Map<Text, [number, number]>();
-  private readonly exact = new Map<Text, { start: boolean }>();
   private lineStarts: number[] | undefined;
 
   constructor(
@@ -585,17 +579,10 @@ class Doc {
     return false;
   }
 
-  /** The stretch of Markdown a text node without a position came from. */
-  locate(node: Text, start: number, end: number, startExact: boolean): void {
-    this.located.set(node, [start, end]);
-    this.exact.set(node, { start: startExact });
-  }
-
   private rangeOf(node: Text): [number, number] | undefined {
     const p = node.position;
-    if (p?.start.offset !== undefined && p.end.offset !== undefined)
-      return [p.start.offset, p.end.offset];
-    return this.located.get(node);
+    if (p?.start.offset === undefined || p.end.offset === undefined) return undefined;
+    return [p.start.offset, p.end.offset];
   }
 
   /** A text node's characters `from` to `to` as written, line prefixes left out. */
@@ -641,20 +628,7 @@ class Doc {
     let alignment = this.alignments.get(node);
     if (alignment === undefined) {
       const range = this.rangeOf(node);
-      const exact = node.position ? { start: true } : this.exact.get(node);
-      alignment = null;
-      if (range && exact?.start) {
-        alignment = align(node.value, this.raw.slice(range[0], range[1]), range[0]);
-      }
-      if (range && !alignment && !node.position) {
-        // The start is not known: the text is the stretch that ends at the end of the range and lines
-        // up with it. A parent's end may include a closing marker, in which case nothing lines up.
-        for (let s = range[1] - node.value.length; s >= range[0] && !alignment; s--) {
-          const candidate = align(node.value, this.raw.slice(s, range[1]), s);
-          if (candidate && candidate.map[candidate.map.length - 1] === range[1])
-            alignment = candidate;
-        }
-      }
+      alignment = range ? align(node.value, this.raw.slice(range[0], range[1]), range[0]) : null;
       this.alignments.set(node, alignment);
     }
     return alignment;
