@@ -4368,9 +4368,9 @@ Completion criteria:
   maintenance.md says that the lockfile audit cannot see inside a prebuilt bundle and no longer says
   that `site/` never ships, and the site samples are regenerated and carry the notices
 - The math notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are
-  recorded in 6.4 with the alternatives and why they lost. The forms of money tabulated there stay text
-  by the notation's own rules, checked against the renderer the notation follows, the forms that still
-  read as math are named, and any spelling an existing
+  recorded in 6.4 with the alternatives and why they lost. The forms of money tabulated there come out
+  as the table classifies them — text stays text, math is math — by the notation's own rules, checked
+  against the renderer the notation follows, and any spelling an existing
   document could contain whose meaning the choice changes is listed there. Whether math is
   recognised by default or only behind a key is decided there with its reason, and what happens to
   `asciimath` is decided and stated
