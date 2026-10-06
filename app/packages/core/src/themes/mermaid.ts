@@ -43,11 +43,36 @@ export async function loadMermaidInline(): Promise<string> {
   );
 }
 
+/**
+ * The third-party notices for the inline runtime, generated from its source map by
+ * `scripts/generate-mermaid-notices.mjs` (roadmap 21.3). The single executable has no file system
+ * copy, so the embedded one comes first, as for the runtime itself.
+ */
+export async function loadMermaidNotices(): Promise<string> {
+  return (
+    embeddedAssets()?.mermaidNotices ??
+    (await readFile(new URL("./mermaid-notices.txt", import.meta.url), "utf8"))
+  );
+}
+
+/**
+ * Wraps text in a `/*! *\/` comment that survives minifiers, inside a classic `<script>`. Nothing in
+ * the text can end the comment (`*\/`) or the script element (`</script`), and `<!--` is broken up so
+ * the HTML parser never enters its script-data escaped states.
+ */
+export function noticeComment(text: string): string {
+  const safe = text
+    .replace(/\*\//g, "*\\/")
+    .replace(/<\/(script)/gi, "<\\/$1")
+    .replace(/<!--/g, "<\\!--");
+  return `/*!\n${safe}\n*/\n`;
+}
+
 export async function mermaidRuntimeScript(runtime: MermaidRuntime): Promise<string> {
   if (runtime === "inline") {
-    const lib = await loadMermaidInline();
+    const [lib, notices] = await Promise.all([loadMermaidInline(), loadMermaidNotices()]);
     return (
-      `<script>${lib}</script>\n` +
+      `<script>${noticeComment(notices)}${lib}</script>\n` +
       `<script>(function(){` +
       `var ns=window.__esbuild_esm_mermaid_nm;var m=ns&&ns.mermaid;m=m&&(m.default||m);` +
       `if(!m&&window.mermaid)m=window.mermaid;` +

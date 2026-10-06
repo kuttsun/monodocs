@@ -3,7 +3,7 @@
 // 単一実行ファイル（SEA）の入力になるほか、`node dist/monodocs.cjs ...` として
 // そのまま実行もできる（ホストに node があれば任意ディレクトリを配信できる）。
 //
-// テーマアセット（template.html / style.css / app.js）と mermaid inline ランタイムは
+// テーマアセット（template.html / style.css / app.js）と mermaid inline ランタイム（とその表記）は
 // 実行時にファイルシステムから読むため、バンドル単体では参照できない。そこで banner で
 // `globalThis.__MONODOCS_ASSETS__` に埋め込み、loadTheme / mermaidRuntimeScript が
 // それを優先して使う（src 側の埋め込みフォールバックは themes/index.ts を参照）。
@@ -36,10 +36,13 @@ const [template, style, appJs] = await Promise.all([
 // node_modules を持たないホストでも inline を選べるよう同梱する。
 const require = createRequire(resolve(coreSrc, "themes/mermaid.ts"));
 const mermaidInline = await readFile(require.resolve("mermaid/dist/mermaid.min.js"), "utf8");
+// Its third-party notices travel with it into the output HTML (roadmap 21.3).
+const mermaidNotices = await readFile(resolve(coreSrc, "themes/mermaid-notices.txt"), "utf8");
 
 const assets = {
   themes: { default: { template, style, appJs } },
   mermaidInline,
+  mermaidNotices,
 };
 
 await mkdir(dirname(outfile), { recursive: true });

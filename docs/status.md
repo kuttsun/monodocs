@@ -459,11 +459,11 @@ reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md)
 
 **Notices for the inline Mermaid runtime** ([roadmap.md](roadmap.md) 21.3, #134)
 
-- [ ] The output HTML carries the runtime's third-party notices exactly once when `mermaid.mode: client` and `mermaid.runtime: inline` meet a document with diagrams, and none for `cdn`, `pre-render`, or a document without diagrams
-- [ ] The notices list the packages and versions the prebuilt `mermaid.min.js` contains, not what `node_modules` resolves, and are read both from the package and from `embeddedAssets`
-- [ ] The notices survive a custom theme and `branding: false`, are present when the build runs from the npm package and from the standalone binary, and no notice text can close the comment that holds it
-- [ ] The size report ([roadmap.md](roadmap.md) 20.5) counts the notices in the inline Mermaid runtime's line
-- [ ] Diagrams still render in a real browser with the notices in place
+- [x] The output HTML carries the runtime's third-party notices exactly once when `mermaid.mode: client` and `mermaid.runtime: inline` meet a document with diagrams, and none for `cdn`, `pre-render`, or a document without diagrams. The notices sit in a `/*! */` comment at the head of the runtime's own `<script>`, so they are emitted by the code that emits the runtime and by nothing else; `build.mermaid-notices.test.ts` covers inline, `cdn`, `pre-render`, and a document without diagrams
+- [x] The notices list the packages and versions the prebuilt `mermaid.min.js` contains, not what `node_modules` resolves, and are read both from the package and from `embeddedAssets`. `generate-mermaid-notices.mjs` reads the runtime's source map — 74 components for mermaid 11.17.2, including two versions of several packages and the parts esbuild names inside the pre-bundled parser — and takes each licence from that exact version, from the pnpm store or the integrity-checked npm tarball. Its `--check` runs offline in a test and fails when the list stops matching the runtime. Identical licence texts share a block: 70 KB raw, 9 KB gzip. `bundle.mjs` embeds the file in `embeddedAssets`, which is read first, and a test builds from a stand-in embedded copy
+- [x] The notices survive a custom theme and `branding: false`, are present when the build runs from the npm package and from the standalone binary, and no notice text can close the comment that holds it. The comment escapes `*/`, `</script`, and `<!--`, and a test parses the result. `ci:check`, `package:verify`, and the PR workflow's bundled-CLI and standalone-binary smoke steps each assert the notices appear once in a build of `examples/en`
+- [x] The size report ([roadmap.md](roadmap.md) 20.5) counts the notices in the inline Mermaid runtime's line: they are inside the string the report measures as the runtime, and a test asserts it
+- [x] Diagrams still render in a real browser with the notices in place: a real-Chromium test renders a diagram from the built file with no page error
 
 **Mermaid 12** ([roadmap.md](roadmap.md) 21.3, #134)
 

@@ -2107,7 +2107,11 @@ figure in it is taken again on the version adopted:
   GHSA-f23m-r3pf-42rh (moderate), both fixed in 4.18.0. An override fixes `node_modules` but not the
   prebuilt `mermaid.min.js`, whose source map shows both 4.17.23 and 4.18.1 inside; the vulnerable
   modules are absent from its source list, which suggests they were tree-shaken out, and that has to
-  be confirmed against the generated code rather than assumed
+  be confirmed against the generated code rather than assumed. The runtime of mermaid 11.17.2, which
+  monodocs ships today, already carries `chevrotain@11.1.2` and `lodash-es@4.17.23` inside its
+  pre-bundled parser — found when its notices were generated in v0.15. Nothing in `node_modules`
+  resolves that version, so `pnpm audit` has never seen it, and the check against the generated code
+  is owed to the runtime shipped now, not only to 12
 - **The CDN runtime is pinned to `mermaid@11`**, so bumping the dependency alone would leave `cdn` on
   11 while `inline` and `pre-render` moved to 12
 

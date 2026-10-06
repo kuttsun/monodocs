@@ -138,6 +138,20 @@ scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/docs
 scripts/app.sh sh -c 'cd packages/core && node scripts/generate-east-asian-width.mjs'
 ```
 
+### inline の Mermaid ランタイムの表記
+
+`mermaid.runtime: inline` でビルドした HTML は、mermaid のビルド済み `mermaid.min.js` を埋め込み、
+あわせて `app/packages/core/src/themes/mermaid-notices.txt` の第三者表記を埋め込む。ランタイムは mermaid
+自身の lockfile でバンドルされているので、表記は `node_modules` からではなく、そのソースマップから生成する。
+ソースの出どころのパッケージと、事前バンドルされたパーサーの中で esbuild が名指すパッケージである。
+ライセンスは、その版が pnpm ストアにあればそこから、無ければ npm の tarball から読み、tarball はレジストリの
+integrity ハッシュと照合する。表記が挙げるコンポーネントがランタイムのものと食い違うとテストが失敗する。
+mermaid を上げるとそうなるので、再生成して（ネットワークを使うことがある）結果をコミットする。
+
+```bash
+scripts/app.sh sh -c 'cd packages/core && node scripts/generate-mermaid-notices.mjs'
+```
+
 ### 単一実行ファイル（ネイティブバイナリ）をビルドする
 
 `scripts/app.sh` / `scripts/app-serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、

@@ -46,6 +46,7 @@ const REQUIRED_TEMPLATE_TOKENS = [
 type EmbeddedAssets = {
   themes?: Record<string, Theme | undefined>;
   mermaidInline?: string;
+  mermaidNotices?: string;
 };
 export function embeddedAssets(): EmbeddedAssets | undefined {
   return (globalThis as { __MONODOCS_ASSETS__?: EmbeddedAssets }).__MONODOCS_ASSETS__;

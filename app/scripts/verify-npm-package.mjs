@@ -158,6 +158,13 @@ try {
     throw new Error("Generated HTML does not contain the installed CLI version in its footer");
   }
 
+  // examples/en has diagrams and the default runtime is inline, so the runtime's third-party
+  // notices must be in the file, once (roadmap 21.3).
+  const html = await readFile(htmlOutput, "utf8");
+  if (html.split("Third-party notices for the Mermaid runtime").length !== 2) {
+    throw new Error("Generated HTML does not carry the Mermaid runtime notices exactly once");
+  }
+
   const pdfHeader = (await readFile(pdfOutput)).subarray(0, 5).toString("latin1");
   if (pdfHeader !== "%PDF-") throw new Error(`Invalid PDF header: ${pdfHeader}`);
   const prerenderedHtml = await readFile(prerenderOutput, "utf8");

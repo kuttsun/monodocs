@@ -75,6 +75,7 @@ jobs:
           node dist/monodocs.cjs --help
           node dist/monodocs.cjs validate ../examples/en
           node dist/monodocs.cjs build ../examples/en -o dist/ci-smoke.html
+          node -e "const html = require('node:fs').readFileSync('dist/ci-smoke.html', 'utf8'); if (html.split('Third-party notices for the Mermaid runtime').length !== 2) throw new Error('The bundled CLI did not embed the Mermaid runtime notices exactly once');"
           node -e "require('node:fs').writeFileSync('dist/ci-smoke-pre-render.yml', 'mermaid:\n  mode: pre-render\n')"
           node packages/cli/dist/index.js build ../examples/en -c dist/ci-smoke-pre-render.yml -o dist/ci-smoke-pre-render.html
           node -e "const html = require('node:fs').readFileSync('dist/ci-smoke-pre-render.html', 'utf8'); if (!html.includes('<svg')) throw new Error('Pre-rendered SVG not found');"
@@ -94,6 +95,7 @@ jobs:
           "$bin" validate ../examples/en
           "$bin" build ../examples/en -o dist/bin-smoke.html
           node -e "const html = require('node:fs').readFileSync('dist/bin-smoke.html', 'utf8'); if (!html.includes('__MONODOCS_DATA__')) throw new Error('Binary produced no document');"
+          node -e "const html = require('node:fs').readFileSync('dist/bin-smoke.html', 'utf8'); if (html.split('Third-party notices for the Mermaid runtime').length !== 2) throw new Error('The binary did not embed the Mermaid runtime notices exactly once');"
           # 再配布に必要なライセンス通知（monodocs / Node.js / npm 依存）が揃っているか。
           node -e "const notices = require('node:fs').readFileSync('dist/monodocs-NOTICES.txt', 'utf8'); for (const needle of ['MIT License', 'Node.js runtime', 'Components:']) { if (!notices.includes(needle)) throw new Error('Binary notices missing: ' + needle); }"
           # PDF / Mermaid pre-render はブラウザ依存のためバンドル版では使えない。
