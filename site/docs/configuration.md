@@ -634,9 +634,9 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 
 | Key            | Type    | Default | Description                                                                                                             |
 | -------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `math.enabled` | boolean | `true`  | Render formulas (`$...$`, `$$...$$`, a fenced `math` block) to MathML at build time. `false` prints them as text, and a fenced `math` block as code, as before. |
+| `math.enabled` | boolean | `true`  | Render formulas (Markdown's `$...$`, `$$...$$`, and fenced `math` block; AsciiDoc's latexmath, and `stem` when it means latexmath) to MathML at build time. `false` prints them as text, and a fenced `math` block as code, as before. |
 
-A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. A formula KaTeX cannot parse (`math/parse-failed`) or that uses a link or HTML command such as `\href` (`math/command-not-allowed`) is reported and shown as written. A style Unicode has no characters for (`math/style-unsupported`, e.g. `\mathit{123}`) an automatic equation number (`math/numbering-unsupported`, e.g. an unstarred `equation`), an enclosure CSS cannot draw (`math/notation-unsupported`, e.g. `\phase`), and a construct the browser cannot draw as written (`math/construct-unsupported`, e.g. `\vcenter`) are reported, and the formula is rendered without them.
+A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. AsciiDoc's asciimath is left as Asciidoctor writes it and reported (`math/asciimath-not-rendered`). A formula KaTeX cannot parse (`math/parse-failed`) or that uses a link or HTML command such as `\href` (`math/command-not-allowed`) is reported and shown as written. A style Unicode has no characters for (`math/style-unsupported`, e.g. `\mathit{123}`) an automatic equation number (`math/numbering-unsupported`, e.g. an unstarred `equation`), an enclosure CSS cannot draw (`math/notation-unsupported`, e.g. `\phase`), and a construct the browser cannot draw as written (`math/construct-unsupported`, e.g. `\vcenter`) are reported, and the formula is rendered without them.
 
 ### `html`
 

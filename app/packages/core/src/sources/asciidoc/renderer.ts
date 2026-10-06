@@ -17,6 +17,8 @@ import { t } from "../../messages.js";
 import { toPageMeta } from "../meta.js";
 import { joinSegmentBreaks, type LineBreak } from "../lineBreak.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
+import { rehypeRenderMath, type MathProblem } from "../mathRender.js";
+import { createMathConverter, type AsciidocMath } from "./math.js";
 import {
   createIncludeBoundary,
   rethrowIncludeViolation,
@@ -38,8 +40,13 @@ function buildOptions(
   source: SourceFile,
   attributes: Readonly<Record<string, string>>,
   registry: unknown,
+  math?: AsciidocMath,
 ): Record<string, unknown> {
   return {
+    // Asciidoctor's own hook for a converter made beforehand, used here so that the formulas in a
+    // section title, which Asciidoctor converts while it loads the document (to make the section's ID),
+    // go through the math converter too. Not in Asciidoctor's public API; a test pins it.
+    ...(math === undefined ? {} : { _preCreatedConverter: math.converter }),
     safe: "safe",
     standalone: false,
     base_dir: dirname(source.absolutePath),
@@ -69,6 +76,8 @@ export function createAsciidocRenderer(
      * refused: two schemes over one document give one heading two numbers.
      */
     refuseSectnums?: boolean;
+    /** Render latexmath (`math.enabled`, roadmap 6.4). On unless turned off. */
+    math?: boolean;
   } = {},
 ): SourceRenderer {
   const lineBreak = options.lineBreak ?? "space";
@@ -78,6 +87,8 @@ export function createAsciidocRenderer(
   const attributes =
     lineBreak === "break" ? { "hardbreaks-option": "@", ...configured } : configured;
   // ルートを知らされていない呼び出し（core を直接使う場合）は境界を張らない。判定の基準が無い。
+  const mathFor = () =>
+    (options.math ?? true) ? createMathConverter() : Promise.resolve(undefined);
   const boundaryFor = (source: SourceFile) =>
     rootDir === undefined ? undefined : createIncludeBoundary(rootDir, source.relativePath);
 
@@ -87,12 +98,14 @@ export function createAsciidocRenderer(
 
     async extractMeta(source: SourceFile): Promise<PageMeta> {
       const boundary = boundaryFor(source);
+      const math = await mathFor();
       const doc = await withBoundary(boundary, source, () =>
-        load(source.raw, buildOptions(source, attributes, boundary?.registry)),
+        load(source.raw, buildOptions(source, attributes, boundary?.registry, math)),
       );
       if (options.refuseSectnums) refuseNumberedSections(doc, source);
       const rawTitle = doc.getDocumentTitle();
-      const docTitle = typeof rawTitle === "string" ? rawTitle : undefined;
+      const docTitle =
+        typeof rawTitle === "string" ? (math ? math.titleText(rawTitle) : rawTitle) : undefined;
 
       // `:sd-*:` 属性をメタデータとして読む（タイトル優先順位: sd-title > = Title）。
       return toPageMeta(
@@ -109,9 +122,11 @@ export function createAsciidocRenderer(
 
     async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
       const boundary = boundaryFor(source);
+      const math = await mathFor();
       const rawHtml = (await withBoundary(boundary, source, () =>
-        convert(source.raw, buildOptions(source, attributes, boundary?.registry)),
+        convert(source.raw, buildOptions(source, attributes, boundary?.registry, math)),
       )) as string;
+      const problems: MathProblem[] = [];
 
       const out = { headings: [] as Heading[], text: "", anchors: [] as string[] };
 
@@ -119,7 +134,9 @@ export function createAsciidocRenderer(
       // （見出し・xref・脚注などの単一 HTML 内 ID 衝突を回避）。Markdown と共通処理。
       const file = await unified()
         .use(rehypeParse, { fragment: true })
+        .use(math ? [() => (tree: HastRoot) => math.markFormulas(tree)] : [])
         .use(lineBreak === "join" ? [() => joinSegmentBreaks] : [])
+        .use(math ? [() => rehypeRenderMath((problem) => problems.push(problem))] : [])
         .use(() => (tree: HastRoot) => {
           const result = prefixIdsAndCollect(tree, context.page.id);
           out.headings = result.headings;
@@ -136,6 +153,13 @@ export function createAsciidocRenderer(
         anchors: out.anchors,
         links: [],
         assets: [],
+        math: [
+          ...problems,
+          ...(math?.asciimath ?? []).map((formula): MathProblem => ({
+            kind: "asciimath",
+            source: formula,
+          })),
+        ],
       };
     },
   };

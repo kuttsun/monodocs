@@ -134,6 +134,8 @@ const EN = {
     'Unicode has no {variant} form of "{chars}" in the formula {source} ({path}:{line}); it is shown without the style.',
   "pages.mathNotAllowed":
     "{path}:{line}: the formula {source} uses {commands}, which monodocs does not render; it is shown as written.",
+  "pages.mathAsciimath":
+    "{path}: the asciimath formula {source} is not rendered and is shown as Asciidoctor writes it; write it as latexmath, with `:stem: latexmath` or `latexmath:[...]`, to render it.",
   "pages.mathConstruct":
     "{path}:{line}: the formula {source} uses {constructs}, which the browser cannot draw as written; the formula is rendered without it.",
   "pages.mathNotation":
@@ -451,6 +453,8 @@ const JA: Record<MessageKey, string> = {
     'Unicode には "{chars}" の {variant} の形がありません（数式 {source}、{path}:{line}）。スタイルなしで表示します。',
   "pages.mathNotAllowed":
     "{path}:{line}: 数式 {source} は monodocs が描かない {commands} を使っているため、書かれたとおりに表示します。",
+  "pages.mathAsciimath":
+    "{path}: asciimath の数式 {source} は描かれず、Asciidoctor が書くとおりに示されます。描くには、`:stem: latexmath` か `latexmath:[...]` を使って latexmath で書いてください。",
   "pages.mathConstruct":
     "{path}:{line}: 数式 {source} は {constructs} を使っていますが、ブラウザはそれを書かれたとおりに描けません。それなしで数式を描きます。",
   "pages.mathNotation":
