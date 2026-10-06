@@ -253,10 +253,12 @@ function blockMath(node: Code, doc: Doc): BlockMath {
  */
 function fenceAsWritten(doc: Doc, start: number, end: number, value: string): string | undefined {
   const { raw } = doc;
-  const fences = doc.marks.fences.filter((f) => f >= start && f < end);
-  const open = fences[0];
+  const { fences } = doc.marks;
+  let i = firstIndexAtOrAfter(fences, start);
+  const open = fences[i] !== undefined && fences[i]! < end ? fences[i] : undefined;
   if (open === undefined) return undefined;
-  const close = fences[1];
+  i++;
+  const close = fences[i] !== undefined && fences[i]! < end ? fences[i] : undefined;
   const lineEnd = (from: number) => {
     let i = from;
     while (i < end && raw[i] !== "\n" && raw[i] !== "\r") i++;
@@ -292,6 +294,10 @@ function fenceAsWritten(doc: Doc, start: number, end: number, value: string): st
 
 /** The first of these ascending offsets that is at least `offset`. */
 function firstAtOrAfter(sorted: number[], offset: number): number | undefined {
+  return sorted[firstIndexAtOrAfter(sorted, offset)];
+}
+
+function firstIndexAtOrAfter(sorted: number[], offset: number): number {
   let lo = 0;
   let hi = sorted.length;
   while (lo < hi) {
@@ -299,7 +305,7 @@ function firstAtOrAfter(sorted: number[], offset: number): number | undefined {
     if (sorted[mid]! < offset) lo = mid + 1;
     else hi = mid;
   }
-  return sorted[lo];
+  return lo;
 }
 
 function displayCandidate(children: PhrasingContent[]): boolean {
