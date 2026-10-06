@@ -142,6 +142,8 @@ describe("Markdown math", () => {
     const tagged = await build("# T\n\n$$\\begin{equation} x \\tag{1}\\end{equation}$$\n");
     const found = tagged.result.warnings.find((w) => w.code === "math/numbering-unsupported");
     expect(found!.message).toContain("starred environment, with \\tag{} after it");
+    const starredTag = await build("# T\n\n$$\\begin{align*} a &= b \\tag{1}\\end{align*}$$\n");
+    expect(starredTag.result.warnings.map((w) => w.code)).toContain("math/numbering-unsupported");
     const after = await build("# T\n\n$$\\begin{equation*} x \\end{equation*} \\tag{1}$$\n");
     expect(after.result.warnings.map((w) => w.code)).not.toContain("math/numbering-unsupported");
     expect(after.html).toMatch(/<mtext>\(1\)<\/mtext>/);
