@@ -194,6 +194,16 @@ describe("renderFormula", () => {
       expect.stringContaining("inside an environment"),
     ]);
     expect(constructs("a \\\\[-0.2em] b")).toEqual([expect.stringContaining("negative height")]);
+    expect(constructs("\\def\\row{\\\\}\\begin{array}{c}a\\row[2em]b\\end{array}")).toEqual([
+      expect.stringContaining("inside an environment"),
+    ]);
+    expect(constructs("\\def\\arraystretch{0.7}\\begin{array}{c}a\\\\b\\end{array}")).toEqual([
+      "\\arraystretch below 1",
+    ]);
+    expect(
+      render("\\def\\arraystretch{0.7}\\begin{array}{c}a\\\\b\\end{array}", true).html,
+    ).not.toMatch(/padding-(?:top|bottom): -/);
+    expect(constructs("\\html@mathml{\\bm{=}}{x}")).toEqual([]);
     expect(render("a\\\\[-0.2em]b", true).html).not.toContain("-0.2em 0");
   });
 

@@ -591,8 +591,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   text "undefined" and monodocs as an overline; a line break inside part of a formula; and `\boldsymbol` on a relation, a bracket, or punctuation
   (`\boldsymbol{\rightarrow}`), which KaTeX writes into MathML only for letters, digits, and binary
   operators; `\\[2em]` between the rows of an environment, whose room KaTeX's MathML leaves out (both
-  found in KaTeX's parse tree, since the MathML no longer shows them); and a negative `\\[...]`, which
-  padding cannot give. Accepted as
+  found in KaTeX's parse tree, since the MathML no longer shows them); a negative `\\[...]` and an `\arraystretch`
+  below 1, which padding cannot give. The parse tree is read after macros are expanded, and only its
+  MathML branch. Accepted as
   KaTeX's own and not detected: a dashed frame around an array is drawn solid, `\xrightequilibrium` and
   `\xleftequilibrium` are drawn as ordinary harpoons, and nested size commands compound.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a

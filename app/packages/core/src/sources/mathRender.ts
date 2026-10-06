@@ -170,7 +170,6 @@ function dropClasses(math: Element): boolean {
  * - the room `\\\\[2em]` asks for between the rows of an environment, which KaTeX's MathML leaves out.
  */
 function parseTreeLosses(tex: string, display: boolean): string[] {
-  if (!/\\(?:boldsymbol|bm)(?![a-zA-Z])|\\\\\s*\[/.test(tex)) return [];
   let tree: unknown;
   try {
     tree = (katex as unknown as { __parse(tex: string, options: object): unknown }).__parse(tex, {
@@ -193,6 +192,8 @@ function parseTreeLosses(tex: string, display: boolean): string[] {
     if (record.type === "array" && Array.isArray(record.rowGaps) && record.rowGaps.some(Boolean)) {
       losses.add("\\\\[...] inside an environment");
     }
+    // Only the branch that reaches MathML counts (`\\html@mathml{...}{...}`).
+    if (record.type === "htmlmathml") return walk(record.mathml, bold);
     // A font replaces the one around it: \\mathrm inside \\boldsymbol is upright, not bold.
     const inside = record.type === "font" ? record.font === "boldsymbol" : bold;
     for (const [key, value] of Object.entries(record)) if (key !== "loc") walk(value, inside);

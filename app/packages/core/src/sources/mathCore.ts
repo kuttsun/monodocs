@@ -266,7 +266,7 @@ export function rewriteForCore(math: Element, tex: string): CoreGaps {
   });
   fixFrameSides(math);
   visit(math, "element", (node: Element) => {
-    if (node.tagName === "mtable") rewriteTable(node);
+    if (node.tagName === "mtable") rewriteTable(node, constructs);
   });
   // A table as wide as the formula (`\\tag`, which KaTeX sets in a full-width table to put the tag
   // at the right margin) needs every box from the formula down to it as wide as the line: a display
@@ -351,7 +351,7 @@ function holdsTable(node: Element): boolean {
  * by), padding (half the spacing on either side of a boundary, none at an unframed table's edges),
  * borders for the lines, and `width`.
  */
-function rewriteTable(table: Element): void {
+function rewriteTable(table: Element, constructs: Set<string>): void {
   const p = table.properties;
   const list = (value: unknown) =>
     typeof value === "string" && value.trim() !== "" ? value.trim().split(/\s+/) : [];
@@ -372,7 +372,14 @@ function rewriteTable(table: Element): void {
     values.length > 0 ? values[Math.min(i, values.length - 1)] : undefined;
   const half = (value: string | undefined) => {
     const length = parseLength(value);
-    return length ? cssLength({ ...length, size: length.size / 2, relative: false }) : "0";
+    if (!length) return "0";
+    // A negative gap (`\\arraystretch` below 1) would draw the rows closer than their content,
+    // which padding cannot give; it is reported, and the rows get no extra room.
+    if (length.size < 0) {
+      constructs.add("\\arraystretch below 1");
+      return "0";
+    }
+    return cssLength({ ...length, size: length.size / 2, relative: false });
   };
   const framed = isFramed(table);
   padRows(table, align.length);
