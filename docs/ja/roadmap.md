@@ -496,6 +496,32 @@ Markdown から捨てる生 HTML も数式を運ばない。HTML ブロックの
 - **アクセシビリティ。** 支援技術が読むのは MathML である。`alttext` は付けない。TeX を読み上げても、それが
   重複する MathML より悪くなるからである。
 
+**描画（v0.15）。** KaTeX が各数式を `output: "mathml"` で MathML に描き、`<math>` 要素だけを残す。KaTeX の
+クラス、スクリプト、スタイルシートは出力に入らない。数式は `span.math`（フェンスのブロックは `div.math`）で、
+クラス `math-inline` か `math-display` を持ち、`data-math-source` と `data-math-tex` を運ぶ。描画するまでは
+TeX を文字として持っており、見出しの ID はそのため TeX から作られる。見出しの一覧と検索の文字は
+`data-math-tex` を読み、MathML は読まない。KaTeX が解析できない数式は、ファイル、行、数式を名指す
+`math/parse-failed` として報告し、KaTeX のエラー表示ではなく、`span.math-error` の中に書かれたとおりに示す。
+
+- **依存としての KaTeX。** KaTeX 0.16.47 は MIT である。Mermaid のランタイムがすでに同梱している版と同じで、
+  2 つが食い違うとテストが失敗するので、告知が名指す KaTeX は 1 つになる。告知では、バンドルのほかの
+  パッケージとともに `THIRD-PARTY-NOTICES.txt` に、そしてランタイム自身の告知に現れる。追加したときに
+  Linux x64 で測ると、CLI バンドルは 0.50 MiB（20,626,667 から 21,150,252 バイト）、単体バイナリは 0.50 MiB
+  （145,493,184 から 146,017,472 バイト）大きくなる。HTML の出力は KaTeX 自身では大きくならず、数式の
+  MathML の分だけ大きくなる。
+- **`mathvariant`。** MathML Core が適用するのは `mathvariant="normal"` だけなので、それ以外の値は
+  ビルド時に、Unicode の Mathematical Alphanumeric Symbols（U+1D400–U+1D7FF）と、その欠けを埋める
+  Letterlike Symbols（`ℎ`、`ℬ`、`ℭ`、`ℝ` など）の文字に置き換え、属性は取り除く。対象は、ラテン文字では
+  bold、italic、bold-italic、script、bold-script、fraktur、bold-fraktur、double-struck、sans-serif、
+  bold-sans-serif、sans-serif-italic、sans-serif-bold-italic、monospace である。数字は bold、double-struck、
+  sans-serif、bold-sans-serif、monospace が対象である。ギリシャ文字は bold、italic、bold-italic、
+  bold-sans-serif、sans-serif-bold-italic が対象で、bold の `Ϝϝ` と italic の点のない `ıȷ` も含む。その
+  スタイルに形のない文字や数字（`\mathit{123}`、`\textbf{}` の中の日本語）はスタイルなしで残し、
+  `math/style-unsupported` として報告する。ほかの文字（空白、句読点、演算子）には、スタイルのついた形が
+  ないので、黙って残す。
+- **`math.enabled: false`** ではパーサを使わないので、数式の区切り記号は以前のリリースと同じく文字として
+  出力される。数式の無い文書は、どちらでもバイト単位で同じに組み上がる。
+
 
 
 ---

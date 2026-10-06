@@ -1,6 +1,7 @@
 import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
-import type { Element, Root as HastRoot } from "hast";
+import type { Element, ElementContent, Root as HastRoot, RootContent } from "hast";
+import { isMath } from "./mathRender.js";
 import type { Heading } from "../types.js";
 
 const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
@@ -55,7 +56,7 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
       headings.push({
         level: Number(element.tagName.slice(1)),
         id: headingId,
-        text: toText(element),
+        text: toText(withFormulasAsText(element, "heading")),
       });
     }
   });
@@ -72,5 +73,32 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
     }
   });
 
-  return { headings, text: toText(tree), anchors: [...anchors] };
+  return { headings, text: toText(withFormulasAsText(tree, "search")), anchors: [...anchors] };
+}
+
+/**
+ * A copy of the tree with each formula as its TeX, for text that is read rather than rendered: a
+ * heading in the lists of headings shows `$TeX$`, and search indexes the TeX without delimiters, a
+ * display formula apart from the text around it (roadmap 6.4). The MathML itself — tokens and the TeX
+ * annotation together — is never read as text.
+ */
+function withFormulasAsText<T extends HastRoot | Element>(node: T, use: "heading" | "search"): T {
+  const map = (n: RootContent | ElementContent): RootContent | ElementContent => {
+    if (n.type === "element" && isMath(n)) {
+      const tex = (n as Element).properties.dataMathTex as string;
+      if (use === "heading") return { type: "text", value: `$${tex}$` };
+      const display = ((n as Element).properties.className as string[]).includes("math-display");
+      return display
+        ? {
+            type: "element",
+            tagName: "div",
+            properties: {},
+            children: [{ type: "text", value: tex }],
+          }
+        : { type: "text", value: tex };
+    }
+    if (n.type !== "element") return n;
+    return { ...n, children: n.children.map(map) as ElementContent[] };
+  };
+  return { ...node, children: (node.children as (RootContent | ElementContent)[]).map(map) } as T;
 }

@@ -1,6 +1,7 @@
 import type { Element, ElementContent, Root as HastRoot, RootContent, Text } from "hast";
 import type { Break, Parent as MdastParent, Root as MdastRoot, Text as MdastText } from "mdast";
 import { EAST_ASIAN_WIDE_RANGES } from "./eastAsianWidth.js";
+import { isMath } from "./mathRender.js";
 
 /**
  * What a newline inside a paragraph becomes (`sources.lineBreak`, roadmap 12.6).
@@ -136,7 +137,11 @@ function textRuns(tree: HastRoot): Text[][] {
         runs[runs.length - 1]!.push(node);
       } else if (node.type === "element") {
         const el = node as Element;
-        if (INLINE.has(el.tagName)) {
+        if (isMath(el)) {
+          // A formula is not text: what it holds is TeX, and a line break next to it is not between
+          // two characters.
+          runs.push([]);
+        } else if (INLINE.has(el.tagName)) {
           visit(el.children);
         } else {
           runs.push([]);

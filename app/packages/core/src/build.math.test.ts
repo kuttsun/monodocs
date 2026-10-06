@@ -1,0 +1,163 @@
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { buildSite } from "./build";
+
+/**
+ * Markdown math rendered at build time (roadmap 6.4): MathML only, the heading IDs math had no part
+ * in before, the lists of headings and the search text reading the TeX, a diagnostic for what cannot
+ * be rendered, and `math.enabled: false` giving back the output of the release before.
+ */
+let dir: string;
+
+beforeEach(async () => {
+  dir = await mkdtemp(join(tmpdir(), "monodocs-math-"));
+});
+
+afterEach(async () => {
+  await rm(dir, { recursive: true, force: true });
+});
+
+async function build(markdown: string, configBody = "") {
+  await writeFile(join(dir, "a.md"), markdown);
+  const configFile = join(dir, "monodocs.config.yml");
+  await writeFile(configFile, configBody);
+  const out = join(dir, "out.html");
+  const result = await buildSite({ configFile, inputDir: dir, outputFile: out, format: "html" });
+  return { html: await readFile(out, "utf8"), result };
+}
+
+interface PageData {
+  title: string;
+  text: string;
+  headings: { id: string; text: string }[];
+}
+
+function decode(s: string): string {
+  return s
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&");
+}
+
+function pageData(html: string): PageData {
+  const json = /window\.__MONODOCS_DATA__ = (\{.*\});/.exec(html)![1]!;
+  return (JSON.parse(json) as { pages: PageData[] }).pages[0]!;
+}
+
+const DOC = [
+  "# Energy $E=mc^2$",
+  "",
+  "## Let $x$ be real",
+  "",
+  "## Cost $\\frac{a}{b}$",
+  "",
+  "Inline $a &lt; b$ and $`\\sqrt{2}`$ here.",
+  "",
+  "$$",
+  "\\sum_{k=1}^{n} k",
+  "$$",
+  "",
+  "```math",
+  "\\mathbb{R}",
+  "```",
+  "",
+].join("\n");
+
+describe("Markdown math", () => {
+  it("renders each formula to MathML, with no KaTeX stylesheet or script", async () => {
+    const { html } = await build(DOC);
+    expect(html.match(/<math /g)).toHaveLength(7);
+    expect(html).not.toMatch(/katex/i);
+    expect(html).toContain("ℝ");
+    expect(html).not.toMatch(/mathvariant="(?!normal")/);
+  });
+
+  it("keeps each formula's source and TeX on the element around it", async () => {
+    const { html } = await build(DOC);
+    const attributes = (name: string) =>
+      [...html.matchAll(new RegExp(`${name}="([^"]*)"`, "g"))].map((m) => decode(m[1]!));
+    expect(attributes("data-math-source")).toEqual([
+      "$E=mc^2$",
+      "$x$",
+      "$\\frac{a}{b}$",
+      "$a &lt; b$",
+      "$`\\sqrt{2}`$",
+      "$$\n\\sum_{k=1}^{n} k\n$$",
+      "```math\n\\mathbb{R}\n```",
+    ]);
+    expect(attributes("data-math-tex")).toEqual([
+      "E=mc^2",
+      "x",
+      "\\frac{a}{b}",
+      "a < b",
+      "\\sqrt{2}",
+      "\n\\sum_{k=1}^{n} k\n",
+      "\\mathbb{R}",
+    ]);
+  });
+
+  it("makes heading IDs from the TeX, as before math was rendered", async () => {
+    const { html } = await build(DOC);
+    const ids = [...html.matchAll(/<h[1-6] id="a-([^"]*)"/g)].map((m) => m[1]);
+    expect(ids).toEqual(["energy-emc2", "let-x-be-real", "cost-fracab"]);
+  });
+
+  it("shows a formula in a heading or title as $TeX$, and indexes the TeX", async () => {
+    const { html } = await build(DOC);
+    const page = pageData(html);
+    expect(page.title).toBe("Energy $E=mc^2$");
+    expect(page.headings.map((h) => h.text)).toEqual(["Let $x$ be real", "Cost $\\frac{a}{b}$"]);
+    expect(page.text).toContain("Inline a < b and \\sqrt{2} here.");
+    expect(page.text).toContain("\\sum_{k=1}^{n} k");
+    // The MathML is not read as text: no italic code points, no TeX annotation twice.
+    expect(page.text).not.toContain("𝑥");
+    expect(page.text.split("\\frac{a}{b}")).toHaveLength(2);
+  });
+
+  it("reports a formula KaTeX cannot parse, with the file and line, and shows it as written", async () => {
+    const { html, result } = await build("# T\n\nBroken $x^{$ here.\n");
+    const found = result.warnings.filter((w) => w.code === "math/parse-failed");
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({ path: "a.md", line: 3 });
+    expect(found[0]!.message).toContain("$x^{$");
+    expect(html).toContain('<span class="math-error">$x^{$</span>');
+    expect(html).not.toContain("katex-error");
+  });
+
+  it("reports a style Unicode has no form for", async () => {
+    const { result } = await build("# T\n\n$\\mathit{123}$\n");
+    const found = result.warnings.filter((w) => w.code === "math/style-unsupported");
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain('"123"');
+  });
+
+  it("with math.enabled: false, prints the formulas as text, as the release before did", async () => {
+    const off = await build(DOC, "math:\n  enabled: false\n");
+    expect(off.html).not.toContain("<math");
+    expect(off.html).not.toContain("data-math");
+    expect(pageData(off.html).title).toBe("Energy $E=mc^2$");
+    expect(pageData(off.html).headings.map((h) => h.text)).toEqual([
+      "Let $x$ be real",
+      "Cost $\\frac{a}{b}$",
+    ]);
+    // A fenced math block is code again.
+    expect(off.html).toContain("<span>\\mathbb{R}</span>");
+  });
+
+  it("builds a fixture without formulas byte for byte as with math off", async () => {
+    // examples/ja has `$` in code and shell lines but no formula.
+    const fixture = fileURLToPath(new URL("../../../../examples/ja", import.meta.url));
+    const outputs: string[] = [];
+    for (const body of ["", "math:\n  enabled: false\n"]) {
+      const configFile = join(dir, "monodocs.config.yml");
+      await writeFile(configFile, body);
+      const out = join(dir, "fixture.html");
+      await buildSite({ configFile, inputDir: fixture, outputFile: out, format: "html" });
+      outputs.push(await readFile(out, "utf8"));
+    }
+    expect(outputs[0]).toBe(outputs[1]);
+  }, 120_000);
+});

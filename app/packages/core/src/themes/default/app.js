@@ -785,9 +785,10 @@
   var BODY_HIGHLIGHT_FLAG = "__monodocsSearchHit";
   // Upper bound on the marks per page, so a keyword that occurs everywhere cannot flood the DOM.
   var MAX_BODY_HIGHLIGHTS = 500;
-  // Subtrees left alone. A Mermaid block is source the runtime reads and replaces with a diagram
-  // (an svg), and the code-block toolbar and its copy toast are UI text the theme injects.
-  var BODY_HIGHLIGHT_SKIP_TAGS = ["SVG", "SCRIPT", "STYLE", "TEXTAREA", "CANVAS"];
+  // Subtrees left alone. A formula is MathML, which a <mark> cannot sit inside; a Mermaid block is
+  // source the runtime reads and replaces with a diagram (an svg); and the code-block toolbar and
+  // its copy toast are UI text the theme injects.
+  var BODY_HIGHLIGHT_SKIP_TAGS = ["SVG", "MATH", "SCRIPT", "STYLE", "TEXTAREA", "CANVAS"];
   var BODY_HIGHLIGHT_SKIP_CLASSES = ["mermaid", "code-toolbar", "code-copied-toast"];
   // The section number core put in a heading. It is matched only as a whole (see scoreEntry), so
   // marking "1" inside "13.2" would show a match search did not make. Recognised by an attribute

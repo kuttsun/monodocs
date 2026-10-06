@@ -46,6 +46,8 @@ export const DIAGNOSTIC_CODES = [
   "lang/unsupported",
   "link/unresolved",
   "link/unresolved-anchor",
+  "math/parse-failed",
+  "math/style-unsupported",
   "mermaid/prerenderer-missing",
   "mermaid/render-failed",
   "numbering/sectnums",

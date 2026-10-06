@@ -463,6 +463,7 @@ function buildConfigFileSchema() {
         .strict()
         .optional(),
       highlight: z.object({ enabled: z.boolean().optional() }).strict().optional(),
+      math: z.object({ enabled: z.boolean().optional() }).strict().optional(),
       html: z
         .object({
           theme: z.string().optional(),
@@ -718,6 +719,8 @@ export type ResolvedConfig = {
   mermaidMode: MermaidMode;
   mermaidRuntime: MermaidRuntime;
   codeHighlight: boolean;
+  /** Render formulas at build time (`math.enabled`, roadmap 6.4). */
+  mathEnabled: boolean;
   /** PDF の用紙サイズ（Puppeteer の page.pdf `format`。既定 "A4"）。 */
   pdfPageSize: string;
   /** PDF のページ余白（各辺 CSS 長さ）。 */
@@ -1250,6 +1253,7 @@ export async function loadConfig(
     // サイズ最小化したい場合のみ cdn を選ぶ。
     mermaidRuntime: fileConfig.mermaid?.runtime ?? "inline",
     codeHighlight: fileConfig.highlight?.enabled ?? true,
+    mathEnabled: fileConfig.math?.enabled ?? true,
     pdfPageSize: fileConfig.pdf?.pageSize ?? DEFAULT_PDF_PAGE_SIZE,
     pdfMargin: {
       top: fileConfig.pdf?.margin?.top ?? DEFAULT_PDF_MARGIN.top,

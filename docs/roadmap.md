@@ -527,6 +527,33 @@ are the same text.
 - **Accessibility.** The MathML is what assistive technology reads; no `alttext` is added, since TeX
   read aloud would be worse than the MathML it duplicates.
 
+**Rendering (v0.15).** KaTeX renders each formula to MathML with `output: "mathml"`, and only the
+`<math>` element is kept, so no KaTeX class, script, or stylesheet reaches the output. A formula is a
+`span.math` (a `div.math` for a fenced block), with class `math-inline` or `math-display`, carrying
+`data-math-source` and `data-math-tex`. Until it is rendered it holds the TeX as text, which is how a
+heading's ID comes from the TeX. The lists of headings and the search text read `data-math-tex`, never
+the MathML. A formula KaTeX cannot parse is reported as `math/parse-failed`, naming the file, the line,
+and the formula, and is shown as written in a `span.math-error`, not as KaTeX's error box.
+
+- **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
+  bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
+  `THIRD-PARTY-NOTICES.txt` with the bundle's other packages and in the runtime's own notices. Measured on
+  Linux x64 when it was added, it makes the CLI bundle 0.50 MiB larger (20,626,667 to 21,150,252 bytes)
+  and the standalone binary 0.50 MiB larger (145,493,184 to 146,017,472 bytes). The HTML output does not
+  grow by KaTeX itself, only by the formulas' MathML.
+- **`mathvariant`.** MathML Core applies only `mathvariant="normal"`, so every other value is resolved at
+  build time into Unicode's Mathematical Alphanumeric Symbols (U+1D400–U+1D7FF) and the Letterlike
+  Symbols that fill its holes (`ℎ`, `ℬ`, `ℭ`, `ℝ`, and the rest), and the attribute is removed. This
+  covers bold, italic, bold-italic, script, bold-script, fraktur, bold-fraktur, double-struck,
+  sans-serif, bold-sans-serif, sans-serif-italic, sans-serif-bold-italic, and monospace for Latin
+  letters. Digits are covered for bold, double-struck, sans-serif, bold-sans-serif, and monospace. Greek
+  is covered for bold, italic, bold-italic, bold-sans-serif, and sans-serif-bold-italic, as are bold
+  `Ϝϝ` and italic dotless `ıȷ`. A letter or digit with no form in its style (`\mathit{123}`, or Japanese
+  in `\textbf{}`) is kept unstyled and reported as `math/style-unsupported`. Other characters (spaces,
+  punctuation, operators) have no styled forms and are kept silently.
+- **`math.enabled: false`** turns the parser off, so the formulas' delimiters print as text, as in the
+  release before. A document without a formula builds byte for byte the same either way.
+
 
 
 ---

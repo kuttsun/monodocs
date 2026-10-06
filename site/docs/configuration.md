@@ -135,6 +135,9 @@ mermaid:
 highlight:
   enabled: true
 
+math:
+  enabled: true
+
 html:
   theme: default
   colorScheme: light # light | dark | auto (follows the OS setting)
@@ -626,6 +629,14 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | Key                 | Type    | Default | Description                                  |
 | ------------------- | ------- | ------- | -------------------------------------------- |
 | `highlight.enabled` | boolean | `true`  | Syntax-highlight code blocks (via shiki).    |
+
+### `math`
+
+| Key            | Type    | Default | Description                                                                                                             |
+| -------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `math.enabled` | boolean | `true`  | Render formulas (`$...$`, `$$...$$`, a fenced `math` block) to MathML at build time. `false` prints them as text instead. |
+
+A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. A formula KaTeX cannot parse is reported (`math/parse-failed`) and shown as written.
 
 ### `html`
 
