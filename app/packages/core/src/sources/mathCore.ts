@@ -466,8 +466,12 @@ function breakLines(math: Element, constructs: Set<string>): void {
     const extra: (string | undefined)[] = [];
     for (const child of top.children) {
       if (isBreak(child)) {
+        // Room asked for below a line; a negative amount (drawing the lines closer) is not something
+        // padding can give, and is reported.
         const height = parseLength((child as Element).properties.height);
-        extra[lines.length - 1] = height ? cssLength({ ...height, relative: false }) : undefined;
+        if (height && height.size < 0) constructs.add("\\\\[...] with a negative height");
+        extra[lines.length - 1] =
+          height && height.size > 0 ? cssLength({ ...height, relative: false }) : undefined;
         lines.push([]);
       } else lines[lines.length - 1]!.push(child);
     }

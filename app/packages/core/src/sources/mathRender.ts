@@ -141,7 +141,7 @@ export function renderFormula(
   if (!math) return { error: "KaTeX produced no <math> element" };
   const unsupported = resolveMathvariants(math);
   const { notations, constructs } = rewriteForCore(math, tex);
-  if (boldSymbolLost(tex)) constructs.push("\\boldsymbol on a relation, bracket, or punctuation");
+  constructs.push(...parseTreeLosses(tex, display));
   const numbered = dropClasses(math);
   return { math, unsupported, numbered, notations, constructs };
 }
@@ -162,31 +162,43 @@ function dropClasses(math: Element): boolean {
 }
 
 /**
- * KaTeX writes `\\boldsymbol` (and `\\bm`) into MathML only for letters, digits, and binary
- * operators; on a relation, a bracket, or punctuation (`\\boldsymbol{\\rightarrow}`) it writes nothing,
- * so the MathML cannot show it. KaTeX's parse tree still has it, and is read for this.
+ * What KaTeX drops on the way from its parse tree to MathML, read from the parse tree since the MathML
+ * no longer shows it:
+ *
+ * - `\\boldsymbol` (and `\\bm`) on a relation, a bracket, or punctuation (`\\boldsymbol{\\rightarrow}`):
+ *   KaTeX writes the style only for letters, digits, and binary operators;
+ * - the room `\\\\[2em]` asks for between the rows of an environment, which KaTeX's MathML leaves out.
  */
-function boldSymbolLost(tex: string): boolean {
-  if (!/\\(?:boldsymbol|bm)(?![a-zA-Z])/.test(tex)) return false;
+function parseTreeLosses(tex: string, display: boolean): string[] {
+  if (!/\\(?:boldsymbol|bm)(?![a-zA-Z])|\\\\\s*\[/.test(tex)) return [];
   let tree: unknown;
   try {
     tree = (katex as unknown as { __parse(tex: string, options: object): unknown }).__parse(tex, {
+      displayMode: display,
       strict: "ignore",
       trust: false,
     });
   } catch {
-    return false;
+    return [];
   }
+  const losses = new Set<string>();
   const lost = new Set(["rel", "open", "close", "punct", "inner"]);
-  const walk = (node: unknown, bold: boolean): boolean => {
-    if (Array.isArray(node)) return node.some((n) => walk(n, bold));
-    if (!node || typeof node !== "object") return false;
+  const walk = (node: unknown, bold: boolean): void => {
+    if (Array.isArray(node)) return node.forEach((n) => walk(n, bold));
+    if (!node || typeof node !== "object") return;
     const record = node as Record<string, unknown>;
-    if (bold && record.type === "atom" && lost.has(String(record.family))) return true;
-    const inside = bold || (record.type === "font" && record.font === "boldsymbol");
-    return Object.entries(record).some(([key, value]) => key !== "loc" && walk(value, inside));
+    if (bold && record.type === "atom" && lost.has(String(record.family))) {
+      losses.add("\\boldsymbol on a relation, bracket, or punctuation");
+    }
+    if (record.type === "array" && Array.isArray(record.rowGaps) && record.rowGaps.some(Boolean)) {
+      losses.add("\\\\[...] inside an environment");
+    }
+    // A font replaces the one around it: \\mathrm inside \\boldsymbol is upright, not bold.
+    const inside = record.type === "font" ? record.font === "boldsymbol" : bold;
+    for (const [key, value] of Object.entries(record)) if (key !== "loc") walk(value, inside);
   };
-  return walk(tree, false);
+  walk(tree, false);
+  return [...losses];
 }
 
 // --- mathvariant --------------------------------------------------------------------------------

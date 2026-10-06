@@ -182,6 +182,19 @@ describe("renderFormula", () => {
     ]);
     expect(constructs("\\bm{=}")).toEqual([expect.stringContaining("\\boldsymbol")]);
     expect(constructs("\\boldsymbol{x + y}")).toEqual([]);
+    expect(constructs("\\bm{=} \\tag{1}")).toEqual([expect.stringContaining("\\boldsymbol")]);
+    expect(constructs("\\begin{align*} a &\\bm{=} b \\end{align*}")).toEqual([
+      expect.stringContaining("\\boldsymbol"),
+    ]);
+    expect(constructs("\\boldsymbol{\\mathrm{=}}")).toEqual([]);
+    expect(constructs("\\boldsymbol{\\mathrm{\\bm{=}}}")).toEqual([
+      expect.stringContaining("\\boldsymbol"),
+    ]);
+    expect(constructs("\\begin{array}{c} a \\\\[2em] b \\end{array}")).toEqual([
+      expect.stringContaining("inside an environment"),
+    ]);
+    expect(constructs("a \\\\[-0.2em] b")).toEqual([expect.stringContaining("negative height")]);
+    expect(render("a\\\\[-0.2em]b", true).html).not.toContain("-0.2em 0");
   });
 
   it("returns KaTeX's reason for a formula it cannot parse", () => {
