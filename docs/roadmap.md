@@ -568,6 +568,27 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
 - **Width.** A display formula wider than the column scrolls sideways, as a code block does, rather
   than being cut off. On paper there is no scroll: a formula cannot wrap, so it is printed at its full
   width, and one wider than the page is cut at the page's edge.
+- **What MathML Core reads otherwise.** KaTeX writes MathML for MathML 3 renderers, and a number of
+  its elements and attributes are left out of MathML Core or read differently. A survey of KaTeX
+  0.16.47's MathML builder listed them; each that changes what a formula says is rewritten into what
+  Core draws as KaTeX means it, and checked in real Chromium:
+  - an array's `columnalign`, `columnspacing`, `rowspacing`, `columnlines`, and `rowlines` become cell
+    CSS — `text-align` in the `-webkit-` values Chromium aligns a cell's content by (`columnalign`
+    stays for Firefox, which reads it), padding, and borders — and the frame KaTeX draws around an
+    array with its sides named crosswise (`top` for a leading `|`) gets them put right;
+  - `\\` and `\newline` outside an array, which Core does not break at, become the rows of a
+    one-column table at the top of a formula;
+  - a negative space (`\!`, a negative `\kern`), which Core cannot draw, becomes a negative margin;
+  - `\overbrace` and `\underbrace` are set as accents, as in TeX, rather than as small scripts;
+  - a `\tag` outside an environment is set at the right margin, its table and the boxes above it
+    spanning the line.
+
+  What cannot be rewritten is reported as `math/construct-unsupported`: `\vcenter`, whose centring
+  KaTeX leaves to its stylesheet; `\mathchoice`, whose branch KaTeX picks by a style it does not carry
+  into scripts and fractions; `\overlinesegment` and `\underlinesegment`, which KaTeX writes as the
+  text "undefined" and monodocs as an overline; and a line break inside part of a formula. Accepted as
+  KaTeX's own and not detected: a dashed frame around an array is drawn solid, `\xrightequilibrium` and
+  `\xleftequilibrium` are drawn as ordinary harpoons, and nested size commands compound.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
   line break before or after it is not between two East Asian characters and stays a space, as at
   any other element that is not text.
@@ -586,8 +607,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   letters. Digits are covered for bold, double-struck, sans-serif, bold-sans-serif, and monospace. Greek
   is covered for bold, italic, bold-italic, bold-sans-serif, and sans-serif-bold-italic, as are bold
   `Ϝϝ` and italic dotless `ıȷ`. A letter or digit with no form in its style (`\mathit{123}`, or Japanese
-  in `\textbf{}`) is kept unstyled and reported as `math/style-unsupported`. Other characters (spaces,
-  punctuation, operators) have no styled forms and are kept silently.
+  in `\textbf{}`) is kept unstyled and reported as `math/style-unsupported`. A symbol (punctuation, an operator)
+  has no styled form either, but CSS can make it bold or italic, which it does (`\boldsymbol{+}`); the
+  other styles are not ones a symbol is drawn in, and spaces have no style.
 - **`math.enabled: false`** turns the parser off, so the formulas' delimiters print as text, as in the
   release before. A document without a formula builds byte for byte the same either way.
 

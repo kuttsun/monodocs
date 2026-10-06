@@ -134,6 +134,8 @@ const EN = {
     'Unicode has no {variant} form of "{chars}" in the formula {source} ({path}:{line}); it is shown without the style.',
   "pages.mathNotAllowed":
     "{path}:{line}: the formula {source} uses {commands}, which monodocs does not render; it is shown as written.",
+  "pages.mathConstruct":
+    "{path}:{line}: the formula {source} uses {constructs}, which the browser cannot draw as written; the formula is rendered without it.",
   "pages.mathNotation":
     "{path}:{line}: the formula {source} encloses a term with {notations}, which is not drawn; the term is shown without it.",
   "pages.mathNumbering":
@@ -449,6 +451,8 @@ const JA: Record<MessageKey, string> = {
     'Unicode には "{chars}" の {variant} の形がありません（数式 {source}、{path}:{line}）。スタイルなしで表示します。',
   "pages.mathNotAllowed":
     "{path}:{line}: 数式 {source} は monodocs が描かない {commands} を使っているため、書かれたとおりに表示します。",
+  "pages.mathConstruct":
+    "{path}:{line}: 数式 {source} は {constructs} を使っていますが、ブラウザはそれを書かれたとおりに描けません。それなしで数式を描きます。",
   "pages.mathNotation":
     "{path}:{line}: 数式 {source} は {notations} で項を囲んでいますが、それは描かれません。項は囲みなしで示します。",
   "pages.mathNumbering":

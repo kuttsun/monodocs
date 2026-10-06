@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -103,6 +103,94 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
 
       await page.emulateMediaType("print");
       expect(await overflow()).toBe("visible");
+    } finally {
+      await browser.close();
+    }
+  }, 60_000);
+
+  it("draws what KaTeX writes for MathML 3 as MathML Core lays it out", async () => {
+    const page2 = join(dir, "b");
+    await mkdir(page2, { recursive: true });
+    await writeFile(
+      join(page2, "b.md"),
+      [
+        "# B",
+        // Fenced, so that Markdown's escapes leave TeX's \\\\ and \\! alone.
+        ...[
+          "\\begin{array}{|c|l:r|}\\hline a&bbbb&c\\\\\\hdashline d&e&f\\\\\\hline\\end{array}",
+          "\\begin{aligned} a &= b \\\\ ccc &= d \\end{aligned}",
+          "a\\\\b",
+          "a\\!b \\quad ab \\quad a\\kern{-0.3em}b",
+          "x \\tag{1}",
+        ].map((tex) => `\n\`\`\`math\n${tex}\n\`\`\`\n`),
+      ].join("\n"),
+    );
+    const configFile = join(page2, "monodocs.config.yml");
+    await writeFile(configFile, "");
+    const out2 = join(page2, "out.html");
+    await buildSite({ configFile, inputDir: page2, outputFile: out2, format: "html" });
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.goto(pathToFileURL(out2).href);
+      const found = await page.evaluate(() => {
+        const displays = [...document.querySelectorAll("#content .math-display")];
+        const rect = (e: Element) => e.getBoundingClientRect();
+        const style = (e: Element) => getComputedStyle(e);
+        // The array: lines between columns and rows, and a frame on all four sides.
+        const cells = [...displays[0]!.querySelectorAll("mtd")];
+        const frame = displays[0]!.querySelector("mtable")!.parentElement!;
+        const array = {
+          columnLines: [style(cells[0]!).borderRightStyle, style(cells[1]!).borderRightStyle],
+          rowLine: style(cells[0]!).borderBottomStyle,
+          frame: ["Top", "Right", "Bottom", "Left"].map(
+            (side) => style(frame)[`border${side}Style` as "borderTopStyle"],
+          ),
+          leftAligned:
+            Math.abs(
+              rect(cells[4]!.querySelector("mi")!).left - rect(cells[1]!.querySelector("mi")!).left,
+            ) < 1,
+        };
+        // aligned: the first column is right-aligned, the second left-aligned.
+        const terms = [...displays[1]!.querySelectorAll("mtd")].map((td) =>
+          rect(td.querySelector("mi, mrow")!),
+        );
+        const aligned = Math.abs(terms[0]!.right - terms[2]!.right) < 1;
+        // a\\b: two lines.
+        const [a, b] = [...displays[2]!.querySelectorAll("mi")].map(rect);
+        const broken = b!.top >= a!.bottom - 1;
+        // \\! and a negative kern bring the terms closer than none.
+        const letters = [...displays[3]!.querySelectorAll("mi")].map(rect);
+        const gap = (i: number) => letters[i + 1]!.left - letters[i]!.right;
+        const closer = gap(0) < gap(2) && gap(4) < gap(2);
+        // \\tag: the tag at the right edge, the formula apart from it.
+        const box = rect(displays[4]!);
+        const tag = rect(displays[4]!.querySelector("mtext")!);
+        const x = rect(displays[4]!.querySelector("mi")!);
+        const tagged = box.right - tag.right < 20 && tag.left - x.right > 50;
+        const m = displays[4]!.querySelector("math")!;
+        const dbg = {
+          box: [box.left, box.right],
+          tag: [tag.left, tag.right],
+          x: [x.left, x.right],
+          math: [rect(m).left, rect(m).right],
+          style: m.getAttribute("style"),
+          table: displays[4]!.querySelector("mtable")!.getAttribute("style"),
+        };
+        return { array, aligned, broken, closer, tagged, dbg };
+      });
+      expect(found.array).toEqual({
+        columnLines: ["solid", "dashed"],
+        rowLine: "dashed",
+        frame: ["solid", "solid", "solid", "solid"],
+        leftAligned: true,
+      });
+      expect(found.aligned).toBe(true);
+      expect(found.broken).toBe(true);
+      expect(found.closer).toBe(true);
+      process.stdout.write("DBG " + JSON.stringify(found.dbg) + "\n");
+      expect(found.tagged).toBe(true);
     } finally {
       await browser.close();
     }

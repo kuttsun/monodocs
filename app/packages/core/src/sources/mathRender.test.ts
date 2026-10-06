@@ -122,6 +122,54 @@ describe("renderFormula", () => {
     expect(render("a\\mathllap{XYZ}b").html).not.toContain('width"');
   });
 
+  it("rewrites what KaTeX writes for MathML 3 into what MathML Core lays out", () => {
+    const array = render(
+      "\\begin{array}{|c|l:r|}\\hline a&b&c\\\\\\hdashline d&e&f\\\\\\hline\\end{array}",
+      true,
+    ).html!;
+    // Lines and spacing as cell CSS; the frame's sides put right (KaTeX names them crosswise).
+    expect(array).not.toMatch(/columnlines|rowlines|columnspacing|rowspacing/);
+    expect(array).toContain("border-right: 0.06em solid");
+    expect(array).toContain("border-right: 0.06em dashed");
+    expect(array).toContain("border-bottom: 0.06em dashed");
+    expect(array).toContain("text-align: -webkit-left");
+    expect(array).toContain('columnalign="center left right"');
+    // Line breaks at the top become rows; one deeper in is reported.
+    expect(render("a\\\\b", true).html).toMatch(
+      /<mtable><mtr><mtd[^>]*><mrow><mi>a<\/mi><\/mrow><\/mtd><\/mtr><mtr>/,
+    );
+    const nested = renderFormula("\\frac{a\\\\b}{c}", true);
+    expect("math" in nested && nested.constructs).toEqual([expect.stringContaining("line break")]);
+    // A negative space pulls the terms together.
+    expect(render("a\\!b").html).toContain('<mspace width="0em" style="margin-left: -0.1667em">');
+    expect(render("a\\kern{-0.3em}b").html).toContain("margin-left: -0.3em");
+    // A brace is an accent, as in TeX.
+    expect(render("\\overbrace{abc}^{n}").html).toMatch(/<mover accent="true">/);
+    expect(render("\\underbrace{abc}_{n}").html).toMatch(/<munder accentunder="true">/);
+    // An arrow's label is padded in em, so the padding follows the label's size.
+    expect(render("\\xrightarrow{abc}").html).toMatch(/padding: [^"]*em/);
+    // A symbol takes bold or italic from CSS, having no styled character.
+    expect(render("\\boldsymbol{+}").html).toMatch(
+      /<mo [^>]*style="font-weight: bold; font-style: italic">\+<\/mo>/,
+    );
+    // A \\tag's table and every box down to it span the line.
+    expect(render("x \\tag{1}", true).html).toMatch(/^<math [^>]*style="width: 100%"/);
+  });
+
+  it("reports what MathML Core cannot draw as KaTeX means it", () => {
+    const constructs = (tex: string) => {
+      const result = renderFormula(tex, true);
+      return "math" in result ? result.constructs : undefined;
+    };
+    expect(constructs("\\vcenter{x}")).toEqual(["\\vcenter"]);
+    expect(constructs("\\mathchoice{D}{T}{S}{SS}")).toEqual(["\\mathchoice"]);
+    expect(constructs("\\overlinesegment{AB}")).toEqual([
+      expect.stringContaining("\\overlinesegment"),
+    ]);
+    expect(render("\\overlinesegment{AB}").html).not.toContain("undefined");
+    expect(constructs("\\frac{a}{b} + \\begin{array}{c} x \\end{array}")).toEqual([]);
+  });
+
   it("returns KaTeX's reason for a formula it cannot parse", () => {
     expect(render("x^{")).toEqual({ error: expect.stringContaining("Expected '}'") });
   });

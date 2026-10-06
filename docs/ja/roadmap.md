@@ -533,6 +533,23 @@ TeX を文字として持っており、見出しの ID はそのため TeX か�
   それなしで示す。
 - **幅。** 列より幅の広い別行立ての数式は、切り捨てられるのではなく、コードブロックと同じく横にスクロールする。
   紙にはスクロールが無い。数式は折り返せないので、その幅のまま印刷され、紙より広いものは紙の端で切れる。
+- **MathML Core が違って読むもの。** KaTeX は MathML 3 のレンダラ向けに MathML を書き、その要素や属性の
+  いくつかは MathML Core に無いか、違って読まれる。KaTeX 0.16.47 の MathML の組み立てを調べてそれらを
+  挙げ、数式の意味を変えるものは、KaTeX の意図どおりに Core が描く形に書き換え、実際の Chromium で確かめた：
+  - 配列の `columnalign`、`columnspacing`、`rowspacing`、`columnlines`、`rowlines` はセルの CSS にする——
+    `text-align` は Chromium がセルの中身を揃える `-webkit-` の値で（`columnalign` は、それを読む Firefox の
+    ために残す）、padding と罫線にする。KaTeX が辺の名前を取り違えて（先頭の `|` を `top` として）配列の
+    周りに描く枠は、辺を正しくする
+  - Core が改行しない、配列の外の `\\` と `\newline` は、数式の最上位で 1 列の表の行にする
+  - Core が描けない負の空き（`\!`、負の `\kern`）は、負の margin にする
+  - `\overbrace` と `\underbrace` は、小さな添字ではなく、TeX と同じくアクセントとして置く
+  - 環境の外の `\tag` は、その表と上の箱を行の幅にして、右端に置く
+
+  書き換えられないものは `math/construct-unsupported` として報告する。中央寄せを KaTeX がスタイルシートに
+  任せる `\vcenter`、添字や分数に伝えないスタイルで KaTeX が枝を選ぶ `\mathchoice`、KaTeX が "undefined" と
+  いう文字として書き、monodocs が上線として描く `\overlinesegment` と `\underlinesegment`、そして数式の一部の
+  中の改行である。KaTeX 自身のものとして受け入れ、検出しないもの：配列の周りの破線の枠は実線で描かれ、
+  `\xrightequilibrium` と `\xleftequilibrium` は普通の銛矢印として描かれ、入れ子の大きさの指定は積み重なる。
 - **数式の隣の改行。** `sources.lineBreak: join`（12.6）では、数式は境界である。その前後の改行は 2 つの東アジアの
   文字の間ではないので、文字でないほかの要素の隣と同じく空白のまま残る。
 
@@ -550,8 +567,9 @@ TeX を文字として持っており、見出しの ID はそのため TeX か�
   sans-serif、bold-sans-serif、monospace が対象である。ギリシャ文字は bold、italic、bold-italic、
   bold-sans-serif、sans-serif-bold-italic が対象で、bold の `Ϝϝ` と italic の点のない `ıȷ` も含む。その
   スタイルに形のない文字や数字（`\mathit{123}`、`\textbf{}` の中の日本語）はスタイルなしで残し、
-  `math/style-unsupported` として報告する。ほかの文字（空白、句読点、演算子）には、スタイルのついた形が
-  ないので、黙って残す。
+  `math/style-unsupported` として報告する。記号（句読点、演算子）にもスタイルのついた形は
+  ないが、CSS で太字や斜体にはできるので、そうする（`\boldsymbol{+}`）。ほかの書体は記号を描く書体ではなく、空白には
+  書体がない。
 - **`math.enabled: false`** ではパーサを使わないので、数式の区切り記号は以前のリリースと同じく文字として
   出力される。数式の無い文書は、どちらでもバイト単位で同じに組み上がる。
 

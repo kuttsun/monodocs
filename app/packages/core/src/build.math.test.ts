@@ -156,6 +156,13 @@ describe("Markdown math", () => {
     expect(found[0]!.message).toContain("phasorangle");
   });
 
+  it("reports a construct the browser cannot draw as written", async () => {
+    const { result } = await build("# T\n\n$\\vcenter{x}$\n");
+    const found = result.warnings.filter((w) => w.code === "math/construct-unsupported");
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain("\\vcenter");
+  });
+
   it("renders a formula in a table cell", async () => {
     const { html } = await build("# T\n\n| a |\n|---|\n| $x\\|y$ |\n");
     expect(html).toMatch(
