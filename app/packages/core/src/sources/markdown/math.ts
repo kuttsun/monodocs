@@ -94,6 +94,9 @@ declare module "mdast" {
  * takes from the processor's parser: whichever parser is set, before or after this plugin is used, is
  * wrapped so that the document it is given is at hand while mdast is built.
  */
+/** The transforms this plugin has registered, to recognise an extension copied from another processor. */
+const ownTransforms = new WeakSet<object>();
+
 export function remarkMath(this: Processor) {
   const state: { raw?: string } = {};
   const extension: FromMarkdownExtension = {
@@ -114,9 +117,14 @@ export function remarkMath(this: Processor) {
       },
     ],
   };
-  // A copy of the processor copies this extension along with the one its own attacher adds; the
-  // copied one only forgets the escapes it recorded, since its `state.raw` is never set.
-  (this.data().fromMarkdownExtensions ??= []).unshift(extension);
+  // A copy of the processor copies the original's extension along with its data; it would read the
+  // original's document, so it is taken out and only this processor's own extension is used.
+  ownTransforms.add(extension.transforms![0]!);
+  const extensions = (this.data().fromMarkdownExtensions ??= []);
+  const others = extensions.filter(
+    (e) => Array.isArray(e) || !e.transforms?.some((t) => ownTransforms.has(t)),
+  );
+  extensions.splice(0, extensions.length, extension, ...others);
 
   type Parser = NonNullable<Processor["parser"]>;
   const wrap = (parse: Parser | undefined): Parser | undefined =>
@@ -192,29 +200,42 @@ function blockMath(node: Code, doc: Doc): BlockMath {
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
   const source =
-    start !== undefined && end !== undefined
-      ? withoutPrefixes(doc.raw, start, end)
-      : "```math\n" + value + "\n```";
+    (start !== undefined && end !== undefined && fenceAsWritten(doc.raw, start, end, node.value)) ||
+    "```math\n" + value + "\n```";
   return { type: "math", value, data: { source }, position: node.position };
 }
 
 /**
- * The Markdown from `start` to `end` without the prefixes a quote or list puts on the lines after the
- * first: on each, as many spaces, tabs, and `>` as the first line has before its content, and no more,
- * so that indentation inside the block stays as written.
+ * A fenced block as written, without the prefixes a quote or list puts on its lines: the opening
+ * fence from its first character, each content line as its value has it (what precedes that on the
+ * line is prefix, and the content's own indentation is in the value), and the closing fence without
+ * the spaces and `>` before it. Line endings and trailing spaces stay as written. `undefined` when the
+ * lines cannot be matched up, in which case the source is rebuilt from the value.
  */
-function withoutPrefixes(raw: string, start: number, end: number): string {
-  const lineStart =
-    Math.max(raw.lastIndexOf("\n", start - 1), raw.lastIndexOf("\r", start - 1)) + 1;
-  let content = start;
-  while (content < end && /[ \t>]/.test(raw[content]!)) content++;
-  const width = content - lineStart;
-  return raw
-    .slice(content, end)
-    .replace(
-      /(\r\n|\r|\n)([ \t>]*)/g,
-      (_, ending: string, prefix: string) => ending + prefix.slice(Math.min(width, prefix.length)),
-    );
+function fenceAsWritten(
+  raw: string,
+  start: number,
+  end: number,
+  value: string,
+): string | undefined {
+  const parts = raw.slice(start, end).split(/(\r\n|\r|\n)/);
+  const lines = parts.filter((_, i) => i % 2 === 0);
+  const endings = parts.filter((_, i) => i % 2 === 1);
+  const open = lines[0]!.replace(/^[ \t>]*/, "");
+  const fence = /^(`{3,}|~{3,})/.exec(open)?.[1];
+  if (!fence) return undefined;
+  const last = lines.length > 1 ? lines[lines.length - 1]!.replace(/^[ \t>]*/, "") : "";
+  const closing = last.trimEnd();
+  // The last line closes the block only if it is a fence of the same character, at least as long.
+  const closes = closing.length >= fence.length && closing === fence[0]!.repeat(closing.length);
+  const content = lines.slice(1, closes ? -1 : undefined);
+  const valueLines = content.length === 0 ? [] : value.split(/\r\n|\r|\n/);
+  if (valueLines.length !== content.length) return undefined;
+  if (content.some((line, i) => !line.endsWith(valueLines[i]!))) return undefined;
+  let out = open;
+  valueLines.forEach((line, i) => (out += endings[i]! + line));
+  if (closes) out += endings[content.length]! + last;
+  return out;
 }
 
 function displayCandidate(children: PhrasingContent[]): boolean {
@@ -749,6 +770,7 @@ export function align(value: string, written: string, base: number): Alignment |
           const fits =
             next >= value.length ||
             written[p] === value[next] ||
+            (written[p] === "\0" && value[next] === "\uFFFD") ||
             written[p] === "\\" ||
             written[p] === "&";
           if (fits && !failed.has(`${next}:${p}`)) candidates.push(p);

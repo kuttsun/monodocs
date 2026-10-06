@@ -278,6 +278,17 @@ describe("a formula's source", () => {
     expect(sources("- x\n\n  ```math\n    a\n  ```")).toEqual(["```math\n  a\n```"]);
   });
 
+  it("keeps a fence's content that starts with `>` inside a quote", () => {
+    expect(sources("> ```math\n>>x\n> ```")).toEqual(["```math\n>x\n```"]);
+    expect(sources("> ```math\n> > x\n> ```")).toEqual(["```math\n> x\n```"]);
+  });
+
+  it("lines up a continuation line that starts with a NUL", () => {
+    expect(formulasWithSource("$$a\n\u0000&alpha;\\$5$$")).toEqual([
+      { source: "$$a\n\u0000&alpha;\\$5$$", at: "$$a\n\u0000&alpha;\\$5$$" },
+    ]);
+  });
+
   it("drops a paragraph's own leading spaces on a continuation line, as Markdown does", () => {
     expect(sources("$`a\n  b`$")).toEqual(["$`a\nb`$"]);
   });
@@ -357,6 +368,22 @@ describe("one processor", () => {
       expect(formulasOf(tree)).toEqual([{ display: true, tex: "e" }]);
       expect(tree.data).toBeUndefined();
     }
+  });
+});
+
+describe("a copy of a processor", () => {
+  it("does not read its documents with the original's state, even inside the original's parse", () => {
+    const p = unified().use(remarkParse).use(remarkGfm).use(remarkMath).freeze();
+    const child = p();
+    const plain = unified().use(remarkParse).use(remarkGfm);
+    const original = p.parser!;
+    let nested: Root | undefined;
+    p.parser = (doc, file) => {
+      nested = child.parse("\\$x$") as Root;
+      return original(doc, file);
+    };
+    p.parse("$x$");
+    expect(nested).toEqual(plain.parse("\\$x$"));
   });
 });
 
