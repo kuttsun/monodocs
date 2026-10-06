@@ -65,6 +65,10 @@ const PREBUILT_AUDITED = {
   "@upsetjs/venn.js@2.0.0": {
     // build/venn.esm.js inlines fmin (nelderMead, conjugateGradient, bisect, zeros), patched by venn.js.
     bundled: [{ name: "fmin", version: "0.0.4", declared: "0.0.4, patched by venn.js" }],
+    vendored: [
+      "build/venn.esm.js also contains wrapText, adapted from",
+      "http://engineering.findthebest.com/wrapping-axis-labels-in-d3-js/, which states no licence.",
+    ],
   },
   // Inside the pre-bundled parser, single files over 20 KB of the package's own code.
   "chevrotain@11.1.2": {},
@@ -90,6 +94,14 @@ const PREBUILT_AUDITED = {
       "    — Copyright OpenJS Foundation and other contributors",
       "  Babel helper functions its build injected (_classCallCheck and the like): MIT,",
       "    Copyright (c) 2014-present Sebastian McKenzie and other contributors (@babel/helpers).",
+      "It also contains code from sources that state no licence:",
+      "  RGB/HSL conversion, from Michael Jackson",
+      "    (http://mjijackson.com/2008/02/rgb-to-hsl-and-rgb-to-hsv-color-model-conversion-algorithms-in-javascript)",
+      "  signed distance functions, from Inigo Quilez (https://iquilezles.org/articles/distfunctions2d/,",
+      "    https://www.shadertoy.com/view/4lsXDN)",
+      "and passive-listener feature detection from the WICG EventListenerOptions explainer",
+      "  (https://github.com/WICG/EventListenerOptions), under the W3C Software and Document License",
+      "  (https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document).",
       "The MIT License text is reproduced above.",
     ],
     // "Explained by Blindman67 at https://stackoverflow.com/a/44856925" cites an explanation of
@@ -115,6 +127,15 @@ const PREBUILT_AUDITED = {
       "document under the Apache-2.0 components.",
     ],
     apache: true,
+  },
+  // Not pre-built, but its comments name the code it took.
+  "khroma@2.1.0": {
+    vendored: [
+      "dist/methods/mix.js is adapted from Dart Sass (https://github.com/sass/dart-sass), under the",
+      "MIT License above: Copyright (c) 2016, Google Inc.",
+      "dist/utils/channel.js contains hue2rgb, from Michael Jackson's gist",
+      "(https://gist.github.com/mjackson/5311256), which states no licence.",
+    ],
   },
   "layout-base@1.0.2": {
     vendored: [
@@ -152,6 +173,9 @@ const PREBUILT_AUDITED = {
       "by Justin Johnson (https://stackoverflow.com/a/1890233), posted 2009-12-12 and so licensed",
       "under CC BY-SA 2.5 (https://creativecommons.org/licenses/by-sa/2.5/), the licence Stack",
       "Overflow applied to contributions of that date.",
+      "src/diagram-api/regexes.ts has a front-matter expression based on Jekyll's",
+      "(https://github.com/jekyll/jekyll), under the MIT License: Copyright (c) 2008-2016 Tom",
+      "Preston-Werner.",
     ],
     // src/utils.ts copies entity-decode's browser decoder ("source: …/entity-decode/blob/v2.0.1").
     bundled: [
@@ -284,6 +308,95 @@ const NOT_IN_RUNTIME = {
     ]),
   ),
 };
+
+/**
+ * Every URL a comment in the runtime's sources cites, outside the hosts of specifications and
+ * references below, with what was decided about it: "attributed" when code came from it and the
+ * notices say so (in PREBUILT_AUDITED), "reference" when it explains, cites an issue, or gives a
+ * formula. A URL in neither fails generation and --check, so a mermaid upgrade cannot bring in
+ * code from a new source unread.
+ */
+const REFERENCE_HOSTS =
+  /^https?:\/\/(www\.)?(w3\.org|w3c\.github\.io|ecma-international\.org|en\.wikipedia\.org|developer\.mozilla\.org|yaml\.org|unicode\.org|datatracker\.ietf\.org|url\.spec\.whatwg\.org|lodash\.com|openjsf\.org|underscorejs\.org|mathworld\.wolfram\.com|dagrejs\.github\.io|bugs\.chromium\.org|bugs\.webkit\.org|tex\.stackexchange\.com|math\.stackexchange\.com)\//;
+const REVIEWED_URLS = {
+  "http://ctan.math.washington.edu/tex-archive/macros/latex/contrib/braket/braket.pdf": "reference",
+  "http://eev.ee/blog/2015/09/12/dark-corners-of-unicode/": "reference",
+  "http://engineering.findthebest.com/wrapping-axis-labels-in-d3-js/": "attributed",
+  "http://mirrors.concertpass.com/tex-archive/macros/latex/required/amsmath/amsmath.pdf":
+    "reference",
+  "http://mjijackson.com/2008/02/rgb-to-hsl-and-rgb-to-hsv-color-model-conversion-algorithms-in-javascript":
+    "attributed",
+  "http://stackoverflow.com/questions/1890203/unique-for-arrays-in-javascript": "attributed",
+  "http://stackoverflow.com/questions/8458984": "reference",
+  "http://www.btluke.com/simanf1.html": "reference",
+  "https://css-tricks.com/debouncing-throttling-explained-examples/": "reference",
+  "https://ctan.math.illinois.edu/macros/latex/contrib/statmath/statmath.pdf": "reference",
+  "https://en.wikibooks.org/wiki/LaTeX/Lengths": "reference",
+  "https://gist.github.com/mjackson/5311256": "attributed",
+  "https://github.com/KaTeX/KaTeX/pull/2460.": "reference",
+  "https://github.com/WICG/EventListenerOptions/blob/gh-pages/explainer.md#feature-detection":
+    "attributed",
+  "https://github.com/WICG/declarative-partial-updates": "reference",
+  "https://github.com/benfred/venn.js/issues/103": "reference",
+  "https://github.com/benfred/venn.js/issues/120": "reference",
+  "https://github.com/benfred/venn.js/issues/48#issuecomment-146069777": "reference",
+  "https://github.com/cytoscape/cytoscape.js-affinity-propagation": "reference",
+  "https://github.com/cytoscape/cytoscape.js-hierarchical": "reference",
+  "https://github.com/cytoscape/cytoscape.js-markov-cluster": "reference",
+  "https://github.com/cytoscape/cytoscape.js/issues/3365": "reference",
+  "https://github.com/dagrejs/graphlib/wiki/images/components.png": "reference",
+  "https://github.com/dagrejs/graphlib/wiki/images/dijkstra-source.png": "reference",
+  "https://github.com/dagrejs/graphlib/wiki/images/preorder.png": "reference",
+  "https://github.com/dagrejs/graphlib/wiki/images/prim-input.png": "reference",
+  "https://github.com/dagrejs/graphlib/wiki/images/prim-output.png": "reference",
+  "https://github.com/dagrejs/graphlib/wiki/images/tarjan.png": "reference",
+  "https://github.com/dagrejs/graphlib/wiki/images/topsort.png": "reference",
+  "https://github.com/dragonfly-ai/JamaJS": "attributed",
+  "https://github.com/iVis-at-Bilkent/cytoscape.js-fcose/issues/67": "reference",
+  "https://github.com/jashkenas/underscore/pull/1247": "reference",
+  "https://github.com/jekyll/jekyll/blob/6dd3cc21c40b98054851846425af06c64f9fb466/lib/jekyll/document.rb#L10":
+    "attributed",
+  "https://github.com/mbostock/d3/issues/1642": "reference",
+  "https://github.com/mermaid-js/mermaid/discussions": "reference",
+  "https://github.com/mermaid-js/mermaid/issues/1618": "reference",
+  "https://github.com/mermaid-js/mermaid/issues/5976": "reference",
+  "https://github.com/mermaid-js/mermaid/pull/4759.": "reference",
+  "https://github.com/nodeca/js-yaml/issues/164": "reference",
+  "https://github.com/sass/dart-sass/blob/7457d2e9e7e623d9844ffd037a070cf32d39c348/lib/src/functions/color.dart#L718-L756":
+    "attributed",
+  "https://github.com/shrpne/entity-decode/blob/v2.0.1/browser.js}": "attributed",
+  "https://github.com/sindresorhus/validate-element-name": "reference",
+  "https://github.com/thysultan/stylis": "reference",
+  "https://iquilezles.org/articles/distfunctions2d/": "attributed",
+  "https://jekyllrb.com/docs/front-matter/": "reference",
+  "https://mathiasbynens.be/notes/javascript-encoding#surrogate-formulae": "reference",
+  "https://mathiasbynens.be/notes/javascript-unicode": "reference",
+  "https://observablehq.com/@mbostock/lab-and-rgb": "reference",
+  "https://planetcalc.com/7779": "reference",
+  "https://stackoverflow.com/a/19303725": "attributed",
+  "https://stackoverflow.com/a/44856925/11028828": "reference",
+  "https://www.math.lsu.edu/~aperlis/publications/mathclap/": "reference",
+  "https://www.particleincell.com/2012/bezier-splines/": "reference",
+  "https://www.shadertoy.com/view/4lsXDN": "attributed",
+  "https://www.tug.org/TUGboat/tb09-3/tb22bechtolsheim.pdf": "reference",
+  "https://www.w3schools.com/charsets/ref_html_entities_a.asp": "reference",
+};
+
+/** URLs cited in comments of the runtime's sources that REVIEWED_URLS does not cover. */
+export function unreviewedUrls(map) {
+  const found = new Set();
+  map.sources.forEach((source, i) => {
+    const content = map.sourcesContent?.[i] ?? "";
+    const end = content.indexOf("/*! Bundled license information:");
+    for (const line of (end === -1 ? content : content.slice(0, end)).split("\n")) {
+      if (!/^\s*(\/\/|\/?\*)/.test(line)) continue;
+      for (const m of line.matchAll(/https?:\/\/[^\s)'"`>\]]+/g)) {
+        if (!REFERENCE_HOSTS.test(m[0]) && !REVIEWED_URLS[m[0]]) found.add(m[0]);
+      }
+    }
+  });
+  return [...found].sort();
+}
 
 /** Licence files left out on purpose: dompurify is dual-licensed and monodocs elects Apache-2.0. */
 const EXCLUDED_FILES = { dompurify: ["LICENSE-MPL"] };
@@ -591,6 +704,14 @@ async function main() {
   const { version } = JSON.parse(await readFile(join(mermaidDir, "package.json"), "utf8"));
   const map = JSON.parse(await readFile(join(mermaidDir, "dist/mermaid.min.js.map"), "utf8"));
   const components = componentsOf(map, version);
+  const unreviewed = unreviewedUrls(map);
+  if (unreviewed.length > 0) {
+    console.error(
+      "comments in the Mermaid runtime cite URLs nobody has reviewed; read the code beside each, " +
+        `attribute it in PREBUILT_AUDITED if it came from there, and add it to REVIEWED_URLS:\n  ${unreviewed.join("\n  ")}`,
+    );
+    process.exit(1);
+  }
   if (process.argv.includes("--check")) {
     const text = await readFile(NOTICES_FILE, "utf8").catch(() => "");
     const listed = listedComponents(text);

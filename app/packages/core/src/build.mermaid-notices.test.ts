@@ -84,6 +84,8 @@ describe("the Mermaid runtime notices", () => {
     expect(notices).toContain("https://stackoverflow.com/a/19303725");
     expect(notices).toContain("https://creativecommons.org/licenses/by-sa/3.0/");
     expect(notices).toContain("https://stackoverflow.com/a/1890233");
+    expect(notices).toContain("Copyright (c) 2016, Google Inc.");
+    expect(notices).toContain("https://gist.github.com/mjackson/5311256), which states no licence");
     expect(notices).toContain("Ralf S. Engelschall");
     expect(notices).toContain("Event object based on jQuery events");
     expect(notices).toContain("Copyright Joyent, Inc. and other Node contributors.");
@@ -138,6 +140,14 @@ describe("the Mermaid runtime notices", () => {
     const cites: string[] = ownSourceCitations(map);
     expect(cites.some((c) => c.includes("entity-decode/blob/v2.0.1"))).toBe(true);
     expect(cites.some((c) => c.includes("From this stack exchange question"))).toBe(true);
+    // Every URL a comment cites has been reviewed, and a new one is caught.
+    const { unreviewedUrls } = await import(/* @vite-ignore */ generator);
+    expect(unreviewedUrls(map)).toEqual([]);
+    const planted = {
+      sources: ["../src/x.ts"],
+      sourcesContent: ["// code from https://example.com/snippet\nconst x = 1;\n"],
+    };
+    expect(unreviewedUrls(planted)).toEqual(["https://example.com/snippet"]);
     // esbuild's closing licence comment is not attributed to the parser's last source file.
     expect(cites.some((c) => c.includes("Jeremy Ashkenas"))).toBe(false);
   });
