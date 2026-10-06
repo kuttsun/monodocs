@@ -415,8 +415,10 @@ Alternatives considered:
 - **Off by default, behind a key.** No existing document changes, but every author who wants math has
   to find the key, until 2.0. Rejected in favour of on by default with a key to turn it off.
 
-**Copying, search, and headings (decided in v0.15).** All three work from the formula's TeX as the
-author wrote it, so that what a reader copies, what search finds, and what a heading list shows agree.
+**Copying, search, and headings (decided in v0.15).** Copying works from the formula's source as
+written — for AsciiDoc, a source rebuilt as `latexmath`, below — and search and the lists of headings
+from its TeX as interpreted, so that what a reader copies and what search finds agree wherever the two
+are the same text.
 
 - **Where the source lives.** Each rendered formula carries two things in the HTML, on the element that
   wraps its MathML: its source exactly as written, delimiters included, which copying uses, and its TeX
@@ -446,7 +448,8 @@ author wrote it, so that what a reader copies, what search finds, and what a hea
   and the fraction bar gone.
 - **Search.** A formula is indexed as its TeX without delimiters, with whitespace runs collapsed and a
   display formula separated from the text around it, and a result's snippet shows that TeX. Pasting a
-  copied one-line formula without character references, delimiters removed, finds it; a multi-line one
+  copied one-line formula, delimiters removed, finds it when that text is the interpreted TeX — not when
+  the source had a character reference, an HTML comment, or AsciiDoc's `\]` escape; a multi-line one
   does not reliably, because a search box drops the newlines of what is pasted into it. A heading in the
   search data is shown as the lists of headings show it, `$TeX$`. In-page highlighting skips formulas,
   as it skips diagrams, because an HTML `<mark>` cannot sit inside MathML; `math` joins the elements the
