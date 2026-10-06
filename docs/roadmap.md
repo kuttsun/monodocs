@@ -2130,6 +2130,15 @@ meant for the CDN; making `cdn` the default breaks the offline, self-contained d
 licence UI, a self-hosted source mirror, a full SBOM, and an ELK-free build of mermaid are deferred
 and do not block the bump.
 
+**Code whose source states no licence (v0.15).** Generating the notices meant reading every source the
+runtime is made of, and four pieces of code in it come from places that state no licence: Michael
+Jackson's RGB/HSL conversions (in cytoscape and in khroma), a blog post's label wrapping (in venn.js),
+and Inigo Quilez's signed distance functions (in cytoscape). Each is a few to a few dozen lines, has been
+in every release that embedded the runtime, and is unattributed by mermaid itself; monodocs cannot replace
+code inside a prebuilt file. The decision is to ship it with the notices naming the source and author and
+saying that no licence is stated, rather than to hold the release, and to record it here as a known
+limitation of what the runtime carries.
+
 ---
 
 ## 22. Search
