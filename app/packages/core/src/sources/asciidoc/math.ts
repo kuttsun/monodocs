@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ConverterFactory } from "@asciidoctor/core";
 import { fromHtml } from "hast-util-from-html";
-import { toHtml } from "hast-util-to-html";
-import type { Element, Root as HastRoot } from "hast";
+import type { Element, ElementContent, Root as HastRoot, Text } from "hast";
 import { SKIP, visit } from "unist-util-visit";
 
 /**
@@ -10,12 +9,17 @@ import { SKIP, visit } from "unist-util-visit";
  * and `stem:[...]` and the `[stem]` block when they mean latexmath — rendered as Markdown's formulas
  * are.
  *
- * The converter's output for a formula is replaced, inside Asciidoctor's conversion, by a marker
- * element whose text is the formula's TeX as Asciidoctor gives it, already escaped. Asciidoctor makes a
- * section's ID from its converted title, so a formula in a heading gives the ID it gave before. The
- * markers are made formulas once the HTML is parsed; raw HTML from a passthrough cannot pass for one,
- * since a marker carries a token that is new for each conversion. asciimath is left to Asciidoctor,
- * whose output stays as it was, and is only noted, to be reported.
+ * The converter's output for a formula is replaced inside Asciidoctor's conversion, and the formulas
+ * are made once the HTML is parsed. An inline formula is marked with characters, not a tag: three
+ * private-use characters around a key and Asciidoctor's own converted text, where the default output
+ * has `\(` and `\)`. Asciidoctor makes a section's ID from its converted title, taking out tags and
+ * every character that is not a word character, so a title with formulas in it gives the very ID it
+ * gave before, whatever the formulas hold; a tag in place of the delimiters would not, since its `>`
+ * can end a bracketed run Asciidoctor reads as a tag across formulas. A key is new for each
+ * conversion, and what it stands for is kept by the converter, so raw HTML from a passthrough can
+ * neither pass for a formula nor change one. A formula the HTML around it broke apart (its own
+ * substitutions let a `</span>` through) is written back with `\(` and `\)`, as Asciidoctor writes it,
+ * and reported. asciimath is left to Asciidoctor, whose output stays as it was, and is only noted.
  */
 
 /** What a conversion with the math converter found. */
@@ -24,8 +28,8 @@ export interface AsciidocMath {
   converter: object;
   /** asciimath formulas, as written, which are not rendered. */
   asciimath: string[];
-  /** latexmath formulas left unrendered because their own substitutions leave `<` or `>` raw. */
-  unescaped: string[];
+  /** latexmath formulas the HTML around them broke apart, written as Asciidoctor writes them. */
+  broken: string[];
   /** Turn the markers in parsed HTML into formulas. */
   markFormulas(tree: HastRoot): void;
   /** A converted title with each formula as `$TeX$`, as the lists of headings show it. */
@@ -43,11 +47,25 @@ interface MathNode {
   title?: string;
   hasTitle?(): boolean;
   content?(): Promise<string>;
-  subs?: string[];
 }
 
 interface Converter {
   convert(node: MathNode, transform?: string, opts?: unknown): Promise<string>;
+}
+
+/** An inline marker: OPEN, the key in KEY_DIGITS, SEP, Asciidoctor's converted text, CLOSE. */
+const OPEN = "\uE000";
+const SEP = "\uE001";
+const CLOSE = "\uE002";
+/** The key's digits: sixteen private-use characters, one per hexadecimal digit. */
+const KEY_BASE = 0xe010;
+const INLINE = /\uE000([\uE010-\uE01F]+)\uE001([^\uE000-\uE002]*)\uE002/g;
+const STRAY_OPEN = /\uE000[\uE010-\uE01F]*\uE001?/g;
+
+interface Formula {
+  tex: string;
+  source: string;
+  display: boolean;
 }
 
 /**
@@ -65,28 +83,18 @@ export async function createMathConverter(
     "html5",
     options.htmlsyntax === undefined ? {} : { htmlsyntax: options.htmlsyntax },
   )) as Converter & object;
-  const nonce = randomUUID();
+  const nonce = randomUUID().replace(/-/g, "");
   const asciimath: string[] = [];
-  const unescaped: string[] = [];
-  // What each marker stands for, kept here rather than read back from the HTML: a passthrough's
-  // unclosed tag can swallow a marker's attributes, but not this.
-  const formulas = new Map<
-    string,
-    { tex: string; source: string; display: boolean; shown: string }
-  >();
+  const broken: string[] = [];
+  const formulas = new Map<string, Formula>();
+  let count = 0;
 
-  /**
-   * A marker for a formula. Its content is what Asciidoctor converted the formula's text to, as it
-   * stands, since Asciidoctor makes a section's ID from that (`latexmath:a[&#945;]` keeps the
-   * reference, which the ID leaves out): with the converter's own `\\(` and `\\)` gone, which an ID
-   * leaves out anyway, the title's text is what it was. What the formula is for rendering is kept apart.
-   */
-  const marker = (tex: string, source: string, display: boolean, content: string) => {
-    const key = `${nonce}-${formulas.size}`;
-    // What the element will hold once the HTML is parsed, read by the same parser.
-    formulas.set(key, { tex, source, display, shown: parsedText(content) });
-    const tag = display ? "div" : "span";
-    return `<${tag} data-monodocs-math="${key}">${content}</${tag}>`;
+  /** A key new for this conversion, written in KEY_DIGITS. */
+  const newKey = (formula: Formula) => {
+    const hex = `${nonce}${(count++).toString(16)}`;
+    const key = [...hex].map((d) => String.fromCharCode(KEY_BASE + parseInt(d, 16))).join("");
+    formulas.set(key, formula);
+    return key;
   };
 
   const convert = async (node: MathNode, transform?: string, opts?: unknown): Promise<string> => {
@@ -94,33 +102,31 @@ export async function createMathConverter(
     if (name === "inline_quoted" && node.type === "latexmath") {
       const converted = node.text ?? "";
       const tex = decode(converted);
-      // A formula whose own substitutions leave a `<` or `>` raw (`latexmath:a[a < b]`) is written as
-      // Asciidoctor writes it and reported: a marker cannot hold that text and keep both the HTML and the
-      // ID Asciidoctor makes from it, which reads the brackets as a tag, across formulas too.
-      if (/[<>]/.test(converted)) {
-        unescaped.push(`latexmath:[${tex.replace(/\]/g, "\\]")}]`);
-        return base.convert(node, transform, opts);
-      }
-      return marker(tex, `latexmath:[${tex.replace(/\]/g, "\\]")}]`, false, converted);
+      const key = newKey({
+        tex,
+        source: `latexmath:[${tex.replace(/\]/g, "\\]")}]`,
+        display: false,
+      });
+      return `${OPEN}${key}${SEP}${converted}${CLOSE}`;
     }
     if (name === "inline_quoted" && node.type === "asciimath") {
       asciimath.push(`asciimath:[${decode(node.text ?? "")}]`);
     }
     if (name === "stem" && node.style === "latexmath") {
       // Decoded whatever the block's substitutions, as the browser decoded it for MathJax before; and
-      // without the `\\[...\\]` an author may have written around it, which Asciidoctor does not add
-      // a second time.
+      // without the `\[...\]` an author may have written around it, which Asciidoctor does not add a
+      // second time. One pair around the whole: `\[a\] + \[b\]` is two formulas, which KaTeX reports.
       let tex = decode((await node.content?.()) ?? "");
-      // One pair around the whole; `\\[a\\] + \\[b\\]` is two formulas, which KaTeX reports.
       const delimited = /^\s*\\\[([\s\S]*)\\\]\s*$/.exec(tex);
       if (delimited && !/\\[[\]]/.test(delimited[1]!)) tex = delimited[1]!;
+      const key = newKey({ tex, source: `[latexmath]\n++++\n${tex}\n++++`, display: true });
       const id = node.id ? ` id="${attribute(node.id)}"` : "";
       const role = node.role ? ` ${attribute(node.role)}` : "";
       const title = node.hasTitle?.() ? `<div class="title">${node.title}</div>\n` : "";
+      // A block is not in a title, so a tag marks it; its content is checked when it is read back.
       return (
         `<div${id} class="stemblock${role}">\n${title}` +
-        marker(tex, `[latexmath]\n++++\n${tex}\n++++`, true, text(tex)) +
-        "\n</div>"
+        `<div data-monodocs-math="${key}">${text(tex)}</div>\n</div>`
       );
     }
     if (name === "stem" && node.style === "asciimath") {
@@ -140,46 +146,104 @@ export async function createMathConverter(
     },
   });
 
+  const placeholder = (formula: Formula): Element => ({
+    type: "element",
+    tagName: formula.display ? "div" : "span",
+    properties: {
+      className: ["math", formula.display ? "math-display" : "math-inline"],
+      dataMathSource: formula.source,
+      dataMathTex: formula.tex,
+    },
+    children: [{ type: "text", value: formula.tex }],
+    data: { monodocsMath: true } as Element["data"],
+  });
+
+  /** A text with its markers made formulas, or `undefined` when it holds none. */
+  const splitText = (value: string): ElementContent[] | undefined => {
+    if (!value.includes(OPEN) && !value.includes(CLOSE)) return undefined;
+    const out: ElementContent[] = [];
+    let at = 0;
+    const pushText = (s: string) => {
+      const restored = restore(s);
+      if (restored) out.push({ type: "text", value: restored });
+    };
+    for (const m of value.matchAll(INLINE)) {
+      const formula = formulas.get(m[1]!);
+      pushText(value.slice(at, m.index));
+      if (formula) out.push(placeholder(formula));
+      else pushText(`\\(${m[2]}\\)`);
+      at = m.index! + m[0].length;
+    }
+    pushText(value.slice(at));
+    return out;
+  };
+
+  /**
+   * What is left of a marker the HTML around it broke apart, written back as Asciidoctor writes the
+   * formula: `\(` and `\)` for the marker's characters.
+   */
+  const restore = (value: string): string => {
+    if (!value.includes(OPEN) && !value.includes(CLOSE)) return value;
+    return value
+      .replace(STRAY_OPEN, (stray) => {
+        const key = stray.slice(1).replace(SEP, "");
+        const formula = formulas.get(key);
+        if (formula) broken.push(formula.source);
+        return "\\(";
+      })
+      .replace(new RegExp(CLOSE, "g"), "\\)");
+  };
+
   return {
     converter,
     asciimath,
-    unescaped,
+    broken,
     markFormulas(tree) {
-      visit(tree, "element", (node: Element) => {
-        const key = node.properties.dataMonodocsMath;
+      visit(tree, (node, index, parent) => {
+        if (node.type === "text" && parent && index !== undefined) {
+          const split = splitText((node as Text).value);
+          if (!split) return;
+          parent.children.splice(index, 1, ...(split as typeof parent.children));
+          return [SKIP, index + split.length];
+        }
+        if (node.type !== "element") return;
+        const element = node as Element;
+        // A marker can sit in an attribute too (an image's alt text, a link's title): written as
+        // Asciidoctor writes the formula there.
+        for (const [name, value] of Object.entries(element.properties)) {
+          if (typeof value === "string") {
+            element.properties[name] = value.replace(
+              INLINE,
+              (_, _key: string, converted: string) => `\\(${decode(converted)}\\)`,
+            );
+          }
+        }
+        const key = element.properties.dataMonodocsMath;
         const formula = typeof key === "string" ? formulas.get(key) : undefined;
-        // Only a marker as the converter wrote it: an element whose tag matches and which holds the
-        // marker's text alone. One a passthrough's malformed tag swallowed is left as it is.
-        const tag = formula?.display ? "div" : "span";
-        const holdsText = formula !== undefined && textOf(node) === formula.shown;
-        if (!formula || node.tagName !== tag || !holdsText) return;
-        // A marker can appear more than once (a section title repeated in a TOC); each is made the same.
-        node.tagName = formula.display ? "div" : "span";
-        node.properties = {
-          className: ["math", formula.display ? "math-display" : "math-inline"],
-          dataMathSource: formula.source,
-          dataMathTex: formula.tex,
-        };
-        node.children = [{ type: "text", value: formula.tex }];
-        node.data = { ...node.data, monodocsMath: true } as Element["data"];
-        // Asciidoctor's HTML has no lines of the source to point at.
-        delete node.position;
+        if (!formula) return;
+        // Only a block marker as the converter wrote it: a div holding the formula's text alone. One a
+        // passthrough's malformed tag swallowed is left as it is.
+        if (element.tagName !== "div" || textOf(element) !== formula.tex) return;
+        Object.assign(element, placeholder(formula));
+        return SKIP;
       });
     },
     titleText(html) {
-      if (!html.includes(nonce)) return html;
-      // Parsed rather than matched: a formula with its own substitutions can hold a raw `<` or tags.
-      const tree = fromHtml(html, { fragment: true });
-      visit(tree, "element", (node: Element, index, parent) => {
-        const key = node.properties.dataMonodocsMath;
-        const formula = typeof key === "string" ? formulas.get(key) : undefined;
-        if (!formula || !parent || index === undefined) return;
-        parent.children[index] = { type: "text", value: `$${formula.tex}$` };
-        return SKIP;
-      });
-      return toHtml(tree, { characterReferences: { useNamedReferences: true } });
+      if (!html.includes(OPEN)) return html;
+      return restore(
+        html.replace(INLINE, (whole, key: string) => {
+          const formula = formulas.get(key);
+          return formula ? `$${text(formula.tex)}$` : whole;
+        }),
+      );
     },
   };
+}
+
+function textOf(node: Element): string {
+  return node.children
+    .map((c) => (c.type === "text" ? c.value : c.type === "element" ? textOf(c) : ""))
+    .join("");
 }
 
 function text(value: string): string {
@@ -188,12 +252,6 @@ function text(value: string): string {
 
 function attribute(value: string): string {
   return text(value).replace(/"/g, "&quot;");
-}
-
-function textOf(node: Element): string {
-  return node.children
-    .map((c) => (c.type === "text" ? c.value : c.type === "element" ? textOf(c) : ""))
-    .join("");
 }
 
 /**

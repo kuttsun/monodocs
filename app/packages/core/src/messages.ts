@@ -136,6 +136,8 @@ const EN = {
     "{where}: the formula {source} uses {commands}, which monodocs does not render; it is shown as written.",
   "pages.mathAsciimath":
     "{path}: the asciimath formula {source} is not rendered and is shown as Asciidoctor writes it; write it as latexmath, with `:stem: latexmath` or `latexmath:[...]`, to render it.",
+  "pages.mathBroken":
+    "{where}: the formula {source} is broken apart by the HTML around it (its own substitutions let a tag through), so it is not rendered and is shown as Asciidoctor writes it.",
   "pages.mathConstruct":
     "{where}: the formula {source} uses {constructs}, which the browser cannot draw as written; the formula is rendered without it.",
   "pages.mathNotation":
@@ -455,6 +457,8 @@ const JA: Record<MessageKey, string> = {
     "{where}: 数式 {source} は monodocs が描かない {commands} を使っているため、書かれたとおりに表示します。",
   "pages.mathAsciimath":
     "{path}: asciimath の数式 {source} は描かれず、Asciidoctor が書くとおりに示されます。描くには、`:stem: latexmath` か `latexmath:[...]` を使って latexmath で書いてください。",
+  "pages.mathBroken":
+    "{where}: 数式 {source} は周りの HTML に分断されている（数式の独自の置換がタグを通した）ため、描かずに Asciidoctor が書くとおりに示します。",
   "pages.mathConstruct":
     "{where}: 数式 {source} は {constructs} を使っていますが、ブラウザはそれを書かれたとおりに描けません。それなしで数式を描きます。",
   "pages.mathNotation":

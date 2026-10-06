@@ -162,10 +162,9 @@ export function createAsciidocRenderer(
             kind: "asciimath",
             source: formula,
           })),
-          ...(math?.unescaped ?? []).map((formula): MathProblem => ({
-            kind: "construct",
+          ...(math?.broken ?? []).map((formula): MathProblem => ({
+            kind: "broken",
             source: formula,
-            constructs: "substitutions that leave < or > unescaped",
           })),
         ]),
       };

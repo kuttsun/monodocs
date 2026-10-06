@@ -207,24 +207,40 @@ describe("AsciiDoc math", () => {
     expect(attributes(html, "data-math-tex")).toEqual(["\\text{€}", "α"]);
   });
 
-  it("writes a formula whose own substitutions leave < or > raw as Asciidoctor does, and warns", async () => {
-    // Asciidoctor reads the brackets as a tag when it makes an ID, across formulas too, so a marker
-    // could not hold this text and keep the ID; the formula is left as it was, and reported.
+  it("keeps every heading ID, whatever its formulas hold", async () => {
+    // Asciidoctor reads raw brackets as a tag when it makes an ID, across formulas too; an inline
+    // formula is marked with characters, not a tag, so the title it makes the ID from is unchanged.
     const adoc =
-      "= Compare latexmath:a[a < b]\n\n== H latexmath:a[a < b] latexmath:a[c > d]\n\n" +
-      "See <<_h_a_d>>. latexmath:a[\\text{</span>}] and latexmath:[x]\n";
+      "= Compare latexmath:a[a < b]\n\n== H latexmath:a[a < b] latexmath:[x] latexmath:a[c > d]\n\n" +
+      "See <<_h_a_d>>.\n";
     const on = await build(adoc);
     const off = await build(adoc, "math:\n  enabled: false\n");
     const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);
     expect(ids(on.html)).toEqual(ids(off.html));
     expect(on.result.warnings.map((w) => w.code)).not.toContain("link/unresolved-anchor");
+    // The title, the heading, and the xref's text taken from the heading.
+    expect(attributes(on.html, "data-math-tex")).toEqual([
+      "a < b",
+      "a < b",
+      "x",
+      "c > d",
+      "a < b",
+      "x",
+      "c > d",
+    ]);
+    expect(pageData(on.html).title).toBe("Compare $a &lt; b$");
+  });
+
+  it("writes a formula the HTML around it broke apart as Asciidoctor does, and warns", async () => {
+    // Inside strong text, the formula's own `</strong>` closes it and splits the formula's marker.
+    const adoc = "= T\n\n*b latexmath:a[\\text{</strong>}] c* and latexmath:[x]\n";
+    const on = await build(adoc);
     expect(attributes(on.html, "data-math-tex")).toEqual(["x"]);
-    expect(pageData(on.html).title).toBe(pageData(off.html).title);
+    expect(on.html).toContain("\\(\\text{");
+    expect(on.html).not.toMatch(/[\uE000-\uE01F]/);
     const found = on.result.warnings.filter((w) => w.code === "math/construct-unsupported");
     expect(found.map((w) => w.message)).toEqual([
-      expect.stringContaining("latexmath:[a < b]"),
-      expect.stringContaining("latexmath:[c > d]"),
-      expect.stringContaining("latexmath:[\\text{</span>}]"),
+      expect.stringContaining("latexmath:[\\text{</strong>}]"),
     ]);
   });
 
@@ -251,9 +267,13 @@ describe("AsciiDoc math", () => {
 
   it("does not let a passthrough's unclosed tag change what a formula is", async () => {
     const { html } = await build('= T\n\n+++<span data-math-tex="\\alpha" +++latexmath:[x] tail\n');
-    expect(attributes(html, "data-math-tex")).not.toContain("\\alpha");
-    // A malformed tag that swallows a marker keeps what it took in; it is not a formula.
-    const swallowed = await build("= T\n\n+++<div x=y +++latexmath:[x] tail and more\n");
+    // The span is the author's own raw HTML, not a formula: nothing renders \\alpha.
+    expect(html).not.toContain("<mi>α</mi>");
+    expect(html).not.toContain("𝛼");
+    // A malformed tag that swallows a block marker keeps what it took in; it is not a formula.
+    const swallowed = await build(
+      "= T\n\n+++<div x=y +++\n\n[latexmath]\n++++\nx\n++++\n\ntail and more\n",
+    );
     expect(swallowed.html).toContain("tail and more");
   });
 

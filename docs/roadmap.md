@@ -600,23 +600,29 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   Asciidoctor's own, handed in as the converter made beforehand (`_preCreatedConverter`, Asciidoctor's
   hook for that), so that a section title, which Asciidoctor converts while it loads the document to
   make the section's ID, gets the marker too. The hook is not in Asciidoctor's public API; the tests
-  of heading IDs and heading text fail if it stops being honoured. A marker carries only a key, new for
-  each conversion; the formula it stands for is kept by the converter, so raw HTML from a passthrough
-  can neither pass for a formula nor change what one is. A marker's content is what Asciidoctor converted the
-  formula's text to, as it stands, so the section ID made from it is unchanged even under the
-  formula's own substitutions (`latexmath:a[&#945;]`); the TeX for rendering is kept apart. A formula
-  whose own substitutions leave a `<` or `>` raw (`latexmath:a[a < b]`) is written as Asciidoctor
-  writes it and reported as `math/construct-unsupported`: Asciidoctor reads such brackets as a tag
-  when it makes an ID, across formulas too, so no marker could hold the text and keep both the HTML
-  and the ID. The wrapped converter is
-  made with the `htmlsyntax` the configuration sets, as Asciidoctor makes its own. Character references
-  are decoded once, by the same HTML parser that reads the markers back, so the two always agree
-  (`&#128;` is `€`, as HTML has it). A title is parsed, not matched, to show its formulas as `$TeX$`. A block's content is decoded
-  whatever its substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is
-  taken as the delimiters Asciidoctor would otherwise have added. The title monodocs reads (`doc.getDocumentTitle()`) shows a formula as `$TeX$`.
-  asciimath is reported as `math/asciimath-not-rendered`, naming the file and the formula. A
-  diagnostic for an AsciiDoc formula names the file without a line: the HTML Asciidoctor writes
-  cannot point back at the source.
+  of heading IDs and heading text fail if it stops being honoured. The wrapped converter is made with
+  the `htmlsyntax` the configuration sets, as Asciidoctor makes its own.
+  - An inline formula is marked with characters, not a tag: three private-use characters around a key
+    and what Asciidoctor converted the formula's text to, where the default output has `\(` and `\)`.
+    Asciidoctor makes a section's ID from its converted title, taking out tags and every character
+    that is not a word character, so a title with formulas gives the very ID it gave before, whatever
+    the formulas hold (`latexmath:a[&#945;]`, or raw `<` and `>` from a formula's own substitutions,
+    which Asciidoctor reads as a tag across formulas). A tag in place of the delimiters would not
+    give the same ID: its `>` can end such a bracketed run. A display formula, which is in no title,
+    is marked with an element.
+  - A key is new for each conversion, and the formula it stands for (its TeX and its source) is kept
+    by the converter, so raw HTML from a passthrough can neither pass for a formula nor change what one
+    is. A formula the HTML around it broke apart (inside strong text, its own substitutions let a
+    `</strong>` through) is written back with `\(` and `\)`, as Asciidoctor writes it, and reported as
+    `math/construct-unsupported`.
+  - Character references are decoded once, by the same HTML parser the formulas are read with, so
+    the two always agree (`&#128;` is `€`, as HTML has it). A block's content is decoded whatever its
+    substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is
+    taken as the delimiters Asciidoctor would otherwise have added.
+  - The title monodocs reads (`doc.getDocumentTitle()`) shows a formula as `$TeX$`. asciimath is
+    reported as `math/asciimath-not-rendered`. A diagnostic for an AsciiDoc formula names the file
+    without a line: the HTML Asciidoctor writes cannot point back at the source. A formula in a section
+    title, converted again for each copy (a TOC entry, an xref's text), is reported once.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
   line break before or after it is not between two East Asian characters and stays a space, as at
   any other element that is not text.

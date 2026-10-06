@@ -21,6 +21,7 @@ export type MathProblem = { source: string; line?: number; column?: number } & (
   | { kind: "notation"; notations: string }
   | { kind: "construct"; constructs: string }
   | { kind: "asciimath" }
+  | { kind: "broken" }
   | { kind: "style"; variant: string; chars: string }
 );
 
