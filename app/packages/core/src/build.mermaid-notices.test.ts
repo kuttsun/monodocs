@@ -152,6 +152,7 @@ describe("the Mermaid runtime notices", () => {
       sourcesContent: [
         "// code from https://example.com/a\n" +
           "const x = 1; // and https://example.com/b\n" +
+          "const y = 2// https://example.com/d\n" +
           "/* adapted from\n   https://example.com/c */\n" +
           'const s = "https://example.com/in-a-string";\n',
       ],
@@ -160,6 +161,7 @@ describe("the Mermaid runtime notices", () => {
       "https://example.com/a",
       "https://example.com/b",
       "https://example.com/c",
+      "https://example.com/d",
     ]);
     // esbuild's closing licence comment is not attributed to the parser's last source file.
     expect(cites.some((c) => c.includes("Jeremy Ashkenas"))).toBe(false);

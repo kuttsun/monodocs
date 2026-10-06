@@ -442,8 +442,8 @@ export function unreviewedUrls(map) {
     const end = content.indexOf("/*! Bundled license information:");
     const code = end === -1 ? content : content.slice(0, end);
     // Block comments, and line comments wherever they start: not after a ":" (a URL's "//"), a
-    // backslash, a quote, or a word character, which would put the "//" inside a string.
-    for (const comment of code.matchAll(/\/\*[\s\S]*?\*\/|(?<![:\\"'\w])\/\/[^\n]*/g)) {
+    // backslash, or a quote, which would put the "//" inside a string.
+    for (const comment of code.matchAll(/\/\*[\s\S]*?\*\/|(?<![:\\"'])\/\/[^\n]*/g)) {
       for (const m of comment[0].matchAll(/https?:\/\/[^\s)'"`>\]]+/g)) {
         if (!REFERENCE_HOSTS.test(m[0]) && !REVIEWED_URLS[m[0]]) found.add(m[0]);
       }
