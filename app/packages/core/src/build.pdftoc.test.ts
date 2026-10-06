@@ -300,236 +300,244 @@ function filler(n: number, word: string): string {
   return Array.from({ length: n }, (_, i) => `${word} paragraph ${i} of plain text.`).join("\n\n");
 }
 
-describe.skipIf(!chromium)("a printed table of contents (real Chromium)", () => {
-  async function buildPdf(name: string, config: string): Promise<Uint8Array> {
-    const root = join(dir, name);
-    const files: Record<string, string> = {
-      "index.md": `# Opening\n\n${filler(20, "lorem")}\n\n## Alpha section\n\n${filler(60, "ipsum")}\n\n## Beta section\n\n${filler(5, "dolor")}\n`,
-      "guide/install.md": `# Install\n\n## Gamma section\n\n${filler(70, "sit")}\n\n### Delta detail\n\n${filler(5, "amet")}\n`,
-      "guide/usage.adoc": `= Usage\n\n== Epsilon section\n\n日本語の本文です。\n\n== Zeta section\n\nText.\n`,
-    };
-    for (const [path, body] of Object.entries(files)) {
-      await mkdir(dirname(join(root, path)), { recursive: true });
-      await writeFile(join(root, path), body);
-    }
-    const configFile = join(dir, `${name}.yml`);
-    await writeFile(configFile, config);
-    const out = join(dir, `${name}.pdf`);
-    await buildSite({ inputDir: root, configFile, outputFile: out, format: "pdf" });
-    return readFile(out);
-  }
-
-  /** The body sheet (1-based, after `cover` sheets) on which `text` first appears, past the table. */
-  async function sheetOf(bytes: Uint8Array, text: string, cover: number, from: number) {
-    const total = (await PDFDocument.load(bytes)).getPageCount();
-    for (let i = cover + from; i < total; i++) {
-      if ((await pageText(bytes, i, cover)).includes(text)) return i - cover + 1;
-    }
-    return undefined;
-  }
-
-  it("prints the sheet each section starts on, agreeing with page breaks, a cover, and numbering", async () => {
-    const bytes = await buildPdf(
-      "all",
-      "title: Manual\nnumbering:\n  sections: 3\n" +
-        "pdf:\n  pageBreakLevel: 2\n  cover:\n    enabled: true\n  toc:\n    enabled: true\n    depth: 3\n",
-    );
-    const cover = 1;
-    const tocText = await pageText(bytes, cover, cover);
-    expect(tocText).toContain("Contents");
-
-    // Every line of the table, in order: pages, the directory (pointing at its first page), and
-    // headings down to depth 3. The extracted text has no separators between lines, so the whole
-    // table is compared rather than each line matched on its own.
-    const lines: [string, string][] = [
-      ["1", "Opening"],
-      ["1.1", "Alpha section"],
-      ["1.2", "Beta section"],
-      ["2", "guide"],
-      ["2.1", "Install"],
-      ["2.1.1", "Gamma section"],
-      ["2.1.1.1", "Delta detail"],
-      ["2.2", "Usage"],
-      ["2.2.1", "Epsilon section"],
-      ["2.2.2", "Zeta section"],
-    ];
-    let expected = "Contents";
-    for (const [number, title] of lines) {
-      // The sheet the line points at, found independently by reading the body after the table:
-      // the heading as printed there, number and all. The directory has no heading of its own;
-      // it points at its first page.
-      const heading = title === "guide" ? "2.1 Install" : `${number} ${title}`;
-      const sheet = await sheetOf(bytes, heading, cover, 1);
-      expect(sheet, title).toBeDefined();
-      expected += `${number} ${title}${sheet}`;
-    }
-    expect(tocText).toBe(expected);
-
-    // The bookmarks and the viewer's page labels agree with the table: the first bookmark opens the
-    // sheet the table lists for "1 Opening", and the labels number the body — the table's own
-    // sheets included — from 1 after the cover, so the viewer shows the number the table prints.
-    const doc = await PDFDocument.load(bytes);
-    const outlines = doc.catalog.lookup(PDFName.of("Outlines"), PDFDict);
-    const firstMark = outlines.lookup(PDFName.of("First"), PDFDict);
-    const markDest = firstMark.lookup(PDFName.of("Dest"), PDFArray).get(0);
-    const markSheet = doc.getPages().findIndex((p) => p.ref === markDest) - cover + 1;
-    expect(markSheet).toBe(await sheetOf(bytes, "1 Opening", cover, 1));
-    const nums = doc.catalog
-      .lookup(PDFName.of("PageLabels"), PDFDict)
-      .lookup(PDFName.of("Nums"), PDFArray);
-    expect(nums.get(2)?.toString()).toBe(String(cover));
-    const bodyLabel = nums.lookup(3, PDFDict);
-    expect(bodyLabel.get(PDFName.of("S"))?.toString()).toBe("/D");
-    expect(bodyLabel.get(PDFName.of("St"))?.toString() ?? "1").toBe("1");
-    // pageBreakLevel put each h2 on a sheet of its own, so the sheets differ.
-    expect(await sheetOf(bytes, "1.2 Beta section", cover, 1)).toBeGreaterThan(
-      (await sheetOf(bytes, "1.1 Alpha section", cover, 1))!,
-    );
-  });
-
-  /** Write `files` under a fresh root and build them to PDF with `config`. */
-  async function buildFiles(name: string, files: Record<string, string>, config: string) {
-    const root = join(dir, name);
-    for (const [path, body] of Object.entries(files)) {
-      await mkdir(dirname(join(root, path)), { recursive: true });
-      await writeFile(join(root, path), body);
-    }
-    const configFile = join(dir, `${name}.yml`);
-    await writeFile(configFile, config);
-    const out = join(dir, `${name}.pdf`);
-    await buildSite({ inputDir: root, configFile, outputFile: out, format: "pdf" });
-    return readFile(out);
-  }
-
-  it("finds a heading inside its own page when another page has an element with the same ID", async () => {
-    // Page IDs join route segments with "-", so both headings are `setup-install-guide`. The first
-    // match across the document would be the wrong heading, verified against itself.
-    const bytes = await buildFiles(
-      "same-id",
-      {
-        "setup.md": "# Setup\n\n## Install Guide\n\nShort.\n",
-        "setup/install.md": `# Install\n\n${filler(80, "lorem")}\n\n## Guide\n\nEnd.\n`,
-      },
-      "numbering:\n  sections: 2\npdf:\n  toc:\n    enabled: true\n",
-    );
-    const guide = await sheetOf(bytes, "2.1.1 Guide", 0, 1);
-    expect(guide).toBeGreaterThan(3);
-    expect(await pageText(bytes, 0)).toMatch(new RegExp(`2\\.1\\.1 Guide${guide}$`));
-  });
-
-  it("fails before printing when a line's section is not in the document", async () => {
-    const generator = createPuppeteerPdfGenerator();
-    try {
-      const error = await generator
-        .render(
-          '<html><body><main id="content"><article class="page" data-route="/">' +
-            '<h1 id="index">Home</h1></article></main></body></html>',
-          {
-            pageSize: "A4",
-            margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
-            printBackground: true,
-            waitForMermaid: false,
-            toc: {
-              title: "Contents",
-              entries: [
-                { depth: 1, title: "Home", target: { route: "/" } },
-                { depth: 2, title: "Gone", target: { route: "/", id: "index-gone" } },
-              ],
-            },
-          },
-        )
-        .catch((e) => e);
-      expect((error as MonodocsError).code).toBe("pdf/toc-unresolved");
-      expect((error as Error).message).toContain("index-gone");
-    } finally {
-      await generator.close();
-    }
-  });
-
-  it("names its anchors so that no ID in the document can be taken for one", async () => {
-    // The heading "3" on page `mdtoc` has the ID `mdtoc-3`, which is the name the fourth line's
-    // anchor would otherwise get. Chromium resolves a link to the first element with an ID.
-    const bytes = await buildFiles(
-      "anchor-name",
-      {
-        "mdtoc.md": "# M\n\n## 3\n\nShort.\n",
-        "z.md": `# Z\n\n${filler(80, "lorem")}\n\n## Last\n\nEnd.\n`,
-      },
-      "pdf:\n  toc:\n    enabled: true\n",
-    );
-    const last = await sheetOf(bytes, "Last", 0, 1);
-    expect(last).toBeGreaterThan(3);
-    expect(await pageText(bytes, 0)).toMatch(new RegExp(`Last${last}$`));
-  });
-
-  it("tells apart two headings in one page that share an ID", async () => {
-    // Asciidoctor only warns about the second [[dup]].
-    const bytes = await buildFiles(
-      "dup-in-page",
-      {
-        "c.adoc": `= C\n\n[[dup]]\n== First\n\n${filler(80, "lorem")}\n\n[[dup]]\n== Second\n\nEnd.\n`,
-      },
-      "pdf:\n  toc:\n    enabled: true\n",
-    );
-    const first = await sheetOf(bytes, "First", 0, 1);
-    const second = await sheetOf(bytes, "Second", 0, 1);
-    expect(second).toBeGreaterThan(first!);
-    expect(await pageText(bytes, 0)).toBe(`ContentsC${first}First${first}Second${second}`);
-  });
-
-  it("leaves out a heading that a collapsed block keeps off the paper", async () => {
-    const bytes = await buildFiles(
-      "collapsed",
-      {
-        "doc.adoc":
-          "= Doc\n\n== Shown\n\nText.\n\n.Click\n[%collapsible]\n====\n[discrete]\n== Folded\n\nInside.\n====\n",
-      },
-      "pdf:\n  toc:\n    enabled: true\n",
-    );
-    const toc = await pageText(bytes, 0);
-    expect(toc).toContain("Shown");
-    expect(toc).not.toContain("Folded");
-  });
-
-  // A longer timeout: it builds a 40-sheet PDF and reads every sheet, and the Windows runner is slow.
-  it("numbers every line of a table that runs over several sheets", async () => {
-    const files: Record<string, string> = {};
-    for (let p = 0; p < 6; p++) {
-      let body = `# Page ${p}\n\n`;
-      for (let h = 0; h < 30; h++) body += `## Heading ${p}-${h}\n\n${filler(3, "text")}\n\n`;
-      files[`p${p}.md`] = body;
-    }
-    const bytes = await buildFiles("long", files, "pdf:\n  toc:\n    enabled: true\n");
-    // Every sheet's text, read once.
-    const total = (await PDFDocument.load(bytes)).getPageCount();
-    const sheets: string[] = [];
-    for (let i = 0; i < total; i++) sheets.push(await pageText(bytes, i));
-    // The table takes the sheets before the first page. Headings are matched with what follows
-    // them, so "Heading 0-1" is not found inside "Heading 0-10".
-    const sheetOfText = (text: string, from: number) =>
-      sheets.findIndex((sheet, i) => i >= from && new RegExp(`${text}(?!\\d)`).test(sheet)) + 1;
-    const tableSheets = sheetOfText("Heading 0-0", 1) - 1;
-    expect(tableSheets).toBeGreaterThan(1);
-    const table = sheets.slice(0, tableSheets).join("");
-
-    let expected = "Contents";
-    for (let p = 0; p < 6; p++) {
-      expected += `Page ${p}${sheetOfText(`Page ${p}`, tableSheets)}`;
-      for (let h = 0; h < 30; h++) {
-        expected += `Heading ${p}-${h}${sheetOfText(`Heading ${p}-${h}`, tableSheets)}`;
+// These launch a real Chromium, and most of them print a PDF twice or more. Under the default 20 s,
+// one of them hit the limit on Linux CI twice in a row (and others locally); the other real-Chromium
+// PDF tests already allow 60-240 s.
+describe.skipIf(!chromium)(
+  "a printed table of contents (real Chromium)",
+  { timeout: 120_000 },
+  () => {
+    async function buildPdf(name: string, config: string): Promise<Uint8Array> {
+      const root = join(dir, name);
+      const files: Record<string, string> = {
+        "index.md": `# Opening\n\n${filler(20, "lorem")}\n\n## Alpha section\n\n${filler(60, "ipsum")}\n\n## Beta section\n\n${filler(5, "dolor")}\n`,
+        "guide/install.md": `# Install\n\n## Gamma section\n\n${filler(70, "sit")}\n\n### Delta detail\n\n${filler(5, "amet")}\n`,
+        "guide/usage.adoc": `= Usage\n\n== Epsilon section\n\n日本語の本文です。\n\n== Zeta section\n\nText.\n`,
+      };
+      for (const [path, body] of Object.entries(files)) {
+        await mkdir(dirname(join(root, path)), { recursive: true });
+        await writeFile(join(root, path), body);
       }
+      const configFile = join(dir, `${name}.yml`);
+      await writeFile(configFile, config);
+      const out = join(dir, `${name}.pdf`);
+      await buildSite({ inputDir: root, configFile, outputFile: out, format: "pdf" });
+      return readFile(out);
     }
-    expect(table).toBe(expected);
-  }, 60_000);
 
-  it("lists to depth 2 by default and prints nothing when off", async () => {
-    const on = await buildPdf("depth", "pdf:\n  toc:\n    enabled: true\n");
-    const text = await pageText(on, 0);
-    expect(text).toContain("Contents");
-    expect(text).toContain("Alpha section");
-    expect(text).not.toContain("Delta detail");
+    /** The body sheet (1-based, after `cover` sheets) on which `text` first appears, past the table. */
+    async function sheetOf(bytes: Uint8Array, text: string, cover: number, from: number) {
+      const total = (await PDFDocument.load(bytes)).getPageCount();
+      for (let i = cover + from; i < total; i++) {
+        if ((await pageText(bytes, i, cover)).includes(text)) return i - cover + 1;
+      }
+      return undefined;
+    }
 
-    const off = await buildPdf("off", "");
-    expect(await pageText(off, 0)).not.toContain("Contents");
-  });
-});
+    it("prints the sheet each section starts on, agreeing with page breaks, a cover, and numbering", async () => {
+      const bytes = await buildPdf(
+        "all",
+        "title: Manual\nnumbering:\n  sections: 3\n" +
+          "pdf:\n  pageBreakLevel: 2\n  cover:\n    enabled: true\n  toc:\n    enabled: true\n    depth: 3\n",
+      );
+      const cover = 1;
+      const tocText = await pageText(bytes, cover, cover);
+      expect(tocText).toContain("Contents");
+
+      // Every line of the table, in order: pages, the directory (pointing at its first page), and
+      // headings down to depth 3. The extracted text has no separators between lines, so the whole
+      // table is compared rather than each line matched on its own.
+      const lines: [string, string][] = [
+        ["1", "Opening"],
+        ["1.1", "Alpha section"],
+        ["1.2", "Beta section"],
+        ["2", "guide"],
+        ["2.1", "Install"],
+        ["2.1.1", "Gamma section"],
+        ["2.1.1.1", "Delta detail"],
+        ["2.2", "Usage"],
+        ["2.2.1", "Epsilon section"],
+        ["2.2.2", "Zeta section"],
+      ];
+      let expected = "Contents";
+      for (const [number, title] of lines) {
+        // The sheet the line points at, found independently by reading the body after the table:
+        // the heading as printed there, number and all. The directory has no heading of its own;
+        // it points at its first page.
+        const heading = title === "guide" ? "2.1 Install" : `${number} ${title}`;
+        const sheet = await sheetOf(bytes, heading, cover, 1);
+        expect(sheet, title).toBeDefined();
+        expected += `${number} ${title}${sheet}`;
+      }
+      expect(tocText).toBe(expected);
+
+      // The bookmarks and the viewer's page labels agree with the table: the first bookmark opens the
+      // sheet the table lists for "1 Opening", and the labels number the body — the table's own
+      // sheets included — from 1 after the cover, so the viewer shows the number the table prints.
+      const doc = await PDFDocument.load(bytes);
+      const outlines = doc.catalog.lookup(PDFName.of("Outlines"), PDFDict);
+      const firstMark = outlines.lookup(PDFName.of("First"), PDFDict);
+      const markDest = firstMark.lookup(PDFName.of("Dest"), PDFArray).get(0);
+      const markSheet = doc.getPages().findIndex((p) => p.ref === markDest) - cover + 1;
+      expect(markSheet).toBe(await sheetOf(bytes, "1 Opening", cover, 1));
+      const nums = doc.catalog
+        .lookup(PDFName.of("PageLabels"), PDFDict)
+        .lookup(PDFName.of("Nums"), PDFArray);
+      expect(nums.get(2)?.toString()).toBe(String(cover));
+      const bodyLabel = nums.lookup(3, PDFDict);
+      expect(bodyLabel.get(PDFName.of("S"))?.toString()).toBe("/D");
+      expect(bodyLabel.get(PDFName.of("St"))?.toString() ?? "1").toBe("1");
+      // pageBreakLevel put each h2 on a sheet of its own, so the sheets differ.
+      expect(await sheetOf(bytes, "1.2 Beta section", cover, 1)).toBeGreaterThan(
+        (await sheetOf(bytes, "1.1 Alpha section", cover, 1))!,
+      );
+    });
+
+    /** Write `files` under a fresh root and build them to PDF with `config`. */
+    async function buildFiles(name: string, files: Record<string, string>, config: string) {
+      const root = join(dir, name);
+      for (const [path, body] of Object.entries(files)) {
+        await mkdir(dirname(join(root, path)), { recursive: true });
+        await writeFile(join(root, path), body);
+      }
+      const configFile = join(dir, `${name}.yml`);
+      await writeFile(configFile, config);
+      const out = join(dir, `${name}.pdf`);
+      await buildSite({ inputDir: root, configFile, outputFile: out, format: "pdf" });
+      return readFile(out);
+    }
+
+    it("finds a heading inside its own page when another page has an element with the same ID", async () => {
+      // Page IDs join route segments with "-", so both headings are `setup-install-guide`. The first
+      // match across the document would be the wrong heading, verified against itself.
+      const bytes = await buildFiles(
+        "same-id",
+        {
+          "setup.md": "# Setup\n\n## Install Guide\n\nShort.\n",
+          "setup/install.md": `# Install\n\n${filler(80, "lorem")}\n\n## Guide\n\nEnd.\n`,
+        },
+        "numbering:\n  sections: 2\npdf:\n  toc:\n    enabled: true\n",
+      );
+      const guide = await sheetOf(bytes, "2.1.1 Guide", 0, 1);
+      expect(guide).toBeGreaterThan(3);
+      expect(await pageText(bytes, 0)).toMatch(new RegExp(`2\\.1\\.1 Guide${guide}$`));
+    });
+
+    it("fails before printing when a line's section is not in the document", async () => {
+      const generator = createPuppeteerPdfGenerator();
+      try {
+        const error = await generator
+          .render(
+            '<html><body><main id="content"><article class="page" data-route="/">' +
+              '<h1 id="index">Home</h1></article></main></body></html>',
+            {
+              pageSize: "A4",
+              margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
+              printBackground: true,
+              waitForMermaid: false,
+              toc: {
+                title: "Contents",
+                entries: [
+                  { depth: 1, title: "Home", target: { route: "/" } },
+                  { depth: 2, title: "Gone", target: { route: "/", id: "index-gone" } },
+                ],
+              },
+            },
+          )
+          .catch((e) => e);
+        expect((error as MonodocsError).code).toBe("pdf/toc-unresolved");
+        expect((error as Error).message).toContain("index-gone");
+      } finally {
+        await generator.close();
+      }
+    });
+
+    it("names its anchors so that no ID in the document can be taken for one", async () => {
+      // The heading "3" on page `mdtoc` has the ID `mdtoc-3`, which is the name the fourth line's
+      // anchor would otherwise get. Chromium resolves a link to the first element with an ID.
+      const bytes = await buildFiles(
+        "anchor-name",
+        {
+          "mdtoc.md": "# M\n\n## 3\n\nShort.\n",
+          "z.md": `# Z\n\n${filler(80, "lorem")}\n\n## Last\n\nEnd.\n`,
+        },
+        "pdf:\n  toc:\n    enabled: true\n",
+      );
+      const last = await sheetOf(bytes, "Last", 0, 1);
+      expect(last).toBeGreaterThan(3);
+      expect(await pageText(bytes, 0)).toMatch(new RegExp(`Last${last}$`));
+    });
+
+    it("tells apart two headings in one page that share an ID", async () => {
+      // Asciidoctor only warns about the second [[dup]].
+      const bytes = await buildFiles(
+        "dup-in-page",
+        {
+          "c.adoc": `= C\n\n[[dup]]\n== First\n\n${filler(80, "lorem")}\n\n[[dup]]\n== Second\n\nEnd.\n`,
+        },
+        "pdf:\n  toc:\n    enabled: true\n",
+      );
+      const first = await sheetOf(bytes, "First", 0, 1);
+      const second = await sheetOf(bytes, "Second", 0, 1);
+      expect(second).toBeGreaterThan(first!);
+      expect(await pageText(bytes, 0)).toBe(`ContentsC${first}First${first}Second${second}`);
+    });
+
+    it("leaves out a heading that a collapsed block keeps off the paper", async () => {
+      const bytes = await buildFiles(
+        "collapsed",
+        {
+          "doc.adoc":
+            "= Doc\n\n== Shown\n\nText.\n\n.Click\n[%collapsible]\n====\n[discrete]\n== Folded\n\nInside.\n====\n",
+        },
+        "pdf:\n  toc:\n    enabled: true\n",
+      );
+      const toc = await pageText(bytes, 0);
+      expect(toc).toContain("Shown");
+      expect(toc).not.toContain("Folded");
+    });
+
+    // Longer than its siblings' 120 s: it builds a 40-sheet PDF and reads every sheet, and the Windows
+    // runner is slow.
+    it("numbers every line of a table that runs over several sheets", async () => {
+      const files: Record<string, string> = {};
+      for (let p = 0; p < 6; p++) {
+        let body = `# Page ${p}\n\n`;
+        for (let h = 0; h < 30; h++) body += `## Heading ${p}-${h}\n\n${filler(3, "text")}\n\n`;
+        files[`p${p}.md`] = body;
+      }
+      const bytes = await buildFiles("long", files, "pdf:\n  toc:\n    enabled: true\n");
+      // Every sheet's text, read once.
+      const total = (await PDFDocument.load(bytes)).getPageCount();
+      const sheets: string[] = [];
+      for (let i = 0; i < total; i++) sheets.push(await pageText(bytes, i));
+      // The table takes the sheets before the first page. Headings are matched with what follows
+      // them, so "Heading 0-1" is not found inside "Heading 0-10".
+      const sheetOfText = (text: string, from: number) =>
+        sheets.findIndex((sheet, i) => i >= from && new RegExp(`${text}(?!\\d)`).test(sheet)) + 1;
+      const tableSheets = sheetOfText("Heading 0-0", 1) - 1;
+      expect(tableSheets).toBeGreaterThan(1);
+      const table = sheets.slice(0, tableSheets).join("");
+
+      let expected = "Contents";
+      for (let p = 0; p < 6; p++) {
+        expected += `Page ${p}${sheetOfText(`Page ${p}`, tableSheets)}`;
+        for (let h = 0; h < 30; h++) {
+          expected += `Heading ${p}-${h}${sheetOfText(`Heading ${p}-${h}`, tableSheets)}`;
+        }
+      }
+      expect(table).toBe(expected);
+    }, 240_000);
+
+    it("lists to depth 2 by default and prints nothing when off", async () => {
+      const on = await buildPdf("depth", "pdf:\n  toc:\n    enabled: true\n");
+      const text = await pageText(on, 0);
+      expect(text).toContain("Contents");
+      expect(text).toContain("Alpha section");
+      expect(text).not.toContain("Delta detail");
+
+      const off = await buildPdf("off", "");
+      expect(await pageText(off, 0)).not.toContain("Contents");
+    });
+  },
+);
