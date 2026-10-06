@@ -80,6 +80,8 @@ describe("the Mermaid runtime notices", () => {
     expect(notices).toMatch(/^jison@0\.4\.18 \(copied into mermaid@/m);
     expect(notices).toContain("Copyright (c) 2009-2014 Zachary Carter");
     expect(notices).toContain("Sebastian McKenzie and other contributors");
+    expect(notices).toContain("adapted from Facebook's React");
+    expect(notices).toContain("https://stackoverflow.com/a/19303725");
     expect(notices).toContain("Ralf S. Engelschall");
     expect(notices).toContain("Event object based on jQuery events");
     expect(notices).toContain("Copyright Joyent, Inc. and other Node contributors.");
@@ -92,7 +94,7 @@ describe("the Mermaid runtime notices", () => {
     expect(notices).toContain("Copyright (c) 2016 Wilson Page");
   });
 
-  it("fail the check when a licence text is gone or the generator changed", async () => {
+  it("fail the check when a notice was edited or the generator changed", async () => {
     const script = fileURLToPath(
       new URL("../scripts/generate-mermaid-notices.mjs", import.meta.url),
     );
@@ -106,12 +108,17 @@ describe("the Mermaid runtime notices", () => {
       );
     };
     expect(await check(notices)).toBe("passed");
-    // A block whose licence text was removed, its label left in place.
+    // A block whose licence text was removed, its label left in place; one attribution removed;
+    // a licence text cut down to its heading.
     const sep = "-".repeat(80);
     const at = notices.indexOf(`${sep}\nMIT License`);
     const stripped =
       notices.slice(0, at + sep.length + 1) + notices.slice(notices.indexOf("\n=", at));
-    expect(await check(stripped)).toMatch(/no licence text/);
+    expect(await check(stripped)).toMatch(/edited after/);
+    expect(await check(notices.replace(/^.*Sebastian McKenzie.*\n/m, ""))).toMatch(/edited after/);
+    expect(await check(notices.replace(/^Permission is hereby granted.*\n/m, ""))).toMatch(
+      /edited after/,
+    );
     expect(await check(notices.replace(/^Generator: \w+$/m, "Generator: 0000"))).toMatch(
       /changed after/,
     );
