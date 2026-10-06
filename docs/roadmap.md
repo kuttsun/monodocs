@@ -606,7 +606,8 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   formula's text to, exactly, so the section ID made from it is unchanged even under the formula's own
   substitutions (`latexmath:a[&#945;]`); the TeX for rendering is kept apart. The wrapped converter is
   made with the `htmlsyntax` the configuration sets, as Asciidoctor makes its own. Character references
-  are decoded once, by HTML's rules (an invalid one becomes U+FFFD). A block's content is decoded
+  are decoded once, by the same HTML parser that reads the markers back, so the two always agree
+  (`&#128;` is `€`, as HTML has it). A title is parsed, not matched, to show its formulas as `$TeX$`. A block's content is decoded
   whatever its substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is
   taken as the delimiters Asciidoctor would otherwise have added. The title monodocs reads (`doc.getDocumentTitle()`) shows a formula as `$TeX$`.
   asciimath is reported as `math/asciimath-not-rendered`, naming the file and the formula. A

@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { ConverterFactory } from "@asciidoctor/core";
-import { decodeNamedCharacterReference } from "decode-named-character-reference";
-import { decodeNumericCharacterReference } from "micromark-util-decode-numeric-character-reference";
+import { fromHtml } from "hast-util-from-html";
+import { toHtml } from "hast-util-to-html";
 import type { Element, Root as HastRoot } from "hast";
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 
 /**
  * AsciiDoc math (roadmap 6.4): Asciidoctor's own markup — `latexmath:[...]`, the `[latexmath]` block,
@@ -79,7 +79,8 @@ export async function createMathConverter(
    */
   const marker = (tex: string, source: string, display: boolean, converted: string) => {
     const key = `${nonce}-${formulas.size}`;
-    formulas.set(key, { tex, source, display, shown: decode(converted.replace(/<[^>]*>/g, "")) });
+    // What the element will hold once the HTML is parsed, read by the same parser.
+    formulas.set(key, { tex, source, display, shown: parsedText(converted) });
     const tag = display ? "div" : "span";
     return `<${tag} data-monodocs-math="${key}">${converted}</${tag}>`;
   };
@@ -153,13 +154,17 @@ export async function createMathConverter(
       });
     },
     titleText(html) {
-      return html.replace(
-        new RegExp(`<span data-monodocs-math="(${nonce}-\\d+)">[^<]*</span>`, "g"),
-        (whole, key: string) => {
-          const formula = formulas.get(key);
-          return formula ? `$${text(formula.tex)}$` : whole;
-        },
-      );
+      if (!html.includes(nonce)) return html;
+      // Parsed rather than matched: a formula with its own substitutions can hold a raw `<` or tags.
+      const tree = fromHtml(html, { fragment: true });
+      visit(tree, "element", (node: Element, index, parent) => {
+        const key = node.properties.dataMonodocsMath;
+        const formula = typeof key === "string" ? formulas.get(key) : undefined;
+        if (!formula || !parent || index === undefined) return;
+        parent.children[index] = { type: "text", value: `$${formula.tex}$` };
+        return SKIP;
+      });
+      return toHtml(tree, { characterReferences: { useNamedReferences: true } });
     },
   };
 }
@@ -179,18 +184,19 @@ function textOf(node: Element): string {
 }
 
 /**
- * Character references decoded once, as an HTML parser decodes them and as the browser did for MathJax
- * before: numeric ones as CommonMark and HTML read them (out of range or invalid, U+FFFD), named ones
- * by HTML's list; anything else is left as written.
+ * Character references decoded once, by the HTML parser the formulas are read with later, so that the
+ * two agree on every reference (`&#128;` is `€`, as HTML has it); a raw `<` stays a character.
  */
 function decode(value: string): string {
-  return value.replace(
-    /&(?:#[xX]([0-9a-fA-F]{1,6})|#([0-9]{1,7})|([A-Za-z][A-Za-z0-9]{0,31}));/g,
-    (whole, hex: string | undefined, dec: string | undefined, name: string | undefined) => {
-      if (hex !== undefined) return decodeNumericCharacterReference(hex, 16);
-      if (dec !== undefined) return decodeNumericCharacterReference(dec, 10);
-      const named = decodeNamedCharacterReference(name!);
-      return named === false ? whole : named;
-    },
-  );
+  return parsedText(value.replace(/</g, "&lt;"));
+}
+
+/** The text an HTML fragment parses to. */
+function parsedText(html: string): string {
+  const tree = fromHtml(html, { fragment: true });
+  const walk = (node: { type: string; value?: string; children?: unknown[] }): string =>
+    node.type === "text"
+      ? (node.value ?? "")
+      : (node.children ?? []).map((c) => walk(c as typeof node)).join("");
+  return walk(tree);
 }

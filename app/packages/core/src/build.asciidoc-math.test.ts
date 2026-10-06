@@ -200,6 +200,20 @@ describe("AsciiDoc math", () => {
     expect(asciimath!.message).toContain("&lt; \uFFFD");
   });
 
+  it("agrees with the HTML parser on every reference, so no formula is lost to one", async () => {
+    const { html } = await build(
+      "= T\n\nlatexmath:a[\\text{&#128;}] and latexmath:a[&#000000945;]\n",
+    );
+    expect(attributes(html, "data-math-tex")).toEqual(["\\text{€}", "α"]);
+  });
+
+  it("shows a title formula with its own substitutions as $TeX$, never as a marker", async () => {
+    const { html } = await build("= Compare latexmath:a[a < b]\n\ntext\n");
+    const title = pageData(html).title;
+    expect(title).toContain("$a &lt; b$");
+    expect(title).not.toContain("data-monodocs-math");
+  });
+
   it("keeps the ID of a heading whose formula has its own substitutions", async () => {
     const adoc = "= T\n\n== Symbol latexmath:a[&#945;]\n\nSee <<_symbol>>.\n";
     const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);
