@@ -85,6 +85,10 @@ describe("the Mermaid runtime notices", () => {
     expect(notices).toContain("https://creativecommons.org/licenses/by-sa/3.0/");
     expect(notices).toContain("https://stackoverflow.com/a/1890233");
     expect(notices).toContain("Copyright (c) 2016, Google Inc.");
+    expect(notices).toContain("https://stackoverflow.com/a/44856925");
+    expect(notices).toContain(
+      "ALL copies of the work or portions thereof, including modifications:",
+    );
     expect(notices).toContain("https://gist.github.com/mjackson/5311256), which states no licence");
     expect(notices).toContain("Ralf S. Engelschall");
     expect(notices).toContain("Event object based on jQuery events");
@@ -145,9 +149,18 @@ describe("the Mermaid runtime notices", () => {
     expect(unreviewedUrls(map)).toEqual([]);
     const planted = {
       sources: ["../src/x.ts"],
-      sourcesContent: ["// code from https://example.com/snippet\nconst x = 1;\n"],
+      sourcesContent: [
+        "// code from https://example.com/a\n" +
+          "const x = 1; // and https://example.com/b\n" +
+          "/* adapted from\n   https://example.com/c */\n" +
+          'const s = "https://example.com/in-a-string";\n',
+      ],
     };
-    expect(unreviewedUrls(planted)).toEqual(["https://example.com/snippet"]);
+    expect(unreviewedUrls(planted)).toEqual([
+      "https://example.com/a",
+      "https://example.com/b",
+      "https://example.com/c",
+    ]);
     // esbuild's closing licence comment is not attributed to the parser's last source file.
     expect(cites.some((c) => c.includes("Jeremy Ashkenas"))).toBe(false);
   });
