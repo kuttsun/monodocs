@@ -95,11 +95,29 @@ const PREBUILT_AUDITED = {
   "marked@16.3.0": {},
   "mermaid@11.17.2": {
     // src/utils.ts copies entity-decode's browser decoder ("source: …/entity-decode/blob/v2.0.1").
-    bundled: [{ name: "entity-decode", version: "2.0.1", declared: "copied into src/utils.ts" }],
+    bundled: [
+      {
+        name: "entity-decode",
+        version: "2.0.1",
+        copied: "into src/utils.ts, from the version its source comment names",
+        // The upstream LICENSE leaves the holder blank; package.json names the author.
+        notice: "The copyright holder left blank above is the package's author, shrpne.",
+      },
+    ],
   },
   // Inside the pre-bundled parser: lib/esm/index.mjs is a webpack bundle carrying path-browserify.
   "vscode-uri@3.1.0": {
-    bundled: [{ name: "path-browserify", version: "1.0.1", declared: "^1.0.1 (devDependency)" }],
+    bundled: [
+      {
+        name: "path-browserify",
+        version: "1.0.1",
+        declared: "^1.0.1 (devDependency)",
+        // index.js is Node.js's path module, and keeps Node's notice in a header the bundle dropped.
+        notice:
+          "index.js is the path module extracted from Node.js v8.11.1, under the MIT License above:\n" +
+          "  Copyright Joyent, Inc. and other Node contributors.",
+      },
+    ],
   },
   "roughjs@4.6.6": {
     // bundled/rough.esm.js is a rollup bundle of roughjs and its four dependencies.
@@ -111,6 +129,29 @@ const PREBUILT_AUDITED = {
     ],
   },
 };
+
+/**
+ * Lines in mermaid's and the parser's own sources that cite where code came from. Those sources are
+ * not in the store and are not judged by needsAudit; they are audited by hand with each mermaid
+ * version (the mermaid@<version> entry above goes stale and forces it), and this list is printed on
+ * generation as the place to start.
+ */
+export function ownSourceCitations(map) {
+  const cites = [];
+  const re =
+    /(source:|adapted from|ported from|copied from|taken from|copyright|licen[cs]ed under)/i;
+  map.sources.forEach((source, i) => {
+    const content = map.sourcesContent?.[i] ?? "";
+    let at = source;
+    for (const line of content.split("\n")) {
+      const mark = /^\/\/ (\S+\.[cm]?[jt]s)$/.exec(line);
+      if (mark) at = mark[1];
+      else if (!storeRef(at) && /^\s*(\/\/|\/?\*)/.test(line) && re.test(line))
+        cites.push(`${at}: ${line.trim().slice(0, 140)}`);
+    }
+  });
+  return cites;
+}
 
 /** Whether a source is one a component's own build may have filled with other code. */
 function needsAudit(file, content, inEsbuildChunk = false) {
@@ -248,6 +289,8 @@ export function componentsOf(map, mermaidVersion) {
         name: b.name,
         version: b.version,
         declared: b.declared,
+        copied: b.copied,
+        notice: b.notice,
         bundledIn: parent,
         patched: false,
       });
@@ -397,9 +440,10 @@ export async function render(components, mermaidVersion) {
     let note = "";
     if (c.bundledIn) {
       found = await fetchPackage(storeDir, entries, c.name, c.version);
-      note =
-        `(Declared by ${labelOf(c.bundledIn)} as ${c.declared}; its build chose the version, and ` +
-        `the licence text is ${c.name}@${c.version}'s.)\n\n`;
+      note = c.copied
+        ? `(Copied by ${labelOf(c.bundledIn)} ${c.copied}.)\n\n`
+        : `(Declared by ${labelOf(c.bundledIn)} as ${c.declared}; its build chose the version, and ` +
+          `the licence text is ${c.name}@${c.version}'s.)\n\n`;
     } else if (c.version) {
       found = await fetchPackage(storeDir, entries, c.name, c.version);
     } else {
@@ -412,7 +456,8 @@ export async function render(components, mermaidVersion) {
     }
     const audit = c.version ? PREBUILT_AUDITED[`${c.name}@${c.version}`] : undefined;
     const vendored = audit?.vendored ? `\n\n${SUB}\n\n${audit.vendored.join("\n")}` : "";
-    const body = note + licenceText(labelOf(c), found) + vendored;
+    const extra = c.notice ? `\n\n${c.notice}` : "";
+    const body = note + licenceText(labelOf(c), found) + extra + vendored;
     let license = licenseOf(found.pkg);
     if (license === "UNKNOWN") license = inferLicense(body);
     const block = blocks.get(body) ?? { labels: [], body };
@@ -469,6 +514,10 @@ async function main() {
     return;
   }
   await writeFile(NOTICES_FILE, await render(components, version), "utf8");
+  const cites = ownSourceCitations(map);
+  if (cites.length > 0) {
+    console.log(`mermaid's own sources cite (audit by hand):\n  ${cites.join("\n  ")}`);
+  }
   console.log(`mermaid-notices: ${fileURLToPath(NOTICES_FILE)} (${components.length} components)`);
 }
 

@@ -78,6 +78,7 @@ describe("the Mermaid runtime notices", () => {
     }
     expect(notices).toContain("Ralf S. Engelschall");
     expect(notices).toContain("Event object based on jQuery events");
+    expect(notices).toContain("Copyright Joyent, Inc. and other Node contributors.");
     expect(notices).toContain("adopted, with changes, from JamaJS");
     // A licence file is text, not a script that happens to be named license-*.
     expect(notices).not.toMatch(/^import /m);

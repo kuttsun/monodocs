@@ -188,9 +188,12 @@ pre-built file, so generation fails on any runtime dependency of a component tha
 nor explain, and on any component with a large or pre-built source that `PREBUILT_AUDITED` does not cover
 at that exact version. Read the file, record the packages it carries and any code copied into it under
 another licence (or that it carries none) in `PREBUILT_AUDITED`, and explain an absent dependency in
-`NOT_IN_RUNTIME`. It also fails on a component with no licence text. A test fails when the components the
-notices list are no longer the runtime's, which is what a mermaid upgrade does; regenerate them (this may
-use the network) and commit the result:
+`NOT_IN_RUNTIME`. It also fails on a component with no licence text. A source is judged by its size,
+minification, path, and bundler traces, so a small, unminified bundle that leaves no trace could still
+pass; and mermaid's and the parser's own sources are not judged at all. They are audited by hand with each
+mermaid version, which the stale `mermaid@<version>` entry forces, starting from the citations generation
+prints. A test fails when the components the notices list are no longer the runtime's, which is what a
+mermaid upgrade does; regenerate them (this may use the network) and commit the result:
 
 ```bash
 scripts/app.sh sh -c 'cd packages/core && node scripts/generate-mermaid-notices.mjs'

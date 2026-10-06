@@ -880,7 +880,7 @@ SOFTWARE.
 ================================================================================
 entity-decode@2.0.1 (bundled inside mermaid@11.17.2)  —  MIT
 --------------------------------------------------------------------------------
-(Declared by mermaid@11.17.2 as copied into src/utils.ts; its build chose the version, and the licence text is entity-decode@2.0.1's.)
+(Copied by mermaid@11.17.2 into src/utils.ts, from the version its source comment names.)
 
 MIT License
 
@@ -903,6 +903,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+The copyright holder left blank above is the package's author, shrpne.
 
 ================================================================================
 es-toolkit@1.45.1  —  MIT
@@ -1430,6 +1432,9 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+index.js is the path module extracted from Node.js v8.11.1, under the MIT License above:
+  Copyright Joyent, Inc. and other Node contributors.
 
 ================================================================================
 path-data-parser@0.1.0 (bundled inside roughjs@4.6.6 (patched by mermaid))  —  MIT
