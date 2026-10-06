@@ -474,7 +474,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] サイトのライセンスのページ、`README.md`、`README.ja.md`、npm の README のライセンスの記述が、monodocs は MIT であり、同梱の Mermaid ランタイムは EPL-2.0 の `elkjs` を含み、inline ランタイムでビルドした HTML はそれを表記とともに埋め込み、文書の内容は影響を受けない、と書く。あわせて、ランタイムの中のいくつかのコードはライセンスを示していない出典から来ていることも書く
 - [x] [roadmap.md](roadmap.md) 21.2 とサイトの設定リファレンスが、mermaid 12 とその inline の実測サイズを書く：表記を含めて gzip で 1.6 MB。21.2 は mermaid 12 を挙げる
 - [x] [maintenance.md](maintenance.md) が、ロックファイルの監査はビルド済みバンドルの中を見られないことを書き、公開している見本があるので「`site/` は配布されない」とはもう書かない
-- [ ] サイトの見本を再生成し、表記を持つことを確かめる。`deploy-site.yml` がリリースからバンドル版 CLI でビルドし、その CLI が表記を持つことは PR のワークフローが確かめている。リリースのデプロイ後に確かめる
+- [ ] サイトの見本を再生成し、表記を持つことを確かめる。`deploy-site.yml` が `scripts/site-build.sh` を通して、リリースタグからビルドした CLI（`packages/cli/dist/index.js`）で生成する。その CLI はテストが確かめているのと同じランタイムのスクリプトを出力する。リリースのデプロイ後に確かめる
 
 **数式**（[roadmap.md](roadmap.md) 6.4）
 

@@ -475,7 +475,7 @@ reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md)
 - [x] The licence statement in the site's licence page, `README.md`, `README.ja.md`, and the npm READMEs says that monodocs is MIT, the bundled Mermaid runtime contains EPL-2.0 `elkjs`, HTML built with the inline runtime embeds it with its notices, and document content is unaffected, and also that a few pieces of code inside the runtime come from sources that state no licence
 - [x] [roadmap.md](roadmap.md) 21.2 and the site's configuration reference state mermaid 12 and its measured inline size: 1.6 MB gzip, notices included, and 21.2 names mermaid 12
 - [x] [maintenance.md](maintenance.md) says that the lockfile audit cannot see inside a prebuilt bundle, and no longer says that `site/` never ships, given the published samples
-- [ ] The site samples are regenerated and carry the notices. `deploy-site.yml` builds them from the release with the bundled CLI, which the PR workflow checks for the notices; this is checked once the release is deployed
+- [ ] The site samples are regenerated and carry the notices. `deploy-site.yml` builds them through `scripts/site-build.sh` with the CLI built from the release tag (`packages/cli/dist/index.js`), which emits the same runtime script the tests check; this is checked once the release is deployed
 
 **Math** ([roadmap.md](roadmap.md) 6.4)
 
