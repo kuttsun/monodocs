@@ -52,5 +52,5 @@ documentation at https://github.com/kuttsun/monodocs.
 MIT
 
 The bundled third-party notices are in `THIRD-PARTY-NOTICES.txt`. The Mermaid runtime monodocs embeds
-contains `elkjs` under the EPL-2.0; HTML built with the inline runtime embeds it with its notices, and the
+contains `elkjs` under the EPL-2.0 (with parts of EMF under the EPL-1.0); HTML built with the inline runtime embeds it with its notices, and the
 content of your documents is unaffected. See https://kuttsun.github.io/monodocs/docs/license.

@@ -33,12 +33,13 @@ SOFTWARE.
 monodocs itself is MIT. Its dependencies are permissively licensed
 (MIT / ISC / BSD / Apache-2.0 and the like), with one exception: the Mermaid
 runtime monodocs embeds contains the Eclipse Layout Kernel (`elkjs`), under the
-**Eclipse Public License 2.0** (EPL-2.0), a weak copyleft license.
+**Eclipse Public License 2.0** (EPL-2.0), a weak copyleft license, and compiled into
+it, parts of EMF under the **Eclipse Public License 1.0**.
 
 - **What reaches your documents.** HTML built with the inline Mermaid runtime
   (`mermaid.runtime: inline`, the default) from a document with diagrams embeds
   that runtime, ELK included, together with its third-party notices, which say
-  where ELK's source is. The EPL-2.0 covers ELK itself; the content of your
+  where ELK's and EMF's source is. The EPL covers ELK and EMF themselves; the content of your
   document is not affected. `mermaid.runtime: cdn`, `mermaid.mode: pre-render`,
   and a document without diagrams put no ELK in the output.
 - `dompurify` is dual-licensed under `MPL-2.0 OR Apache-2.0`; monodocs elects

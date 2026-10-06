@@ -79,5 +79,5 @@ npm 公開物の `dist/monodocs.cjs` には依存ライブラリをバンドル�
 まとめた `dist/THIRD-PARTY-NOTICES.txt` を生成し、配布物に添付します（`pnpm bundle` で出力）。
 埋め込む依存は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 等）で、`dompurify` は
 `MPL-2.0 OR Apache-2.0` のうち Apache-2.0 を選択しています。例外として、埋め込む Mermaid ランタイムは
-`elkjs`（EPL-2.0）を含みます。inline ランタイムでビルドした HTML はそれを表記とともに埋め込みますが、
+`elkjs`（EPL-2.0。EMF の一部は EPL-1.0）を含みます。inline ランタイムでビルドした HTML はそれを表記とともに埋め込みますが、
 文書の内容は影響を受けません。詳しくは[ライセンスのページ](https://kuttsun.github.io/monodocs/ja/docs/license)を参照してください。

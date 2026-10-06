@@ -35,12 +35,12 @@ SOFTWARE.
 monodocs 自体は MIT です。依存は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 など）
 ですが、例外が 1 つあります。monodocs が埋め込む Mermaid ランタイムは Eclipse Layout
 Kernel（`elkjs`）を含み、これは弱いコピーレフトの **Eclipse Public License 2.0**
-（EPL-2.0）です。
+（EPL-2.0）です。その中には、**Eclipse Public License 1.0** の EMF の一部もコンパイルされています。
 
 - **文書に届くもの。** inline の Mermaid ランタイム（`mermaid.runtime: inline`、既定）で
   図を含む文書をビルドした HTML は、ELK を含むそのランタイムを、第三者表記とともに
-  埋め込みます。表記には ELK のソースの入手先を書いています。EPL-2.0 が及ぶのは ELK
-  自体で、文書の内容には及びません。`mermaid.runtime: cdn`、`mermaid.mode: pre-render`、
+  埋め込みます。表記には ELK と EMF のソースの入手先を書いています。EPL が及ぶのは ELK と
+  EMF 自体で、文書の内容には及びません。`mermaid.runtime: cdn`、`mermaid.mode: pre-render`、
   図を含まない文書では、出力に ELK は入りません。
 - `dompurify` は `MPL-2.0 OR Apache-2.0` のデュアルライセンスで、monodocs は
   **Apache-2.0** を選択しています。

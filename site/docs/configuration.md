@@ -605,14 +605,14 @@ the HTML; to make them smaller, run an image tool as a step before the build.
 
 #### `client` vs `pre-render`
 
-Both render with the same mermaid engine, so a given diagram's shape and layout are essentially identical. The differences are:
+Both render with the same mermaid engine, so a given diagram's shape and layout are essentially identical. Client mode needs a browser that runs mermaid 12, which uses ES2024 features such as `Object.groupBy`: Chrome and Edge 117, Firefox 119, Safari 17.4, or later; in an older browser the diagram is not drawn. The differences are:
 
 | Aspect                  | `client` (cdn / inline)                  | `pre-render`                                   |
 | ----------------------- | ---------------------------------------- | ---------------------------------------------- |
 | Self-contained          | cdn = needs network / inline = yes       | Yes (SVG embedded)                             |
 | JavaScript              | Required                                 | Not required                                   |
 | Added size              | cdn ≈ 0 / inline ≈ 1.6MB(gzip) fixed     | Proportional to diagram count (a few KB each)  |
-| Dark theme              | Does not follow it (mermaid default)     | Fixed via `html.colorScheme` (`dark`→dark, else light) |
+| Dark theme              | Does not follow it (mermaid default)     | Fixed via `html.colorScheme` (`dark`→`redux-dark-color`, else mermaid's default) |
 | Fonts                   | Reader's browser fonts                   | **Measured & baked with the build machine's fonts** |
 | Interactivity (`click`) | Works                                    | Disabled (static SVG)                          |
 | Print / unvisited pages | May be missing                           | Always rendered                                |

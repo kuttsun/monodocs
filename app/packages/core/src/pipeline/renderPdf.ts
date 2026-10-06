@@ -114,11 +114,13 @@ const PREPARE_MERMAID =
   "document.querySelectorAll('.page[hidden]').forEach(function(el){el.removeAttribute('hidden');});" +
   "if(typeof window.__sdRenderMermaid==='function')window.__sdRenderMermaid();";
 
-// すべての .mermaid が描画完了（mermaid が付ける data-processed="true"、もしくは <svg> を内包）
-// したか。図が 0 個なら every は true で即座に解決する。
+// Whether every .mermaid holds its <svg>. mermaid sets data-processed="true" before it awaits the
+// render, so that attribute can be true while a diagram is still being laid out, and mermaid 12's
+// asynchronous ELK layout widens that window; a syntax error still ends in mermaid's error <svg>.
+// With no diagrams, every() is true at once.
 const MERMAID_DONE =
   "Array.prototype.every.call(document.querySelectorAll('.mermaid'),function(el){" +
-  "return el.getAttribute('data-processed')==='true'||!!el.querySelector('svg');})";
+  "return !!el.querySelector('svg');})";
 
 /** client Mermaid の描画完了を待つ上限（超えても PDF 生成は続行する）。 */
 const MERMAID_WAIT_TIMEOUT_MS = 30_000;

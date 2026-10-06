@@ -48,8 +48,19 @@ function digestOf(text) {
   return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 
+/** A licence text vendored under scripts/data/, with its line endings normalized. */
+async function readData(file) {
+  const text = await readFile(new URL(`./data/${file}`, import.meta.url), "utf8");
+  return text.replace(/\r\n?/g, "\n").trim();
+}
+
 async function generatorHash() {
-  const text = (await readFile(fileURLToPath(import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+  // The licence texts this script vendors count as part of it.
+  const parts = [
+    await readFile(fileURLToPath(import.meta.url), "utf8"),
+    await readData("EPL-1.0.txt"),
+  ];
+  const text = parts.join("\n").replace(/\r\n?/g, "\n");
   return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 const SUB = "-".repeat(80);
@@ -183,27 +194,45 @@ const PREBUILT_AUDITED = {
       },
     ],
     vendored: [
-      "Corresponding Source (EPL-2.0, section 3.1): lib/elk-worker.min.js is the Eclipse Layout",
-      "Kernel compiled to JavaScript with GWT. Its source is ELK at tag v0.9.1",
-      "(https://github.com/eclipse/elk, commit 62d5909f96fad541bc101ad52dabaece6b7eab7e), built by",
-      "elkjs at tag 0.9.3 (https://github.com/kieler/elkjs, commit",
-      "a8304cf79fde75bc2ab1a89d28320f53f8637436) with GWT 2.10.0, EMF GWT 2.12.4, Guava 31.1-jre, and",
-      "Xtext 2.28.0. elkjs's release procedure builds against ELK's matching release tag, and v0.9.1",
-      "was ELK's latest 0.9 release when elkjs 0.9.3 was tagged on 2024-04-16; the bundle itself does",
-      "not record the ELK commit.",
+      "Source Code (EPL-2.0, section 3.1(a)): the Source Code of the ELK and elkjs code in this",
+      "component is available under the Eclipse Public License 2.0 above, from:",
+      "  ELK: https://github.com/eclipse/elk, branch master at commit",
+      "    9bc93474e1dc649450e8c97abb45d16b7c88e35b (2024-04-15). lib/elk-worker.min.js contains the",
+      "    change master took in commit 7ca51784e42a24201f29bc13e458728b6fc61cdc (2024-04-09), which no",
+      "    ELK release before it has, and the commits from there to 9bc93474 change only ELK's",
+      "    meta-compiler, which is not compiled in, so either commit yields the same code. The bundle",
+      "    itself does not record the commit.",
+      "  elkjs: https://github.com/kieler/elkjs, tag 0.9.3 (commit",
+      "    a8304cf79fde75bc2ab1a89d28320f53f8637436), which compiles ELK to JavaScript with GWT 2.10.0",
+      "    against EMF for GWT 2.12.4, Guava 31.1-jre, and Xtext 2.28.0, generating code from ELK's",
+      "    .melk files with org.eclipse.elk.core.meta 0.10.0-SNAPSHOT.",
+      "ELK: Copyright (c) 2017, 2021 Kiel University and others.",
       "",
-      "Compiled into the worker with ELK, under the Eclipse Public License 2.0 above:",
-      "  Eclipse Modeling Framework (org.eclipse.emf.common, org.eclipse.emf.ecore) and Xtext's",
-      "    xbase library (org.eclipse.xtext.xbase.lib) — Copyright the Eclipse contributors.",
-      "and under the Apache License, Version 2.0, whose full text is reproduced in this document under",
-      "the Apache-2.0 components:",
-      "  Guava (com.google.common) — Copyright The Guava Authors.",
-      "  GWT's runtime and Java runtime emulation (com.google.gwt, java.lang, java.util, java.math) —",
-      "    Copyright the GWT Project Authors.",
-      "lib/elk.bundled.js also contains Babel helper functions its build injected, under the MIT",
-      "License, whose text is reproduced in this document: Copyright (c) 2014-present Sebastian",
-      "McKenzie and other contributors (@babel/helpers).",
+      "Compiled into lib/elk-worker.min.js with ELK:",
+      "  Xtext's xbase library (org.eclipse.xtext.xbase.lib 2.28.0), under the EPL-2.0 above:",
+      "    Copyright (c) itemis AG (http://www.itemis.eu) and others. Source Code:",
+      "    https://github.com/eclipse/xtext-lib, tag v2.28.0, and",
+      "    org.eclipse.xtext.xbase.lib-2.28.0-sources.jar at",
+      "    https://repo1.maven.org/maven2/org/eclipse/xtext/org.eclipse.xtext.xbase.lib/2.28.0/.",
+      "  EMF for GWT (com.genmymodel.emf.gwt emf-common and emf-ecore 2.12.4), under the Eclipse",
+      "    Public License 1.0, whose full text follows below: Copyright (c) 2002-2010 IBM Corporation",
+      "    and others. Its Source Code is available under the EPL-1.0 as",
+      "    emf-common-2.12.4-sources.jar and emf-ecore-2.12.4-sources.jar at",
+      "    https://repo1.maven.org/maven2/com/genmymodel/emf/gwt/, and at",
+      "    https://github.com/Axellience/emfgwt.",
+      "  Under the Apache License, Version 2.0, whose full text is reproduced in this document under",
+      "  the Apache-2.0 components:",
+      "    Guava 31.1-jre (com.google.common): Copyright (C) The Guava Authors.",
+      "    GWT 2.10.0's runtime and Java emulation (com.google.gwt, java.lang, java.util): Copyright",
+      "      Google Inc.; its java.math emulation derives from Apache Harmony, licensed to the Apache",
+      "      Software Foundation.",
+      "lib/elk.bundled.js also contains, under the MIT License, whose text is reproduced in this",
+      "document: the helper functions Babel 6 injected (Copyright (c) 2014-2017 Sebastian McKenzie),",
+      "browserify's module prelude (browser-pack, Copyright James Halliday), and its UMD wrapper",
+      "(umd, Copyright Forbes Lindesay).",
     ],
+    // EMF for GWT is EPL-1.0, so its full text is carried after the vendored notes.
+    licenceTexts: ["EPL-1.0.txt"],
     apache: true,
   },
   "katex@0.16.47": {
@@ -361,7 +390,7 @@ const NOT_IN_RUNTIME = {
   "@chevrotain/cst-dts-gen": { "@chevrotain/types": "type declarations" },
   chevrotain: {
     "@chevrotain/types": "type declarations",
-    "@chevrotain/cst-dts-gen": "absent from the parser chunk's esbuild path comments",
+    "@chevrotain/cst-dts-gen": "listed: mermaid 12 bundles it with chevrotain 13",
   },
   langium: { "vscode-languageserver": "absent from the parser chunk's esbuild path comments" },
   "d3-delaunay": { delaunator: "only src/index.js is in the runtime; Delaunay is tree-shaken" },
@@ -769,7 +798,13 @@ export async function render(components, mermaidVersion) {
       unexplained.push(`${labelOf(c)} → ${dep}`);
     }
     const audit = c.version ? PREBUILT_AUDITED[`${c.name}@${c.version}`] : undefined;
-    const vendored = audit?.vendored ? `\n\n${SUB}\n\n${audit.vendored.join("\n")}` : "";
+    const vendored =
+      (audit?.vendored ? `\n\n${SUB}\n\n${audit.vendored.join("\n")}` : "") +
+      (
+        await Promise.all(
+          (audit?.licenceTexts ?? []).map(async (f) => `\n\n${SUB}\n\n${await readData(f)}`),
+        )
+      ).join("");
     const extra = c.notice ? `\n\n${c.notice}` : "";
     const body = note + licenceText(labelOf(c), found) + extra + vendored;
     let license = licenseOf(found.pkg);

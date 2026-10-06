@@ -558,14 +558,14 @@ numbering:
 
 #### `client` と `pre-render` の比較
 
-同じ mermaid エンジンで描画するため、図の形・レイアウトは基本的に一致する。ただし次の違いがある。
+同じ mermaid エンジンで描画するため、図の形・レイアウトは基本的に一致する。client mode には、mermaid 12 を実行できるブラウザが要る。mermaid 12 は `Object.groupBy` などの ES2024 の機能を使うので、Chrome と Edge は 117、Firefox は 119、Safari は 17.4 以降である。それより古いブラウザでは図が描画されない。ただし次の違いがある。
 
 | 観点                    | `client`（cdn / inline）                 | `pre-render`                                   |
 | ----------------------- | ---------------------------------------- | ---------------------------------------------- |
 | 自己完結                | cdn = 要ネット / inline = 自己完結       | 自己完結（SVG を埋め込み）                      |
 | JavaScript              | 必要                                     | 不要                                           |
 | 追加サイズ              | cdn ≈ 0 / inline ≈ 1.6MB(gzip) 固定      | 図の数に比例（1 図あたり数 KB）                |
-| ダーク配色              | 追従しない（mermaid 既定テーマで固定）   | `html.colorScheme` で固定（`dark`→dark / 他→light） |
+| ダーク配色              | 追従しない（mermaid 既定テーマで固定）   | `html.colorScheme` で固定（`dark`→`redux-dark-color` / 他→mermaid の既定） |
 | フォント                | 読者のブラウザ・フォントで描画           | **ビルド環境のフォントで計測・焼き込み**       |
 | 対話機能（`click` 等）  | 有効                                     | 無効（静的 SVG）                               |
 | 印刷・未訪問ページの図  | 崩れる場合がある                         | 常に表示される                                 |

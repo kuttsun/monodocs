@@ -61,7 +61,10 @@ describe("the Mermaid runtime notices", () => {
     const notices = await loadMermaidNotices();
     // ELK, EPL-2.0, with where its corresponding source is (roadmap 21.3).
     expect(notices).toMatch(/^elkjs@0\.9\.3 {2}— {2}EPL-2\.0$/m);
-    expect(notices).toContain("commit 62d5909f96fad541bc101ad52dabaece6b7eab7e");
+    expect(notices).toContain("9bc93474e1dc649450e8c97abb45d16b7c88e35b");
+    expect(notices).toContain("Copyright (c) 2017, 2021 Kiel University and others.");
+    // EMF for GWT, compiled into ELK's worker, is EPL-1.0, and its text is carried in full.
+    expect(notices).toContain("Eclipse Public License - v 1.0");
     expect(notices).toMatch(/^web-worker@1\.3\.0 \(bundled inside elkjs@0\.9\.3\)/m);
     // The vulnerable lodash-es mermaid 12.0.0 carried is gone (chevrotain 13 dropped it).
     expect(notices).not.toMatch(/^lodash-es@4\.17\./m);

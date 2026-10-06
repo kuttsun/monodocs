@@ -2073,20 +2073,24 @@ Chromium が要り、スタンドアロンバイナリからは動かない。�
   chevrotain 11 とともに無くなった。ソースマップのファイル一覧ではなく生成された `mermaid.min.js` に対して
   読むと、`_.template`（`templateSettings` も `sourceURL` も無い）も `_.unset` / `_.omit`（`baseUnset` も
   `customOmitClone` も無い）も tree-shaking を生き残っていない。cytoscape が取り込む `lodash@4.17.21` の
-  コードは `debounce`、`memoize` とその補助である。`pnpm audit` は `lodash-es` の override 無しで通るので、
-  override は加えない。
+  コードは `debounce`、`memoize` とその補助である。関数名は minify で残らないので、根拠は、template・unset・
+  omit のモジュールを挙げないモジュール一覧とパーサーのチャンクのパスコメント、そして `_.template` の文字列
+  リテラルが無いことである。`pnpm audit` は `lodash-es` の override 無しで通るので、override は加えない。
 - サイズ：inline ランタイムは無圧縮で 5.49 MB、gzip で 1.57 MB（3.57 MB と約 975 KB から）、CLI バンドルは
-  17.7 MiB から 19.7 MiB になる。ランタイムの表記は、図を含む HTML に無圧縮で 137 KB、gzip で 22 KB を
-  加え、その大半は EPL-2.0 の本文である。
+  17.7 MiB から 19.7 MiB になる。ランタイムの表記は、図を含む HTML に無圧縮で 150 KB、gzip で 24 KB を
+  加え、その大半は EPL-2.0 と EPL-1.0 の本文である。
 - ELK：`elkjs@0.9.3`。その `elk.bundled.js` は、elkjs の API、`web-worker` のブラウザ向け入口
-  （Apache-2.0）、`elk-worker.min.js` を browserify でまとめたもので、後者は ELK を、EMF と Xtext の xbase
-  ライブラリ（EPL-2.0）、Guava、GWT のランタイムと Java エミュレーション（Apache-2.0）とともに GWT で
-  コンパイルしたものである。対応するソースは、ELK のタグ v0.9.1（コミット
-  `62d5909f96fad541bc101ad52dabaece6b7eab7e`）を、elkjs のタグ 0.9.3（コミット
-  `a8304cf79fde75bc2ab1a89d28320f53f8637436`）で GWT 2.10.0、EMF GWT 2.12.4、Guava 31.1-jre、Xtext 2.28.0
-  とともにビルドしたもので、どちらのタグも公開されている。バンドルは ELK のコミットを記録していない。
-  v0.9.1 は、ELK の対応するリリースタグに対してビルドするという elkjs のリリース手順が、2024-04-16 に
-  タグ付けされた 0.9.3 に対して与えるものである。表記はこれをすべて書いている。
+  （Apache-2.0）、`elk-worker.min.js` を browserify でまとめたもので、後者は ELK を、Xtext の xbase ライブラリ
+  （EPL-2.0）、EMF for GWT（EPL-1.0）、Guava、GWT のランタイムと Java エミュレーション（Apache-2.0）とともに
+  GWT でコンパイルしたものである。対応するソースは、ELK の master のコミット
+  `9bc93474e1dc649450e8c97abb45d16b7c88e35b`（2024-04-15）を、elkjs のタグ 0.9.3（コミット
+  `a8304cf79fde75bc2ab1a89d28320f53f8637436`）で GWT 2.10.0、EMF for GWT 2.12.4、Guava 31.1-jre、Xtext 2.28.0、
+  ELK のメタコンパイラ 0.10.0-SNAPSHOT とともにビルドしたものである。バンドルは ELK のコミットを記録して
+  いない。リリース v0.9.1 ではない。ワーカーは master が `7ca51784`（2024-04-09）で取り込んだ変更を含み、
+  それはそれ以前のどのリリースにも無い。そこから elkjs 0.9.3 のタグ付け前の最後のコミット `9bc93474` まで
+  の変更はメタコンパイラだけで、コンパイルされない。EMF for GWT のソースは Maven Central の sources jar と
+  github.com/Axellience/emfgwt で、Xtext のソースは github.com/eclipse/xtext-lib で公開されている。表記は
+  これらをすべて書き、minify でランタイムから落ちる ELK 自身の著作権表示と、EPL-1.0 の全文も持つ。
 - CDN ランタイムは、`inline` と `pre-render` が埋め込むのと同じ `mermaid@12.1.0` を読み込む。
 
 **ライセンスを示していない出典のコード（v0.15）。** 表記を生成するにあたってランタイムを構成するソースをすべて

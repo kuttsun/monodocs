@@ -43,6 +43,6 @@ monodocs serve ./docs
 MIT
 
 同梱する第三者のライセンス表記は `THIRD-PARTY-NOTICES.txt` にあります。monodocs が埋め込む Mermaid
-ランタイムは `elkjs`（EPL-2.0）を含みます。inline ランタイムでビルドした HTML はそれを表記とともに
+ランタイムは `elkjs`（EPL-2.0。EMF の一部は EPL-1.0）を含みます。inline ランタイムでビルドした HTML はそれを表記とともに
 埋め込みますが、文書の内容は影響を受けません。詳しくは https://kuttsun.github.io/monodocs/ja/docs/license
 を参照してください。
