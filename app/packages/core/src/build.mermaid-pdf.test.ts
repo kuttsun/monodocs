@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildSite } from "./build";
 import { pageText } from "./pdfText.testutil";
+import { createPuppeteerPdfGenerator } from "./pipeline/renderPdf";
 import { renderHelper } from "./themes/mermaid";
 
 /**
@@ -50,6 +51,34 @@ describe.skipIf(!chromium)("diagrams in a PDF (real Chromium)", () => {
       expect(text).toContain(label);
     }
   }, 120_000);
+});
+
+describe.skipIf(!chromium)("the PDF's wait for client-mode diagrams (real Chromium)", () => {
+  it("prints only after the render promise settles, whatever the DOM says before", async () => {
+    // A stand-in runtime that marks the diagram processed and gives it an empty <svg> at once, as
+    // mermaid does, and draws its label only 1.5 s later. Waiting on the DOM prints too early.
+    const html =
+      '<html><body><main id="content"><article class="page" data-route="/">' +
+      '<div class="mermaid">graph TD</div></article></main><script>' +
+      "window.__sdRenderMermaid=function(){" +
+      "var el=document.querySelector('.mermaid');el.setAttribute('data-processed','true');" +
+      "el.innerHTML='<svg></svg>';" +
+      "return new Promise(function(r){setTimeout(function(){" +
+      "el.innerHTML='<svg width=\\'300\\' height=\\'40\\'><text x=\\'0\\' y=\\'20\\'>QZXJLATE</text></svg>';" +
+      "r();},1500);});};</script></body></html>";
+    const generator = createPuppeteerPdfGenerator();
+    try {
+      const bytes = await generator.render(html, {
+        pageSize: "A4",
+        margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
+        printBackground: true,
+        waitForMermaid: true,
+      });
+      expect(await pageText(bytes, 0)).toContain("QZXJLATE");
+    } finally {
+      await generator.close();
+    }
+  }, 60_000);
 });
 
 describe("__sdRenderMermaid", () => {

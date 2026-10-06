@@ -32,11 +32,18 @@ SOFTWARE.
 
 ## 第三者ライセンス
 
-monodocs 自体は MIT です。依存は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 /
-Apache-1.1 など）ですが、monodocs が埋め込む Mermaid ランタイムの中に例外があります。
-Eclipse Layout Kernel（`elkjs`）は弱いコピーレフトの **Eclipse Public License 2.0**
-（EPL-2.0）で、その中には **Eclipse Public License 1.0** の EMF の一部もコンパイルされて
-います。
+monodocs 自体は MIT です。依存の大半は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 /
+Apache-1.1 など）です。monodocs が埋め込む Mermaid ランタイムは、ほかの条件のコードも
+含みます。
+
+- Eclipse Layout Kernel（`elkjs`）。弱いコピーレフトの **Eclipse Public License 2.0**
+  （EPL-2.0）で、その中には **Eclipse Public License 1.0** の EMF の一部もコンパイルされて
+  います。
+- Stack Overflow の回答から改変した少数の断片。投稿日に応じて **CC BY-SA** 2.5 または
+  3.0 で、継承条件のあるライセンスです。
+- ライセンスを示していない出典から来た少数のコード。
+
+表記は、それぞれの出典、著作者、条件を挙げています。
 
 - **文書に届くもの。** inline の Mermaid ランタイム（`mermaid.runtime: inline`、既定）で
   図を含む文書をビルドした HTML は、ELK を含むそのランタイムを、第三者表記とともに
@@ -45,8 +52,6 @@ Eclipse Layout Kernel（`elkjs`）は弱いコピーレフトの **Eclipse Publi
   図を含まない文書では、出力に ELK は入りません。
 - `dompurify` は `MPL-2.0 OR Apache-2.0` のデュアルライセンスで、monodocs は
   **Apache-2.0** を選択しています。
-- Mermaid ランタイムの中のいくつかのコードは、ライセンスを示していない出典から来て
-  います。表記はその出典と著作者を挙げています。
 
 単一ファイル配布物（`monodocs.cjs` および単体バイナリ）は依存を埋め込むため、
 ビルドごとに出力の隣へ `THIRD-PARTY-NOTICES.txt` を生成します。埋め込んだ各
