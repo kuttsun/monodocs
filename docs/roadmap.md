@@ -465,9 +465,12 @@ from its TeX as interpreted, so that what a reader copies and what search finds 
 are the same text.
 
 - **Where the source lives.** Each rendered formula carries two things in the HTML, on the element that
-  wraps its MathML: its source exactly as written, delimiters included, which copying uses, and its TeX
-  as interpreted — character references decoded, as GitHub does in `$...$` and `$$...$$` — which
-  rendering, search, and the lists of headings use. The two differ where the source had a reference:
+  wraps its MathML: its source exactly as written, delimiters and line endings included, less what
+  Markdown itself removes from the start of a continuation line (a quote's `>`, a list's indentation, a
+  paragraph's own leading spaces), which copying uses, and its TeX as interpreted — backslash escapes
+  and character references resolved, as GitHub does in `$...$` and `$$...$$`, line endings as LF —
+  which rendering, search, and the lists of headings use. The two differ where the source had an
+  escape or a reference:
   `$&alpha;$` is copied as written and indexed as `α`. For Markdown the source is the text the formula
   was written as (`$...$`, ``$`...`$``, `$$...$$`, or a fenced block). For AsciiDoc, monodocs replaces
   the converter's output for a formula inside Asciidoctor's conversion with a marker element whose text

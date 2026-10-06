@@ -49,7 +49,11 @@ export interface InlineMath extends Literal {
 }
 
 interface InlineMathData extends Data {
-  /** The formula as written, delimiters included, without the prefixes of a quote or list. */
+  /**
+   * The formula as written, delimiters and line endings included, without what Markdown removes from
+   * the start of a continuation line: a quote's `>`, a list's indentation, a paragraph's own leading
+   * spaces.
+   */
   source: string;
   /** `$$...$$` in a paragraph read as display math. */
   display: boolean;
@@ -81,13 +85,14 @@ declare module "mdast" {
 }
 
 /**
- * remark plugin: finds the formulas and replaces them with `inlineMath` and `math` nodes. Use it after
- * remark-parse.
+ * remark plugin: finds the formulas and replaces them with `inlineMath` and `math` nodes.
  *
  * The formulas are found while mdast is built, as its first transform, before GFM's autolink literals
  * split text nodes into nodes without a position; every text is then still where it was written,
  * which is how a `\$` is told from a `$`. GitHub, too, reads a formula in text an autolink literal
- * could otherwise have taken (`www.x.com/($x$)`).
+ * could otherwise have taken (`www.x.com/($x$)`). The transform needs the Markdown itself, which it
+ * takes from the processor's parser: whichever parser is set, before or after this plugin is used, is
+ * wrapped so that the document it is given is at hand while mdast is built.
  */
 export function remarkMath(this: Processor) {
   const state: { raw?: string } = {};
@@ -103,34 +108,38 @@ export function remarkMath(this: Processor) {
     },
     transforms: [
       (tree) => {
-        if (state.raw !== undefined) findMath(tree as Root, state.raw);
+        const root = tree as Root;
+        if (state.raw !== undefined) findMath(root, state.raw);
+        else forgetEscapes(root);
       },
     ],
   };
   // A copy of the processor copies this extension along with the one its own attacher adds; the
-  // copied one is inert, since its `state.raw` is set only by the parser it wrapped.
+  // copied one only forgets the escapes it recorded, since its `state.raw` is never set.
   (this.data().fromMarkdownExtensions ??= []).unshift(extension);
 
-  const parse = this.parser;
-  if (parse) {
-    this.parser = (doc, file) => {
+  type Parser = NonNullable<Processor["parser"]>;
+  const wrap = (parse: Parser | undefined): Parser | undefined =>
+    parse &&
+    ((doc, file) => {
       const previous = state.raw;
-      state.raw = doc;
+      // micromark counts offsets after a byte order mark.
+      state.raw = doc.startsWith("\uFEFF") ? doc.slice(1) : doc;
       try {
         return parse(doc, file);
       } finally {
         state.raw = previous;
       }
-    };
-    return;
-  }
-  // Used before remark-parse: there is no parser to read the document from, so the formulas are found
-  // after mdast is built. A text an autolink literal split off then cannot be lined up with the
-  // Markdown, and every `$` in it is read as escaped if the document has a `\$` anywhere. A tree
-  // that is parsed but never run keeps the recorded escapes in `root.data.mathEscapes`.
-  return (tree: Root, file: { value: unknown }) => {
-    findMath(tree, String(file.value));
-  };
+    });
+  let parser = wrap(this.parser);
+  Object.defineProperty(this, "parser", {
+    configurable: true,
+    enumerable: true,
+    get: () => parser,
+    set: (next: Parser | undefined) => {
+      parser = wrap(next);
+    },
+  });
 }
 
 // --- The tree -----------------------------------------------------------------------------------
@@ -141,11 +150,14 @@ const RAW_SKIPPING = new Set(["em", "b", "a", "code"]);
 /** Find the formulas in a tree parsed with the plugin's extension, from the Markdown it was parsed from. */
 export function findMath(tree: Root, raw: string): void {
   const escapes = new Set(tree.data?.mathEscapes);
-  if (tree.data?.mathEscapes) {
-    delete tree.data.mathEscapes;
-    if (Object.keys(tree.data).length === 0) delete tree.data;
-  }
+  forgetEscapes(tree);
   walkBlocks(tree, new Doc(raw, escapes), false);
+}
+
+function forgetEscapes(tree: Root): void {
+  if (!tree.data?.mathEscapes) return;
+  delete tree.data.mathEscapes;
+  if (Object.keys(tree.data).length === 0) delete tree.data;
 }
 
 function walkBlocks(parent: Parent, doc: Doc, inListItem: boolean): void {
@@ -179,17 +191,30 @@ function blockMath(node: Code, doc: Doc): BlockMath {
   const value = lf(node.value);
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
-  let source = "```math\n" + value + "\n```";
-  if (start !== undefined && end !== undefined) {
-    const lines = doc.raw.slice(start, end).split(/\r\n|\r|\n/);
-    const open = lines[0]!.replace(/^[ \t>]*/, "").trimEnd();
-    const fence = /^(`{3,}|~{3,})/.exec(open)![1]!;
-    const last = lines.length > 1 ? lines[lines.length - 1]!.replace(/^[ \t>]*/, "").trimEnd() : "";
-    // The last line closes the block only if it is a fence of the same character, at least as long.
-    const closes = last.length >= fence.length && last === fence[0]!.repeat(last.length);
-    source = open + "\n" + value + (closes ? "\n" + last : "");
-  }
+  const source =
+    start !== undefined && end !== undefined
+      ? withoutPrefixes(doc.raw, start, end)
+      : "```math\n" + value + "\n```";
   return { type: "math", value, data: { source }, position: node.position };
+}
+
+/**
+ * The Markdown from `start` to `end` without the prefixes a quote or list puts on the lines after the
+ * first: on each, as many spaces, tabs, and `>` as the first line has before its content, and no more,
+ * so that indentation inside the block stays as written.
+ */
+function withoutPrefixes(raw: string, start: number, end: number): string {
+  const lineStart =
+    Math.max(raw.lastIndexOf("\n", start - 1), raw.lastIndexOf("\r", start - 1)) + 1;
+  let content = start;
+  while (content < end && /[ \t>]/.test(raw[content]!)) content++;
+  const width = content - lineStart;
+  return raw
+    .slice(content, end)
+    .replace(
+      /(\r\n|\r|\n)([ \t>]*)/g,
+      (_, ending: string, prefix: string) => ending + prefix.slice(Math.min(width, prefix.length)),
+    );
 }
 
 function displayCandidate(children: PhrasingContent[]): boolean {
@@ -200,7 +225,7 @@ function isComment(node: Nodes): boolean {
   return node.type === "html" && node.value.startsWith("<!--");
 }
 
-/** Line endings as `\n`, so that a formula reads the same whatever the file's line endings. */
+/** Line endings as `\n`, so that a formula's TeX is the same whatever the file's line endings. */
 function lf(s: string): string {
   return s.replace(/\r\n?/g, "\n");
 }
@@ -331,7 +356,7 @@ function codeSpanMath(before: Text, code: InlineCode, after: Text, doc: Doc): In
   const codeEnd = code.position?.end.offset;
   const source =
     open !== undefined && close !== undefined && codeStart !== undefined && codeEnd !== undefined
-      ? open + doc.raw.slice(codeStart, codeEnd).replace(/(?:\r\n|\r|\n)[ \t>]*/g, "\n") + close
+      ? open + doc.raw.slice(codeStart, codeEnd).replace(/(\r\n|\r|\n)[ \t>]*/g, "$1") + close
       : "$`" + code.value + "`$";
   const start = doc.offsetIn(before, before.value.length - 1);
   const end = doc.offsetIn(after, 1);
@@ -503,11 +528,11 @@ function toMath(run: Run, f: Found, doc: Doc): InlineMath {
   let source: string | undefined = "";
   let k = f.from;
   while (k <= f.to && source !== undefined) {
-    for (const c of run.comments) if (c.at === k && k > f.from) source += lf(c.node.value);
+    for (const c of run.comments) if (c.at === k && k > f.from) source += c.node.value;
     const u = units[k]!;
     if (u.node.type === "break") {
       const p = u.node.position;
-      source = p ? source + lf(doc.raw.slice(p.start.offset, p.end.offset)) : undefined;
+      source = p ? source + doc.raw.slice(p.start.offset, p.end.offset) : undefined;
       k++;
       continue;
     }
@@ -575,10 +600,24 @@ class Doc {
   isEscaped(node: Text, index: number): boolean {
     const offset = this.offsetIn(node, index);
     if (offset !== undefined) return this.escapes.has(offset);
-    // Not lined up with the Markdown: fail safe. Any `\$` where the text may have come from makes
-    // every `$` in it a non-delimiter, since a `\$` read as a delimiter would change the document.
+    // Not lined up with the Markdown. Every `$` of the value was written as `$`, as `\$`, or as a
+    // character reference; if the Markdown holds as many of these as the value has dollar signs, the
+    // n-th is the n-th. Otherwise fail safe: a `\$` anywhere the text may have come from makes every
+    // `$` in it a non-delimiter, since a `\$` read as a delimiter would change the document.
     const range = this.rangeOf(node);
     if (!range) return this.escapes.size > 0;
+    const written = dollarsWritten(this.raw.slice(range[0], range[1]));
+    const head = this.heads.get(node) ?? 0;
+    const full = node.value;
+    let nth = 0;
+    let count = 0;
+    for (let i = 0; i < full.length + head; i++) {
+      const c = i < head ? "$" : full[i - head];
+      if (c !== "$") continue;
+      if (i < index + head) nth++;
+      count++;
+    }
+    if (written.length === count) return written[nth]!;
     for (const e of this.escapes) if (e >= range[0] && e < range[1]) return true;
     return false;
   }
@@ -603,7 +642,7 @@ class Doc {
         at = b;
       }
     }
-    return lf(out + this.raw.slice(at, end));
+    return out + this.raw.slice(at, end);
   }
 
   offsetOf(unit: Unit): number | undefined {
@@ -637,6 +676,27 @@ class Doc {
     }
     return alignment;
   }
+}
+
+/** For each dollar sign the Markdown produces, in order, whether it was written `\$`. */
+function dollarsWritten(written: string): boolean[] {
+  const out: boolean[] = [];
+  for (let j = 0; j < written.length; j++) {
+    if (written[j] === "\\" && ASCII_PUNCTUATION.test(written[j + 1] ?? "")) {
+      if (written[j + 1] === "$") out.push(true);
+      j++;
+    } else if (written[j] === "&") {
+      const m = REFERENCE.exec(written.slice(j, j + 40));
+      const decoded = m ? decodeReference(m) : false;
+      if (m && decoded) {
+        for (const ch of decoded) if (ch === "$") out.push(false);
+        j += m[0].length - 1;
+      }
+    } else if (written[j] === "$") {
+      out.push(false);
+    }
+  }
+  return out;
 }
 
 function lineStartsOf(raw: string): number[] {
@@ -731,7 +791,8 @@ export function align(value: string, written: string, base: number): Alignment |
           continue;
         }
       }
-      if (written[j] === c) {
+      // micromark reads U+0000 as U+FFFD.
+      if (written[j] === c || (written[j] === "\0" && c === "\uFFFD")) {
         map.push(base + j);
         i++;
         j++;

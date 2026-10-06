@@ -229,7 +229,7 @@ describe("a formula's source", () => {
     const wrong: string[] = [];
     for (const c of CAPTURED) {
       for (const f of formulasWithSource(c.input)) {
-        const at = f.at?.replace(/(?:\r\n|\r|\n)[ \t>]*/g, "\n");
+        const at = f.at?.replace(/(\r\n|\r|\n)[ \t>]*/g, "$1");
         if (f.source !== at) wrong.push(`${JSON.stringify(c.input)}: ${JSON.stringify(f)}`);
       }
     }
@@ -262,7 +262,7 @@ describe("a formula's source", () => {
 
   it("keeps a comment inside a formula as mdast holds it", () => {
     expect(sources("$$x <!--\n  c --> y$$")).toEqual(["$$x <!--\nc --> y$$"]);
-    expect(sources("$x <!--\r\nc --> y$ b")).toEqual(["$x <!--\nc --> y$"]);
+    expect(sources("$x <!--\r\nc --> y$ b")).toEqual(["$x <!--\r\nc --> y$"]);
   });
 
   it("keeps a fence that runs to the end of the document as it is", () => {
@@ -271,15 +271,31 @@ describe("a formula's source", () => {
     expect(sources("~~~math\na\n```")).toEqual(["~~~math\na\n```"]);
   });
 
-  it("reads CRLF line endings as LF, in the TeX and in the source", () => {
+  it("takes a fence from the Markdown, not from its content", () => {
+    expect(sources("```math\n```")).toEqual(["```math\n```"]);
+    expect(sources("```math  \nx\n```  ")).toEqual(["```math  \nx\n```  "]);
+    // Indentation inside the block, beyond the list's, is the author's and stays.
+    expect(sources("- x\n\n  ```math\n    a\n  ```")).toEqual(["```math\n  a\n```"]);
+  });
+
+  it("drops a paragraph's own leading spaces on a continuation line, as Markdown does", () => {
+    expect(sources("$`a\n  b`$")).toEqual(["$`a\nb`$"]);
+  });
+
+  it("counts positions after a byte order mark, as remark does", () => {
+    expect(sources("\uFEFF```math\nx\n```")).toEqual(["```math\nx\n```"]);
+    expect(sources("\uFEFFa $x$ \\$5")).toEqual(["$x$"]);
+  });
+
+  it("reads CRLF line endings as LF in the TeX and keeps them in the source", () => {
     const tree = parse("$$a\r\nb$$\r\n\r\n```math\r\nc\r\nd\r\n```\r\n");
     expect(formulasOf(tree)).toEqual([
       { display: true, tex: "a\nb" },
       { display: true, tex: "c\nd" },
     ]);
     expect(sources("$$a\r\nb$$\r\n\r\n```math\r\nc\r\nd\r\n```\r\n")).toEqual([
-      "$$a\nb$$",
-      "```math\nc\nd\n```",
+      "$$a\r\nb$$",
+      "```math\r\nc\r\nd\r\n```",
     ]);
   });
 });
@@ -345,15 +361,36 @@ describe("one processor", () => {
 });
 
 describe("the plugin used before remark-parse", () => {
-  it("still finds the formulas, after mdast is built", () => {
-    const processor = unified().use(remarkMath).use(remarkParse).use(remarkGfm);
-    const input = "Let $x$ be \\$5 and $$y$$.";
-    expect(formulasOf(processor.runSync(processor.parse(input), input) as Root)).toEqual([
+  const processor = unified().use(remarkMath).use(remarkParse).use(remarkGfm);
+  const read = (input: string) => processor.runSync(processor.parse(input), input) as Root;
+
+  it("works as it does after it", () => {
+    expect(formulasOf(read("Let $x$ be \\$5 and $$y$$."))).toEqual([
       { display: false, tex: "x" },
       { display: false, tex: "y" },
     ]);
+    expect(formulasWithSourceIn(read("x<br>www.x.com a $x$ b\n\n\\$5"))).toEqual(["$x$"]);
+    expect(formulasOf(read("x<br>www.x.com a \\$x$ b"))).toEqual([]);
+  });
+
+  it("leaves nothing on a tree that is only parsed", () => {
+    expect(processor.parse("\\$5").data).toBeUndefined();
+  });
+
+  it("finds a NUL-bearing formula without losing it to a `\\$` nearby", () => {
+    expect(formulasOf(read("$x\u0000$ \\$5"))).toEqual([{ display: false, tex: "x\uFFFD" }]);
   });
 });
+
+function formulasWithSourceIn(tree: Root): string[] {
+  const out: string[] = [];
+  const walk = (node: Nodes) => {
+    if (node.type === "inlineMath" || node.type === "math") out.push(node.data.source);
+    else if ("children" in node) node.children.forEach((c) => walk(c as Nodes));
+  };
+  walk(tree);
+  return out;
+}
 
 describe("a document without formulas", () => {
   const plain = unified().use(remarkParse).use(remarkGfm);
