@@ -229,7 +229,8 @@ const ENCLOSURES: Record<string, { border?: string[]; radius?: boolean; strike?:
 /**
  * `menclose` is not in MathML Core, so Chromium draws its content and nothing around it: `\cancel`
  * would show the term it cancels, and `\boxed` no box. Each one becomes an `mrow` drawing its
- * notations with an inline style, as KaTeX itself does for `\fcolorbox`. A notation CSS cannot draw
+ * notations with an inline style, as KaTeX itself does for `\fcolorbox`: borders around the term,
+ * strikes on an element laid over it. A notation CSS cannot draw
  * this way (`phasorangle`, `circle`, `longdiv`, and the rest) is returned to be reported.
  */
 function drawEnclosures(math: Element): string[] {
@@ -256,12 +257,27 @@ function drawEnclosures(math: Element): string[] {
       ...[...borders].map((side) => `border-${side}: ${LINE} solid`),
       borders.size > 0 ? "padding: 0.15em" : "",
       radius ? "border-radius: 0.3em" : "",
-      strikes.length > 0 ? `background-image: ${strikes.join(", ")}` : "",
+      strikes.length > 0 ? "position: relative" : "",
       typeof node.properties.style === "string" ? node.properties.style : "",
     ].filter(Boolean);
     node.tagName = "mrow";
     delete node.properties.notation;
     if (style.length > 0) node.properties.style = style.join("; ");
+    if (strikes.length > 0) {
+      // The strikes are drawn over the term, by an empty element laid over it, so that a background
+      // in the term (`\colorbox`) cannot hide them; and they are printed even with
+      // `pdf.printBackground` off, since a cancelled term that prints uncancelled changes the formula.
+      node.children.push({
+        type: "element",
+        tagName: "mrow",
+        properties: {
+          style:
+            `position: absolute; inset: 0; background-image: ${strikes.join(", ")}; ` +
+            "print-color-adjust: exact; -webkit-print-color-adjust: exact",
+        },
+        children: [],
+      });
+    }
   });
   return [...unsupported];
 }

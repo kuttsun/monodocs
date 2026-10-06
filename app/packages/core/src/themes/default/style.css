@@ -719,6 +719,13 @@ body.content-wide #content {
   overflow-y: hidden;
 }
 
+/* What a formula draws as a background — `\rule`, `\colorbox` — is part of what it says, so it is
+   printed even with pdf.printBackground off. */
+#content math {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
 #content th,
 #content td {
   border: 1px solid var(--color-border);
@@ -1306,6 +1313,10 @@ body.content-wide #content {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     overflow-x: visible;
+  }
+  /* A formula cannot wrap; on paper it is shown at its full width rather than cut at a scroll. */
+  #content .math-display {
+    overflow: visible;
   }
   /* 画面では `display: block` + 横スクロールで表を見せているが、印刷では
      切り捨てになるうえ thead の繰り返しも効かない。表として組み直す。 */

@@ -552,12 +552,15 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
 - **Enclosures.** KaTeX writes `\cancel`, `\bcancel`, `\xcancel`, `\sout`, `\boxed`, `\fbox`, and
   `\angl` as `menclose`, which MathML Core does not have, so Chromium would draw the term and nothing
   around it — a cancelled term reading as if it stood. Each becomes an `mrow` that draws its notation with
-  an inline style, as KaTeX itself does for `\fcolorbox`: borders for a box and its sides, a linear
-  gradient for a strike. A strike is a background, so it is printed only with `pdf.printBackground` on,
-  the default. A notation CSS cannot draw this way (`phasorangle` from `\phase`, and the others MathML
+  an inline style, as KaTeX itself does for `\fcolorbox`: borders for a box and its sides, and for a
+  strike a linear gradient on an empty element laid over the term, so that a background in the term
+  (`\colorbox`) cannot hide it. The strike, and anything a formula draws as a background (`\rule`,
+  `\colorbox`), is printed even with `pdf.printBackground` off (`print-color-adjust: exact`), since a
+  cancelled term printed uncancelled changes the formula. A notation CSS cannot draw this way (`phasorangle` from `\phase`, and the others MathML
   defines) is reported as `math/notation-unsupported`, and the term is shown without it.
 - **Width.** A display formula wider than the column scrolls sideways, as a code block does, rather
-  than being cut off. A formula cannot wrap, so in print it is as wide as it is.
+  than being cut off. On paper there is no scroll: a formula cannot wrap, so it is printed at its full
+  width, and one wider than the page is cut at the page's edge.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
   line break before or after it is not between two East Asian characters and stays a space, as at
   any other element that is not text.
