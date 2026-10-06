@@ -87,8 +87,9 @@ export function createAsciidocRenderer(
   const attributes =
     lineBreak === "break" ? { "hardbreaks-option": "@", ...configured } : configured;
   // ルートを知らされていない呼び出し（core を直接使う場合）は境界を張らない。判定の基準が無い。
+  const htmlsyntax = attributes.htmlsyntax?.replace(/@$/, "");
   const mathFor = () =>
-    (options.math ?? true) ? createMathConverter() : Promise.resolve(undefined);
+    (options.math ?? true) ? createMathConverter({ htmlsyntax }) : Promise.resolve(undefined);
   const boundaryFor = (source: SourceFile) =>
     rootDir === undefined ? undefined : createIncludeBoundary(rootDir, source.relativePath);
 

@@ -602,8 +602,12 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   make the section's ID, gets the marker too. The hook is not in Asciidoctor's public API; the tests
   of heading IDs and heading text fail if it stops being honoured. A marker carries only a key, new for
   each conversion; the formula it stands for is kept by the converter, so raw HTML from a passthrough
-  can neither pass for a formula nor change what one is. A block's content is decoded whatever its
-  substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is
+  can neither pass for a formula nor change what one is. A marker's content is what Asciidoctor converted the
+  formula's text to, exactly, so the section ID made from it is unchanged even under the formula's own
+  substitutions (`latexmath:a[&#945;]`); the TeX for rendering is kept apart. The wrapped converter is
+  made with the `htmlsyntax` the configuration sets, as Asciidoctor makes its own. Character references
+  are decoded once, by HTML's rules (an invalid one becomes U+FFFD). A block's content is decoded
+  whatever its substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is
   taken as the delimiters Asciidoctor would otherwise have added. The title monodocs reads (`doc.getDocumentTitle()`) shows a formula as `$TeX$`.
   asciimath is reported as `math/asciimath-not-rendered`, naming the file and the formula. A
   diagnostic for an AsciiDoc formula names the file without a line: the HTML Asciidoctor writes

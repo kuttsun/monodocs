@@ -183,6 +183,33 @@ describe("AsciiDoc math", () => {
     expect(found!.message).toContain("\\[a\\] + \\[b\\]");
   });
 
+  it("keeps a document's htmlsyntax, with or without formulas", async () => {
+    const adoc = '= T\n\nifeval::["{htmlsyntax}" == "xml"]\nXML content\nendif::[]\n';
+    const config = "sources:\n  asciidoc:\n    attributes:\n      htmlsyntax: xml\n";
+    const on = await build(adoc, config);
+    expect(on.html).toContain("XML content");
+  });
+
+  it("decodes character references once, as HTML does, and never fails the build on one", async () => {
+    const { html, result } = await build(
+      "= T\n\n[latexmath,subs=none]\n++++\n\\text{&#x110000;} &alpha;\n++++\n\n" +
+        "[asciimath,subs=none]\n++++\n&#38;lt; &#x110000;\n++++\n",
+    );
+    expect(attributes(html, "data-math-tex")).toEqual(["\\text{\uFFFD} α"]);
+    const asciimath = result.warnings.find((w) => w.code === "math/asciimath-not-rendered");
+    expect(asciimath!.message).toContain("&lt; \uFFFD");
+  });
+
+  it("keeps the ID of a heading whose formula has its own substitutions", async () => {
+    const adoc = "= T\n\n== Symbol latexmath:a[&#945;]\n\nSee <<_symbol>>.\n";
+    const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(ids(on.html)).toEqual(ids(off.html));
+    // The heading, and the xref's text taken from it.
+    expect(attributes(on.html, "data-math-tex")).toEqual(["α", "α"]);
+  });
+
   it("writes the source of an asciimath block as written", async () => {
     const { result } = await build("= T\n\n[asciimath]\n++++\na < b\n++++\n");
     const found = result.warnings.find((w) => w.code === "math/asciimath-not-rendered");

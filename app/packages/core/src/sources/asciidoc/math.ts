@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ConverterFactory } from "@asciidoctor/core";
+import { decodeNamedCharacterReference } from "decode-named-character-reference";
+import { decodeNumericCharacterReference } from "micromark-util-decode-numeric-character-reference";
 import type { Element, Root as HastRoot } from "hast";
 import { visit } from "unist-util-visit";
 
@@ -50,29 +52,43 @@ interface Converter {
  * A converter for one conversion. Asciidoctor resolves `stem` before converting: `stem:[x]` under
  * `:stem: latexmath` arrives as latexmath, and `[stem,asciimath]` as asciimath.
  */
-export async function createMathConverter(): Promise<AsciidocMath> {
+export async function createMathConverter(
+  options: { htmlsyntax?: string } = {},
+): Promise<AsciidocMath> {
+  // Made as Asciidoctor makes the document's own, which is given the `htmlsyntax` set by the API: a
+  // converter made without it sets the attribute back to `html`, which a document could test.
   const base = (await (
     ConverterFactory as unknown as { create(backend: string, opts: object): Promise<Converter> }
-  ).create("html5", {})) as Converter & object;
+  ).create(
+    "html5",
+    options.htmlsyntax === undefined ? {} : { htmlsyntax: options.htmlsyntax },
+  )) as Converter & object;
   const nonce = randomUUID();
   const asciimath: string[] = [];
   // What each marker stands for, kept here rather than read back from the HTML: a passthrough's
   // unclosed tag can swallow a marker's attributes, but not this.
-  const formulas = new Map<string, { tex: string; source: string; display: boolean }>();
+  const formulas = new Map<
+    string,
+    { tex: string; source: string; display: boolean; shown: string }
+  >();
 
-  const marker = (tex: string, source: string, display: boolean) => {
+  /**
+   * A marker for a formula. Its content is what Asciidoctor converted the formula's text to, exactly,
+   * since Asciidoctor makes a section's ID from that (`latexmath:a[&#945;]` keeps the reference, which
+   * the ID leaves out); what the formula is for rendering is kept apart.
+   */
+  const marker = (tex: string, source: string, display: boolean, converted: string) => {
     const key = `${nonce}-${formulas.size}`;
-    formulas.set(key, { tex, source, display });
+    formulas.set(key, { tex, source, display, shown: decode(converted.replace(/<[^>]*>/g, "")) });
     const tag = display ? "div" : "span";
-    // The text is the TeX as Asciidoctor escapes it, which is what it makes a section's ID from.
-    return `<${tag} data-monodocs-math="${key}">${text(tex)}</${tag}>`;
+    return `<${tag} data-monodocs-math="${key}">${converted}</${tag}>`;
   };
 
   const convert = async (node: MathNode, transform?: string, opts?: unknown): Promise<string> => {
     const name = transform ?? node.getNodeName();
     if (name === "inline_quoted" && node.type === "latexmath") {
       const tex = decode(node.text ?? "");
-      return marker(tex, `latexmath:[${tex.replace(/\]/g, "\\]")}]`, false);
+      return marker(tex, `latexmath:[${tex.replace(/\]/g, "\\]")}]`, false, node.text ?? "");
     }
     if (name === "inline_quoted" && node.type === "asciimath") {
       asciimath.push(`asciimath:[${decode(node.text ?? "")}]`);
@@ -90,7 +106,7 @@ export async function createMathConverter(): Promise<AsciidocMath> {
       const title = node.hasTitle?.() ? `<div class="title">${node.title}</div>\n` : "";
       return (
         `<div${id} class="stemblock${role}">\n${title}` +
-        marker(tex, `[latexmath]\n++++\n${tex}\n++++`, true) +
+        marker(tex, `[latexmath]\n++++\n${tex}\n++++`, true, text(tex)) +
         "\n</div>"
       );
     }
@@ -121,10 +137,7 @@ export async function createMathConverter(): Promise<AsciidocMath> {
         // Only a marker as the converter wrote it: an element whose tag matches and which holds the
         // marker's text alone. One a passthrough's malformed tag swallowed is left as it is.
         const tag = formula?.display ? "div" : "span";
-        const holdsText =
-          node.children.length === 1 &&
-          node.children[0]!.type === "text" &&
-          node.children[0]!.value === formula?.tex;
+        const holdsText = formula !== undefined && textOf(node) === formula.shown;
         if (!formula || node.tagName !== tag || !holdsText) return;
         // A marker can appear more than once (a section title repeated in a TOC); each is made the same.
         node.tagName = formula.display ? "div" : "span";
@@ -159,14 +172,25 @@ function attribute(value: string): string {
   return text(value).replace(/"/g, "&quot;");
 }
 
-/** The character references Asciidoctor writes, decoded: what a formula's TeX is. */
+function textOf(node: Element): string {
+  return node.children
+    .map((c) => (c.type === "text" ? c.value : c.type === "element" ? textOf(c) : ""))
+    .join("");
+}
+
+/**
+ * Character references decoded once, as an HTML parser decodes them and as the browser did for MathJax
+ * before: numeric ones as CommonMark and HTML read them (out of range or invalid, U+FFFD), named ones
+ * by HTML's list; anything else is left as written.
+ */
 function decode(value: string): string {
-  return value
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
+  return value.replace(
+    /&(?:#[xX]([0-9a-fA-F]{1,6})|#([0-9]{1,7})|([A-Za-z][A-Za-z0-9]{0,31}));/g,
+    (whole, hex: string | undefined, dec: string | undefined, name: string | undefined) => {
+      if (hex !== undefined) return decodeNumericCharacterReference(hex, 16);
+      if (dec !== undefined) return decodeNumericCharacterReference(dec, 10);
+      const named = decodeNamedCharacterReference(name!);
+      return named === false ? whole : named;
+    },
+  );
 }
