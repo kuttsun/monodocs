@@ -344,6 +344,8 @@ Captured on 2026-10-06 (math: what GitHub renders as a formula):
 | a paragraph that is only `$$x$$`; `$$` on lines around `x`; `$$x$$` and `$$y$$` on two lines | display math |
 | `$$x$$` on a line between two lines of text in one paragraph | inline math |
 | `To split <span>$</span>100 in half, we calculate $100/2$` | math: `100/2` |
+| `$a &lt; b$`, `$a &#60; b$`, `$a < b$` | math: `a < b` (references decoded) |
+| `$&alpha;$`, `$&#x3B1;$` | math: `α` |
 | `$x$` in a table cell | inline math |
 | a fenced `math` block | display math |
 
@@ -417,11 +419,13 @@ author wrote it, so that what a reader copies, what search finds, and what a hea
 
 - **Where the source lives.** Each rendered formula carries its source in the HTML, on the element
   that wraps its MathML: the TeX, and for Markdown the form it was written in (`$...$`, ``$`...`$``,
-  `$$...$$`, or a fenced block). AsciiDoc's form is lost by the time monodocs sees the output —
-  `latexmath:[x]` and `stem:[x]` under `:stem: latexmath` both arrive as `\(x\)` — so an AsciiDoc
-  formula is recorded as `latexmath:[...]` inline and a `[latexmath]` block with `++++` delimiters
-  for display, which also keeps a pasted `stem:[...]` from being read as asciimath where `:stem:` is
-  unset.
+  `$$...$$`, or a fenced block). For AsciiDoc, monodocs replaces the converter's output for a formula
+  inside Asciidoctor's conversion with a marker element whose text is the TeX, escaped, and renders
+  the markers afterwards; text an author wrote as `\(x\)` is not a marker and stays text. Asciidoctor
+  has already resolved `stem` by then — `stem:[x]` under `:stem: latexmath` arrives as latexmath — so
+  the form recorded is `latexmath:[...]` inline, with `]` escaped as `\]`, and a `[latexmath]` block
+  with `++++` delimiters for display, which also keeps a pasted formula from being read as asciimath
+  where `:stem:` is unset.
 - **Copying.** On `copy`, when the selection includes a formula, the script writes both formats
   itself, since replacing the plain text discards the browser's own HTML. The plain text has each
   formula replaced by its source in that form; a display formula sits on lines of its own, without the
@@ -433,7 +437,8 @@ author wrote it, so that what a reader copies, what search finds, and what a hea
 - **Search.** A formula is indexed as its TeX without delimiters, with whitespace runs collapsed and a
   display formula separated from the text around it, and a result's snippet shows that TeX. Pasting a
   copied one-line formula, delimiters removed, finds it; a multi-line one does not reliably, because a
-  search box drops the newlines of what is pasted into it. In-page highlighting skips formulas, as it
+  search box drops the newlines of what is pasted into it. A heading in the search data is shown as
+  the lists of headings show it, `$TeX$`. In-page highlighting skips formulas, as it
   skips diagrams, because an HTML `<mark>` cannot sit inside MathML; `math` joins the elements the
   highlighter skips, and a result still opens the section that holds the formula.
 - **Headings and titles shown as text.** Wherever a heading or a page title appears as text — the
@@ -445,17 +450,19 @@ author wrote it, so that what a reader copies, what search finds, and what a hea
   TeX without delimiters, which is the ID it had before math existed, since the slug already drops
   `$`: measured with monodocs' own pipeline on the TeX text, `# Let $x$ be real`, `# Energy
   $E=mc^2$`, and `# Cost $\frac{a}{b}$` get `let-x-be-real`, `energy-emc2`, and `cost-fracab`, as they
-  did before. The replacement has to happen before rehype-slug reads the heading, which would
-  otherwise see MathML tokens and the TeX annotation together. A formula with a character reference is
-  the exception: Markdown decoded `$a &lt; b$` before, and GitHub keeps `&lt;` in that formula as
-  written while it decodes `$&alpha;$` to `α` — both are in the capture — so such an ID can change;
-  formulas follow the capture there. In AsciiDoc, Asciidoctor makes the IDs, from a
-  title in which the formula is `\(TeX\)`; monodocs keeps them as they are, which is why formulas are
-  rendered after Asciidoctor's conversion rather than inside it, where a different title would mean a
-  different ID.
+  did before. Character references in a formula are decoded as Markdown decodes them anywhere — so
+  does GitHub, whose capture shows `$a &lt; b$`, `$a &#60; b$`, and `$a < b$` as the same formula — so
+  they do not change an ID either. The replacement has to happen before rehype-slug reads the heading,
+  which would otherwise see MathML tokens and the TeX annotation together. In AsciiDoc, Asciidoctor
+  makes the IDs; because the marker's text is the TeX, it makes the same ones: measured with a
+  converter that emits the marker, `== Let latexmath:[x] be real`, `== Energy latexmath:[E=mc^2]`, and
+  `== Lt latexmath:[a < b]` keep `_let_x_be_real`, `_energy_emc2`, and `_lt_a_b`, the last only with
+  the marker's text escaped.
 - **Size.** A formula's TeX appears three times — in the MathML's annotation, in the stored source,
-  and in the search data — and the size report counts it where it falls, in the document and the page
-  data.
+  and in the search data — and a formula in a heading once more in each list of headings; the size
+  report counts it where it falls, in the document and the page data.
+- **Accessibility.** The MathML is what assistive technology reads; no `alttext` is added, since TeX
+  read aloud would be worse than the MathML it duplicates.
 
 
 

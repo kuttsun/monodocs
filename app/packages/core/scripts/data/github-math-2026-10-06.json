@@ -1,7 +1,7 @@
 {
   "capturedOn": "2026-10-06",
   "method": "gh api markdown -f mode=gfm -f text=<input> (GitHub's comment rendering; the API's file mode renders no math)",
-  "reading": "A formula is a <math-renderer> element; class js-inline-math is inline and js-display-math is display; its text is the formula with its delimiters.",
+  "reading": "A formula is a <math-renderer> element; class js-inline-math is inline and js-display-math is display. Its text, once the HTML is parsed, is the formula with its delimiters, escaped once more for <, >, and &: decode it once more to get the TeX.",
   "cases": [
     {
       "input": "Let $x$ be real.",
@@ -186,6 +186,22 @@
     {
       "input": "$&alpha;$",
       "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"70ebaa9821bb29f58e5d2e0bca2be0ef\">$α$</math-renderer></p>"
+    },
+    {
+      "input": "$a < b$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"34d29fff5a39f61d6a18f216c5ffe3ac\">$a &amp;lt; b$</math-renderer></p>"
+    },
+    {
+      "input": "$a &#60; b$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"a3527ebdeea3f4577da52d45badb83d9\">$a &amp;lt; b$</math-renderer></p>"
+    },
+    {
+      "input": "$a & b$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"25529969d96a7c9ad73ce6735a01afa8\">$a &amp;amp; b$</math-renderer></p>"
+    },
+    {
+      "input": "$&#x3B1;$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"4377481cdd9965fe5e4dd377dab0807b\">$α$</math-renderer></p>"
     }
   ]
 }
