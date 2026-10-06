@@ -282,7 +282,7 @@ conditions. 1.x could add it only behind an opt-in key, since every candidate de
 appear in a document and 12.4 lets a minor release add only markup that none could contain; and a
 default that 1.0 sets cannot change before 2.0. Bringing it forward keeps the choice of recognising
 math by default open, to be made with the notation (v0.15). The notation and the alternatives
-it was chosen over follow; the design of copying and search is recorded here when v0.15 settles it.
+it was chosen over follow, and then the design of copying and search.
 
 **The notation (decided in v0.15).**
 
@@ -411,6 +411,26 @@ Alternatives considered:
   `\(` is an escaped `(`, so an existing document's text changes. Rejected.
 - **Off by default, behind a key.** No existing document changes, but every author who wants math has
   to find the key, until 2.0. Rejected in favour of on by default with a key to turn it off.
+
+**Copying and search (decided in v0.15).** Both work from the formula as the author wrote it, so that
+what a reader copies is what search finds.
+
+- **Copying.** When a selection in the HTML includes a formula, the plain text it copies has each
+  formula replaced by its source as written, delimiters included: `$x^2$`, ``$`a+b`$``, `$$...$$`, a
+  fenced `math` block, or in AsciiDoc `latexmath:[...]`, `stem:[...]`, or the block. A selection that
+  covers part of a formula copies the whole formula's source. The rich-text copy keeps the browser's
+  MathML, for an editor that reads it. The page's script does this, so it does not reach a PDF, whose
+  copying is the viewer's. What the browser copies without it, measured in v0.14, is the formula's
+  tokens one per line, with the radical and the fraction bar gone.
+- **Search.** A formula is indexed as its TeX without delimiters, and a result's snippet shows that
+  TeX, so pasting a copied formula, delimiters removed, finds it. In-page highlighting skips formulas,
+  as it skips diagrams, since a match inside MathML has no text node to mark; the result still opens
+  the section that holds it.
+- **Heading IDs.** A heading's ID comes from its text with each formula replaced by its TeX without
+  delimiters. That is the ID it had before math existed, because the slug already drops `$`: measured
+  with monodocs' own pipeline, `# Let $x$ be real`, `# Energy $E=mc^2$`, and `# Cost $\frac{a}{b}$`
+  get `let-x-be-real`, `energy-emc2`, and `cost-fracab` with math and without it, so links to such
+  headings keep working. The table of contents and the search index use the same TeX text.
 
 
 ---
