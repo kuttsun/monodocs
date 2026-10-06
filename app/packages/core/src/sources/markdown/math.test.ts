@@ -278,6 +278,15 @@ describe("a formula's source", () => {
     expect(sources("- x\n\n  ```math\n    a\n  ```")).toEqual(["```math\n  a\n```"]);
   });
 
+  it("tells a closing fence from content that looks like one", () => {
+    expect(sources("```math\n>```")).toEqual(["```math\n>```"]);
+    expect(sources("```math\n    ```")).toEqual(["```math\n    ```"]);
+  });
+
+  it("keeps a tab that is only partly indentation, and the fence's own spelling", () => {
+    expect(sources(" ~~~~math  \r\n\tx\r\n ~~~~  ")).toEqual(["~~~~math  \r\n\tx\r\n~~~~  "]);
+  });
+
   it("keeps a fence's content that starts with `>` inside a quote", () => {
     expect(sources("> ```math\n>>x\n> ```")).toEqual(["```math\n>x\n```"]);
     expect(sources("> ```math\n> > x\n> ```")).toEqual(["```math\n> x\n```"]);
@@ -384,6 +393,31 @@ describe("a copy of a processor", () => {
     };
     p.parse("$x$");
     expect(nested).toEqual(plain.parse("\\$x$"));
+  });
+
+  it("does the same when the extensions are grouped in an array, and keeps what others added", () => {
+    const p = unified().use(remarkParse).use(remarkGfm).use(remarkMath).freeze();
+    const extensions = p.data("fromMarkdownExtensions")!;
+    const group = extensions.slice();
+    extensions.splice(0, extensions.length, group);
+    const mine = group[0];
+    if (!Array.isArray(mine)) {
+      mine.transforms!.push((tree) => {
+        (tree.data ??= {}).thirdParty = true;
+      });
+    }
+    const child = p();
+    const plain = unified().use(remarkParse).use(remarkGfm);
+    const original = p.parser!;
+    let nested: Root | undefined;
+    p.parser = (doc, file) => {
+      nested = child.parse("\\$x$") as Root;
+      return original(doc, file);
+    };
+    p.parse("$x$");
+    const { data, ...rest } = nested!;
+    expect(data).toEqual({ thirdParty: true });
+    expect(rest).toEqual(plain.parse("\\$x$"));
   });
 });
 

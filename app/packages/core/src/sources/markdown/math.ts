@@ -79,8 +79,8 @@ declare module "mdast" {
     inlineMath: InlineMath;
   }
   interface RootData {
-    /** Offsets of the `\$` escapes in the document, recorded while mdast is built. */
-    mathEscapes?: number[];
+    /** What the plugin records while mdast is built; removed once the formulas are found. */
+    mathMarks?: Marks;
   }
 }
 
@@ -94,18 +94,37 @@ declare module "mdast" {
  * takes from the processor's parser: whichever parser is set, before or after this plugin is used, is
  * wrapped so that the document it is given is at hand while mdast is built.
  */
-/** The transforms this plugin has registered, to recognise an extension copied from another processor. */
-const ownTransforms = new WeakSet<object>();
+/** Offsets in the Markdown, recorded while mdast is built. */
+interface Marks {
+  /** Where each `\$` starts. */
+  escapes: number[];
+  /** Where each code fence's sequence (```` ``` ````, `~~~`) starts, opening and closing alike. */
+  fences: number[];
+  /** Where each line of code content starts, after the prefixes micromark consumed. */
+  codeLines: number[];
+}
+
+/** The functions this plugin registers, to recognise what a processor copy inherits from another. */
+const own = new WeakSet<object>();
+
+function marksOf(context: CompileContext): Marks {
+  const root = context.stack[0] as Root;
+  return ((root.data ??= {}).mathMarks ??= { escapes: [], fences: [], codeLines: [] });
+}
 
 export function remarkMath(this: Processor) {
   const state: { raw?: string } = {};
   const extension: FromMarkdownExtension = {
     enter: {
       characterEscape(this: CompileContext, token: Token) {
-        if (this.sliceSerialize(token) === "\\$") {
-          const root = this.stack[0] as Root;
-          ((root.data ??= {}).mathEscapes ??= []).push(token.start.offset);
-        }
+        if (this.sliceSerialize(token) === "\\$") marksOf(this).escapes.push(token.start.offset);
+        this.config.enter.data!.call(this, token);
+      },
+      codeFencedFenceSequence(this: CompileContext, token: Token) {
+        marksOf(this).fences.push(token.start.offset);
+      },
+      codeFlowValue(this: CompileContext, token: Token) {
+        marksOf(this).codeLines.push(token.start.offset);
         this.config.enter.data!.call(this, token);
       },
     },
@@ -113,17 +132,16 @@ export function remarkMath(this: Processor) {
       (tree) => {
         const root = tree as Root;
         if (state.raw !== undefined) findMath(root, state.raw);
-        else forgetEscapes(root);
+        else forgetMarks(root);
       },
     ],
   };
+  for (const f of [...Object.values(extension.enter!), ...extension.transforms!]) own.add(f);
   // A copy of the processor copies the original's extension along with its data; it would read the
-  // original's document, so it is taken out and only this processor's own extension is used.
-  ownTransforms.add(extension.transforms![0]!);
+  // original's document, so what the original's plugin registered is taken out of it, and only this
+  // processor's own extension is used. Anything else in the copied extensions stays.
   const extensions = (this.data().fromMarkdownExtensions ??= []);
-  const others = extensions.filter(
-    (e) => Array.isArray(e) || !e.transforms?.some((t) => ownTransforms.has(t)),
-  );
+  const others = withoutOwn(extensions);
   extensions.splice(0, extensions.length, extension, ...others);
 
   type Parser = NonNullable<Processor["parser"]>;
@@ -150,6 +168,28 @@ export function remarkMath(this: Processor) {
   });
 }
 
+type Extensions = (FromMarkdownExtension | FromMarkdownExtension[])[];
+
+function withoutOwn(extensions: Extensions): Extensions {
+  const out: Extensions = [];
+  for (const e of extensions) {
+    if (Array.isArray(e)) {
+      out.push(withoutOwn(e) as FromMarkdownExtension[]);
+      continue;
+    }
+    const copy: FromMarkdownExtension = { ...e };
+    if (e.transforms) copy.transforms = e.transforms.filter((t) => !own.has(t));
+    for (const key of ["enter", "exit"] as const) {
+      const handlers = e[key];
+      if (handlers) {
+        copy[key] = Object.fromEntries(Object.entries(handlers).filter(([, h]) => !own.has(h!)));
+      }
+    }
+    out.push(copy);
+  }
+  return out;
+}
+
 // --- The tree -----------------------------------------------------------------------------------
 
 /** Raw HTML elements whose content GitHub reads no formula in. */
@@ -157,14 +197,14 @@ const RAW_SKIPPING = new Set(["em", "b", "a", "code"]);
 
 /** Find the formulas in a tree parsed with the plugin's extension, from the Markdown it was parsed from. */
 export function findMath(tree: Root, raw: string): void {
-  const escapes = new Set(tree.data?.mathEscapes);
-  forgetEscapes(tree);
-  walkBlocks(tree, new Doc(raw, escapes), false);
+  const marks = tree.data?.mathMarks ?? { escapes: [], fences: [], codeLines: [] };
+  forgetMarks(tree);
+  walkBlocks(tree, new Doc(raw, marks), false);
 }
 
-function forgetEscapes(tree: Root): void {
-  if (!tree.data?.mathEscapes) return;
-  delete tree.data.mathEscapes;
+function forgetMarks(tree: Root): void {
+  if (!tree.data?.mathMarks) return;
+  delete tree.data.mathMarks;
   if (Object.keys(tree.data).length === 0) delete tree.data;
 }
 
@@ -200,42 +240,66 @@ function blockMath(node: Code, doc: Doc): BlockMath {
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
   const source =
-    (start !== undefined && end !== undefined && fenceAsWritten(doc.raw, start, end, node.value)) ||
+    (start !== undefined && end !== undefined && fenceAsWritten(doc, start, end, node.value)) ||
     "```math\n" + value + "\n```";
   return { type: "math", value, data: { source }, position: node.position };
 }
 
 /**
- * A fenced block as written, without the prefixes a quote or list puts on its lines: the opening
- * fence from its first character, each content line as its value has it (what precedes that on the
- * line is prefix, and the content's own indentation is in the value), and the closing fence without
- * the spaces and `>` before it. Line endings and trailing spaces stay as written. `undefined` when the
- * lines cannot be matched up, in which case the source is rebuilt from the value.
+ * A fenced block as written, from where micromark found its parts: the opening fence from its first
+ * character, each content line from where its content starts (a quote's `>` and a list's indentation
+ * left out; a tab partly taken as indentation kept whole), and the closing fence, if there is one,
+ * from its first character. Line endings and trailing spaces stay as written.
  */
-function fenceAsWritten(
-  raw: string,
-  start: number,
-  end: number,
-  value: string,
-): string | undefined {
-  const parts = raw.slice(start, end).split(/(\r\n|\r|\n)/);
-  const lines = parts.filter((_, i) => i % 2 === 0);
-  const endings = parts.filter((_, i) => i % 2 === 1);
-  const open = lines[0]!.replace(/^[ \t>]*/, "");
-  const fence = /^(`{3,}|~{3,})/.exec(open)?.[1];
-  if (!fence) return undefined;
-  const last = lines.length > 1 ? lines[lines.length - 1]!.replace(/^[ \t>]*/, "") : "";
-  const closing = last.trimEnd();
-  // The last line closes the block only if it is a fence of the same character, at least as long.
-  const closes = closing.length >= fence.length && closing === fence[0]!.repeat(closing.length);
-  const content = lines.slice(1, closes ? -1 : undefined);
-  const valueLines = content.length === 0 ? [] : value.split(/\r\n|\r|\n/);
-  if (valueLines.length !== content.length) return undefined;
-  if (content.some((line, i) => !line.endsWith(valueLines[i]!))) return undefined;
-  let out = open;
-  valueLines.forEach((line, i) => (out += endings[i]! + line));
-  if (closes) out += endings[content.length]! + last;
+function fenceAsWritten(doc: Doc, start: number, end: number, value: string): string | undefined {
+  const { raw } = doc;
+  const fences = doc.marks.fences.filter((f) => f >= start && f < end);
+  const open = fences[0];
+  if (open === undefined) return undefined;
+  const close = fences[1];
+  const lineEnd = (from: number) => {
+    let i = from;
+    while (i < end && raw[i] !== "\n" && raw[i] !== "\r") i++;
+    return i;
+  };
+  const valueLines = value.split(/\r\n|\r|\n/);
+  let line = 0;
+  let at = lineEnd(open);
+  let out = raw.slice(open, at);
+  while (at < end) {
+    const ending = raw.startsWith("\r\n", at) ? "\r\n" : raw[at]!;
+    const lineStart = at + ending.length;
+    at = lineEnd(lineStart);
+    if (close !== undefined && close >= lineStart && close <= at) {
+      out += ending + raw.slice(close, end);
+      break;
+    }
+    const first = firstAtOrAfter(doc.marks.codeLines, lineStart);
+    let content = first !== undefined && first <= at ? first : undefined;
+    // A tab taken partly as indentation leaves spaces in the value and starts the content after it.
+    if (
+      content !== undefined &&
+      raw[content - 1] === "\t" &&
+      (valueLines[line]?.length ?? 0) > at - content
+    ) {
+      content--;
+    }
+    out += ending + (content === undefined ? "" : raw.slice(content, at));
+    line++;
+  }
   return out;
+}
+
+/** The first of these ascending offsets that is at least `offset`. */
+function firstAtOrAfter(sorted: number[], offset: number): number | undefined {
+  let lo = 0;
+  let hi = sorted.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (sorted[mid]! < offset) lo = mid + 1;
+    else hi = mid;
+  }
+  return sorted[lo];
 }
 
 function displayCandidate(children: PhrasingContent[]): boolean {
@@ -602,10 +666,14 @@ class Doc {
   private readonly heads = new Map<Text, number>();
   private lineStarts: number[] | undefined;
 
+  private readonly escapes: Set<number>;
+
   constructor(
     readonly raw: string,
-    private readonly escapes: Set<number>,
-  ) {}
+    readonly marks: Marks,
+  ) {
+    this.escapes = new Set(marks.escapes);
+  }
 
   /** Characters about to be taken from the start of a text node's value. */
   trimHead(node: Text, count: number): void {
