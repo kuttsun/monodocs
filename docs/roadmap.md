@@ -340,19 +340,23 @@ Captured on 2026-10-06 (math: what GitHub renders as a formula):
 | `` `$x$` ``, `![$x$](i.png)` | text (code span, image alt) |
 | a paragraph that is only `$$x$$`; `$$` on lines around `x`; `$$x$$` and `$$y$$` on two lines | display math |
 | `$$x$$` on a line between two lines of text in one paragraph | inline math |
+| `To split <span>$</span>100 in half, we calculate $100/2$` | math: `100/2` |
 | `$x$` in a table cell | inline math |
 | a fenced `math` block | display math |
 
-So the common forms of money and shell variables stay text, and the forms above marked math read as
-math here too, as they do on GitHub. The one deliberate difference is `\$`. GitHub's way out is `<span>$</span>`, and monodocs drops raw
-HTML in Markdown, so `\$` is made an escape instead: a backslash before a dollar sign never opens or
-closes a formula. Outside a formula it prints a `$`; inside `$...$` or `$$...$$` it stays `\$`, TeX's
-dollar sign, which is what GitHub tells authors to write there. Inside ``$`...`$`` it is part of the
-code span, as on GitHub. So `Between \$5 and 10$` stays text, `Cost $x = \$4$ here` is the formula
-`x = \$4`, and `a $\$$ b` is the formula `\$`, where GitHub renders math, the formula `4`, and text.
-Every input with a `\$` outside ``$`...`$`` may differ from GitHub this way, and those cases are the
-tests not pinned to GitHub. A document written for GitHub that puts `\$` in a formula, as GitHub
-advises, comes out as its author meant here, so the difference corrects rather than breaks it.
+So the common forms of money and shell variables stay text, and the forms above marked math read as math
+here too, as they do on GitHub. The one deliberate difference is `\$`. GitHub's way out is
+`<span>$</span>`, and monodocs drops raw HTML in Markdown, so `\$` is made an escape instead: a
+backslash before a dollar sign never opens or closes a formula. Outside a formula it prints a `$`;
+inside `$...$` or `$$...$$` it stays `\$`, TeX's dollar sign, which is what GitHub tells authors to
+write there. Inside ``$`...`$`` it is part of the code span, as on GitHub. So `Between \$5 and 10$`
+stays text, `Cost $x = \$4$ here` is the formula `x = \$4`, and `a $\$$ b` is the formula `\$`, where
+GitHub renders math, the formula `4`, and text. Every input with a `\$` outside ``$`...`$`` may differ
+from GitHub this way, and those cases are the tests not pinned to GitHub. GitHub's own escape still
+works as it does there: an inline HTML tag is a boundary no formula crosses, so the `$` in
+`<span>$</span>` is text, and the tags are then dropped as monodocs drops raw HTML, leaving the `$`. A
+document written for GitHub that puts `\$` in a formula, as GitHub advises, comes out as its author
+meant here, so the difference corrects rather than breaks it.
 
 AsciiDoc keeps Asciidoctor's own markup: `latexmath:[...]` and the `[latexmath]` block, rendered
 whatever `:stem:` says, and `stem:[...]` and the `[stem]` block, rendered when they mean latexmath —
@@ -373,9 +377,9 @@ no asciimath diagnostic is raised.
 
 What an existing document could contain whose meaning this changes:
 
-- in Markdown, a `$...$` or `$$...$$` that GitHub reads as math, which printed as text, including in a
-  heading (its text, and so its slug, its table-of-contents entry, and what search indexes), a table
-  cell, or bold or struck-through text
+- in Markdown, a `$...$` or `$$...$$` that GitHub reads as math (with a `\$` in it, by the rule above),
+  which printed as text, including in a heading (its text, and so its slug, its table-of-contents
+  entry, and what search indexes), a table cell, or bold or struck-through text
 - `$` immediately followed by a code span and then `$`, which printed a code span between two dollar
   signs
 - a fenced code block whose language is `math`, which printed as code
