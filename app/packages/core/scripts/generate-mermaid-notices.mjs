@@ -143,7 +143,9 @@ export function ownSourceCitations(map) {
   map.sources.forEach((source, i) => {
     const content = map.sourcesContent?.[i] ?? "";
     let at = source;
-    for (const line of content.split("\n")) {
+    // esbuild's closing "Bundled license information" belongs to no section; lodash-es is listed.
+    const end = content.indexOf("/*! Bundled license information:");
+    for (const line of (end === -1 ? content : content.slice(0, end)).split("\n")) {
       const mark = /^\/\/ (\S+\.[cm]?[jt]s)$/.exec(line);
       if (mark) at = mark[1];
       else if (!storeRef(at) && /^\s*(\/\/|\/?\*)/.test(line) && re.test(line))
@@ -223,7 +225,10 @@ function storeRef(path) {
 
 /** The label a component carries in the notices, which is also what --check compares. */
 function labelOf(c) {
-  if (c.bundledIn) return `${c.name}@${c.version} (bundled inside ${labelOf(c.bundledIn)})`;
+  if (c.bundledIn) {
+    const how = c.copied ? "copied into" : "bundled inside";
+    return `${c.name}@${c.version} (${how} ${labelOf(c.bundledIn)})`;
+  }
   const at = c.version ? `@${c.version}` : ` (built with mermaid@${c.builtWith})`;
   return `${c.name}${at}${c.patched ? " (patched by mermaid)" : ""}`;
 }

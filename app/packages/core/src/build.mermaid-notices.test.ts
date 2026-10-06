@@ -72,10 +72,10 @@ describe("the Mermaid runtime notices", () => {
       ["gl-matrix", "cytoscape"],
       ["lodash", "cytoscape"],
       ["path-browserify", "vscode-uri"],
-      ["entity-decode", "mermaid"],
     ]) {
       expect(notices).toMatch(new RegExp(`^${name}@[\\d.]+ \\(bundled inside ${parent}@`, "m"));
     }
+    expect(notices).toMatch(/^entity-decode@2\.0\.1 \(copied into mermaid@/m);
     expect(notices).toContain("Ralf S. Engelschall");
     expect(notices).toContain("Event object based on jQuery events");
     expect(notices).toContain("Copyright Joyent, Inc. and other Node contributors.");
@@ -86,6 +86,19 @@ describe("the Mermaid runtime notices", () => {
     expect(notices).not.toContain("UNKNOWN");
     expect(notices).toMatch(/^fastdom@[\d.]+ {2}— {2}MIT\n-+\n\(From the package's README\.\)/m);
     expect(notices).toContain("Copyright (c) 2016 Wilson Page");
+  });
+
+  it("list the citations in mermaid's own sources for the hand audit", async () => {
+    const generator = new URL("../scripts/generate-mermaid-notices.mjs", import.meta.url).href;
+    const { ownSourceCitations } = await import(/* @vite-ignore */ generator);
+    const require = createRequire(import.meta.url);
+    const map = JSON.parse(
+      await readFile(require.resolve("mermaid/dist/mermaid.min.js.map"), "utf8"),
+    ) as unknown;
+    const cites: string[] = ownSourceCitations(map);
+    expect(cites.some((c) => c.includes("entity-decode/blob/v2.0.1"))).toBe(true);
+    // esbuild's closing licence comment is not attributed to the parser's last source file.
+    expect(cites.some((c) => c.includes("Jeremy Ashkenas"))).toBe(false);
   });
 
   it("are emitted once with the inline runtime and a diagram, inside its script", async () => {

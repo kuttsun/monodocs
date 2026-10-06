@@ -878,7 +878,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ================================================================================
-entity-decode@2.0.1 (bundled inside mermaid@11.17.2)  —  MIT
+entity-decode@2.0.1 (copied into mermaid@11.17.2)  —  MIT
 --------------------------------------------------------------------------------
 (Copied by mermaid@11.17.2 into src/utils.ts, from the version its source comment names.)
 

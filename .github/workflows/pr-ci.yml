@@ -64,7 +64,8 @@ jobs:
           node -e "const fs = require('node:fs'); const text =
           fs.readFileSync('dist/THIRD-PARTY-NOTICES.txt', 'utf8'); const match =
           /Components: (\d+)/.exec(text); if (!match || Number(match[1]) < 1 ||
-          text.includes('—  UNKNOWN')) throw new Error('Invalid third-party notices');"
+          text.includes('—  UNKNOWN') || !text.includes('Components inside the prebuilt
+          Mermaid runtime')) throw new Error('Invalid third-party notices');"
 
       - name: Verify installable npm package
         run: pnpm package:verify
