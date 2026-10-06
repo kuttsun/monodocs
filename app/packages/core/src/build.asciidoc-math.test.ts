@@ -225,6 +225,15 @@ describe("AsciiDoc math", () => {
     expect(ids(on.html)).toEqual(ids(off.html));
   });
 
+  it("takes tags out as Asciidoctor does, so an ID with stray brackets stays", async () => {
+    const adoc = "= T\n\n== H latexmath:a[a < b < c > d]\n\nSee <<_h_a_d>>.\n";
+    const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(ids(on.html)).toEqual(ids(off.html));
+    expect(on.result.warnings.map((w) => w.code)).not.toContain("link/unresolved-anchor");
+  });
+
   it("keeps the ID of a heading whose formula has its own substitutions", async () => {
     const adoc = "= T\n\n== Symbol latexmath:a[&#945;]\n\nSee <<_symbol>>.\n";
     const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);
