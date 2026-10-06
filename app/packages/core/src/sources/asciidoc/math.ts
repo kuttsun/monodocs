@@ -73,16 +73,23 @@ export async function createMathConverter(
   >();
 
   /**
-   * A marker for a formula. Its content is what Asciidoctor converted the formula's text to, exactly,
-   * since Asciidoctor makes a section's ID from that (`latexmath:a[&#945;]` keeps the reference, which
-   * the ID leaves out); what the formula is for rendering is kept apart.
+   * A marker for a formula. Its content is what Asciidoctor converted the formula's text to, with tags
+   * taken out, since Asciidoctor makes a section's ID from that with tags taken out
+   * (`latexmath:a[&#945;]` keeps the reference, which the ID leaves out). Taking them out here also
+   * keeps a tag the formula's own substitutions let through (`latexmath:a[\\text{</span>}]`) from
+   * closing the marker; a `<` or `>` that is not part of a tag is escaped for the same reason. What the
+   * formula is for rendering is kept apart.
    */
   const marker = (tex: string, source: string, display: boolean, converted: string) => {
     const key = `${nonce}-${formulas.size}`;
+    const content = converted
+      .replace(/<[^<>]*>/g, "")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
     // What the element will hold once the HTML is parsed, read by the same parser.
-    formulas.set(key, { tex, source, display, shown: parsedText(converted) });
+    formulas.set(key, { tex, source, display, shown: parsedText(content) });
     const tag = display ? "div" : "span";
-    return `<${tag} data-monodocs-math="${key}">${converted}</${tag}>`;
+    return `<${tag} data-monodocs-math="${key}">${content}</${tag}>`;
   };
 
   const convert = async (node: MathNode, transform?: string, opts?: unknown): Promise<string> => {

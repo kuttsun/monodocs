@@ -214,6 +214,17 @@ describe("AsciiDoc math", () => {
     expect(title).not.toContain("data-monodocs-math");
   });
 
+  it("does not let a tag in a formula's own substitutions close its marker", async () => {
+    const adoc =
+      "= Compare latexmath:a[\\text{</span>}]\n\n== H latexmath:a[\\text{</span>}]\n\nlatexmath:a[\\text{</span>}]\n";
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(on.html.match(/<math /g)).toHaveLength(3);
+    expect(pageData(on.html).title).toBe("Compare $\\text{&lt;/span>}$");
+    const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);
+    expect(ids(on.html)).toEqual(ids(off.html));
+  });
+
   it("keeps the ID of a heading whose formula has its own substitutions", async () => {
     const adoc = "= T\n\n== Symbol latexmath:a[&#945;]\n\nSee <<_symbol>>.\n";
     const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);

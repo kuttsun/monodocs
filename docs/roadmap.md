@@ -603,7 +603,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   of heading IDs and heading text fail if it stops being honoured. A marker carries only a key, new for
   each conversion; the formula it stands for is kept by the converter, so raw HTML from a passthrough
   can neither pass for a formula nor change what one is. A marker's content is what Asciidoctor converted the
-  formula's text to, exactly, so the section ID made from it is unchanged even under the formula's own
+  formula's text to, with tags taken out as Asciidoctor takes them out to make an ID (so a tag the
+  formula's own substitutions let through cannot close the marker), so the section ID made from it is
+  unchanged even under the formula's own
   substitutions (`latexmath:a[&#945;]`); the TeX for rendering is kept apart. The wrapped converter is
   made with the `htmlsyntax` the configuration sets, as Asciidoctor makes its own. Character references
   are decoded once, by the same HTML parser that reads the markers back, so the two always agree
