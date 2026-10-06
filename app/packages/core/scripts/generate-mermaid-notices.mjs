@@ -9,9 +9,12 @@
 // that exact version: from the pnpm store when it is installed, otherwise from its npm tarball,
 // checked against the registry's integrity hash (roadmap 21.3).
 //
-// A source map cannot see inside a package that ships its own pre-built file (roughjs's rollup
-// bundle), so every runtime dependency of every component has to be accounted for in BUNDLED_INSIDE
-// or NOT_IN_RUNTIME below; one that is in neither fails the run rather than leaving a notice out.
+// A source map cannot see inside a package that ships its own pre-built file: roughjs's rollup
+// bundle carries four packages, cytoscape's carries three of its devDependencies, and some files
+// carry code copied in with its own licence. So a component with a large or pre-built source must be
+// audited at its exact version in PREBUILT_AUDITED, which names what it carries, and every runtime
+// dependency of every component must be listed or explained in NOT_IN_RUNTIME. Either gap fails the
+// run rather than leaving a notice out.
 //
 //   node scripts/generate-mermaid-notices.mjs           rewrite the notices (may use the network)
 //   node scripts/generate-mermaid-notices.mjs --check   exit 1 if the components listed in the
@@ -28,15 +31,74 @@ import { gunzipSync } from "node:zlib";
 const NOTICES_FILE = new URL("../src/themes/mermaid-notices.txt", import.meta.url);
 const require = createRequire(new URL("../src/themes/mermaid.ts", import.meta.url));
 const mermaidDir = dirname(require.resolve("mermaid/package.json"));
-const LICENSE_FILE_RE = /^(licen[sc]e|copying|notice)([-.][^/]*)?$/i;
+// LICENSE, LICENSE.txt, LICENSE-MIT, NOTICE.md…, but not a script such as license-update.mjs.
+const LICENSE_FILE_RE = /^(licen[sc]e|copying|notice)([-.][a-z0-9]+)?(\.(md|txt|markdown))?$/i;
 const SEP = "=".repeat(80);
 const SUB = "-".repeat(80);
 
-/** Dependencies a component carries inside its own pre-built file, invisible to the source map. */
-const BUNDLED_INSIDE = {
-  // bundled/rough.esm.js is a rollup bundle of roughjs and these four.
-  roughjs: ["hachure-fill", "path-data-parser", "points-on-curve", "points-on-path"],
+/**
+ * Components with a source over 20 KB, minified, or under bundled/, build/ or umd/, audited by hand
+ * at the version named: `bundled` lists the packages the file carries (its own build picked their
+ * versions, so each is named by the range it declares and the version its licence text is read
+ * from), and `vendored` describes code copied into it under another licence. An empty entry records
+ * that the file was read and carries only the package's own code.
+ */
+const PREBUILT_AUDITED = {
+  "@upsetjs/venn.js@2.0.0": {
+    // build/venn.esm.js inlines fmin (nelderMead, conjugateGradient, bisect, zeros), patched by venn.js.
+    bundled: [{ name: "fmin", version: "0.0.4", declared: "0.0.4, patched by venn.js" }],
+  },
+  "cose-base@1.0.3": {}, // requires layout-base rather than carrying it
+  "cose-base@2.2.0": {},
+  "cytoscape@3.34.0": {
+    // dist/cytoscape.esm.mjs inlines these devDependencies.
+    bundled: [
+      { name: "gl-matrix", version: "3.4.3", declared: "^3.4.3" },
+      { name: "heap", version: "0.2.7", declared: "^0.2.7" },
+      { name: "lodash", version: "4.17.21", declared: "^4.17.21" },
+    ],
+    vendored: [
+      "dist/cytoscape.esm.mjs also contains code under the MIT License whose authors it names:",
+      "  Promises/A+ 1.1.1 Thenable — Copyright (c) 2013-2014 Ralf S. Engelschall (http://engelschall.com)",
+      "  Bezier curve function generator — Copyright Gaetan Renaudeau",
+      "  Runge-Kutta spring physics function generator, adapted from Framer.js — copyright Koen Bok",
+      "The MIT License text is reproduced above.",
+    ],
+  },
+  "cytoscape-fcose@2.2.0": {}, // requires cose-base rather than carrying it
+  "dagre-d3-es@7.0.14": {},
+  "dayjs@1.11.21": {},
+  "dompurify@3.4.12": {},
+  "js-yaml@4.3.0": {},
+  "katex@0.16.47": {},
+  "layout-base@1.0.2": {},
+  "layout-base@2.0.1": {
+    vendored: [
+      "layout-base.js also contains code adopted, with changes, from JamaJS",
+      "(https://github.com/dragonfly-ai/JamaJS), under the Apache License, Version 2.0. The file",
+      "carries the licence's full text, which is reproduced in this document under the Apache-2.0",
+      "components.",
+    ],
+    apache: true,
+  },
+  "marked@16.3.0": {},
+  "roughjs@4.6.6": {
+    // bundled/rough.esm.js is a rollup bundle of roughjs and its four dependencies.
+    bundled: [
+      { name: "hachure-fill", version: "0.5.2", declared: "^0.5.2" },
+      { name: "path-data-parser", version: "0.1.0", declared: "^0.1.0" },
+      { name: "points-on-curve", version: "0.2.0", declared: "^0.2.0" },
+      { name: "points-on-path", version: "0.2.1", declared: "^0.2.1" },
+    ],
+  },
 };
+
+/** Whether a source is one a component's own build may have filled with other code. */
+function needsAudit(file, content) {
+  return (
+    content.length > 20_000 || /\.min\.js$/.test(file) || /(^|\/)(bundled|build|umd)\//.test(file)
+  );
+}
 
 /** Declared dependencies that are not in the runtime, each with the reason. */
 const NOT_IN_RUNTIME = {
@@ -52,6 +114,7 @@ const NOT_IN_RUNTIME = {
   "d3-dsv": { rw: "command-line tools", commander: "command-line tools", "iconv-lite": "same" },
   "js-yaml": { argparse: "the command-line tool" },
   katex: { commander: "the command-line tool" },
+  fmin: { contour_plot: "fmin's plotting demos; venn.js's bundle has no contour code" },
   fastdom: { strictdom: "fastdom-strict.js, which the runtime does not import" },
   "@iconify/utils": Object.fromEntries(
     [
@@ -76,21 +139,23 @@ const EXCLUDED_FILES = { dompurify: ["LICENSE-MPL"] };
 /** Packages whose published tarball has no licence file and states it in its README instead. */
 const LICENCE_IN_README = new Set(["fastdom"]);
 
-/** The last `.pnpm/<key>/node_modules/<name>` in a path, as { name, version, patched }. */
+/** The last `.pnpm/<key>/node_modules/<name>/<file>` in a path, as { name, version, patched, file }. */
 function storeRef(path) {
-  const all = [...path.matchAll(/\.pnpm\/([^/]+)\/node_modules\/(@[^/]+\/[^/]+|[^/]+)/g)];
+  const all = [
+    ...path.matchAll(/\.pnpm\/([^/]+)\/node_modules\/(@[^/]+\/[^/]+|[^/]+)\/?([^\s]*)/g),
+  ];
   if (all.length === 0) return null;
-  const [, key, name] = all[all.length - 1];
+  const [, key, name, file] = all[all.length - 1];
   // A store key is `<name with / as +>@<version>`, then a peer or patch suffix.
   const prefix = `${name.replace("/", "+")}@`;
   if (!key.startsWith(prefix)) throw new Error(`unexpected store key ${key} for ${name}`);
   const rest = key.slice(prefix.length);
-  return { name, version: /^[^_(]+/.exec(rest)[0], patched: rest.includes("patch_hash=") };
+  return { name, version: /^[^_(]+/.exec(rest)[0], patched: rest.includes("patch_hash="), file };
 }
 
 /** The label a component carries in the notices, which is also what --check compares. */
 function labelOf(c) {
-  if (c.bundledIn) return `${c.name} (bundled inside ${labelOf(c.bundledIn)})`;
+  if (c.bundledIn) return `${c.name}@${c.version} (bundled inside ${labelOf(c.bundledIn)})`;
   const at = c.version ? `@${c.version}` : ` (built with mermaid@${c.builtWith})`;
   return `${c.name}${at}${c.patched ? " (patched by mermaid)" : ""}`;
 }
@@ -98,14 +163,22 @@ function labelOf(c) {
 /** Every component the runtime contains, sorted. */
 export function componentsOf(map, mermaidVersion) {
   const found = new Map();
-  const add = (path) => {
+  const unaudited = new Set();
+  const add = (path, content) => {
     const ref = storeRef(path);
     if (!ref) return;
     const id = `${ref.name}@${ref.version}`;
-    found.set(id, { ...ref, patched: ref.patched || Boolean(found.get(id)?.patched) });
+    found.set(id, {
+      name: ref.name,
+      version: ref.version,
+      patched: ref.patched || Boolean(found.get(id)?.patched),
+    });
+    if (content !== undefined && needsAudit(ref.file, content) && !PREBUILT_AUDITED[id]) {
+      unaudited.add(`${id} (${ref.file})`);
+    }
   };
   map.sources.forEach((source, i) => {
-    add(source);
+    add(source, map.sourcesContent?.[i] ?? "");
     // Pre-bundled chunks keep esbuild's `// <path>` comments naming where each part came from.
     for (const m of (map.sourcesContent?.[i] ?? "").matchAll(/^\/\/ (\S*node_modules\/\S+)$/gm)) {
       add(m[1]);
@@ -122,9 +195,21 @@ export function componentsOf(map, mermaidVersion) {
       patched: false,
     });
   }
+  if (unaudited.size > 0) {
+    throw new Error(
+      "components with a large or pre-built source that PREBUILT_AUDITED does not cover at this " +
+        `version; read each file and record what it carries:\n  ${[...unaudited].join("\n  ")}`,
+    );
+  }
   for (const parent of [...found.values()]) {
-    for (const name of BUNDLED_INSIDE[parent.name] ?? []) {
-      found.set(`${name} in ${labelOf(parent)}`, { name, bundledIn: parent, patched: false });
+    for (const b of PREBUILT_AUDITED[`${parent.name}@${parent.version}`]?.bundled ?? []) {
+      found.set(`${b.name}@${b.version} in ${labelOf(parent)}`, {
+        name: b.name,
+        version: b.version,
+        declared: b.declared,
+        bundledIn: parent,
+        patched: false,
+      });
     }
   }
   return [...found.values()].sort(
@@ -179,9 +264,10 @@ async function fetchOk(url) {
 /** { pkg, files } for a package directory: package.json, and its top-level files' names → text. */
 async function fromDir(dir) {
   const files = new Map();
-  for (const f of await readdir(dir)) {
-    if (LICENSE_FILE_RE.test(f) || /^readme(\.[^.]*)?$/i.test(f)) {
-      files.set(f, await readFile(join(dir, f), "utf8"));
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    if (LICENSE_FILE_RE.test(entry.name) || /^readme(\.[^.]*)?$/i.test(entry.name)) {
+      files.set(entry.name, await readFile(join(dir, entry.name), "utf8"));
     }
   }
   return { pkg: JSON.parse(await readFile(join(dir, "package.json"), "utf8")), files };
@@ -269,27 +355,23 @@ export async function render(components, mermaidVersion) {
     let found;
     let note = "";
     if (c.bundledIn) {
-      // pnpm links a package's dependencies beside it, at the versions its ranges resolved to.
-      const [entry] = storeEntries(entries, c.bundledIn.name, c.bundledIn.version);
-      if (!entry) throw new Error(`${labelOf(c)}: ${labelOf(c.bundledIn)} is not installed`);
-      found = await fromDir(join(storeDir, entry, "node_modules", c.name));
-      const range = (await fromDir(join(storeDir, entry, "node_modules", c.bundledIn.name))).pkg
-        .dependencies[c.name];
-      note = `(Declared by ${labelOf(c.bundledIn)} as ${range}; licence text from ${c.name}@${found.pkg.version}.)\n\n`;
+      found = await fetchPackage(storeDir, entries, c.name, c.version);
+      note =
+        `(Declared by ${labelOf(c.bundledIn)} as ${c.declared}; its build chose the version, and ` +
+        `the licence text is ${c.name}@${c.version}'s.)\n\n`;
     } else if (c.version) {
       found = await fetchPackage(storeDir, entries, c.name, c.version);
     } else {
       found = await fromDir(parserDir);
       note = `(Licence text from ${c.name}@${found.pkg.version}.)\n\n`;
     }
-    if (!c.bundledIn) {
-      for (const dep of Object.keys(found.pkg.dependencies ?? {})) {
-        if (names.has(dep) || BUNDLED_INSIDE[c.name]?.includes(dep)) continue;
-        if (NOT_IN_RUNTIME[c.name]?.[dep]) continue;
-        unexplained.push(`${labelOf(c)} → ${dep}`);
-      }
+    for (const dep of Object.keys(found.pkg.dependencies ?? {})) {
+      if (names.has(dep) || NOT_IN_RUNTIME[c.name]?.[dep]) continue;
+      unexplained.push(`${labelOf(c)} → ${dep}`);
     }
-    const body = note + licenceText(labelOf(c), found);
+    const audit = c.version ? PREBUILT_AUDITED[`${c.name}@${c.version}`] : undefined;
+    const vendored = audit?.vendored ? `\n\n${SUB}\n\n${audit.vendored.join("\n")}` : "";
+    const body = note + licenceText(labelOf(c), found) + vendored;
     let license = licenseOf(found.pkg);
     if (license === "UNKNOWN") license = inferLicense(body);
     const block = blocks.get(body) ?? { labels: [], body };
@@ -298,7 +380,7 @@ export async function render(components, mermaidVersion) {
   }
   if (unexplained.length > 0) {
     throw new Error(
-      "dependencies the notices neither list nor explain; add each to BUNDLED_INSIDE or " +
+      "dependencies the notices neither list nor explain; add each to PREBUILT_AUDITED or " +
         `NOT_IN_RUNTIME:\n  ${unexplained.join("\n  ")}`,
     );
   }
@@ -315,6 +397,11 @@ export async function render(components, mermaidVersion) {
         ]
       : []),
   ].join("\n");
+  // Vendored code that refers to the Apache-2.0 text relies on another component carrying it.
+  const needsApache = components.some((c) => PREBUILT_AUDITED[`${c.name}@${c.version}`]?.apache);
+  if (needsApache && ![...blocks.keys()].some((b) => /Apache License\s+Version 2\.0/.test(b))) {
+    throw new Error("vendored Apache-2.0 code refers to a licence text no component carries");
+  }
   const text = [...blocks.values()]
     .map((b) => `${SEP}\n${b.labels.join("\n")}\n${SUB}\n${b.body}\n`)
     .join("\n");

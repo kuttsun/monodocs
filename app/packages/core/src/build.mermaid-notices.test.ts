@@ -62,10 +62,22 @@ describe("the Mermaid runtime notices", () => {
     // Versions the runtime carries that node_modules does not resolve at the top level.
     expect(notices).toMatch(/^lodash-es@4\.17\.23 {2}— {2}MIT$/m);
     expect(notices).toMatch(/^@mermaid-js\/parser \(built with mermaid@\d+\.\d+\.\d+\)/m);
-    // Packages a component bundles into its own pre-built file, which the source map cannot see.
-    for (const name of ["hachure-fill", "path-data-parser", "points-on-curve", "points-on-path"]) {
-      expect(notices).toMatch(new RegExp(`^${name} \\(bundled inside roughjs@`, "m"));
+    // Packages a component bundles into its own pre-built file, which the source map cannot see,
+    // and code copied into one under another licence.
+    for (const [name, parent] of [
+      ["hachure-fill", "roughjs"],
+      ["points-on-path", "roughjs"],
+      ["fmin", "@upsetjs/venn.js"],
+      ["heap", "cytoscape"],
+      ["gl-matrix", "cytoscape"],
+      ["lodash", "cytoscape"],
+    ]) {
+      expect(notices).toMatch(new RegExp(`^${name}@[\\d.]+ \\(bundled inside ${parent}@`, "m"));
     }
+    expect(notices).toContain("Ralf S. Engelschall");
+    expect(notices).toContain("adopted, with changes, from JamaJS");
+    // A licence file is text, not a script that happens to be named license-*.
+    expect(notices).not.toMatch(/^import /m);
     // Every component carries a licence text, fastdom's taken from its README.
     expect(notices).not.toContain("UNKNOWN");
     expect(notices).toMatch(/^fastdom@[\d.]+ {2}— {2}MIT\n-+\n\(From the package's README\.\)/m);
