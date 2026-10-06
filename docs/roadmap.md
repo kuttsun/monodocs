@@ -292,25 +292,58 @@ Markdown takes the four forms GitHub renders, read by GitHub's rules:
 | --- | --- |
 | `$...$` | inline math |
 | ``$`...`$`` | inline math, the backticks keeping Markdown out of the formula |
-| `$$...$$` | display math |
+| `$$...$$` | display math in a paragraph of its own, inline math within other text |
 | a fenced code block whose language is `math` | display math |
 
-A document written for GitHub renders the same formulas here, and that is the point: `$x$` is the form
-most such documents use. The reference is GitHub's renderer, not a library. GitHub documents the forms
-but not the rules that decide where a formula starts and ends, and remark-math, the obvious library,
-reads them differently: with its single `$` on, `It costs $5 and $10 today.` becomes a formula
-`5 and `, which GitHub leaves as text, and with it off, a paragraph that is only `$$x$$` is inline
-where GitHub displays it, and a line starting `$$` with no closing one swallows the rest of the document.
-monodocs therefore parses math itself, and its tests pin cases against what GitHub's renderer returned
-for them. Measured that way, GitHub keeps the common forms of money literal — `$5 and $10`,
-`$4.50/$5`, `$HOME and $PATH`, `Price $$5 and $$6` — and reads a span such as `Between $5 and 10$ or
-so` as math. That case renders as math here too, as it does there, and `\$` keeps a dollar sign
-literal. Where GitHub's behaviour is not yet pinned (a formula in a table cell, a `|` inside one, a list
-item's indentation), the test fixture records GitHub's output before the implementation follows it.
+A document written for GitHub renders the same formulas here. The reference is GitHub's renderer, not
+a library. GitHub documents the forms but not the rules that decide where a formula starts and ends, and
+remark-math, the obvious library, reads them differently: with its single `$` on, `It costs $5 and $10
+today.` becomes a formula `5 and `, which GitHub leaves as text, and with it off, a paragraph that is
+only `$$x$$` is inline where GitHub displays it, and a line starting `$$` with no closing one swallows
+the rest of the document. monodocs therefore parses math itself. Its tests pin cases to GitHub's output
+as captured on a stated date through `gh api markdown -f mode=gfm`, not to the live renderer, which has
+no version and may change; a later capture that differs is a decision to follow it or not, made then.
+
+Captured on 2026-10-06 (math: what GitHub renders as a formula):
+
+| Input | GitHub |
+| --- | --- |
+| `Let $x$ be real.` | math: `x` |
+| `It costs $5 and $10 today.` | text |
+| `Pay $4.50/$5 now.` | text |
+| `Set $HOME and $PATH.` | text |
+| `$HOME/$USER is set.` | text |
+| `Price $$5 and $$6.` | text |
+| `a $$ x $$ b` | text |
+| `Price $$5$$ here.` | math: `5` |
+| `Between $5 and 10$ or so.` | math: `5 and 10` |
+| `costs 5$, $10, or 15$` | math: `10, or 15` |
+| `pay $5; refund $` | math: `5; refund ` |
+| `from $5 up to 10$` | math: `5 up to 10` |
+| `tip: $5$ max` | math: `5` |
+| `$(pwd)/$(ls)` | math: `(pwd)/` |
+| `Between \$5 and 10$ or so.` | math: `5 and 10` |
+| ``Use $`a+b`$ here.`` | math: `a+b` |
+| `[$x$](u)` | text (link text) |
+| `*$x$*`, `_a $x$ b_` | text (emphasis) |
+| `**bold $x$**`, `**bold $x$ here**`, `~~$x$~~` | math: `x` |
+| `$a*b*c$` | text (the emphasis wins) |
+| `` `$x$` ``, `![$x$](i.png)` | text (code span, image alt) |
+| a paragraph that is only `$$x$$`; `$$` on lines around `x` | display math |
+| `$x$` in a table cell | inline math |
+| a fenced `math` block | display math |
+
+So the common forms of money and shell variables stay text, and the forms above marked math read as
+math here too, as they do on GitHub. The one deliberate difference is the escape. GitHub's way out is
+`<span>$</span>`, and monodocs drops raw HTML in Markdown, so `\$` is made an escape instead: a
+backslash before a dollar sign makes it a literal `$` that never opens or closes a formula, where GitHub
+renders `Between \$5 and 10$` as math. A document written for GitHub has no reason to write `\$` as a
+delimiter, so the difference costs it nothing, and that case is the one test not pinned to GitHub.
 
 AsciiDoc keeps Asciidoctor's own markup: `latexmath:[...]` and the `[latexmath]` block, rendered
 whatever `:stem:` says, and `stem:[...]` and the `[stem]` block, rendered when they mean latexmath —
-`:stem:` set to `latexmath`, `latex`, or `tex`, or the block's style says so (`[stem,latexmath]`).
+`:stem:` set to `latexmath`, `latex`, or `tex`, unless a block's style says otherwise
+(`[stem,asciimath]`), or the block's style says so (`[stem,latexmath]`).
 They are rendered wherever Asciidoctor produces them, a monospace span or a block with macros
 substituted included, since Asciidoctor treats them as math there. Otherwise `stem` means asciimath:
 with `:stem:` unset, set with no value, or set to anything else, and `asciimath:[...]` always.
@@ -326,24 +359,26 @@ no asciimath diagnostic is raised.
 
 What an existing document could contain whose meaning this changes:
 
-- in Markdown, a pair of `$` that GitHub reads as math, which printed as text, including in a heading
-  (its text, and so its slug, its table-of-contents entry, and what search indexes), a table cell, or
-  a link's text
-- `$$...$$`, which printed as text
+- in Markdown, a `$...$` or `$$...$$` that GitHub reads as math, which printed as text, including in a
+  heading (its text, and so its slug, its table-of-contents entry, and what search indexes), a table
+  cell, or bold or struck-through text
 - `$` immediately followed by a code span and then `$`, which printed a code span between two dollar
   signs
 - a fenced code block whose language is `math`, which printed as code
 - in AsciiDoc, `latexmath:[...]`, the `[latexmath]` block, and `stem:[...]` or the `[stem]` block when
   they mean latexmath, which printed with MathJax's `\(...\)` / `\[...\]` delimiters
 
-What does not change: dollar signs inside a code span, a code block, or an HTML block, and an image's
-alt text, which GitHub leaves as written.
+What does not change: dollar signs inside a code span or a code block, a link's text, an image's alt
+text, and italic text, which GitHub leaves as written, and `\$`. Raw HTML, which monodocs drops from
+Markdown, carries no math either; Markdown paragraphs between HTML blocks are Markdown, and follow the
+rules above.
 
 Alternatives considered:
 
-- **GitHub's forms without the single `$`.** No case of money is ever math, but `$x$`, the commonest
-  form in documents written for GitHub, stays text. Rejected: the cases GitHub misreads are rare and
-  escapable, and the mismatch with GitHub would not be.
+- **GitHub's forms without the single `$`.** Fewer cases of money become math (`Price $$5$$ here.`
+  still does), but `$x$`, the first form GitHub documents, stays text. Rejected: the cases the single
+  `$` misreads are few and, with `\$`, escapable, while the mismatch with GitHub would be in every
+  document that uses it.
 - **remark-math as it is.** Its rules differ from GitHub's in both directions, as measured above.
   Rejected; monodocs parses math itself, against GitHub's output.
 - **LaTeX's `\(...\)` and `\[...\]`.** Unambiguous, but GitHub does not render them, and in Markdown
