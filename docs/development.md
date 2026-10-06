@@ -51,7 +51,7 @@ the inline runtime and pre-render use, and the one inside the `mermaid@11` ESM b
 either, and mermaid 11 and 12 both require `katex ^0.16.47`; an override would silence the audit without
 changing what ships. The risk is accepted as low: exploiting it needs both code that has already polluted
 `Object.prototype` and attacker-controlled formulas, and mermaid passes its output through DOMPurify.
-Remove the entry when both the embedded mermaid and the version the CDN runtime is pinned to carry a
+Remove the entry when both the embedded mermaid and the `mermaid@11` range the CDN runtime loads carry a
 patched KaTeX. Last checked 2026-10-06: mermaid 12.1.0 still requires `katex ^0.16.47`.
 
 ### App Dependency Security Override (Removed)

@@ -87,7 +87,8 @@ PowerShell だけ入れさせる理由は無く、またプラットフォーム
       いるものも無いこと。
 - [ ] **未対応の alert。** Dependabot alerts をトリアージし、open のまま残すものには理由を残す。
 - [ ] **セキュリティ override と監査から除外した advisory。** [development.md](development.md) に
-      記録した各 override と、監査から除外した各 advisory を削除条件と突き合わせ、結論が変わらなかった場合も「再点検した日付」を更新する。
+      記録した各 override と、監査から除外した各 advisory を削除条件と突き合わせ、
+      結論が変わらなかった場合も「再点検した日付」を更新する。
 - [ ] **npm の maintainer。** `monodocs` を publish できるアカウントが意図したものだけであり、
       いずれも 2FA が有効であること。
 - [ ] **Trusted Publisher。** npm 側の設定が、現在のリポジトリ・`release.yml`・リリース用
