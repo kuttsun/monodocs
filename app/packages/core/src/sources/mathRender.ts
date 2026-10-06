@@ -92,7 +92,7 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
 /**
  * The largest size, in em, a formula may ask for (`\rule`, `\kern`, `\hspace`, `\raisebox`, and the
  * like). KaTeX's own `maxSize` does not reach every size it writes into MathML — `\raisebox` keeps the
- * unit it was given — so the MathML's sizes are limited here, in whatever unit they are written.
+ * unit it was given — so the MathML's sizes are limited in {@link normalizeLengths}.
  */
 const MAX_SIZE_EM = 100;
 
@@ -142,7 +142,7 @@ export function renderFormula(
   if (!math) return { error: "KaTeX produced no <math> element" };
   const unsupported = resolveMathvariants(math);
   const numbered = dropClasses(math);
-  limitSizes(math);
+  normalizeLengths(math);
   const notations = drawEnclosures(math);
   return { math, unsupported, numbered, notations };
 }
@@ -162,22 +162,59 @@ function dropClasses(math: Element): boolean {
   return numbered;
 }
 
-/** Clamp every size in em beyond {@link MAX_SIZE_EM}, so that one formula cannot break the page. */
-function limitSizes(math: Element): void {
+/** A TeX length in em, signed, and whether it was written relative (`+6pt`), or undefined. */
+function lengthInEm(value: unknown): { em: number; relative: boolean } | undefined {
+  if (typeof value !== "string") return undefined;
+  const m = /^([-+]?)(Infinity|(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?)([a-z]{2})$/i.exec(value.trim());
+  const perEm = m ? UNITS_PER_EM[m[3]!.toLowerCase()] : undefined;
+  if (!m || perEm === undefined) return undefined;
+  const size = Number(m[2]) / perEm;
+  return { em: m[1] === "-" ? -size : size, relative: m[1] !== "" };
+}
+
+/** An em length as MathML Core reads it, within {@link MAX_SIZE_EM}. */
+function em(size: number): string {
+  const clamped = Math.max(-MAX_SIZE_EM, Math.min(MAX_SIZE_EM, size));
+  return `${Number(clamped.toFixed(4))}em`;
+}
+
+/**
+ * Write every length as MathML Core reads it. KaTeX writes TeX's units (`bp`, `dd`, `mu`, and the
+ * rest), which are not CSS lengths and would be ignored, and an `mpadded` that grows its content by a
+ * signed amount (`width="+6pt" lspace="3pt"`, for `\colorbox` and `\fcolorbox`), which MathML Core
+ * reads as an absolute size, so that the box would not fit what it holds. Lengths become em, clamped
+ * to {@link MAX_SIZE_EM} so that one formula cannot break the page; a growing `mpadded` becomes
+ * padding around its content.
+ */
+function normalizeLengths(math: Element): void {
   visit(math, "element", (node: Element) => {
+    if (node.tagName === "mpadded") growByPadding(node);
     for (const [key, value] of Object.entries(node.properties)) {
-      const m =
-        typeof value === "string"
-          ? /^([-+]?(?:Infinity|(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?))([a-z]{2})$/i.exec(value.trim())
-          : null;
-      const perEm = m ? UNITS_PER_EM[m[2]!.toLowerCase()] : undefined;
-      if (!m || perEm === undefined) continue;
-      const size = Number(m[1]) / perEm;
-      if (Math.abs(size) > MAX_SIZE_EM) {
-        node.properties[key] = `${size < 0 ? "-" : ""}${MAX_SIZE_EM}em`;
-      }
+      const length = lengthInEm(value);
+      if (length) node.properties[key] = em(length.em);
     }
   });
+}
+
+function growByPadding(node: Element): void {
+  const width = lengthInEm(node.properties.width);
+  const height = lengthInEm(node.properties.height);
+  const depth = lengthInEm(node.properties.depth);
+  if (!width?.relative && !height?.relative && !depth?.relative) return;
+  const lspace = lengthInEm(node.properties.lspace)?.em ?? 0;
+  const voffset = lengthInEm(node.properties.voffset)?.em ?? 0;
+  const padding = {
+    left: lspace,
+    right: (width?.relative ? width.em : 0) - lspace,
+    top: (height?.relative ? height.em : 0) - voffset,
+    bottom: (depth?.relative ? depth.em : 0) + voffset,
+  };
+  // Shrinking has no padding to become; such an mpadded is left as KaTeX wrote it.
+  if (Object.values(padding).some((p) => p < 0)) return;
+  for (const key of ["width", "height", "depth", "lspace", "voffset"]) delete node.properties[key];
+  const style = `padding: ${em(padding.top)} ${em(padding.right)} ${em(padding.bottom)} ${em(padding.left)}`;
+  node.properties.style =
+    typeof node.properties.style === "string" ? `${style}; ${node.properties.style}` : style;
 }
 
 /**

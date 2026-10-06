@@ -71,11 +71,13 @@ describe("renderFormula", () => {
     expect(render("a \\kern{-100000em} b").html).not.toMatch(/"-?1000+em"/);
     expect(render("\\raisebox{100000cm}{x}").html).toContain('voffset="100em"');
     expect(render("\\raisebox{-100000pt}{x}").html).toContain('voffset="-100em"');
-    expect(render("\\raisebox{2cm}{x}").html).toContain('voffset="2cm"');
+    // Within the cap, a length is written in em, which MathML Core reads, whatever TeX unit it had.
+    expect(render("\\raisebox{2cm}{x}").html).toContain('voffset="5.6906em"');
+    expect(render("\\raisebox{72bp}{x}").html).toContain('voffset="7.227em"');
     // KaTeX's px: 1200px is 120.45em, 1000px 100.375em, 990px 99.37em.
     expect(render("\\raisebox{1200px}{x}").html).toContain('voffset="100em"');
     expect(render("\\raisebox{-1200px}{x}").html).toContain('voffset="-100em"');
-    expect(render("\\raisebox{990px}{x}").html).toContain('voffset="990px"');
+    expect(render("\\raisebox{990px}{x}").html).toContain('voffset="99.3712em"');
     expect(render(`\\raisebox{${"9".repeat(400)}em}{x}`).html).toContain('voffset="100em"');
     expect(render(`\\raisebox{-${"9".repeat(400)}em}{x}`).html).toContain('voffset="-100em"');
   });
@@ -100,6 +102,15 @@ describe("renderFormula", () => {
     expect(drawn("\\angl{n}").html).toMatch(/border-top: [^;]*; border-right/);
     expect(drawn("\\phase{x}").notations).toEqual(["phasorangle"]);
     expect(drawn("\\phase{x}").html).not.toContain("menclose");
+  });
+
+  it("writes every length in em, and a box that grows its content as padding", () => {
+    const { html } = render("\\mkern18mu \\kern1dd \\colorbox{red}{abcdefgh}");
+    expect(html).not.toMatch(/="[-+]?[\d.]+(?:mu|dd|bp|pt|cc|sp)"/);
+    expect(html).toMatch(
+      /<mpadded mathbackground="red" style="padding: 0\.3em 0\.3em 0\.3em 0\.3em">/,
+    );
+    expect(html).not.toMatch(/<mpadded[^>]*width=/);
   });
 
   it("returns KaTeX's reason for a formula it cannot parse", () => {

@@ -24,7 +24,7 @@ beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "monodocs-math-chromium-"));
   await writeFile(
     join(dir, "a.md"),
-    "# T\n\n$$\\cancel{\\colorbox{white}{x}}$$\n\n$$\\rule{80em}{0.1em}+x$$\n",
+    "# T\n\n$$\\cancel{\\colorbox{white}{abcdefghijkl}}$$\n\n$$\\rule{80em}{0.1em}+x$$\n",
   );
   const configFile = join(dir, "monodocs.config.yml");
   await writeFile(configFile, "");
@@ -49,16 +49,23 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           (m.getAttribute("style") ?? "").includes("position: absolute"),
         )!;
         const box = overlay.getBoundingClientRect();
+        const text = math.querySelector("mtext")!.getBoundingClientRect();
+        const colored = math.querySelector("mpadded")!.getBoundingClientRect();
         const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
         return {
           onTop: top === overlay,
           area: box.width * box.height,
+          // The coloured box holds the whole term, and the strike crosses all of it.
+          boxCoversText: colored.left <= text.left && colored.right >= text.right,
+          strikeCoversBox: box.left <= colored.left + 0.5 && box.right >= colored.right - 0.5,
           printAdjust: getComputedStyle(overlay).printColorAdjust,
           mathPrintAdjust: getComputedStyle(math).printColorAdjust,
         };
       });
       expect(strike.onTop).toBe(true);
       expect(strike.area).toBeGreaterThan(0);
+      expect(strike.boxCoversText).toBe(true);
+      expect(strike.strikeCoversBox).toBe(true);
       expect(strike.printAdjust).toBe("exact");
       expect(strike.mathPrintAdjust).toBe("exact");
 

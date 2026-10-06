@@ -545,9 +545,11 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   numbered formula is reported as `math/numbering-unsupported` and rendered without its number. A
   `\tag{}` at the top level of a display formula, after a starred environment for one, is rendered, but
   not at the right margin: KaTeX places it with `width` attributes MathML Core ignores. Inside a numbered
-  environment KaTeX drops a `\tag{}` altogether, so the warning points at the starred form. A size beyond 100em, in whatever unit it is written (`\rule`, `\kern`, `\hspace`,
-  `\raisebox`), is clamped to 100em, since KaTeX's own `maxSize` does not reach every size it writes into
-  MathML: `\raisebox` keeps the unit it was given. KaTeX merges adjacent digits of different styles into one
+  environment KaTeX drops a `\tag{}` altogether, so the warning points at the starred form. Every length is written in em: KaTeX keeps TeX's units (`bp`, `dd`, `mu`),
+  which are not CSS lengths and MathML Core would ignore. A length beyond 100em (`\rule`, `\kern`,
+  `\hspace`, `\raisebox`) is clamped to 100em, since KaTeX's own `maxSize` does not reach every size it
+  writes into MathML. The box KaTeX grows around `\colorbox` and `\fcolorbox` with a signed `mpadded`
+  (`width="+6pt"`), which MathML Core reads as an absolute size, becomes padding around the term. KaTeX merges adjacent digits of different styles into one
   token (`\mathbf{0}\mathbb{0}` becomes one bold `00`); that is KaTeX's doing and is not detected.
 - **Enclosures.** KaTeX writes `\cancel`, `\bcancel`, `\xcancel`, `\sout`, `\boxed`, `\fbox`, and
   `\angl` as `menclose`, which MathML Core does not have, so Chromium would draw the term and nothing
