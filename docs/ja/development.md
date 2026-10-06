@@ -41,6 +41,10 @@ monodocs/
 テストする。イメージは Node 22 に pnpm（`app/package.json` の `packageManager` と同一の
 バージョン）を焼き込んであるため、corepack による pnpm の都度ダウンロードが発生しない。
 
+### 監査から除外しているアプリ依存関係の advisory
+
+`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` に GHSA-238p-pmpm-9mq7 を挙げ、`pnpm audit` がこれで失敗しないようにしています。0.18.2 で修正された低深刻度の KaTeX の advisory で、すでに汚染された `Object.prototype` から継承した `trust` などのオプションを、アプリケーションが設定したかのように扱うというものです。利用者に届くのは mermaid の `mermaid.min.js` にビルド済みで入っている KaTeX 0.16.47 で、このリポジトリの依存をどう変えても差し替えられず、mermaid 11 も 12 も `katex ^0.16.47` を要求します。override では、出荷するものを変えずに監査だけを黙らせることになります。埋め込む mermaid が修正済みの KaTeX を持つようになったら削除します。2026-10-06 時点の再点検では、mermaid 12.1.0 も `katex ^0.16.47` を要求しています。
+
 ### アプリ依存関係のセキュリティ override（削除済み）
 
 `app/` ワークスペースは以前、`postcss` を pnpm `overrides`（`pnpm-workspace.yaml`）で `^8.5.18` に固定していました。`postcss <= 8.5.17` は高深刻度の path traversal advisory（GHSA-r28c-9q8g-f849）を持ち、`vitest -> vite` 経由で dev/test 専用の依存ツリーに入っていたためです。2026-10-01、lockfile が `vite` 8.3.1 を解決するようになった時点で削除しました。`vite` 8.3.1 は自前で `postcss: ^8.5.28` を宣言しています。

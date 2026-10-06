@@ -87,9 +87,9 @@ item is looking for.
       for 60 days. Check that `Scheduled Audit` has recent runs; re-enable it if it stopped.
 - [ ] **Dependabot pull requests.** None open longer than a cycle; none silently failing CI.
 - [ ] **Open alerts.** Dependabot alerts triaged, with anything left open explained.
-- [ ] **Security overrides.** Re-check each documented override in
-      [development.md](development.md) against their removal conditions and update the "Last checked"
-      line, whether or not the answer changed.
+- [ ] **Security overrides and ignored advisories.** Re-check each documented override and each
+      advisory ignored in the audit in [development.md](development.md) against their removal
+      conditions and update the "Last checked" line, whether or not the answer changed.
 - [ ] **npm maintainers.** Only intended accounts can publish `monodocs`, and each has 2FA enabled.
 - [ ] **Trusted Publisher.** The npm setting still names this repository, `release.yml`, and the
       release environment. Renaming any of the three breaks publishing silently — the failure shows
