@@ -3,10 +3,11 @@
 // 単一実行ファイル（SEA）の入力になるほか、`node dist/monodocs.cjs ...` として
 // そのまま実行もできる（ホストに node があれば任意ディレクトリを配信できる）。
 //
-// テーマアセット（template.html / style.css / app.js）と mermaid inline ランタイム（とその表記）は
+// テーマアセット（template.html / style.css / app.js）と mermaid inline ランタイムは
 // 実行時にファイルシステムから読むため、バンドル単体では参照できない。そこで banner で
 // `globalThis.__MONODOCS_ASSETS__` に埋め込み、loadTheme / mermaidRuntimeScript が
 // それを優先して使う（src 側の埋め込みフォールバックは themes/index.ts を参照）。
+// The runtime's third-party notices (themes/mermaid-notices.txt) are embedded the same way.
 import { build } from "esbuild";
 import { bundleExternals } from "./externals.mjs";
 import { createRequire } from "node:module";

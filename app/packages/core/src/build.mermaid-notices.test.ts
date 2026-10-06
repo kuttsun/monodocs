@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildSite } from "./build";
@@ -62,7 +62,14 @@ describe("the Mermaid runtime notices", () => {
     // Versions the runtime carries that node_modules does not resolve at the top level.
     expect(notices).toMatch(/^lodash-es@4\.17\.23 {2}— {2}MIT$/m);
     expect(notices).toMatch(/^@mermaid-js\/parser \(built with mermaid@\d+\.\d+\.\d+\)/m);
+    // Packages a component bundles into its own pre-built file, which the source map cannot see.
+    for (const name of ["hachure-fill", "path-data-parser", "points-on-curve", "points-on-path"]) {
+      expect(notices).toMatch(new RegExp(`^${name} \\(bundled inside roughjs@`, "m"));
+    }
+    // Every component carries a licence text, fastdom's taken from its README.
     expect(notices).not.toContain("UNKNOWN");
+    expect(notices).toMatch(/^fastdom@[\d.]+ {2}— {2}MIT\n-+\n\(From the package's README\.\)/m);
+    expect(notices).toContain("Copyright (c) 2016 Wilson Page");
   });
 
   it("are emitted once with the inline runtime and a diagram, inside its script", async () => {
@@ -163,7 +170,7 @@ describe.skipIf(!chromium)("the inline runtime with its notices (real Chromium)"
       const page = await browser.newPage();
       const errors: string[] = [];
       page.on("pageerror", (e) => errors.push(String(e)));
-      await page.goto(`file://${out}`, { waitUntil: "load" });
+      await page.goto(pathToFileURL(out).href, { waitUntil: "load" });
       await page.waitForSelector("#content .mermaid svg", { timeout: 20_000 });
       expect(errors).toEqual([]);
     } finally {

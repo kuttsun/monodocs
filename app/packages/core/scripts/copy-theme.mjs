@@ -1,5 +1,5 @@
-// tsc はソース以外のアセット（.html / .css / .js）を dist へコピーしないため、
-// テーマアセットを dist にコピーする。
+// tsc does not copy non-source assets to dist, so the theme assets and the Mermaid runtime notices
+// are copied here.
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +14,8 @@ if (!existsSync(src)) {
 }
 
 mkdirSync(dest, { recursive: true });
-// .ts は tsc がコンパイル済みなので、アセット（.html/.css/.js）のみコピーする。
+// tsc has compiled the .ts files; copy everything else, which is the theme's .html/.css/.js and the
+// Mermaid runtime notices (.txt).
 cpSync(src, dest, {
   recursive: true,
   filter: (s) => !s.endsWith(".ts"),

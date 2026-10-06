@@ -2042,14 +2042,14 @@ mermaid 12（Dependabot の #126。経緯は #134 に記録）は、バージョ
   であるとだけ書いている
 - **サイズ。** inline ランタイムは gzip で約 975 KB から約 1.6 MB に（無圧縮で 3.57 MB → 5.58 MB）、
   CLI バンドルは約 2 MB 増える
-- **`lodash-es`（12.0.0）。** mermaid 12.0.0 で新たに入る `chevrotain@11.1.2` が `lodash-es` を `4.17.23` ちょうどに
+- **`lodash-es`（12.0.0）。** mermaid 12.0.0 で `node_modules` の依存になる `chevrotain@11.1.2` が `lodash-es` を `4.17.23` ちょうどに
   固定するので、`pnpm audit` が GHSA-r5fr-rjxr-66jc（`_.template` のコード注入、high）と
   GHSA-f23m-r3pf-42rh（moderate）で失敗する。どちらも 4.18.0 で修正済みである。override は
   `node_modules` を直すが、ビルド済みの `mermaid.min.js` は直さない。そのソースマップには 4.17.23 と
   4.18.1 の両方が見える。脆弱なモジュールはソース一覧に無く、tree-shaking で落ちたことを示唆するが、
   推測ではなく生成されたコードに対して確かめなければならない。monodocs が今出している mermaid 11.17.2 の
   ランタイムも、事前バンドルされたパーサーの中に `chevrotain@11.1.2` と `lodash-es@4.17.23` をすでに
-  含んでいる。v0.15 で表記を生成したときに分かった。`node_modules` にはその版が無いので、`pnpm audit` は
+  含んでいる。v0.15 で表記を生成したときに分かった。`node_modules` には `lodash-es@4.17.23` が無いので、`pnpm audit` は
   これを一度も見ていない。生成されたコードに対する確認は、12 だけでなく、今出しているランタイムにも要る
 - **CDN ランタイムは `mermaid@11` に固定されている。** 依存だけを上げると、`inline` と `pre-render` が
   12 に移る一方で `cdn` は 11 に残る
