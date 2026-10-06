@@ -207,31 +207,25 @@ describe("AsciiDoc math", () => {
     expect(attributes(html, "data-math-tex")).toEqual(["\\text{€}", "α"]);
   });
 
-  it("shows a title formula with its own substitutions as $TeX$, never as a marker", async () => {
-    const { html } = await build("= Compare latexmath:a[a < b]\n\ntext\n");
-    const title = pageData(html).title;
-    expect(title).toContain("$a &lt; b$");
-    expect(title).not.toContain("data-monodocs-math");
-  });
-
-  it("does not let a tag in a formula's own substitutions close its marker", async () => {
+  it("writes a formula whose own substitutions leave < or > raw as Asciidoctor does, and warns", async () => {
+    // Asciidoctor reads the brackets as a tag when it makes an ID, across formulas too, so a marker
+    // could not hold this text and keep the ID; the formula is left as it was, and reported.
     const adoc =
-      "= Compare latexmath:a[\\text{</span>}]\n\n== H latexmath:a[\\text{</span>}]\n\nlatexmath:a[\\text{</span>}]\n";
+      "= Compare latexmath:a[a < b]\n\n== H latexmath:a[a < b] latexmath:a[c > d]\n\n" +
+      "See <<_h_a_d>>. latexmath:a[\\text{</span>}] and latexmath:[x]\n";
     const on = await build(adoc);
     const off = await build(adoc, "math:\n  enabled: false\n");
-    expect(on.html.match(/<math /g)).toHaveLength(3);
-    expect(pageData(on.html).title).toBe("Compare $\\text{&lt;/span>}$");
     const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);
-    expect(ids(on.html)).toEqual(ids(off.html));
-  });
-
-  it("takes tags out as Asciidoctor does, so an ID with stray brackets stays", async () => {
-    const adoc = "= T\n\n== H latexmath:a[a < b < c > d]\n\nSee <<_h_a_d>>.\n";
-    const ids = (html: string) => [...html.matchAll(/<h2 id="([^"]*)"/g)].map((m) => m[1]);
-    const on = await build(adoc);
-    const off = await build(adoc, "math:\n  enabled: false\n");
     expect(ids(on.html)).toEqual(ids(off.html));
     expect(on.result.warnings.map((w) => w.code)).not.toContain("link/unresolved-anchor");
+    expect(attributes(on.html, "data-math-tex")).toEqual(["x"]);
+    expect(pageData(on.html).title).toBe(pageData(off.html).title);
+    const found = on.result.warnings.filter((w) => w.code === "math/construct-unsupported");
+    expect(found.map((w) => w.message)).toEqual([
+      expect.stringContaining("latexmath:[a < b]"),
+      expect.stringContaining("latexmath:[c > d]"),
+      expect.stringContaining("latexmath:[\\text{</span>}]"),
+    ]);
   });
 
   it("keeps the ID of a heading whose formula has its own substitutions", async () => {

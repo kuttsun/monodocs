@@ -154,17 +154,20 @@ export function createAsciidocRenderer(
         anchors: out.anchors,
         links: [],
         assets: [],
-        math: [
-          // A formula in a section title is converted again for each copy (a TOC entry, an xref's
-          // text), and reported once.
-          ...problems.filter(
-            (p, i) => problems.findIndex((q) => JSON.stringify(q) === JSON.stringify(p)) === i,
-          ),
+        // A formula in a section title is converted again for each copy (a TOC entry, an xref's
+        // text), and reported once.
+        math: unique([
+          ...problems,
           ...(math?.asciimath ?? []).map((formula): MathProblem => ({
             kind: "asciimath",
             source: formula,
           })),
-        ],
+          ...(math?.unescaped ?? []).map((formula): MathProblem => ({
+            kind: "construct",
+            source: formula,
+            constructs: "substitutions that leave < or > unescaped",
+          })),
+        ]),
       };
     },
   };
@@ -234,6 +237,16 @@ async function withBoundary<T>(
     rethrowIncludeViolation(boundary?.takeViolation(), source.relativePath);
     throw error;
   }
+}
+
+function unique(problems: MathProblem[]): MathProblem[] {
+  const seen = new Set<string>();
+  return problems.filter((p) => {
+    const key = JSON.stringify(p);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

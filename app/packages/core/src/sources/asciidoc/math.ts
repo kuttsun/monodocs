@@ -24,6 +24,8 @@ export interface AsciidocMath {
   converter: object;
   /** asciimath formulas, as written, which are not rendered. */
   asciimath: string[];
+  /** latexmath formulas left unrendered because their own substitutions leave `<` or `>` raw. */
+  unescaped: string[];
   /** Turn the markers in parsed HTML into formulas. */
   markFormulas(tree: HastRoot): void;
   /** A converted title with each formula as `$TeX$`, as the lists of headings show it. */
@@ -65,6 +67,7 @@ export async function createMathConverter(
   )) as Converter & object;
   const nonce = randomUUID();
   const asciimath: string[] = [];
+  const unescaped: string[] = [];
   // What each marker stands for, kept here rather than read back from the HTML: a passthrough's
   // unclosed tag can swallow a marker's attributes, but not this.
   const formulas = new Map<
@@ -73,19 +76,13 @@ export async function createMathConverter(
   >();
 
   /**
-   * A marker for a formula. Its content is what Asciidoctor converted the formula's text to, with tags
-   * taken out as Asciidoctor takes them out (`<[^>]+>`), since it makes a section's ID from that
-   * (`latexmath:a[&#945;]` keeps the reference, which the ID leaves out). Taking them out here also
-   * keeps a tag the formula's own substitutions let through (`latexmath:a[\\text{</span>}]`) from
-   * closing the marker; a `<` or `>` that is not part of a tag is escaped for the same reason. What the
-   * formula is for rendering is kept apart.
+   * A marker for a formula. Its content is what Asciidoctor converted the formula's text to, as it
+   * stands, since Asciidoctor makes a section's ID from that (`latexmath:a[&#945;]` keeps the
+   * reference, which the ID leaves out): with the converter's own `\\(` and `\\)` gone, which an ID
+   * leaves out anyway, the title's text is what it was. What the formula is for rendering is kept apart.
    */
-  const marker = (tex: string, source: string, display: boolean, converted: string) => {
+  const marker = (tex: string, source: string, display: boolean, content: string) => {
     const key = `${nonce}-${formulas.size}`;
-    const content = converted
-      .replace(/<[^>]+>/g, "")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
     // What the element will hold once the HTML is parsed, read by the same parser.
     formulas.set(key, { tex, source, display, shown: parsedText(content) });
     const tag = display ? "div" : "span";
@@ -95,8 +92,16 @@ export async function createMathConverter(
   const convert = async (node: MathNode, transform?: string, opts?: unknown): Promise<string> => {
     const name = transform ?? node.getNodeName();
     if (name === "inline_quoted" && node.type === "latexmath") {
-      const tex = decode(node.text ?? "");
-      return marker(tex, `latexmath:[${tex.replace(/\]/g, "\\]")}]`, false, node.text ?? "");
+      const converted = node.text ?? "";
+      const tex = decode(converted);
+      // A formula whose own substitutions leave a `<` or `>` raw (`latexmath:a[a < b]`) is written as
+      // Asciidoctor writes it and reported: a marker cannot hold that text and keep both the HTML and the
+      // ID Asciidoctor makes from it, which reads the brackets as a tag, across formulas too.
+      if (/[<>]/.test(converted)) {
+        unescaped.push(`latexmath:[${tex.replace(/\]/g, "\\]")}]`);
+        return base.convert(node, transform, opts);
+      }
+      return marker(tex, `latexmath:[${tex.replace(/\]/g, "\\]")}]`, false, converted);
     }
     if (name === "inline_quoted" && node.type === "asciimath") {
       asciimath.push(`asciimath:[${decode(node.text ?? "")}]`);
@@ -138,6 +143,7 @@ export async function createMathConverter(
   return {
     converter,
     asciimath,
+    unescaped,
     markFormulas(tree) {
       visit(tree, "element", (node: Element) => {
         const key = node.properties.dataMonodocsMath;
