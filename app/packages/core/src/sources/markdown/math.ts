@@ -215,6 +215,7 @@ interface Found {
 
 function inlineMath(parent: Parent, doc: Doc, display: boolean): void {
   const children = parent.children as PhrasingContent[];
+  locateTexts(parent, doc);
   if (display) {
     const run = toRun(children, doc);
     if (startsAndEndsWithDoubleDollar(run.units)) {
@@ -223,6 +224,29 @@ function inlineMath(parent: Parent, doc: Doc, display: boolean): void {
     }
   }
   parent.children = splitRuns(children, doc) as never;
+}
+
+/**
+ * GFM's autolink literals split text nodes after mdast is built and leave the new ones without a
+ * position. Each is given the stretch between its neighbours, so that a `\$` in it is still known.
+ */
+function locateTexts(parent: Parent, doc: Doc): void {
+  const children = parent.children as PhrasingContent[];
+  children.forEach((child, i) => {
+    if (child.type === "text" && !child.position) {
+      // A neighbour's edge is exact; the parent's is not (it includes markers such as `**`), and a
+      // neighbour made by the same transform has no position at all.
+      const before = children[i - 1]?.position?.end.offset;
+      const after = children[i + 1]?.position?.start.offset;
+      const start = before ?? parent.position?.start.offset;
+      const end = after ?? parent.position?.end.offset;
+      if (start !== undefined && end !== undefined) {
+        doc.locate(child, start, end, before !== undefined);
+      }
+    } else if ("children" in child) {
+      locateTexts(child, doc);
+    }
+  });
 }
 
 function startsAndEndsWithDoubleDollar(units: Unit[]): boolean {
@@ -271,13 +295,15 @@ function splitRuns(children: PhrasingContent[], doc: Doc): PhrasingContent[] {
         !doc.isEscaped(after, 0)
       ) {
         const math = codeSpanMath(before, child, after, doc);
+        if (before.value === "") pending.pop();
         flush();
         out.push(math);
         continue;
       }
     }
     if (child.type === "text" || isComment(child)) {
-      pending.push(child);
+      // A text emptied by taking the `$` of a code-span formula out of it is dropped.
+      if (child.type !== "text" || child.value !== "") pending.push(child);
       continue;
     }
     flush();
@@ -312,6 +338,9 @@ function codeSpanMath(before: Text, code: InlineCode, after: Text, doc: Doc): In
   doc.trimHead(after, 1);
   before.value = before.value.slice(0, -1);
   after.value = after.value.slice(1);
+  // The texts around keep positions that do not overlap the formula.
+  if (before.position && start !== undefined) before.position.end = doc.point(start);
+  if (after.position && end !== undefined) after.position.start = doc.point(end);
   return {
     type: "inlineMath",
     value: code.value,
@@ -474,7 +503,7 @@ function toMath(run: Run, f: Found, doc: Doc): InlineMath {
   let source: string | undefined = "";
   let k = f.from;
   while (k <= f.to && source !== undefined) {
-    for (const c of run.comments) if (c.at === k && k > f.from) source += c.node.value;
+    for (const c of run.comments) if (c.at === k && k > f.from) source += lf(c.node.value);
     const u = units[k]!;
     if (u.node.type === "break") {
       const p = u.node.position;
@@ -525,6 +554,8 @@ interface Alignment {
 class Doc {
   private readonly alignments = new Map<Text, Alignment | null>();
   private readonly heads = new Map<Text, number>();
+  private readonly located = new Map<Text, [number, number]>();
+  private readonly exact = new Map<Text, { start: boolean }>();
   private lineStarts: number[] | undefined;
 
   constructor(
@@ -545,7 +576,26 @@ class Doc {
   /** Whether the `$` at this index of a text node was written `\$`. */
   isEscaped(node: Text, index: number): boolean {
     const offset = this.offsetIn(node, index);
-    return offset !== undefined && this.escapes.has(offset);
+    if (offset !== undefined) return this.escapes.has(offset);
+    // Not lined up with the Markdown: fail safe. Any `\$` where the text may have come from makes
+    // every `$` in it a non-delimiter, since a `\$` read as a delimiter would change the document.
+    const range = this.rangeOf(node);
+    if (!range) return this.escapes.size > 0;
+    for (const e of this.escapes) if (e >= range[0] && e < range[1]) return true;
+    return false;
+  }
+
+  /** The stretch of Markdown a text node without a position came from. */
+  locate(node: Text, start: number, end: number, startExact: boolean): void {
+    this.located.set(node, [start, end]);
+    this.exact.set(node, { start: startExact });
+  }
+
+  private rangeOf(node: Text): [number, number] | undefined {
+    const p = node.position;
+    if (p?.start.offset !== undefined && p.end.offset !== undefined)
+      return [p.start.offset, p.end.offset];
+    return this.located.get(node);
   }
 
   /** A text node's characters `from` to `to` as written, line prefixes left out. */
@@ -590,12 +640,21 @@ class Doc {
   private alignmentOf(node: Text): Alignment | null {
     let alignment = this.alignments.get(node);
     if (alignment === undefined) {
-      const start = node.position?.start.offset;
-      const end = node.position?.end.offset;
-      alignment =
-        start === undefined || end === undefined
-          ? null
-          : align(node.value, this.raw.slice(start, end), start);
+      const range = this.rangeOf(node);
+      const exact = node.position ? { start: true } : this.exact.get(node);
+      alignment = null;
+      if (range && exact?.start) {
+        alignment = align(node.value, this.raw.slice(range[0], range[1]), range[0]);
+      }
+      if (range && !alignment && !node.position) {
+        // The start is not known: the text is the stretch that ends at the end of the range and lines
+        // up with it. A parent's end may include a closing marker, in which case nothing lines up.
+        for (let s = range[1] - node.value.length; s >= range[0] && !alignment; s--) {
+          const candidate = align(node.value, this.raw.slice(s, range[1]), s);
+          if (candidate && candidate.map[candidate.map.length - 1] === range[1])
+            alignment = candidate;
+        }
+      }
       this.alignments.set(node, alignment);
     }
     return alignment;

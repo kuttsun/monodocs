@@ -262,6 +262,7 @@ describe("a formula's source", () => {
 
   it("keeps a comment inside a formula as mdast holds it", () => {
     expect(sources("$$x <!--\n  c --> y$$")).toEqual(["$$x <!--\nc --> y$$"]);
+    expect(sources("$x <!--\r\nc --> y$ b")).toEqual(["$x <!--\nc --> y$"]);
   });
 
   it("keeps a fence that runs to the end of the document as it is", () => {
@@ -284,6 +285,32 @@ describe("a formula's source", () => {
 });
 
 describe("what a formula leaves behind", () => {
+  it("never reads `\\$` as a delimiter, also in the texts GFM splits around an autolink", () => {
+    expect(formulasOf(parse("x<br>www.x.com a \\$x$ b"))).toEqual([]);
+    expect(formulasOf(parse("Price:$www.x.com a \\$x$ b"))).toEqual([]);
+    expect(formulasWithSource("x<br>www.x.com a $x$ b")).toEqual([{ source: "$x$", at: "$x$" }]);
+    expect(formulasWithSource("x<br>a $x$ www.x.com b $y$")).toEqual([
+      { source: "$x$", at: "$x$" },
+      { source: "$y$", at: "$y$" },
+    ]);
+  });
+
+  it("leaves no empty text and no overlapping position around a code-span formula", () => {
+    const input = "$`a`$ and w$`b`$w";
+    const paragraph = parse(input).children[0] as { children: Nodes[] };
+    expect(
+      paragraph.children.map((c) => [
+        c.type,
+        input.slice(c.position!.start.offset, c.position!.end.offset),
+      ]),
+    ).toEqual([
+      ["inlineMath", "$`a`$"],
+      ["text", " and w"],
+      ["inlineMath", "$`b`$"],
+      ["text", "w"],
+    ]);
+  });
+
   it("prints `\\$` outside a formula as a dollar sign", () => {
     expect(textOf(parse("It costs \\$5 and $x$ \\$6."))).toBe("It costs $5 and ⟦x⟧ $6.");
   });
