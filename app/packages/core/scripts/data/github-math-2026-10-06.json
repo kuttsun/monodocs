@@ -178,6 +178,14 @@
     {
       "input": "$$x\ny$$",
       "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"174a70f6f460e6e670fd89de9a5138ca\">$$x\ny$$</math-renderer></p>"
+    },
+    {
+      "input": "$a &lt; b$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"82d1fefcb198f82029663b6b00e08047\">$a &amp;lt; b$</math-renderer></p>"
+    },
+    {
+      "input": "$&alpha;$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"70ebaa9821bb29f58e5d2e0bca2be0ef\">$α$</math-renderer></p>"
     }
   ]
 }
