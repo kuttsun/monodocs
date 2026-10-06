@@ -150,8 +150,10 @@ function dropClasses(math: Element): boolean {
 function limitSizes(math: Element): void {
   visit(math, "element", (node: Element) => {
     for (const [key, value] of Object.entries(node.properties)) {
-      const m = typeof value === "string" ? /^(-?)(\d*\.?\d+)em$/.exec(value) : null;
-      if (m && Number(m[2]) > MAX_SIZE_EM) node.properties[key] = `${m[1]}${MAX_SIZE_EM}em`;
+      const m = typeof value === "string" ? /^([-+]?[\d.]+(?:e[-+]?\d+)?)em$/i.exec(value) : null;
+      const size = m ? Number(m[1]) : NaN;
+      if (Math.abs(size) > MAX_SIZE_EM)
+        node.properties[key] = `${size < 0 ? "-" : ""}${MAX_SIZE_EM}em`;
     }
   });
 }

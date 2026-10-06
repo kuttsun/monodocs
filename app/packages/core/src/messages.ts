@@ -135,7 +135,7 @@ const EN = {
   "pages.mathNotAllowed":
     "{path}:{line}: the formula {source} uses {commands}, which monodocs does not render; it is shown as written.",
   "pages.mathNumbering":
-    "{path}:{line}: the formula {source} is numbered, and the number is not rendered; use a starred environment, or a tag.",
+    "{path}:{line}: the formula {source} is numbered, and the number is not rendered; use a starred environment, with \\tag{} after it if the formula needs a number.",
   "pages.aliasCollision":
     'Alias collision: "{alias}" is claimed by both "{first}" and "{second}". An alias resolves to one page.',
   "pages.aliasShadowed":
@@ -448,7 +448,7 @@ const JA: Record<MessageKey, string> = {
   "pages.mathNotAllowed":
     "{path}:{line}: 数式 {source} は monodocs が描かない {commands} を使っているため、書かれたとおりに表示します。",
   "pages.mathNumbering":
-    "{path}:{line}: 数式 {source} には番号が付きますが、番号は描かれません。星付きの環境かタグを使ってください。",
+    "{path}:{line}: 数式 {source} には番号が付きますが、番号は描かれません。星付きの環境を使い、番号が要るならその後ろに \\tag{} を書いてください。",
   "pages.aliasCollision":
     '別名の衝突: "{alias}" を "{first}" と "{second}" の両方が主張しています。別名が指すページは 1 つです。',
   "pages.aliasShadowed":

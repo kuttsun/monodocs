@@ -138,6 +138,13 @@ describe("Markdown math", () => {
   it("reports a numbered environment, whose number cannot be drawn", async () => {
     const { result } = await build("# T\n\n$$\\begin{equation} x \\end{equation}$$\n");
     expect(result.warnings.map((w) => w.code)).toContain("math/numbering-unsupported");
+    // A tag inside a numbered environment is dropped by KaTeX, so the advice is a starred one.
+    const tagged = await build("# T\n\n$$\\begin{equation} x \\tag{1}\\end{equation}$$\n");
+    const found = tagged.result.warnings.find((w) => w.code === "math/numbering-unsupported");
+    expect(found!.message).toContain("starred environment, with \\tag{} after it");
+    const after = await build("# T\n\n$$\\begin{equation*} x \\end{equation*} \\tag{1}$$\n");
+    expect(after.result.warnings.map((w) => w.code)).not.toContain("math/numbering-unsupported");
+    expect(after.html).toMatch(/<mtext>\(1\)<\/mtext>/);
   });
 
   it("renders a formula in a table cell", async () => {

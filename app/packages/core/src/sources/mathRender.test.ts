@@ -67,6 +67,8 @@ describe("renderFormula", () => {
     const { html } = render("\\rule{100000em}{1em}");
     expect(html).not.toContain('width="100000em"');
     expect(html).toContain('width="100em"');
+    expect(render("\\rule{9999999999999999999999em}{1em}").html).toContain('width="100em"');
+    expect(render("a \\kern{-100000em} b").html).not.toMatch(/"-?1000+em"/);
   });
 
   it("returns KaTeX's reason for a formula it cannot parse", () => {
@@ -160,7 +162,13 @@ describe("mathvariant", () => {
   });
 
   it("applies a style a token inherits from the element around it", () => {
-    expect(render("\\textbf{a \\textit{b}}").html).toMatch(/𝐚.*𝒃|𝐚.*𝑏/);
+    const html = render("\\textbf{a \\textit{b}}").html!;
+    expect(
+      [...html.matchAll(/<mtext>([^<]*)<\/mtext>/g)]
+        .map((m) => m[1])
+        .join("")
+        .replace(/\s/gu, " "),
+    ).toBe("𝐚 𝒃");
     expect(render("\\boldsymbol{x + \\alpha}").html).toContain("𝒙");
   });
 

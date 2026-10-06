@@ -509,7 +509,9 @@ TeX を文字として持っており、見出しの ID はそのため TeX か�
   `math/command-not-allowed` として報告し、KaTeX が代わりに置く赤いコマンド名ではなく、書かれたとおりに示す。
   自動の数式番号（星の無い `equation`、`align`、`gather`）は KaTeX のスタイルシートが CSS カウンタで描くので、
   それが無ければ現れない。番号の付く数式は `math/numbering-unsupported` として報告し、番号なしで描く。
-  `\tag{}` は描くが、右端には置かれない。KaTeX は MathML Core が無視する `width` 属性で位置を決めるからである。
+  別行立ての数式の最上位にある `\tag{}`（星付きの環境の後ろに書くものを含む）は描くが、右端には置かれない。
+  KaTeX は MathML Core が無視する `width` 属性で位置を決めるからである。番号の付く環境の中の `\tag{}` は KaTeX が
+  まるごと落とすので、警告は星付きの形を案内する。
   100em を超える大きさ（`\rule`、`\kern`、`\hspace`）は 100em に切り詰める。KaTeX 自身の `maxSize` は HTML
   出力しか制限しないからである。KaTeX は書体の違う隣り合う数字を 1 つのトークンにまとめる
   （`\mathbf{0}\mathbb{0}` は太字の `00` 1 つになる）。これは KaTeX のふるまいで、検出しない。
