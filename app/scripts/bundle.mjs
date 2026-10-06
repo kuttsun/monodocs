@@ -32,7 +32,7 @@ const [template, style, appJs] = await Promise.all([
   readFile(resolve(themeDir, "app.js"), "utf8"),
 ]);
 
-// mermaid の inline ランタイム（config の mermaid.runtime: inline 用。既定 cdn では未使用）。
+// mermaid の inline ランタイム（config の mermaid.runtime: inline 用。inline が既定値）。
 // node_modules を持たないホストでも inline を選べるよう同梱する。
 const require = createRequire(resolve(coreSrc, "themes/mermaid.ts"));
 const mermaidInline = await readFile(require.resolve("mermaid/dist/mermaid.min.js"), "utf8");

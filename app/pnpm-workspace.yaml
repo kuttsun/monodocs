@@ -5,8 +5,8 @@ allowBuilds:
 auditConfig:
   ignoreGhsas:
     # KaTeX: an existing prototype pollution can bypass trust restrictions (low; patched in 0.18.2).
-    # The copy that reaches users is the KaTeX 0.16.47 prebuilt into mermaid's mermaid.min.js, which
-    # no dependency change here can replace, and mermaid 11 and 12 both require katex ^0.16.47. It
-    # needs Object.prototype already polluted by other code. Remove this entry when the mermaid we
-    # embed carries a patched KaTeX (docs/development.md).
+    # The copies that reach users are prebuilt into mermaid's bundles (mermaid.min.js, and the
+    # mermaid@11 ESM the CDN runtime loads), which no dependency change here can replace, and mermaid
+    # 11 and 12 both require katex ^0.16.47. It needs Object.prototype already polluted by other
+    # code. Remove this entry when both carry a patched KaTeX (docs/development.md).
     - GHSA-238p-pmpm-9mq7

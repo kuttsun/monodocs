@@ -116,6 +116,10 @@ item is looking for.
    and excluded from the published bundle. Record that reasoning; do not silently close.
 3. Fix Critical and High before other work, per [SECURITY.md](../SECURITY.md).
 4. If no patched version exists yet, prefer a scoped `overrides` entry with a comment naming its
-   removal condition, and add it to the quarterly re-check above.
+   removal condition, and add it to the quarterly re-check above. If the vulnerable copy that ships
+   cannot change with dependency resolution — code prebuilt into a package's bundle — an override
+   would silence the audit and change nothing that ships: list the advisory under
+   `auditConfig.ignoreGhsas` instead, with the reason and removal condition in
+   [development.md](development.md), and add it to the same re-check.
 5. Release the fix as a new patch on the current line. Do not rebuild an already-published version,
    and do not backport it to an older one ([SECURITY.md](../SECURITY.md)).
