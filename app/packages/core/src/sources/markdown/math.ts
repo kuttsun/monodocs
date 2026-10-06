@@ -107,23 +107,27 @@ export function remarkMath(this: Processor) {
       },
     ],
   };
+  // A copy of the processor copies this extension along with the one its own attacher adds; the
+  // copied one is inert, since its `state.raw` is set only by the parser it wrapped.
   (this.data().fromMarkdownExtensions ??= []).unshift(extension);
 
   const parse = this.parser;
   if (parse) {
     this.parser = (doc, file) => {
+      const previous = state.raw;
       state.raw = doc;
       try {
         return parse(doc, file);
       } finally {
-        state.raw = undefined;
+        state.raw = previous;
       }
     };
     return;
   }
   // Used before remark-parse: there is no parser to read the document from, so the formulas are found
   // after mdast is built. A text an autolink literal split off then cannot be lined up with the
-  // Markdown, and every `$` in it is read as escaped if the document has a `\$` anywhere.
+  // Markdown, and every `$` in it is read as escaped if the document has a `\$` anywhere. A tree
+  // that is parsed but never run keeps the recorded escapes in `root.data.mathEscapes`.
   return (tree: Root, file: { value: unknown }) => {
     findMath(tree, String(file.value));
   };

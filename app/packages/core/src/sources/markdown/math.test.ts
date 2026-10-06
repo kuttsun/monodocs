@@ -330,6 +330,20 @@ describe("what a formula leaves behind", () => {
   });
 });
 
+describe("one processor", () => {
+  it("reads several documents in turn, and so does a copy of it", () => {
+    const processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath).freeze();
+    const read = (p: typeof processor, input: string) => p.runSync(p.parse(input), input) as Root;
+    for (const p of [processor, processor()]) {
+      expect(formulasOf(read(p, "a \\$x$ b"))).toEqual([]);
+      expect(formulasOf(read(p, "a $y$ b"))).toEqual([{ display: false, tex: "y" }]);
+      const tree = read(p, "$$e$$\n\n\\$5");
+      expect(formulasOf(tree)).toEqual([{ display: true, tex: "e" }]);
+      expect(tree.data).toBeUndefined();
+    }
+  });
+});
+
 describe("the plugin used before remark-parse", () => {
   it("still finds the formulas, after mdast is built", () => {
     const processor = unified().use(remarkMath).use(remarkParse).use(remarkGfm);
