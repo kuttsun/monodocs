@@ -602,8 +602,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   make the section's ID, gets the marker too. The hook is not in Asciidoctor's public API; the tests
   of heading IDs and heading text fail if it stops being honoured. The wrapped converter is made with
   the `htmlsyntax` the configuration sets, as Asciidoctor makes its own.
-  - An inline formula is marked with characters, not a tag: three private-use characters around a key
-    and what Asciidoctor converted the formula's text to, where the default output has `\(` and `\)`.
+  - An inline formula is marked with characters, not a tag: private-use characters, each end carrying
+    a key, around what Asciidoctor converted the formula's text to, where the default output has `\(`
+    and `\)`.
     Asciidoctor makes a section's ID from its converted title, taking out tags and every character
     that is not a word character, so a title with formulas gives the very ID it gave before, whatever
     the formulas hold (`latexmath:a[&#945;]`, or raw `<` and `>` from a formula's own substitutions,
@@ -614,7 +615,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
     by the converter, so raw HTML from a passthrough can neither pass for a formula nor change what one
     is. A formula the HTML around it broke apart (inside strong text, its own substitutions let a
     `</strong>` through) is written back with `\(` and `\)`, as Asciidoctor writes it, and reported as
-    `math/construct-unsupported`.
+    `math/construct-unsupported`. A marker, whole or one end of it, wherever the HTML put it — a text,
+    an attribute's value or name, a list of classes, a comment — is written back the same way, with its
+    text as the HTML parser left it; a private-use character an author wrote is left as written.
   - Character references are decoded once, by the same HTML parser the formulas are read with, so
     the two always agree (`&#128;` is `€`, as HTML has it). A block's content is decoded whatever its
     substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is

@@ -53,14 +53,16 @@ interface Converter {
   convert(node: MathNode, transform?: string, opts?: unknown): Promise<string>;
 }
 
-/** An inline marker: OPEN, the key in KEY_DIGITS, SEP, Asciidoctor's converted text, CLOSE. */
+/**
+ * An inline marker: U+E000, the key, U+E001, Asciidoctor's converted text, U+E002, the key, U+E003.
+ * Both ends carry the key, so that either end, alone or with its pair, is known to be one this
+ * converter wrote, and a private-use character an author wrote is left alone.
+ */
 const OPEN = "\uE000";
-const SEP = "\uE001";
-const CLOSE = "\uE002";
 /** The key's digits: sixteen private-use characters, one per hexadecimal digit. */
 const KEY_BASE = 0xe010;
-const INLINE = /\uE000([\uE010-\uE01F]+)\uE001([^\uE000-\uE002]*)\uE002/g;
-const STRAY_OPEN = /\uE000[\uE010-\uE01F]*\uE001?/g;
+const INLINE = /\uE000([\uE010-\uE01F]+)\uE001([^\uE000-\uE003]*)\uE002\1\uE003/g;
+const END = /\uE000([\uE010-\uE01F]+)\uE001|\uE002([\uE010-\uE01F]+)\uE003/g;
 
 interface Formula {
   tex: string;
@@ -107,7 +109,7 @@ export async function createMathConverter(
         source: `latexmath:[${tex.replace(/\]/g, "\\]")}]`,
         display: false,
       });
-      return `${OPEN}${key}${SEP}${converted}${CLOSE}`;
+      return `\uE000${key}\uE001${converted}\uE002${key}\uE003`;
     }
     if (name === "inline_quoted" && node.type === "asciimath") {
       asciimath.push(`asciimath:[${decode(node.text ?? "")}]`);
@@ -160,7 +162,7 @@ export async function createMathConverter(
 
   /** A text with its markers made formulas, or `undefined` when it holds none. */
   const splitText = (value: string): ElementContent[] | undefined => {
-    if (!value.includes(OPEN) && !value.includes(CLOSE)) return undefined;
+    if (!value.includes(OPEN) && !value.includes("\uE002")) return undefined;
     const out: ElementContent[] = [];
     let at = 0;
     const pushText = (s: string) => {
@@ -169,9 +171,9 @@ export async function createMathConverter(
     };
     for (const m of value.matchAll(INLINE)) {
       const formula = formulas.get(m[1]!);
+      if (!formula) continue;
       pushText(value.slice(at, m.index));
-      if (formula) out.push(placeholder(formula));
-      else pushText(`\\(${m[2]}\\)`);
+      out.push(placeholder(formula));
       at = m.index! + m[0].length;
     }
     pushText(value.slice(at));
@@ -179,19 +181,36 @@ export async function createMathConverter(
   };
 
   /**
-   * What is left of a marker the HTML around it broke apart, written back as Asciidoctor writes the
-   * formula: `\(` and `\)` for the marker's characters.
+   * A string with every marker this converter wrote written back as Asciidoctor writes the formula:
+   * a whole one as `\(` and `\)` around its text, as it stands (an attribute's value or a comment is
+   * already decoded); an end left alone, because the HTML around it broke the marker apart, as `\(` or
+   * `\)`, and the formula reported. Anything else is left as written.
    */
   const restore = (value: string): string => {
-    if (!value.includes(OPEN) && !value.includes(CLOSE)) return value;
+    if (!value.includes(OPEN) && !value.includes("\uE002")) return value;
     return value
-      .replace(STRAY_OPEN, (stray) => {
-        const key = stray.slice(1).replace(SEP, "");
-        const formula = formulas.get(key);
-        if (formula) broken.push(formula.source);
-        return "\\(";
-      })
-      .replace(new RegExp(CLOSE, "g"), "\\)");
+      .replace(INLINE, (whole, key: string, converted: string) =>
+        formulas.has(key) ? `\\(${converted}\\)` : whole,
+      )
+      .replace(END, (whole, open: string | undefined, close: string | undefined) => {
+        const formula = formulas.get(open ?? close!);
+        if (!formula) return whole;
+        if (!broken.includes(formula.source)) broken.push(formula.source);
+        return open !== undefined ? "\\(" : "\\)";
+      });
+  };
+
+  /** Every string an element carries, in its properties' names and values, written back. */
+  const restoreProperties = (element: Element) => {
+    const restored: Element["properties"] = {};
+    for (const [name, value] of Object.entries(element.properties)) {
+      restored[restore(name)] = Array.isArray(value)
+        ? value.map((v) => (typeof v === "string" ? restore(v) : v))
+        : typeof value === "string"
+          ? restore(value)
+          : value;
+    }
+    element.properties = restored;
   };
 
   return {
@@ -206,18 +225,15 @@ export async function createMathConverter(
           parent.children.splice(index, 1, ...(split as typeof parent.children));
           return [SKIP, index + split.length];
         }
+        if (node.type === "comment") {
+          node.value = restore(node.value);
+          return;
+        }
         if (node.type !== "element") return;
         const element = node as Element;
-        // A marker can sit in an attribute too (an image's alt text, a link's title): written as
-        // Asciidoctor writes the formula there.
-        for (const [name, value] of Object.entries(element.properties)) {
-          if (typeof value === "string") {
-            element.properties[name] = value.replace(
-              INLINE,
-              (_, _key: string, converted: string) => `\\(${decode(converted)}\\)`,
-            );
-          }
-        }
+        // A marker can sit in an attribute too (an image's alt text, a link's title, or anywhere a
+        // passthrough put one): written back as Asciidoctor writes the formula there.
+        restoreProperties(element);
         const key = element.properties.dataMonodocsMath;
         const formula = typeof key === "string" ? formulas.get(key) : undefined;
         if (!formula) return;
@@ -225,11 +241,13 @@ export async function createMathConverter(
         // passthrough's malformed tag swallowed is left as it is.
         if (element.tagName !== "div" || textOf(element) !== formula.tex) return;
         Object.assign(element, placeholder(formula));
+        // Asciidoctor's HTML has no lines of the source to point at.
+        delete element.position;
         return SKIP;
       });
     },
     titleText(html) {
-      if (!html.includes(OPEN)) return html;
+      if (!html.includes(OPEN) && !html.includes("\uE002")) return html;
       return restore(
         html.replace(INLINE, (whole, key: string) => {
           const formula = formulas.get(key);

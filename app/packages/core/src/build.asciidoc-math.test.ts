@@ -265,6 +265,37 @@ describe("AsciiDoc math", () => {
     expect(pageData(html).title).toBe('Q $a &lt; b, "c"$');
   });
 
+  it("leaves private-use characters an author wrote alone", async () => {
+    const adoc = "= T\n\nA\uE000B\uE002C \uE001\uE003\n";
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(pageData(on.html).text).toBe(pageData(off.html).text);
+    expect(on.html).toContain("A\uE000B\uE002C");
+  });
+
+  it("writes markers back wherever HTML put them: attribute values, lists, names, and comments", async () => {
+    const adoc =
+      "= T\n\n[subs=macros]\n++++\n" +
+      '<span class="latexmath:[x]">T</span>\n' +
+      '<span title="latexmath:a[x"y]">U</span>\n' +
+      '<span title="latexmath:a[&#38;lt;]">V</span>\n' +
+      "<!-- latexmath:[x] -->\n++++\n";
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(on.html).not.toMatch(/[\uE000-\uE01F]/);
+    // As with math off: the attribute's value keeps its reference decoded once, not twice.
+    const titles = (html: string) => [...html.matchAll(/title="([^"]*)"/g)].map((m) => m[1]);
+    expect(titles(on.html)).toEqual(titles(off.html));
+    expect(on.html).toContain("<!-- \\(x\\) -->");
+  });
+
+  it("does not point a block formula's diagnostic at a line of Asciidoctor's HTML", async () => {
+    const { result } = await build("= T\n\n[latexmath]\n++++\nx^{\n++++\n");
+    const found = result.warnings.find((w) => w.code === "math/parse-failed");
+    expect(found!.line).toBeUndefined();
+    expect(found!.message).toMatch(/^a\.adoc: /);
+  });
+
   it("does not let a passthrough's unclosed tag change what a formula is", async () => {
     const { html } = await build('= T\n\n+++<span data-math-tex="\\alpha" +++latexmath:[x] tail\n');
     // The span is the author's own raw HTML, not a formula: nothing renders \\alpha.
