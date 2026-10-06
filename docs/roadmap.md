@@ -549,6 +549,15 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   `\raisebox`), is clamped to 100em, since KaTeX's own `maxSize` does not reach every size it writes into
   MathML: `\raisebox` keeps the unit it was given. KaTeX merges adjacent digits of different styles into one
   token (`\mathbf{0}\mathbb{0}` becomes one bold `00`); that is KaTeX's doing and is not detected.
+- **Enclosures.** KaTeX writes `\cancel`, `\bcancel`, `\xcancel`, `\sout`, `\boxed`, `\fbox`, and
+  `\angl` as `menclose`, which MathML Core does not have, so Chromium would draw the term and nothing
+  around it — a cancelled term reading as if it stood. Each becomes an `mrow` that draws its notation with
+  an inline style, as KaTeX itself does for `\fcolorbox`: borders for a box and its sides, a linear
+  gradient for a strike. A strike is a background, so it is printed only with `pdf.printBackground` on,
+  the default. A notation CSS cannot draw this way (`phasorangle` from `\phase`, and the others MathML
+  defines) is reported as `math/notation-unsupported`, and the term is shown without it.
+- **Width.** A display formula wider than the column scrolls sideways, as a code block does, rather
+  than being cut off. A formula cannot wrap, so in print it is as wide as it is.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
   line break before or after it is not between two East Asian characters and stays a space, as at
   any other element that is not text.

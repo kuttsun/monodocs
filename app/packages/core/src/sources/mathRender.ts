@@ -17,6 +17,7 @@ export type MathProblem = { source: string; line?: number; column?: number } & (
   | { kind: "parse"; detail: string }
   | { kind: "not-allowed"; commands: string }
   | { kind: "numbering" }
+  | { kind: "notation"; notations: string }
   | { kind: "style"; variant: string; chars: string }
 );
 
@@ -79,6 +80,9 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
       }
       for (const s of result.unsupported) report({ kind: "style", source, ...s, ...where });
       if (result.numbered) report({ kind: "numbering", source, ...where });
+      if (result.notations.length > 0) {
+        report({ kind: "notation", source, notations: result.notations.join(", "), ...where });
+      }
       node.children = [result.math];
       return SKIP;
     });
@@ -101,7 +105,12 @@ export function renderFormula(
   tex: string,
   display: boolean,
 ):
-  | { math: Element; unsupported: { variant: string; chars: string }[]; numbered: boolean }
+  | {
+      math: Element;
+      unsupported: { variant: string; chars: string }[];
+      numbered: boolean;
+      notations: string[];
+    }
   | { error: string }
   | { notAllowed: string[] } {
   let html: string;
@@ -134,7 +143,8 @@ export function renderFormula(
   const unsupported = resolveMathvariants(math);
   const numbered = dropClasses(math);
   limitSizes(math);
-  return { math, unsupported, numbered };
+  const notations = drawEnclosures(math);
+  return { math, unsupported, numbered, notations };
 }
 
 /**
@@ -192,6 +202,69 @@ const UNITS_PER_EM: Record<string, number> = {
   // KaTeX's px is 803/800 of a point, not CSS's 1/96 inch.
   px: 10 / (803 / 800),
 };
+
+/** A line as thick as KaTeX draws its rules. */
+const LINE = "0.06em";
+const strike = (direction: string) =>
+  `linear-gradient(${direction}, transparent calc(50% - ${LINE} / 2), currentColor calc(50% - ${LINE} / 2), ` +
+  `currentColor calc(50% + ${LINE} / 2), transparent calc(50% + ${LINE} / 2))`;
+
+/** The CSS each `menclose` notation becomes: borders for the sides, gradients for the strikes. */
+const ENCLOSURES: Record<string, { border?: string[]; radius?: boolean; strike?: string }> = {
+  box: { border: ["top", "right", "bottom", "left"] },
+  roundedbox: { border: ["top", "right", "bottom", "left"], radius: true },
+  top: { border: ["top"] },
+  bottom: { border: ["bottom"] },
+  left: { border: ["left"] },
+  right: { border: ["right"] },
+  actuarial: { border: ["top", "right"] },
+  // A gradient's stripe runs across its direction: "to bottom right" draws the stripe from the bottom
+  // left corner to the top right one.
+  updiagonalstrike: { strike: strike("to bottom right") },
+  downdiagonalstrike: { strike: strike("to top right") },
+  horizontalstrike: { strike: strike("to bottom") },
+  verticalstrike: { strike: strike("to right") },
+};
+
+/**
+ * `menclose` is not in MathML Core, so Chromium draws its content and nothing around it: `\cancel`
+ * would show the term it cancels, and `\boxed` no box. Each one becomes an `mrow` drawing its
+ * notations with an inline style, as KaTeX itself does for `\fcolorbox`. A notation CSS cannot draw
+ * this way (`phasorangle`, `circle`, `longdiv`, and the rest) is returned to be reported.
+ */
+function drawEnclosures(math: Element): string[] {
+  const unsupported = new Set<string>();
+  visit(math, "element", (node: Element) => {
+    if (node.tagName !== "menclose") return;
+    const notations = String(node.properties.notation ?? "longdiv")
+      .split(/\s+/)
+      .filter(Boolean);
+    const borders = new Set<string>();
+    const strikes: string[] = [];
+    let radius = false;
+    for (const notation of notations) {
+      const drawn = ENCLOSURES[notation];
+      if (!drawn) {
+        unsupported.add(notation);
+        continue;
+      }
+      drawn.border?.forEach((side) => borders.add(side));
+      if (drawn.strike) strikes.push(drawn.strike);
+      radius ||= drawn.radius === true;
+    }
+    const style = [
+      ...[...borders].map((side) => `border-${side}: ${LINE} solid`),
+      borders.size > 0 ? "padding: 0.15em" : "",
+      radius ? "border-radius: 0.3em" : "",
+      strikes.length > 0 ? `background-image: ${strikes.join(", ")}` : "",
+      typeof node.properties.style === "string" ? node.properties.style : "",
+    ].filter(Boolean);
+    node.tagName = "mrow";
+    delete node.properties.notation;
+    if (style.length > 0) node.properties.style = style.join("; ");
+  });
+  return [...unsupported];
+}
 
 // --- mathvariant --------------------------------------------------------------------------------
 

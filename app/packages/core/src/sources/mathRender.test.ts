@@ -80,6 +80,28 @@ describe("renderFormula", () => {
     expect(render(`\\raisebox{-${"9".repeat(400)}em}{x}`).html).toContain('voffset="-100em"');
   });
 
+  it("draws the enclosures MathML Core has no menclose for, and returns those CSS cannot draw", () => {
+    const drawn = (tex: string) => {
+      const result = renderFormula(tex, false);
+      if (!("math" in result)) throw new Error("not rendered");
+      return { html: toHtml(result.math), notations: result.notations };
+    };
+    for (const tex of ["\\cancel{x}", "\\bcancel{x}", "\\xcancel{x}", "\\sout{abc}"]) {
+      const { html, notations } = drawn(tex);
+      expect(html, tex).not.toContain("menclose");
+      expect(html, tex).toContain("background-image: linear-gradient(");
+      expect(notations).toEqual([]);
+    }
+    expect(drawn("\\xcancel{x}").html.match(/linear-gradient\(/g)).toHaveLength(2);
+    // A stripe runs across its gradient: \\cancel's "/" is a gradient to the bottom right.
+    expect(drawn("\\cancel{x}").html).toContain("linear-gradient(to bottom right");
+    expect(drawn("\\bcancel{x}").html).toContain("linear-gradient(to top right");
+    expect(drawn("\\boxed{x}").html).toContain("border-left: 0.06em solid");
+    expect(drawn("\\angl{n}").html).toMatch(/border-top: [^;]*; border-right/);
+    expect(drawn("\\phase{x}").notations).toEqual(["phasorangle"]);
+    expect(drawn("\\phase{x}").html).not.toContain("menclose");
+  });
+
   it("returns KaTeX's reason for a formula it cannot parse", () => {
     expect(render("x^{")).toEqual({ error: expect.stringContaining("Expected '}'") });
   });

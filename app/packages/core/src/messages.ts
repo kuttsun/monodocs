@@ -134,6 +134,8 @@ const EN = {
     'Unicode has no {variant} form of "{chars}" in the formula {source} ({path}:{line}); it is shown without the style.',
   "pages.mathNotAllowed":
     "{path}:{line}: the formula {source} uses {commands}, which monodocs does not render; it is shown as written.",
+  "pages.mathNotation":
+    "{path}:{line}: the formula {source} encloses a term with {notations}, which is not drawn; the term is shown without it.",
   "pages.mathNumbering":
     "{path}:{line}: the formula {source} is numbered or tagged inside an environment, and that number is not rendered; use a starred environment, with \\tag{} after it if the formula needs a number.",
   "pages.aliasCollision":
@@ -447,6 +449,8 @@ const JA: Record<MessageKey, string> = {
     'Unicode には "{chars}" の {variant} の形がありません（数式 {source}、{path}:{line}）。スタイルなしで表示します。',
   "pages.mathNotAllowed":
     "{path}:{line}: 数式 {source} は monodocs が描かない {commands} を使っているため、書かれたとおりに表示します。",
+  "pages.mathNotation":
+    "{path}:{line}: 数式 {source} は {notations} で項を囲んでいますが、それは描かれません。項は囲みなしで示します。",
   "pages.mathNumbering":
     "{path}:{line}: 数式 {source} には環境の中で番号かタグが付いていますが、それは描かれません。星付きの環境を使い、番号が要るならその後ろに \\tag{} を書いてください。",
   "pages.aliasCollision":

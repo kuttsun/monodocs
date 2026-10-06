@@ -149,6 +149,13 @@ describe("Markdown math", () => {
     expect(after.html).toMatch(/<mtext>\(1\)<\/mtext>/);
   });
 
+  it("reports an enclosure it cannot draw", async () => {
+    const { result } = await build("# T\n\n$\\phase{x}$ and $\\cancel{y}$\n");
+    const found = result.warnings.filter((w) => w.code === "math/notation-unsupported");
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain("phasorangle");
+  });
+
   it("renders a formula in a table cell", async () => {
     const { html } = await build("# T\n\n| a |\n|---|\n| $x\\|y$ |\n");
     expect(html).toMatch(
