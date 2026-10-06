@@ -170,6 +170,19 @@ describe("AsciiDoc math", () => {
     expect(html).toContain('<span class="math-error">latexmath:[x^{]</span>');
   });
 
+  it("reports a broken formula in a section title once, however often the title is shown", async () => {
+    const { result } = await build(
+      "= T\n:toc:\n\n== Lt latexmath:[x^{]\n\nSee <<_lt_x>> and <<_lt_x>>.\n",
+    );
+    expect(result.warnings.filter((w) => w.code === "math/parse-failed")).toHaveLength(1);
+  });
+
+  it("does not strip the delimiters of two display formulas in one block", async () => {
+    const { result } = await build("= T\n\n[latexmath]\n++++\n\\[a\\] + \\[b\\]\n++++\n");
+    const found = result.warnings.find((w) => w.code === "math/parse-failed");
+    expect(found!.message).toContain("\\[a\\] + \\[b\\]");
+  });
+
   it("writes the source of an asciimath block as written", async () => {
     const { result } = await build("= T\n\n[asciimath]\n++++\na < b\n++++\n");
     const found = result.warnings.find((w) => w.code === "math/asciimath-not-rendered");
@@ -184,6 +197,9 @@ describe("AsciiDoc math", () => {
   it("does not let a passthrough's unclosed tag change what a formula is", async () => {
     const { html } = await build('= T\n\n+++<span data-math-tex="\\alpha" +++latexmath:[x] tail\n');
     expect(attributes(html, "data-math-tex")).not.toContain("\\alpha");
+    // A malformed tag that swallows a marker keeps what it took in; it is not a formula.
+    const swallowed = await build("= T\n\n+++<div x=y +++latexmath:[x] tail and more\n");
+    expect(swallowed.html).toContain("tail and more");
   });
 
   it("does not take raw HTML that spells a marker for a formula", async () => {

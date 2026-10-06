@@ -154,7 +154,11 @@ export function createAsciidocRenderer(
         links: [],
         assets: [],
         math: [
-          ...problems,
+          // A formula in a section title is converted again for each copy (a TOC entry, an xref's
+          // text), and reported once.
+          ...problems.filter(
+            (p, i) => problems.findIndex((q) => JSON.stringify(q) === JSON.stringify(p)) === i,
+          ),
           ...(math?.asciimath ?? []).map((formula): MathProblem => ({
             kind: "asciimath",
             source: formula,

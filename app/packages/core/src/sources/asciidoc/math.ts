@@ -82,8 +82,9 @@ export async function createMathConverter(): Promise<AsciidocMath> {
       // without the `\\[...\\]` an author may have written around it, which Asciidoctor does not add
       // a second time.
       let tex = decode((await node.content?.()) ?? "");
+      // One pair around the whole; `\\[a\\] + \\[b\\]` is two formulas, which KaTeX reports.
       const delimited = /^\s*\\\[([\s\S]*)\\\]\s*$/.exec(tex);
-      if (delimited) tex = delimited[1]!;
+      if (delimited && !/\\[[\]]/.test(delimited[1]!)) tex = delimited[1]!;
       const id = node.id ? ` id="${attribute(node.id)}"` : "";
       const role = node.role ? ` ${attribute(node.role)}` : "";
       const title = node.hasTitle?.() ? `<div class="title">${node.title}</div>\n` : "";
@@ -117,7 +118,14 @@ export async function createMathConverter(): Promise<AsciidocMath> {
       visit(tree, "element", (node: Element) => {
         const key = node.properties.dataMonodocsMath;
         const formula = typeof key === "string" ? formulas.get(key) : undefined;
-        if (!formula) return;
+        // Only a marker as the converter wrote it: an element whose tag matches and which holds the
+        // marker's text alone. One a passthrough's malformed tag swallowed is left as it is.
+        const tag = formula?.display ? "div" : "span";
+        const holdsText =
+          node.children.length === 1 &&
+          node.children[0]!.type === "text" &&
+          node.children[0]!.value === formula?.tex;
+        if (!formula || node.tagName !== tag || !holdsText) return;
         // A marker can appear more than once (a section title repeated in a TOC); each is made the same.
         node.tagName = formula.display ? "div" : "span";
         node.properties = {
