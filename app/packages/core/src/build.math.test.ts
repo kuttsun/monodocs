@@ -187,6 +187,18 @@ describe("Markdown math", () => {
     expect(off.html).toContain("<span>\\mathbb{R}</span>");
   });
 
+  it("reads raw HTML that looks like a formula as the HTML it is", async () => {
+    await writeFile(
+      join(dir, "b.adoc"),
+      '= B\n\n++++\n<span class="math" data-math-tex="replacement">Visible</span>\n++++\n',
+    );
+    const { html } = await build("# A\n");
+    const json = /window\.__MONODOCS_DATA__ = (\{.*\});/.exec(html)![1]!;
+    const texts = (JSON.parse(json) as { pages: { text: string }[] }).pages.map((p) => p.text);
+    expect(texts.join("\n")).toContain("Visible");
+    expect(texts.join("\n")).not.toContain("replacement");
+  });
+
   it("builds a fixture without formulas byte for byte as with math off", async () => {
     // examples/ja has `$` in code and shell lines but no formula.
     const fixture = fileURLToPath(new URL("../../../../examples/ja", import.meta.url));

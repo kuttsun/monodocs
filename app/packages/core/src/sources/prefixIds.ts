@@ -82,10 +82,7 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
  * display formula apart from the text around it (roadmap 6.4). The MathML itself — tokens and the TeX
  * annotation together — is never read as text.
  */
-export function withFormulasAsText<T extends HastRoot | Element>(
-  node: T,
-  use: "heading" | "search",
-): T {
+function withFormulasAsText<T extends HastRoot | Element>(node: T, use: "heading" | "search"): T {
   const map = (n: RootContent | ElementContent): RootContent | ElementContent => {
     if (n.type === "element" && isMath(n)) {
       const tex = (n as Element).properties.dataMathTex as string;

@@ -36,17 +36,21 @@ export function mathPlaceholder(
       dataMathTex: tex,
     },
     children: [{ type: "text", value: tex }],
+    // The mark that makes it a formula: raw HTML can spell the class and the attributes, but not this.
+    data: { monodocsMath: true } as Element["data"],
   };
 }
 
-/** Whether a hast element is a formula (rendered or not). */
+declare module "hast" {
+  interface ElementData {
+    /** Set on a formula monodocs made; see {@link mathPlaceholder}. */
+    monodocsMath?: boolean;
+  }
+}
+
+/** Whether a hast element is a formula monodocs made (rendered or not), not raw HTML that looks like one. */
 export function isMath(node: ElementContent): boolean {
-  return (
-    node.type === "element" &&
-    Array.isArray(node.properties.className) &&
-    node.properties.className.includes("math") &&
-    typeof node.properties.dataMathTex === "string"
-  );
+  return node.type === "element" && node.data?.monodocsMath === true;
 }
 
 /** rehype plugin: renders every formula placeholder, reporting what it could not render. */
@@ -67,6 +71,7 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
         );
         // Shown as written, as it was before math was rendered, rather than as KaTeX's error box.
         node.properties.className = ["math-error"];
+        delete node.data;
         delete node.properties.dataMathTex;
         delete node.properties.dataMathSource;
         node.children = [{ type: "text", value: source }];
@@ -81,8 +86,9 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
 }
 
 /**
- * The largest size, in em, a formula may ask for (`\rule`, `\kern`, `\hspace`, and the like). KaTeX's
- * own `maxSize` limits only its HTML output, so the MathML's sizes are limited here.
+ * The largest size, in em, a formula may ask for (`\rule`, `\kern`, `\hspace`, `\raisebox`, and the
+ * like). KaTeX's own `maxSize` does not reach every size it writes into MathML — `\raisebox` keeps the
+ * unit it was given — so the MathML's sizes are limited here, in whatever unit they are written.
  */
 const MAX_SIZE_EM = 100;
 
@@ -150,13 +156,41 @@ function dropClasses(math: Element): boolean {
 function limitSizes(math: Element): void {
   visit(math, "element", (node: Element) => {
     for (const [key, value] of Object.entries(node.properties)) {
-      const m = typeof value === "string" ? /^([-+]?[\d.]+(?:e[-+]?\d+)?)em$/i.exec(value) : null;
-      const size = m ? Number(m[1]) : NaN;
-      if (Math.abs(size) > MAX_SIZE_EM)
+      const m =
+        typeof value === "string"
+          ? /^([-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?)([a-z]{2})$/i.exec(value.trim())
+          : null;
+      const perEm = m ? UNITS_PER_EM[m[2]!.toLowerCase()] : undefined;
+      if (!m || perEm === undefined) continue;
+      const size = Number(m[1]) / perEm;
+      if (Math.abs(size) > MAX_SIZE_EM) {
         node.properties[key] = `${size < 0 ? "-" : ""}${MAX_SIZE_EM}em`;
+      }
     }
   });
 }
+
+/**
+ * How many of each TeX unit make an em, taking an em as 10pt as KaTeX does; `ex` and `mu` are KaTeX's
+ * own proportions. A unit not listed is left alone.
+ */
+const UNITS_PER_EM: Record<string, number> = {
+  em: 1,
+  ex: 1 / 0.431,
+  mu: 18,
+  pt: 10,
+  mm: 10 / (72.27 / 25.4),
+  cm: 10 / (72.27 / 2.54),
+  in: 10 / 72.27,
+  bp: 10 / (72.27 / 72),
+  pc: 10 / 12,
+  dd: 10 / (1238 / 1157),
+  cc: 10 / (14856 / 1157),
+  nd: 10 / (685 / 642),
+  nc: 10 / (1370 / 107),
+  sp: 10 * 65536,
+  px: 10 / (72.27 / 96),
+};
 
 // --- mathvariant --------------------------------------------------------------------------------
 

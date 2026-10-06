@@ -545,8 +545,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   numbered formula is reported as `math/numbering-unsupported` and rendered without its number. A
   `\tag{}` at the top level of a display formula, after a starred environment for one, is rendered, but
   not at the right margin: KaTeX places it with `width` attributes MathML Core ignores. Inside a numbered
-  environment KaTeX drops a `\tag{}` altogether, so the warning points at the starred form. A size beyond 100em (`\rule`, `\kern`, `\hspace`) is clamped to 100em, since KaTeX's own
-  `maxSize` limits only its HTML output. KaTeX merges adjacent digits of different styles into one
+  environment KaTeX drops a `\tag{}` altogether, so the warning points at the starred form. A size beyond 100em, in whatever unit it is written (`\rule`, `\kern`, `\hspace`,
+  `\raisebox`), is clamped to 100em, since KaTeX's own `maxSize` does not reach every size it writes into
+  MathML: `\raisebox` keeps the unit it was given. KaTeX merges adjacent digits of different styles into one
   token (`\mathbf{0}\mathbb{0}` becomes one bold `00`); that is KaTeX's doing and is not detected.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
   line break before or after it is not between two East Asian characters and stays a space, as at

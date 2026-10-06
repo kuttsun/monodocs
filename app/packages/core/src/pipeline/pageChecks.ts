@@ -4,7 +4,6 @@ import type { ElementContent, Root as HastRoot } from "hast";
 import { headingLevel, pageFlow } from "./pageBreakHeadings.js";
 import { type Diagnostic, warn } from "../diagnostics.js";
 import { t } from "../messages.js";
-import { withFormulasAsText } from "../sources/prefixIds.js";
 import type { Page } from "../types.js";
 
 /**
@@ -45,7 +44,10 @@ export function checkHeadingLevels(tree: HastRoot, page: Page, diagnostics: Diag
         warn(
           "heading/level-skipped",
           t("check.headingLevelSkipped", {
-            title: toText(withFormulasAsText(node, "heading")).trim(),
+            // The heading as the lists of headings show it, a formula as `$TeX$`.
+            title: (
+              page.headings.find((h) => h.id === node.properties.id)?.text ?? toText(node)
+            ).trim(),
             from: previous,
             to: level,
             path: page.relativePath,

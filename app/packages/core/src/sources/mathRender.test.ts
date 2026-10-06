@@ -69,6 +69,9 @@ describe("renderFormula", () => {
     expect(html).toContain('width="100em"');
     expect(render("\\rule{9999999999999999999999em}{1em}").html).toContain('width="100em"');
     expect(render("a \\kern{-100000em} b").html).not.toMatch(/"-?1000+em"/);
+    expect(render("\\raisebox{100000cm}{x}").html).toContain('voffset="100em"');
+    expect(render("\\raisebox{-100000pt}{x}").html).toContain('voffset="-100em"');
+    expect(render("\\raisebox{2cm}{x}").html).toContain('voffset="2cm"');
   });
 
   it("returns KaTeX's reason for a formula it cannot parse", () => {
