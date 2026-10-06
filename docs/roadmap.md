@@ -354,9 +354,10 @@ stays text, `Cost $x = \$4$ here` is the formula `x = \$4`, and `a $\$$ b` is th
 GitHub renders math, the formula `4`, and text. Every input with a `\$` outside ``$`...`$`` may differ
 from GitHub this way, and those cases are the tests not pinned to GitHub. GitHub's own escape still
 works as it does there: an inline HTML tag is a boundary no formula crosses, so the `$` in
-`<span>$</span>` is text, and the tags are then dropped as monodocs drops raw HTML, leaving the `$`. A
-document written for GitHub that puts `\$` in a formula, as GitHub advises, comes out as its author
-meant here, so the difference corrects rather than breaks it.
+`<span>$</span>` is text, and the tags are then dropped as monodocs drops raw HTML, leaving the `$`. An
+HTML comment is not a boundary, as on GitHub: `$x<!-- c -->y$` is the formula `xy`. A document written
+for GitHub that puts `\$` in a formula, as GitHub advises, comes out as its author meant here, so the
+difference corrects rather than breaks it.
 
 AsciiDoc keeps Asciidoctor's own markup: `latexmath:[...]` and the `[latexmath]` block, rendered
 whatever `:stem:` says, and `stem:[...]` and the `[stem]` block, rendered when they mean latexmath —
