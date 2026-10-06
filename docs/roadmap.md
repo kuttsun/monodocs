@@ -345,7 +345,7 @@ Captured on 2026-10-06 (math: what GitHub renders as a formula):
 | `$$x$$` on a line between two lines of text in one paragraph | inline math |
 | `To split <span>$</span>100 in half, we calculate $100/2$` | math: `100/2` |
 | `$a &lt; b$`, `$a &#60; b$`, `$a < b$`, `$$a &lt; b$$` | math: `a < b` (references decoded) |
-| ``$`a &lt; b`$``, a fenced `math` block holding `a &lt; b` | math: `a &lt; b` (code: not decoded) |
+| ``$`a &lt; b`$``, a fenced `math` block holding `a &lt; b` | math, TeX `a &lt; b` (code: not decoded) |
 | `$&alpha;$`, `$&#x3B1;$` | math: `α` |
 | `$x$` in a table cell | inline math |
 | a fenced `math` block | display math |
@@ -418,20 +418,19 @@ Alternatives considered:
 **Copying, search, and headings (decided in v0.15).** All three work from the formula's TeX as the
 author wrote it, so that what a reader copies, what search finds, and what a heading list shows agree.
 
-- **Where the source lives.** Each rendered formula carries its source in the HTML, on the element
-  that wraps its MathML: the TeX, and for Markdown the form it was written in (`$...$`, ``$`...`$``,
+- **Where the source lives.** Each rendered formula carries its source in the HTML, on the element that
+  wraps its MathML: the TeX, and for Markdown the form it was written in (`$...$`, ``$`...`$``,
   `$$...$$`, or a fenced block). For AsciiDoc, monodocs replaces the converter's output for a formula
   inside Asciidoctor's conversion with a marker element whose text is the formula's text as Asciidoctor
-  gives it — `node.text`, already escaped, so it goes out as it is — and renders the markers
-  afterwards; text an author wrote as `\(x\)` is not a marker and stays text. The same converter is used
-  where monodocs reads a document's title, so a formula there can be shown as `$TeX$`. An asciimath
-  marker is turned back into Asciidoctor's `\$...\$` with its warning, its output unchanged. A macro
-  given its own substitutions, such as `latexmath:a[...]`, carries what those substitutions made of
-  the text rather than the bare TeX. Asciidoctor
-  has already resolved `stem` by then — `stem:[x]` under `:stem: latexmath` arrives as latexmath — so
-  the form recorded is `latexmath:[...]` inline, with `]` escaped as `\]`, and a `[latexmath]` block
-  with `++++` delimiters for display, which also keeps a pasted formula from being read as asciimath
-  where `:stem:` is unset.
+  gives it — `node.text`, already escaped, so it goes out as it is — and renders the markers afterwards;
+  text an author wrote as `\(x\)` is not a marker and stays text. The same converter is used where
+  monodocs reads a document's title, so a formula there can be shown as `$TeX$`. asciimath is not
+  marked: the converter leaves it to Asciidoctor, whose output it keeps, and only notes the formula for
+  the warning. A macro given its own substitutions, such as `latexmath:a[...]`, carries what those
+  substitutions made of the text rather than the bare TeX. Asciidoctor has already resolved `stem` by
+  then — `stem:[x]` under `:stem: latexmath` arrives as latexmath — so the form recorded is
+  `latexmath:[...]` inline, with `]` escaped as `\]`, and a `[latexmath]` block with `++++` delimiters
+  for display, which also keeps a pasted formula from being read as asciimath where `:stem:` is unset.
 - **Copying.** On `copy`, when the selection includes a formula, the script writes both formats
   itself, since replacing the plain text discards the browser's own HTML. The plain text has each
   formula replaced by its source in that form; a display formula sits on lines of its own, without the
