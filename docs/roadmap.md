@@ -309,7 +309,7 @@ capture is kept in full — every input as sent, the options, and GitHub's HTML 
 `app/packages/core/scripts/data/github-math-2026-10-06.json`, where a formula is a `<math-renderer>`
 element whose class says inline or display. It includes formulas across a newline: a single-`$`
 formula does not cross one (`a $x` then `y$ b` is text, the newline a `<br>` in a comment), and a
-`$$...$$` one does (`$$x` then `y$$` is display math), and that is the rule here, whether or not a
+`$$...$$` one does in a paragraph that displays (`$$x` then `y$$` is display math), and that is the rule here, whether or not a
 repository file would differ.
 
 Captured on 2026-10-06 (math: what GitHub renders as a formula):
@@ -350,8 +350,50 @@ Captured on 2026-10-06 (math: what GitHub renders as a formula):
 | `$x$` in a table cell | inline math |
 | a fenced `math` block | display math |
 
+**The rules, measured (v0.15).** The table above does not settle where a formula may start and end, so
+2,773 more inputs were captured the same way on the same day, varying the character before and after
+each delimiter systematically and covering the containers a formula can sit in; they are kept in
+`app/packages/core/scripts/data/github-math-probes-2026-10-06.json`. monodocs' parser reproduces every
+captured case, apart from the differences listed at the end of this paragraph. GitHub looks for formulas after
+CommonMark has parsed the paragraph, in the text between tags, which is why emphasis wins and an element
+is a boundary. In that text:
+
+- `$...$` opens at a `$` that comes after the start of the text, an ASCII space, or `(`, and before a
+  character that is neither a space nor `$`. It closes at the next `$`, which must not be followed by an
+  ASCII letter, digit, or `_`, nor by the character just before it (`$a.$.` is text). The formula holds
+  no `$` and no newline. If the first closing `$` fails, there is no formula from that opening.
+- `$$...$$` inline follows the same rules, without the one about the character before the closing `$$`.
+- ``$`...`$`` is a code span with a `$` right before and right after it, whatever surrounds them.
+- A paragraph whose text starts and ends with `$$` displays every `$$...$$` in it; such a formula may
+  cross lines and start or end with a space, and text between two of them stays text. This applies to
+  paragraphs outside a list item, quoted or not; in a list item, a heading, or a table cell `$$...$$` is
+  inline.
+- No formula is found in emphasis, a link's text, an image's alt text, a code span, a footnote
+  definition (a fenced `math` block there included), or raw `<em>`, `<b>`, `<a>`, or `<code>`. Strong and
+  struck-through text and other raw tags do not stop one.
+- A fenced block is math when its language is exactly `math`; `Math` is code.
+
+Two consequences follow GitHub as the notation says, and are documented for authors rather than changed.
+First, **backslash escapes are resolved before a formula is read**, as CommonMark resolves them anywhere:
+in `$...$` and `$$...$$`, `\{` is `{`, `\` is `\`, and `\,` is `,`. TeX that needs them is written as
+``$`...`$`` or a fenced `math` block, which keep a backslash as written. `\$` is the
+exception, by the rule below. Keeping every backslash was considered and rejected: a document previewed
+on GitHub has already been adjusted to GitHub's reading, doubling backslashes or switching to the code
+forms, and would break here; a document that relies on them unadjusted is already wrong on GitHub, where
+its author can see it. Second, **a formula has to follow a space**: `値は$x$です` is text and
+`値は $x$ です` is math, while a closing `$` may be followed by Japanese text.
+
+The display rule is the second deliberate difference, besides `\$` below. GitHub displays a paragraph
+that starts and ends with `$$` even when it also holds emphasis, struck-through text, an image, or inline
+HTML, and then rewrites that markup into the formula: `$$a *b* c$$` becomes the TeX `a _b_ c`, `$$a
+**b** c$$` the TeX `a b c`, and an image disappears. monodocs displays such a paragraph only when it holds
+nothing but text, line breaks, and HTML comments; otherwise it reads it by the inline rules, which keeps
+the markup. A paragraph holding a code span or a link is read the same way on both. The captured inputs
+where the result differs — those, the `\$` cases, and raw HTML, which monodocs drops — are listed with
+monodocs' result in the parser's tests.
+
 So the common forms of money and shell variables stay text, and the forms above marked math read as math
-here too, as they do on GitHub. The one deliberate difference is `\$`. GitHub's way out is
+here too, as they do on GitHub. The other deliberate difference is `\$`. GitHub's way out is
 `<span>$</span>`, and monodocs drops raw HTML in Markdown, so `\$` is made an escape instead: a
 backslash before a dollar sign never opens or closes a formula. Outside a formula it prints a `$`;
 inside `$...$` or `$$...$$` it stays `\$`, TeX's dollar sign, which is what GitHub tells authors to
