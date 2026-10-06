@@ -76,6 +76,10 @@ describe("the Mermaid runtime notices", () => {
       expect(notices).toMatch(new RegExp(`^${name}@[\\d.]+ \\(bundled inside ${parent}@`, "m"));
     }
     expect(notices).toMatch(/^entity-decode@2\.0\.1 \(copied into mermaid@/m);
+    // Code generated into mermaid's parsers, and helpers Babel injected into pre-built files.
+    expect(notices).toMatch(/^jison@0\.4\.18 \(copied into mermaid@/m);
+    expect(notices).toContain("Copyright (c) 2009-2014 Zachary Carter");
+    expect(notices).toContain("Sebastian McKenzie and other contributors");
     expect(notices).toContain("Ralf S. Engelschall");
     expect(notices).toContain("Event object based on jQuery events");
     expect(notices).toContain("Copyright Joyent, Inc. and other Node contributors.");
@@ -86,6 +90,31 @@ describe("the Mermaid runtime notices", () => {
     expect(notices).not.toContain("UNKNOWN");
     expect(notices).toMatch(/^fastdom@[\d.]+ {2}— {2}MIT\n-+\n\(From the package's README\.\)/m);
     expect(notices).toContain("Copyright (c) 2016 Wilson Page");
+  });
+
+  it("fail the check when a licence text is gone or the generator changed", async () => {
+    const script = fileURLToPath(
+      new URL("../scripts/generate-mermaid-notices.mjs", import.meta.url),
+    );
+    const notices = await loadMermaidNotices();
+    const check = async (text: string) => {
+      const file = join(dir, "notices.txt");
+      await writeFile(file, text);
+      return promisify(execFile)(process.execPath, [script, "--check", "--file", file]).then(
+        () => "passed",
+        (e: { stderr: string }) => e.stderr,
+      );
+    };
+    expect(await check(notices)).toBe("passed");
+    // A block whose licence text was removed, its label left in place.
+    const sep = "-".repeat(80);
+    const at = notices.indexOf(`${sep}\nMIT License`);
+    const stripped =
+      notices.slice(0, at + sep.length + 1) + notices.slice(notices.indexOf("\n=", at));
+    expect(await check(stripped)).toMatch(/no licence text/);
+    expect(await check(notices.replace(/^Generator: \w+$/m, "Generator: 0000"))).toMatch(
+      /changed after/,
+    );
   });
 
   it("list the citations in mermaid's own sources for the hand audit", async () => {

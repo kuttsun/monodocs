@@ -193,7 +193,8 @@ minification, path, and bundler traces, so a small, unminified bundle that leave
 pass; and mermaid's and the parser's own sources are not judged at all. They are audited by hand with each
 mermaid version, which the stale `mermaid@<version>` entry forces, starting from the citations generation
 prints. A test fails when the components the notices list are no longer the runtime's, which is what a
-mermaid upgrade does; regenerate them (this may use the network) and commit the result:
+mermaid upgrade does, and when the generator, which holds the audit, changed after the notices were
+generated; regenerate them (this may use the network) and commit the result:
 
 ```bash
 scripts/app.sh sh -c 'cd packages/core && node scripts/generate-mermaid-notices.mjs'
