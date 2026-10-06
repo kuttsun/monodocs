@@ -300,8 +300,8 @@ function filler(n: number, word: string): string {
   return Array.from({ length: n }, (_, i) => `${word} paragraph ${i} of plain text.`).join("\n\n");
 }
 
-// Each of these renders a PDF twice or more in a real Chromium, which takes well over the default
-// 20 s on a loaded runner, as the other real-Chromium PDF tests already allow for.
+// These launch a real Chromium, and most of them print a PDF twice or more, which takes well over the
+// default 20 s on a loaded runner, as the other real-Chromium PDF tests already allow for.
 describe.skipIf(!chromium)(
   "a printed table of contents (real Chromium)",
   { timeout: 120_000 },
@@ -496,7 +496,8 @@ describe.skipIf(!chromium)(
       expect(toc).not.toContain("Folded");
     });
 
-    // A longer timeout: it builds a 40-sheet PDF and reads every sheet, and the Windows runner is slow.
+    // Longer than its siblings' 120 s: it builds a 40-sheet PDF and reads every sheet, and the Windows
+    // runner is slow.
     it("numbers every line of a table that runs over several sheets", async () => {
       const files: Record<string, string> = {};
       for (let p = 0; p < 6; p++) {
@@ -525,7 +526,7 @@ describe.skipIf(!chromium)(
         }
       }
       expect(table).toBe(expected);
-    }, 60_000);
+    }, 240_000);
 
     it("lists to depth 2 by default and prints nothing when off", async () => {
       const on = await buildPdf("depth", "pdf:\n  toc:\n    enabled: true\n");
