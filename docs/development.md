@@ -40,6 +40,20 @@ monodocs/
 
 Instead of installing Node / pnpm on the host, develop, build, and test inside the dedicated image **`monodocs-dev`**. The image bakes in pnpm on top of Node 22 (the same version as `packageManager` in `app/package.json`), so pnpm is not downloaded each time via corepack.
 
+### App Dependency Advisory Ignored in the Audit
+
+`app/pnpm-workspace.yaml` lists GHSA-238p-pmpm-9mq7 under `auditConfig.ignoreGhsas`, so `pnpm audit` does
+not fail on it. It is a low-severity KaTeX advisory, patched in 0.18.2: KaTeX can treat options inherited
+from an already-polluted `Object.prototype`, such as `trust`, as if the application had set them. The
+copies that reach users are prebuilt: the KaTeX 0.16.47 inside mermaid's `mermaid.min.js`, which the
+inline runtime and pre-render use, and the one inside the `mermaid@11` ESM bundle that
+`mermaid.runtime: cdn` loads from jsDelivr at run time. Overriding the KaTeX version this repository resolves reaches
+neither, and mermaid 11 and 12 both require `katex ^0.16.47`; an override would silence the audit without
+changing what ships. The risk is accepted as low: exploiting it needs both code that has already polluted
+`Object.prototype` and attacker-controlled formulas, and mermaid passes its output through DOMPurify.
+Remove the entry when both the embedded mermaid and the `mermaid@11` range the CDN runtime loads carry a
+patched KaTeX. Last checked 2026-10-06: mermaid 12.1.0 still requires `katex ^0.16.47`.
+
 ### App Dependency Security Override (Removed)
 
 The `app/` workspace used to pin `postcss` to `^8.5.18` through pnpm `overrides` in `pnpm-workspace.yaml`,
