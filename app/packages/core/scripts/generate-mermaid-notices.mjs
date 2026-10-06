@@ -48,6 +48,12 @@ const PREBUILT_AUDITED = {
     // build/venn.esm.js inlines fmin (nelderMead, conjugateGradient, bisect, zeros), patched by venn.js.
     bundled: [{ name: "fmin", version: "0.0.4", declared: "0.0.4, patched by venn.js" }],
   },
+  // Inside the pre-bundled parser, single files over 20 KB of the package's own code.
+  "chevrotain@11.1.2": {},
+  "langium@4.2.1": {},
+  "vscode-jsonrpc@8.2.0": {},
+  "vscode-languageserver-protocol@3.17.5": {},
+  "vscode-languageserver-types@3.17.5": {},
   "cose-base@1.0.3": {}, // requires layout-base rather than carrying it
   "cose-base@2.2.0": {},
   "cytoscape@3.34.0": {
@@ -62,9 +68,14 @@ const PREBUILT_AUDITED = {
       "  Promises/A+ 1.1.1 Thenable — Copyright (c) 2013-2014 Ralf S. Engelschall (http://engelschall.com)",
       "  Bezier curve function generator — Copyright Gaetan Renaudeau",
       "  Runge-Kutta spring physics function generator, adapted from Framer.js — copyright Koen Bok",
+      "  Event object based on jQuery events (https://github.com/jquery/jquery/blob/master/src/event.js)",
+      "    — Copyright OpenJS Foundation and other contributors",
       "The MIT License text is reproduced above.",
     ],
+    // "Explained by Blindman67 at https://stackoverflow.com/a/44856925" cites an explanation of
+    // the technique; the code there is not copied.
   },
+  "cytoscape-cose-bilkent@4.1.0": {}, // a webpack UMD of its own code; requires cose-base
   "cytoscape-fcose@2.2.0": {}, // requires cose-base rather than carrying it
   "dagre-d3-es@7.0.14": {},
   "dayjs@1.11.21": {},
@@ -82,6 +93,14 @@ const PREBUILT_AUDITED = {
     apache: true,
   },
   "marked@16.3.0": {},
+  "mermaid@11.17.2": {
+    // src/utils.ts copies entity-decode's browser decoder ("source: …/entity-decode/blob/v2.0.1").
+    bundled: [{ name: "entity-decode", version: "2.0.1", declared: "copied into src/utils.ts" }],
+  },
+  // Inside the pre-bundled parser: lib/esm/index.mjs is a webpack bundle carrying path-browserify.
+  "vscode-uri@3.1.0": {
+    bundled: [{ name: "path-browserify", version: "1.0.1", declared: "^1.0.1 (devDependency)" }],
+  },
   "roughjs@4.6.6": {
     // bundled/rough.esm.js is a rollup bundle of roughjs and its four dependencies.
     bundled: [
@@ -94,7 +113,14 @@ const PREBUILT_AUDITED = {
 };
 
 /** Whether a source is one a component's own build may have filled with other code. */
-function needsAudit(file, content) {
+function needsAudit(file, content, inEsbuildChunk = false) {
+  const bundlerTrace =
+    /__webpack_require__|\/\*{3}\/|createCommonjsModule|getDefaultExportFromCjs|function require[A-Z]\w* \(\)|typeof exports *=== *['"]object['"] *&& *typeof module/;
+  if (bundlerTrace.test(content)) return true;
+  // Inside mermaid's own esbuild chunk, __commonJS is esbuild wrapping the section's own module.
+  if (!inEsbuildChunk && /__commonJS/.test(content)) return true;
+  // Minified code runs to tens of thousands of characters a line; a long declaration does not.
+  if (content.split("\n").some((line) => line.length > 10_000)) return true;
   return (
     content.length > 20_000 || /\.min\.js$/.test(file) || /(^|\/)(bundled|build|umd)\//.test(file)
   );
@@ -114,6 +140,7 @@ const NOT_IN_RUNTIME = {
   "d3-dsv": { rw: "command-line tools", commander: "command-line tools", "iconv-lite": "same" },
   "js-yaml": { argparse: "the command-line tool" },
   katex: { commander: "the command-line tool" },
+  "entity-decode": { he: "its Node entry; the browser decoder mermaid copied uses the DOM" },
   fmin: { contour_plot: "fmin's plotting demos; venn.js's bundle has no contour code" },
   fastdom: { strictdom: "fastdom-strict.js, which the runtime does not import" },
   "@iconify/utils": Object.fromEntries(
@@ -164,7 +191,7 @@ function labelOf(c) {
 export function componentsOf(map, mermaidVersion) {
   const found = new Map();
   const unaudited = new Set();
-  const add = (path, content) => {
+  const add = (path, content, inEsbuildChunk) => {
     const ref = storeRef(path);
     if (!ref) return;
     const id = `${ref.name}@${ref.version}`;
@@ -173,16 +200,23 @@ export function componentsOf(map, mermaidVersion) {
       version: ref.version,
       patched: ref.patched || Boolean(found.get(id)?.patched),
     });
-    if (content !== undefined && needsAudit(ref.file, content) && !PREBUILT_AUDITED[id]) {
+    if (needsAudit(ref.file, content, inEsbuildChunk) && !PREBUILT_AUDITED[id]) {
       unaudited.add(`${id} (${ref.file})`);
     }
   };
   map.sources.forEach((source, i) => {
-    add(source, map.sourcesContent?.[i] ?? "");
-    // Pre-bundled chunks keep esbuild's `// <path>` comments naming where each part came from.
-    for (const m of (map.sourcesContent?.[i] ?? "").matchAll(/^\/\/ (\S*node_modules\/\S+)$/gm)) {
-      add(m[1]);
-    }
+    const content = map.sourcesContent?.[i];
+    if (content == null && storeRef(source))
+      throw new Error(`${source}: no sourcesContent to audit`);
+    add(source, content ?? "");
+    // Pre-bundled chunks keep esbuild's `// <path>` comments naming where each part came from; each
+    // section up to the next comment is that part's code, and is audited as its own source.
+    // Sections are bounded by every path comment, the chunk's own src/ files included.
+    const marks = [...(content ?? "").matchAll(/^\/\/ (\S+\.[cm]?[jt]s)$/gm)];
+    marks.forEach((m, k) => {
+      const section = content.slice(m.index + m[0].length, marks[k + 1]?.index ?? content.length);
+      add(m[1], section, true);
+    });
   });
   found.set("mermaid", { name: "mermaid", version: mermaidVersion, patched: false });
   // The parser is built from mermaid's repository in the same release, and mermaid depends on it by
@@ -199,6 +233,13 @@ export function componentsOf(map, mermaidVersion) {
     throw new Error(
       "components with a large or pre-built source that PREBUILT_AUDITED does not cover at this " +
         `version; read each file and record what it carries:\n  ${[...unaudited].join("\n  ")}`,
+    );
+  }
+  const present = new Set([...found.values()].map((c) => `${c.name}@${c.version}`));
+  const stale = Object.keys(PREBUILT_AUDITED).filter((id) => !present.has(id));
+  if (stale.length > 0) {
+    throw new Error(
+      `PREBUILT_AUDITED lists components the runtime no longer has: ${stale.join(", ")}`,
     );
   }
   for (const parent of [...found.values()]) {

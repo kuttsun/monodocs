@@ -71,10 +71,13 @@ describe("the Mermaid runtime notices", () => {
       ["heap", "cytoscape"],
       ["gl-matrix", "cytoscape"],
       ["lodash", "cytoscape"],
+      ["path-browserify", "vscode-uri"],
+      ["entity-decode", "mermaid"],
     ]) {
       expect(notices).toMatch(new RegExp(`^${name}@[\\d.]+ \\(bundled inside ${parent}@`, "m"));
     }
     expect(notices).toContain("Ralf S. Engelschall");
+    expect(notices).toContain("Event object based on jQuery events");
     expect(notices).toContain("adopted, with changes, from JamaJS");
     // A licence file is text, not a script that happens to be named license-*.
     expect(notices).not.toMatch(/^import /m);
