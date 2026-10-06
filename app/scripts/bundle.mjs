@@ -7,6 +7,7 @@
 // 実行時にファイルシステムから読むため、バンドル単体では参照できない。そこで banner で
 // `globalThis.__MONODOCS_ASSETS__` に埋め込み、loadTheme / mermaidRuntimeScript が
 // それを優先して使う（src 側の埋め込みフォールバックは themes/index.ts を参照）。
+// The runtime's third-party notices (themes/mermaid-notices.txt) are embedded the same way.
 import { build } from "esbuild";
 import { bundleExternals } from "./externals.mjs";
 import { createRequire } from "node:module";
@@ -36,10 +37,13 @@ const [template, style, appJs] = await Promise.all([
 // node_modules を持たないホストでも inline を選べるよう同梱する。
 const require = createRequire(resolve(coreSrc, "themes/mermaid.ts"));
 const mermaidInline = await readFile(require.resolve("mermaid/dist/mermaid.min.js"), "utf8");
+// Its third-party notices travel with it into the output HTML (roadmap 21.3).
+const mermaidNotices = await readFile(resolve(coreSrc, "themes/mermaid-notices.txt"), "utf8");
 
 const assets = {
   themes: { default: { template, style, appJs } },
   mermaidInline,
+  mermaidNotices,
 };
 
 await mkdir(dirname(outfile), { recursive: true });
@@ -86,7 +90,7 @@ console.log(`bundle: ${outfile} (${(bytes / 1024 / 1024).toFixed(1)} MiB)`);
 //
 // esbuild の metafile から「実際にバンドルへ取り込まれた」パッケージだけを集約し、
 // 各パッケージの LICENSE 文を連結する。mermaid inline ランタイム（mermaidInline として
-// アセット埋め込み。内部に dompurify を含む）は esbuild のグラフに現れないため明示追加する。
+// アセット埋め込み）は esbuild のグラフに現れないため、その表記を末尾の節として加える。
 
 // 実行時にファイル名から拡張子を除いた形で LICENSE / COPYING / NOTICE を拾う。
 const LICENSE_FILE_RE = /^(licen[sc]e|copying|notice)(\.[^.]*)?$/i;
@@ -169,70 +173,12 @@ async function collectNotices(pkgDirs) {
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function pkgNameAt(dir) {
-  try {
-    return JSON.parse(await readFile(resolve(dir, "package.json"), "utf8")).name;
-  } catch {
-    return null;
-  }
-}
-
-// `fromDir` のパッケージが依存する `name` のディレクトリを解決する。
-// pnpm（`.pnpm/<parent>@<ver>/node_modules/<dep>` の兄弟）/ npm・yarn（ネスト）双方の
-// レイアウトを候補で順に試し、最後にエントリ解決からの遡り（exports 制約に注意）で補完する。
-async function resolveDependencyDir(fromDir, name) {
-  const candidates = [resolve(fromDir, "node_modules", name), resolve(dirname(fromDir), name)];
-  for (const c of candidates) {
-    if ((await pkgNameAt(c)) === name) return c;
-  }
-  let entryDir;
-  try {
-    entryDir = dirname(createRequire(resolve(fromDir, "package.json")).resolve(name));
-  } catch {
-    return null;
-  }
-  for (let i = 0; i < 12; i++) {
-    if ((await pkgNameAt(entryDir)) === name) return entryDir;
-    const parent = dirname(entryDir);
-    if (parent === entryDir) break;
-    entryDir = parent;
-  }
-  return null;
-}
-
-// `rootDir` のパッケージの本番依存ツリー（dependencies / optionalDependencies）を辿り、
-// 到達する全パッケージのディレクトリを集める。
-async function collectDependencyTree(rootDir) {
-  const found = new Set();
-  const queue = [rootDir];
-  while (queue.length) {
-    const dir = queue.shift();
-    if (found.has(dir)) continue;
-    let pkg;
-    try {
-      pkg = JSON.parse(await readFile(resolve(dir, "package.json"), "utf8"));
-    } catch {
-      continue;
-    }
-    found.add(dir);
-    const deps = { ...pkg.dependencies, ...pkg.optionalDependencies };
-    for (const name of Object.keys(deps)) {
-      const depDir = await resolveDependencyDir(dir, name);
-      if (depDir && !found.has(depDir)) queue.push(depDir);
-    }
-  }
-  return found;
-}
-
-// mermaid inline ランタイム（mermaid/dist/mermaid.min.js）は mermaid の依存を prebundle した
-// 単一ファイル。esbuild のグラフに現れないため、mermaid の本番依存ツリー全体を辿って明示追加する
-// （d3 / cytoscape / katex / dagre / roughjs / dompurify など）。
-const mermaidDir = dirname(require.resolve("mermaid/package.json"));
-const embeddedDirs = await collectDependencyTree(mermaidDir);
-
-const notices = await collectNotices(
-  new Set([...packageDirsFromMetafile(result.metafile), ...embeddedDirs]),
-);
+// The mermaid inline runtime (mermaid/dist/mermaid.min.js) is a single file mermaid's own build
+// produced, so it is not in esbuild's graph, and walking mermaid's dependency tree in node_modules
+// names the wrong versions and misses what pre-built files carry. Its notices are the ones generated
+// from its source map for the output HTML (packages/core/scripts/generate-mermaid-notices.mjs,
+// roadmap 21.3), appended below as their own section.
+const notices = await collectNotices(new Set(packageDirsFromMetafile(result.metafile)));
 
 // The East_Asian_Width table behind `sources.lineBreak: join` is first-party source generated from
 // Unicode data, so no package in the graph carries its license. It is added by hand, with the
@@ -267,9 +213,16 @@ const header = [
   `Generated: ${new Date().toISOString().slice(0, 10)}`,
   `Components: ${notices.length}`,
   "",
-  'Note: "dompurify" is dual-licensed under "MPL-2.0 OR Apache-2.0";',
-  "monodocs elects the Apache-2.0 terms.",
+  "The Mermaid runtime embedded in the distribution carries further components, listed in",
+  'the last section, "Components inside the prebuilt Mermaid runtime".',
   "",
+  ...(notices.some((n) => n.name === "dompurify")
+    ? [
+        'Note: "dompurify" is dual-licensed under "MPL-2.0 OR Apache-2.0";',
+        "monodocs elects the Apache-2.0 terms.",
+        "",
+      ]
+    : []),
 ].join("\n");
 
 const body = notices
@@ -281,7 +234,18 @@ const body = notices
   .join("\n");
 
 const noticesFile = resolve(cliDir, "THIRD-PARTY-NOTICES.txt");
-await writeFile(noticesFile, `${header}\n${body}\n`, "utf8");
+const runtimeSection = [
+  "#".repeat(80),
+  "Components inside the prebuilt Mermaid runtime",
+  "#".repeat(80),
+  "",
+  // Written for the output HTML, where "this file" is the HTML; here it is the distribution.
+  mermaidNotices.replace(
+    /^(Third-party notices for the Mermaid runtime \([^)]*\)) embedded in this file\./,
+    "$1 embedded in dist/monodocs.cjs and the standalone binary.",
+  ),
+].join("\n");
+await writeFile(noticesFile, `${header}\n${body}\n${runtimeSection}`, "utf8");
 console.log(`notices: ${noticesFile} (${notices.length} components)`);
 
 // Keep the existing development/SEA entry point available while the published

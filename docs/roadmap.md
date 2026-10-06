@@ -2102,12 +2102,16 @@ figure in it is taken again on the version adopted:
   that monodocs is MIT
 - **Size.** The inline runtime grows from about 975 KB to about 1.6 MB gzip (3.57 MB → 5.58 MB raw),
   and the CLI bundle by about 2 MB
-- **`lodash-es` (12.0.0).** `chevrotain@11.1.2`, new in mermaid 12.0.0, pins `lodash-es` to exactly `4.17.23`, so
+- **`lodash-es` (12.0.0).** `chevrotain@11.1.2`, which mermaid 12.0.0 makes a dependency in `node_modules`, pins `lodash-es` to exactly `4.17.23`, so
   `pnpm audit` fails on GHSA-r5fr-rjxr-66jc (`_.template` code injection, high) and
   GHSA-f23m-r3pf-42rh (moderate), both fixed in 4.18.0. An override fixes `node_modules` but not the
   prebuilt `mermaid.min.js`, whose source map shows both 4.17.23 and 4.18.1 inside; the vulnerable
   modules are absent from its source list, which suggests they were tree-shaken out, and that has to
-  be confirmed against the generated code rather than assumed
+  be confirmed against the generated code rather than assumed. The runtime of mermaid 11.17.2, which
+  monodocs ships today, already carries `chevrotain@11.1.2` and `lodash-es@4.17.23` inside its
+  pre-bundled parser — found when its notices were generated in v0.15. Nothing in `node_modules`
+  resolves `lodash-es@4.17.23`, so `pnpm audit` has never seen it, and the check against the generated code
+  is owed to the runtime shipped now, not only to 12
 - **The CDN runtime is pinned to `mermaid@11`**, so bumping the dependency alone would leave `cdn` on
   11 while `inline` and `pre-render` moved to 12
 
@@ -2125,6 +2129,15 @@ meant for the CDN; making `cdn` the default breaks the offline, self-contained d
 `pre-render` the default requires Chromium and does not work from the standalone binary. A reader-visible
 licence UI, a self-hosted source mirror, a full SBOM, and an ELK-free build of mermaid are deferred
 and do not block the bump.
+
+**Code whose source states no licence (v0.15).** Generating the notices meant reading every source the
+runtime is made of, and four pieces of code in it come from places that state no licence: Michael
+Jackson's RGB/HSL conversions (in cytoscape and in khroma), a blog post's label wrapping (in venn.js),
+and Inigo Quilez's signed distance functions (in cytoscape). Each is a few to a few dozen lines, has been
+in every release that embedded the runtime, and is unattributed by mermaid itself; monodocs cannot replace
+code inside a prebuilt file. The decision is to ship it with the notices naming the source and author and
+saying that no licence is stated, rather than to hold the release, and to record it here as a known
+limitation of what the runtime carries.
 
 ---
 

@@ -142,6 +142,30 @@ scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/docs
 scripts/app.sh sh -c 'cd packages/core && node scripts/generate-east-asian-width.mjs'
 ```
 
+### inline の Mermaid ランタイムの表記
+
+`mermaid.runtime: inline` でビルドした HTML は、mermaid のビルド済み `mermaid.min.js` を埋め込み、
+あわせて `app/packages/core/src/themes/mermaid-notices.txt` の第三者表記を埋め込む。ランタイムは mermaid
+自身の lockfile でバンドルされているので、表記は `node_modules` からではなく、そのソースマップから生成する。
+ソースの出どころのパッケージと、事前バンドルされたパーサーの中で esbuild が名指すパッケージである。
+ライセンスは、その版が pnpm ストアにあればそこから、無ければ npm の tarball から読み、tarball はレジストリの
+integrity ハッシュと照合する。ソースマップは、自前のビルド済みファイルを同梱するパッケージの中を見られない。
+そのため、コンポーネントの実行時の依存のうち表記が挙げも説明もしないものがあるとき、また、大きなソースや
+ビルド済みのソースを持つコンポーネントがその版で `PREBUILT_AUDITED` に無いとき、さらにソースのコメントが
+挙げる URL が `REVIEWED_URLS` に記録されていないとき、生成は失敗する。ファイルを
+読み、取り込んでいるパッケージと、別のライセンスで持ち込まれたコード（あるいは何も含まないこと）を
+`PREBUILT_AUDITED` に記録し、ランタイムに無い依存は `NOT_IN_RUNTIME` に理由とともに書く。ライセンス文の無い
+コンポーネントでも失敗する。ソースは大きさ、minify、パス、バンドラーの痕跡で判定するので、痕跡を残さない小さな
+minify されていないバンドルは素通りしうる。また mermaid とパーサー自身のソースは判定の対象外である。これらは
+mermaid の版ごとに人が監査する。古くなった `mermaid@<version>` の項目がそれを強制し、生成時に表示される出典の
+一覧が手がかりになる。表記が挙げるコンポーネントがランタイムのものと食い違うとき（mermaid を上げると
+そうなる）、また監査を持つ生成スクリプトが表記の生成後に変わったとき、テストが失敗する。再生成して
+（ネットワークを使うことがある）結果をコミットする。
+
+```bash
+scripts/app.sh sh -c 'cd packages/core && node scripts/generate-mermaid-notices.mjs'
+```
+
 ### 単一実行ファイル（ネイティブバイナリ）をビルドする
 
 `scripts/app.sh` / `scripts/app-serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、

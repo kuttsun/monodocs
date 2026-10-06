@@ -190,6 +190,31 @@ generator at it, regenerate, and update the version the test in `sources/lineBre
 scripts/app.sh sh -c 'cd packages/core && node scripts/generate-east-asian-width.mjs'
 ```
 
+### Notices for the Inline Mermaid Runtime
+
+HTML built with `mermaid.runtime: inline` embeds mermaid's prebuilt `mermaid.min.js`, and with it the
+third-party notices in `app/packages/core/src/themes/mermaid-notices.txt`. The runtime was bundled from
+mermaid's own lockfile, so the notices are generated from its source map rather than from `node_modules`:
+the packages its sources come from, and those esbuild names inside the pre-bundled parser. A licence is
+read from the pnpm store when that exact version is installed, and otherwise from the npm tarball, checked
+against the registry's integrity hash. A source map cannot see inside a package that ships its own
+pre-built file, so generation fails on any runtime dependency of a component that the notices neither list
+nor explain, on any component with a large or pre-built source that `PREBUILT_AUDITED` does not cover at
+that exact version, and on any URL a source comment cites that `REVIEWED_URLS` does not record. Read the
+file, record the packages it carries and any code copied into it under another licence (or that it carries
+none) in `PREBUILT_AUDITED`, and explain an absent dependency in `NOT_IN_RUNTIME`. It also fails on a
+component with no licence text. A source is judged by its size, minification, path, and bundler traces, so
+a small, unminified bundle that leaves no trace could still pass; and mermaid's and the parser's own
+sources are not judged at all. They are audited by hand with each mermaid version, which the stale
+`mermaid@<version>` entry forces, starting from the citations generation prints. A test fails when the
+components the notices list are no longer the runtime's, which is what a mermaid upgrade does, and when
+the generator, which holds the audit, changed after the notices were generated; regenerate them (this may
+use the network) and commit the result:
+
+```bash
+scripts/app.sh sh -c 'cd packages/core && node scripts/generate-mermaid-notices.mjs'
+```
+
 ### Building a Single Executable File (Native Binary)
 
 `scripts/app.sh` / `scripts/app-serve.sh` mount only the repository (`/work`) into the container, and the working directory is `/work/app`, so **they can only serve paths under the repository** (you cannot point to an arbitrary directory outside the repository; to point outside `app/`, prefix with `../` as in `../examples/ja`). To avoid this and try out documents in an arbitrary location, use a single executable file that runs directly on the host.
