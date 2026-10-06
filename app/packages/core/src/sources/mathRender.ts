@@ -140,7 +140,7 @@ export function renderFormula(
   });
   if (!math) return { error: "KaTeX produced no <math> element" };
   const unsupported = resolveMathvariants(math);
-  const { notations, constructs } = rewriteForCore(math, tex);
+  const { notations, constructs } = rewriteForCore(math);
   constructs.push(...parseTreeLosses(tex, display));
   const numbered = dropClasses(math);
   return { math, unsupported, numbered, notations, constructs };
@@ -167,7 +167,10 @@ function dropClasses(math: Element): boolean {
  *
  * - `\\boldsymbol` (and `\\bm`) on a relation, a bracket, or punctuation (`\\boldsymbol{\\rightarrow}`):
  *   KaTeX writes the style only for letters, digits, and binary operators;
- * - the room `\\\\[2em]` asks for between the rows of an environment, which KaTeX's MathML leaves out.
+ * - the room `\\\\[2em]` asks for between the rows of an environment, which KaTeX's MathML leaves out;
+ * - the branch of `\\mathchoice` (written directly, or through `\\bmod` and the like) inside a script or
+ *   a fraction: KaTeX picks it by a style it does not carry into scripts and fractions, so it can be
+ *   the wrong one.
  */
 function parseTreeLosses(tex: string, display: boolean): string[] {
   let tree: unknown;
@@ -182,8 +185,8 @@ function parseTreeLosses(tex: string, display: boolean): string[] {
   }
   const losses = new Set<string>();
   const lost = new Set(["rel", "open", "close", "punct", "inner"]);
-  const walk = (node: unknown, bold: boolean): void => {
-    if (Array.isArray(node)) return node.forEach((n) => walk(n, bold));
+  const walk = (node: unknown, bold: boolean, smaller = false): void => {
+    if (Array.isArray(node)) return node.forEach((n) => walk(n, bold, smaller));
     if (!node || typeof node !== "object") return;
     const record = node as Record<string, unknown>;
     if (bold && record.type === "atom" && lost.has(String(record.family))) {
@@ -193,10 +196,20 @@ function parseTreeLosses(tex: string, display: boolean): string[] {
       losses.add("\\\\[...] inside an environment");
     }
     // Only the branch that reaches MathML counts (`\\html@mathml{...}{...}`).
-    if (record.type === "htmlmathml") return walk(record.mathml, bold);
+    if (record.type === "htmlmathml") return walk(record.mathml, bold, smaller);
+    if (record.type === "mathchoice" && smaller) losses.add("\\mathchoice");
+    // A script, or a fraction's numerator or denominator, is set in a smaller style.
+    const scripts =
+      record.type === "supsub"
+        ? ["sup", "sub"]
+        : record.type === "genfrac"
+          ? ["numer", "denom"]
+          : [];
     // A font replaces the one around it: \\mathrm inside \\boldsymbol is upright, not bold.
     const inside = record.type === "font" ? record.font === "boldsymbol" : bold;
-    for (const [key, value] of Object.entries(record)) if (key !== "loc") walk(value, inside);
+    for (const [key, value] of Object.entries(record)) {
+      if (key !== "loc") walk(value, inside, smaller || scripts.includes(key));
+    }
   };
   walk(tree, false);
   return [...losses];

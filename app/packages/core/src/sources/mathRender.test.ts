@@ -171,7 +171,12 @@ describe("renderFormula", () => {
       return "math" in result ? result.constructs : undefined;
     };
     expect(constructs("\\vcenter{x}")).toEqual(["\\vcenter"]);
-    expect(constructs("\\mathchoice{D}{T}{S}{SS}")).toEqual(["\\mathchoice"]);
+    // \\mathchoice is reported where KaTeX can pick the wrong branch: in a script or a fraction.
+    expect(constructs("\\mathchoice{D}{T}{S}{SS}")).toEqual([]);
+    expect(constructs("x^{\\mathchoice{D}{T}{S}{SS}}")).toEqual(["\\mathchoice"]);
+    expect(constructs("x^{a\\bmod b}")).toEqual(["\\mathchoice"]);
+    expect(constructs("\\frac{\\mathchoice{D}{T}{S}{SS}}{2}")).toEqual(["\\mathchoice"]);
+    expect(constructs("\\html@mathml{x^{\\mathchoice{D}{T}{S}{SS}}}{x}")).toEqual([]);
     expect(constructs("\\overlinesegment{AB}")).toEqual([
       expect.stringContaining("\\overlinesegment"),
     ]);

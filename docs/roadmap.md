@@ -586,8 +586,8 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
     spanning the line.
 
   What cannot be rewritten is reported as `math/construct-unsupported`: `\vcenter`, whose centring
-  KaTeX leaves to its stylesheet; `\mathchoice`, whose branch KaTeX picks by a style it does not carry
-  into scripts and fractions; `\overlinesegment` and `\underlinesegment`, which KaTeX writes as the
+  KaTeX leaves to its stylesheet; `\mathchoice` in a script or a fraction (written directly, or through
+  `\bmod`), whose branch KaTeX picks by a style it does not carry into scripts and fractions; `\overlinesegment` and `\underlinesegment`, which KaTeX writes as the
   text "undefined" and monodocs as an overline; a line break inside part of a formula; and `\boldsymbol` on a relation, a bracket, or punctuation
   (`\boldsymbol{\rightarrow}`), which KaTeX writes into MathML only for letters, digits, and binary
   operators; `\\[2em]` between the rows of an environment, whose room KaTeX's MathML leaves out (both

@@ -249,11 +249,8 @@ export interface CoreGaps {
 }
 
 /** Rewrite KaTeX's MathML in place into what MathML Core draws as KaTeX means it. */
-export function rewriteForCore(math: Element, tex: string): CoreGaps {
+export function rewriteForCore(math: Element): CoreGaps {
   const constructs = new Set<string>();
-  // KaTeX picks a branch of \mathchoice by a style it does not carry into scripts and fractions, so
-  // the branch it picks there can be the wrong one; nothing in the MathML shows which was meant.
-  if (/\\mathchoice(?![a-zA-Z])/.test(tex)) constructs.add("\\mathchoice");
   visit(math, "element", (node: Element) => {
     const className = node.properties.className;
     if (Array.isArray(className) && className.includes("vcenter")) constructs.add("\\vcenter");

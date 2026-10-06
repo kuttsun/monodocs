@@ -548,7 +548,7 @@ TeX を文字として持っており、見出しの ID はそのため TeX か�
   - 環境の外の `\tag` は、その表と上の箱を行の幅にして、右端に置く
 
   書き換えられないものは `math/construct-unsupported` として報告する。中央寄せを KaTeX がスタイルシートに
-  任せる `\vcenter`、添字や分数に伝えないスタイルで KaTeX が枝を選ぶ `\mathchoice`、KaTeX が "undefined" と
+  任せる `\vcenter`、添字や分数に伝えないスタイルで KaTeX が枝を選ぶ、添字や分数の中の `\mathchoice`（直接書いたものも、`\bmod` を通したものも）、KaTeX が "undefined" と
   いう文字として書き、monodocs が上線として描く `\overlinesegment` と `\underlinesegment`、数式の一部の中の
   改行、そして関係記号、括弧、句読点に付けた `\boldsymbol`（`\boldsymbol{\rightarrow}`）である。KaTeX は
   `\boldsymbol` を、文字、数字、二項演算子にしか MathML に書かない。環境の行の間の `\\[2em]`
