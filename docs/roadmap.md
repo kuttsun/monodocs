@@ -200,7 +200,7 @@ docs/
     faq.md
 ```
 
-### 6.4 Math (decided in v0.14)
+### 6.4 Math (decided in v0.14, notation settled in v0.15)
 
 Math is unsupported, and syntax.md gives the reason: keeping the HTML self-contained means not
 introducing a MathJax or KaTeX dependency. The reason is out of date rather than wrong. KaTeX can
@@ -281,56 +281,76 @@ so the conditions do not depend on it, and the decision stands on both platforms
 conditions. 1.x could add it only behind an opt-in key, since every candidate delimiter can already
 appear in a document and 12.4 lets a minor release add only markup that none could contain; and a
 default that 1.0 sets cannot change before 2.0. Bringing it forward keeps the choice of recognising
-math by default open, to be made with the notation (v0.15). The notation, the alternatives it
-was chosen over, and the design of copying and search are recorded here when v0.15 settles them.
+math by default open, to be made with the notation (v0.15). The notation and the alternatives
+it was chosen over follow; the design of copying and search is recorded here when v0.15 settles it.
 
 **The notation (decided in v0.15).**
 
-Markdown takes three of the four forms GitHub renders:
+Markdown takes the four forms GitHub renders, read by GitHub's rules:
 
 | Form | Use |
 | --- | --- |
-| `$$...$$` | display math on lines of its own, and inline math between other text |
-| ``$`...`$`` | inline math, with the backticks keeping Markdown out of the formula |
+| `$...$` | inline math |
+| ``$`...`$`` | inline math, the backticks keeping Markdown out of the formula |
+| `$$...$$` | display math |
 | a fenced code block whose language is `math` | display math |
 
-A document written this way renders the same formulas on GitHub. The fourth form GitHub accepts, a
-single `$` on each side, is not taken: it reads prose about money as math. Measured with remark-math's
-single-dollar parsing, `It costs $5 and $10 today.` becomes a formula `5 and `, and GitHub itself tells
-authors to escape such a `$` with `<span>$</span>`. A document written for GitHub with `$x$` therefore
-keeps that text literal here, which is the price of no false positives in prose.
+A document written for GitHub renders the same formulas here, and that is the point: `$x$` is the form
+most such documents use. The reference is GitHub's renderer, not a library. GitHub documents the forms
+but not the rules that decide where a formula starts and ends, and remark-math, the obvious library,
+reads them differently: with its single `$` on, `It costs $5 and $10 today.` becomes a formula
+`5 and `, which GitHub leaves as text, and with it off, a paragraph that is only `$$x$$` is inline
+where GitHub displays it, and a line starting `$$` with no closing one swallows the rest of the document.
+monodocs therefore parses math itself, and its tests pin cases against what GitHub's renderer returned
+for them. Measured that way, GitHub keeps the common forms of money literal — `$5 and $10`,
+`$4.50/$5`, `$HOME and $PATH`, `Price $$5 and $$6` — and reads a span such as `Between $5 and 10$ or
+so` as math. That case renders as math here too, as it does there, and `\$` keeps a dollar sign
+literal. Where GitHub's behaviour is not yet pinned (a formula in a table cell, a `|` inside one, a list
+item's indentation), the test fixture records GitHub's output before the implementation follows it.
 
-AsciiDoc keeps Asciidoctor's own markup: `latexmath:[...]`, `stem:[...]`, and the `[stem]` and
-`[latexmath]` blocks. With `:stem: latexmath`, or for the `latexmath` forms whatever `:stem:` says,
-they are rendered by KaTeX. `asciimath` — what `stem` means when `:stem:` is set with no value, and
-`asciimath:[...]` — is not rendered: KaTeX does not read it, and converting it would add a dependency
-whose fidelity would need its own measurement. It stays as text, with a diagnostic naming the file and
-the formula and pointing at `:stem: latexmath` or `latexmath:[...]`. A converter can come in a 1.x
-release, because it adds rendering to markup monodocs already recognises rather than recognising new
-markup.
+AsciiDoc keeps Asciidoctor's own markup: `latexmath:[...]` and the `[latexmath]` block, rendered
+whatever `:stem:` says, and `stem:[...]` and the `[stem]` block, rendered when they mean latexmath —
+`:stem:` set to `latexmath`, `latex`, or `tex`, or the block's style says so (`[stem,latexmath]`).
+They are rendered wherever Asciidoctor produces them, a monospace span or a block with macros
+substituted included, since Asciidoctor treats them as math there. Otherwise `stem` means asciimath:
+with `:stem:` unset, set with no value, or set to anything else, and `asciimath:[...]` always.
+asciimath is not rendered: KaTeX does not read it. It stays as text, with a diagnostic naming the file
+and the formula and pointing at `:stem: latexmath` or `latexmath:[...]`. A 1.x release may add a
+converter, but only behind a key, since rendering what 1.0 printed as text changes an existing
+document's output (12.4); rendering asciimath by default would wait for 2.0.
 
 Math is on by default, and `math.enabled: false` turns it off. Default on is why math had to come
-before 1.0 (12.4), and the key gives a document the previous output back. What an existing document
-could contain whose meaning this changes, all of which printed as text before:
+before 1.0 (12.4). With the key off, the output is what the previous release produced: Markdown
+math forms print as text, AsciiDoc's stem output keeps MathJax's `\(...\)` / `\[...\]` delimiters, and
+no asciimath diagnostic is raised.
 
-- `$$...$$` in prose
+What an existing document could contain whose meaning this changes:
+
+- in Markdown, a pair of `$` that GitHub reads as math, which printed as text, including in a heading
+  (its text, and so its slug, its table-of-contents entry, and what search indexes), a table cell, or
+  a link's text
+- `$$...$$`, which printed as text
 - `$` immediately followed by a code span and then `$`, which printed a code span between two dollar
   signs
 - a fenced code block whose language is `math`, which printed as code
-- in AsciiDoc, `latexmath:[...]`, and `stem:[...]` or a `[stem]` block under `:stem: latexmath`, which
-  printed with MathJax's `\(...\)` / `\[...\]` delimiters
+- in AsciiDoc, `latexmath:[...]`, the `[latexmath]` block, and `stem:[...]` or the `[stem]` block when
+  they mean latexmath, which printed with MathJax's `\(...\)` / `\[...\]` delimiters
+
+What does not change: dollar signs inside a code span, a code block, or an HTML block, and an image's
+alt text, which GitHub leaves as written.
 
 Alternatives considered:
 
-- **GitHub's four forms, single `$` included.** Every GitHub document renders as there, but money in
-  prose becomes math, and an existing document's meaning changes in the commonest place. Rejected.
-- **A single `$` with Pandoc's rules** (no space after the opening `$`, none before the closing one,
-  no digit after it). Fewer false positives, but `From $5 to $x$.` still reads `5 to $x` as math, and
-  the rule is a third dialect, neither GitHub's nor CommonMark's. Rejected.
+- **GitHub's forms without the single `$`.** No case of money is ever math, but `$x$`, the commonest
+  form in documents written for GitHub, stays text. Rejected: the cases GitHub misreads are rare and
+  escapable, and the mismatch with GitHub would not be.
+- **remark-math as it is.** Its rules differ from GitHub's in both directions, as measured above.
+  Rejected; monodocs parses math itself, against GitHub's output.
 - **LaTeX's `\(...\)` and `\[...\]`.** Unambiguous, but GitHub does not render them, and in Markdown
   `\(` is an escaped `(`, so an existing document's text changes. Rejected.
 - **Off by default, behind a key.** No existing document changes, but every author who wants math has
   to find the key, until 2.0. Rejected in favour of on by default with a key to turn it off.
+
 
 ---
 
@@ -4287,8 +4307,9 @@ Completion criteria:
   maintenance.md says that the lockfile audit cannot see inside a prebuilt bundle and no longer says
   that `site/` never ships, and the site samples are regenerated and carry the notices
 - The math notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are
-  recorded in 6.4 with the alternatives and why they lost. Prose about currency is not read as math
-  by the choice itself, rather than by a warning after the fact, and any spelling an existing
+  recorded in 6.4 with the alternatives and why they lost. The common forms of money in prose stay
+  text by the notation's own rules, checked against the renderer the notation follows, the forms that
+  still read as math are named, and any spelling an existing
   document could contain whose meaning the choice changes is listed there. Whether math is
   recognised by default or only behind a key is decided there with its reason, and what happens to
   `asciimath` is decided and stated
