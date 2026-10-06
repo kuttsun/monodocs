@@ -30,15 +30,24 @@ SOFTWARE.
 
 ## Third-party licenses
 
-monodocs depends only on permissively licensed open-source software
-(MIT / ISC / BSD / Apache-2.0 and the like). There are **no copyleft
-(GPL / LGPL / AGPL) dependencies**.
+monodocs itself is MIT. Its dependencies are permissively licensed
+(MIT / ISC / BSD / Apache-2.0 and the like), with one exception: the Mermaid
+runtime monodocs embeds contains the Eclipse Layout Kernel (`elkjs`), under the
+**Eclipse Public License 2.0** (EPL-2.0), a weak copyleft license.
 
+- **What reaches your documents.** HTML built with the inline Mermaid runtime
+  (`mermaid.runtime: inline`, the default) from a document with diagrams embeds
+  that runtime, ELK included, together with its third-party notices, which say
+  where ELK's source is. The EPL-2.0 covers ELK itself; the content of your
+  document is not affected. `mermaid.runtime: cdn`, `mermaid.mode: pre-render`,
+  and a document without diagrams put no ELK in the output.
 - `dompurify` is dual-licensed under `MPL-2.0 OR Apache-2.0`; monodocs elects
   the **Apache-2.0** terms.
+- A few pieces of code inside the Mermaid runtime come from sources that state
+  no license; the notices name them and their authors.
 
 The single-file distribution (`monodocs.cjs` and the standalone binary) embeds
 its dependencies, so every build writes a `THIRD-PARTY-NOTICES.txt` alongside
-the output. It reproduces the license of each bundled component (~190 in total,
-including the Mermaid runtime and its dependencies such as d3, cytoscape, katex,
-dagre and roughjs).
+the output. It reproduces the license of each bundled component, and ends with
+the notices for the Mermaid runtime (d3, cytoscape, katex, dagre, roughjs, ELK
+and the rest), the same notices HTML built with the inline runtime carries.

@@ -3,7 +3,8 @@ import { createRequire } from "node:module";
 import type { MermaidRuntime } from "../config.js";
 import { embeddedAssets } from "./index.js";
 
-const MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+// The exact version the inline runtime and pre-render embed, so the three modes draw alike.
+const MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@12.1.0/dist/mermaid.esm.min.mjs";
 
 /**
  * Mermaid のクライアントランタイムを注入する <script> 群を生成する。

@@ -2060,7 +2060,7 @@ mermaid:
 ```
 
 At build time, each diagram is converted to SVG using Puppeteer (`puppeteer-core` + system Chromium) and embedded into the HTML
-(instead of the originally proposed Mermaid CLI, the policy was changed to run `mermaid.render` for the existing dependency mermaid@11 within a single page and control id collisions
+(instead of the originally proposed Mermaid CLI, the policy was changed to run `mermaid.render` for the existing dependency mermaid (11 then, 12 since v0.15) within a single page and control id collisions
 by ourselves). The implementation is `processMermaidPrerender` in `pipeline/mermaidPrerender.ts` and `postprocess.ts`.
 The SVG is inserted as a raw node, and ids are assigned as `mermaid-{n}`, unique across the entire HTML.
 
@@ -2069,7 +2069,8 @@ Advantages:
 - Strong for PDF conversion
 - Can be displayed even without JavaScript
 - Printed results are stable
-- If there are few diagrams, it is smaller than the inline runtime (fixed at approximately 975KB gzip)
+- If there are few diagrams, it is smaller than the inline runtime (fixed at approximately 1.6MB gzip under mermaid 12,
+  975KB under 11)
 
 Disadvantages:
 
@@ -2129,6 +2130,27 @@ meant for the CDN; making `cdn` the default breaks the offline, self-contained d
 `pre-render` the default requires Chromium and does not work from the standalone binary. A reader-visible
 licence UI, a self-hosted source mirror, a full SBOM, and an ELK-free build of mermaid are deferred
 and do not block the bump.
+
+**Measured again on 12.1.0 (v0.15), the version adopted.**
+
+- `lodash-es`: the runtime carries `lodash-es@4.18.1` only, patched for both advisories, and 4.17.23 is
+  gone with chevrotain 11. Read against the generated `mermaid.min.js` rather than the source map's file
+  list, neither `_.template` (no `templateSettings`, no `sourceURL`) nor `_.unset` / `_.omit` (no
+  `baseUnset`, no `customOmitClone`) survives tree-shaking, and the `lodash@4.17.21` code cytoscape bundles
+  is `debounce`, `memoize`, and their helpers. `pnpm audit` passes with no `lodash-es` override, so none
+  is added.
+- Size: the inline runtime is 5.49 MB raw and 1.57 MB gzip (from 3.57 MB and about 975 KB), and the CLI
+  bundle grows from 17.7 MiB to 19.7 MiB. The runtime's notices add 137 KB raw, 22 KB gzip, to HTML with
+  diagrams, the EPL-2.0 text most of it.
+- ELK: `elkjs@0.9.3`. Its `elk.bundled.js` is a browserify bundle of elkjs's API, `web-worker`'s browser
+  entry (Apache-2.0), and `elk-worker.min.js`, which is ELK compiled by GWT together with EMF and Xtext's
+  xbase library (EPL-2.0), Guava, and GWT's runtime and Java emulation (Apache-2.0). The corresponding
+  source is ELK at tag v0.9.1 (commit `62d5909f96fad541bc101ad52dabaece6b7eab7e`) built by elkjs at tag
+  0.9.3 (commit `a8304cf79fde75bc2ab1a89d28320f53f8637436`) with GWT 2.10.0, EMF GWT 2.12.4, Guava
+  31.1-jre, and Xtext 2.28.0; both tags are public. The bundle does not record the ELK commit: v0.9.1 is
+  the one elkjs's release procedure — build against ELK's matching release tag — gives for a 0.9.3 tagged
+  on 2024-04-16. The notices say all of this.
+- The CDN runtime loads `mermaid@12.1.0`, the version `inline` and `pre-render` embed.
 
 **Code whose source states no licence (v0.15).** Generating the notices meant reading every source the
 runtime is made of, and four pieces of code in it come from places that state no licence: Michael

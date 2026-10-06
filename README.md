@@ -71,3 +71,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) before contributing and [SECURITY.md](SEC
 [MIT License](LICENSE) © 2026 kuttsun
 
 The npm bundle includes `dist/THIRD-PARTY-NOTICES.txt`, generated during `pnpm bundle`, for bundled third-party dependencies.
+The Mermaid runtime it embeds contains `elkjs` under the EPL-2.0; HTML built with the inline runtime embeds it
+with its notices, and your document content is unaffected. See the [license page](https://kuttsun.github.io/monodocs/docs/license).

@@ -32,13 +32,23 @@ SOFTWARE.
 
 ## 第三者ライセンス
 
-monodocs の依存はすべて寛容ライセンス（MIT / ISC / BSD / Apache-2.0 など）です。
-**コピーレフト（GPL / LGPL / AGPL）の依存はありません。**
+monodocs 自体は MIT です。依存は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 など）
+ですが、例外が 1 つあります。monodocs が埋め込む Mermaid ランタイムは Eclipse Layout
+Kernel（`elkjs`）を含み、これは弱いコピーレフトの **Eclipse Public License 2.0**
+（EPL-2.0）です。
 
+- **文書に届くもの。** inline の Mermaid ランタイム（`mermaid.runtime: inline`、既定）で
+  図を含む文書をビルドした HTML は、ELK を含むそのランタイムを、第三者表記とともに
+  埋め込みます。表記には ELK のソースの入手先を書いています。EPL-2.0 が及ぶのは ELK
+  自体で、文書の内容には及びません。`mermaid.runtime: cdn`、`mermaid.mode: pre-render`、
+  図を含まない文書では、出力に ELK は入りません。
 - `dompurify` は `MPL-2.0 OR Apache-2.0` のデュアルライセンスで、monodocs は
   **Apache-2.0** を選択しています。
+- Mermaid ランタイムの中のいくつかのコードは、ライセンスを示していない出典から来て
+  います。表記はその出典と著作者を挙げています。
 
 単一ファイル配布物（`monodocs.cjs` および単体バイナリ）は依存を埋め込むため、
 ビルドごとに出力の隣へ `THIRD-PARTY-NOTICES.txt` を生成します。埋め込んだ各
-コンポーネント（Mermaid ランタイムと d3 / cytoscape / katex / dagre / roughjs
-などの依存を含め計約 190 個）のライセンス全文を収録します。
+コンポーネントのライセンス全文を収録し、末尾に Mermaid ランタイム（d3 / cytoscape /
+katex / dagre / roughjs / ELK など）の表記を持ちます。inline ランタイムでビルドした
+HTML が持つのと同じ表記です。

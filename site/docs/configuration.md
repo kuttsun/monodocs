@@ -601,7 +601,7 @@ the HTML; to make them smaller, run an image tool as a step before the build.
 | ----------------- | --------------------- | -------- | ------------------------------------------------------------------------ |
 | `mermaid.enabled` | boolean               | `true`   | Render Mermaid code blocks as diagrams.                                   |
 | `mermaid.mode`    | `client` `pre-render` | `client` | `client` runs the mermaid runtime in the browser (see `runtime`). `pre-render` rasterizes each diagram to inline SVG at build time via headless Chromium (no JS, print-stable, smaller than `inline` for a handful of diagrams). |
-| `mermaid.runtime` | `inline` `cdn`        | `inline` | **client mode only.** `inline` (default) embeds the mermaid runtime in the HTML for a **fully self-contained, offline** file (adds ~975KB gzip when diagrams exist). `cdn` loads it from a CDN, keeping the HTML tiny but **requiring network access to display**. |
+| `mermaid.runtime` | `inline` `cdn`        | `inline` | **client mode only.** `inline` (default) embeds the mermaid runtime in the HTML for a **fully self-contained, offline** file (adds ~1.6MB gzip when diagrams exist, its third-party notices included). `cdn` loads it from a CDN, keeping the HTML tiny but **requiring network access to display**. |
 
 #### `client` vs `pre-render`
 
@@ -611,7 +611,7 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | ----------------------- | ---------------------------------------- | ---------------------------------------------- |
 | Self-contained          | cdn = needs network / inline = yes       | Yes (SVG embedded)                             |
 | JavaScript              | Required                                 | Not required                                   |
-| Added size              | cdn ≈ 0 / inline ≈ 975KB(gzip) fixed     | Proportional to diagram count (a few KB each)  |
+| Added size              | cdn ≈ 0 / inline ≈ 1.6MB(gzip) fixed     | Proportional to diagram count (a few KB each)  |
 | Dark theme              | Does not follow it (mermaid default)     | Fixed via `html.colorScheme` (`dark`→dark, else light) |
 | Fonts                   | Reader's browser fonts                   | **Measured & baked with the build machine's fonts** |
 | Interactivity (`click`) | Works                                    | Disabled (static SVG)                          |

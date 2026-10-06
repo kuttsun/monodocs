@@ -59,8 +59,12 @@ describe("the Mermaid runtime notices", () => {
     // Exits 1 when the runtime's components differ from those the committed notices list.
     await expect(promisify(execFile)(process.execPath, [script, "--check"])).resolves.toBeDefined();
     const notices = await loadMermaidNotices();
-    // Versions the runtime carries that node_modules does not resolve at the top level.
-    expect(notices).toMatch(/^lodash-es@4\.17\.23 {2}— {2}MIT$/m);
+    // ELK, EPL-2.0, with where its corresponding source is (roadmap 21.3).
+    expect(notices).toMatch(/^elkjs@0\.9\.3 {2}— {2}EPL-2\.0$/m);
+    expect(notices).toContain("commit 62d5909f96fad541bc101ad52dabaece6b7eab7e");
+    expect(notices).toMatch(/^web-worker@1\.3\.0 \(bundled inside elkjs@0\.9\.3\)/m);
+    // The vulnerable lodash-es mermaid 12.0.0 carried is gone (chevrotain 13 dropped it).
+    expect(notices).not.toMatch(/^lodash-es@4\.17\./m);
     expect(notices).toMatch(/^@mermaid-js\/parser \(built with mermaid@\d+\.\d+\.\d+\)/m);
     // Packages a component bundles into its own pre-built file, which the source map cannot see,
     // and code copied into one under another licence.
@@ -98,7 +102,9 @@ describe("the Mermaid runtime notices", () => {
     expect(notices).not.toMatch(/^import /m);
     // Every component carries a licence text, fastdom's taken from its README.
     expect(notices).not.toContain("UNKNOWN");
-    expect(notices).toMatch(/^fastdom@[\d.]+ {2}— {2}MIT\n-+\n\(From the package's README\.\)/m);
+    expect(notices).toMatch(
+      /^fastdom@[\d.]+( \(patched by mermaid\))? {2}— {2}MIT\n-+\n\(From the package's README\.\)/m,
+    );
     expect(notices).toContain("Copyright (c) 2016 Wilson Page");
   });
 

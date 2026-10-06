@@ -109,11 +109,20 @@ const PREBUILT_AUDITED = {
     ],
   },
   // Inside the pre-bundled parser, single files over 20 KB of the package's own code.
-  "chevrotain@11.1.2": {},
-  "langium@4.2.1": {},
-  "vscode-jsonrpc@8.2.0": {},
-  "vscode-languageserver-protocol@3.17.5": {},
-  "vscode-languageserver-types@3.17.5": {},
+  "@chevrotain/regexp-to-ast@13.2.0": {},
+  "@chevrotain/utils@13.2.0": {
+    vendored: [
+      "src/to-fast-properties.ts is based on bluebird's util.js",
+      "(https://github.com/petkaantonov/bluebird), under the MIT License:",
+      "  Copyright (c) 2013-2018 Petka Antonov.",
+    ],
+  },
+  "chevrotain@13.2.0": {},
+  "chevrotain-allstar@0.5.0": {},
+  "langium@4.4.0": {},
+  "vscode-jsonrpc@9.0.3": {},
+  "vscode-languageserver-protocol@3.18.4": {},
+  "vscode-languageserver-types@3.18.4": {},
   "cose-base@1.0.3": {}, // requires layout-base rather than carrying it
   "cose-base@2.2.0": {},
   "cytoscape@3.34.0": {
@@ -162,6 +171,41 @@ const PREBUILT_AUDITED = {
   "dayjs@1.11.21": {},
   "dompurify@3.4.12": {},
   "js-yaml@4.3.0": {},
+  // lib/elk.bundled.js is a browserify bundle of elkjs's API, its worker, and web-worker's browser
+  // entry; the worker (elk-worker.min.js) is ELK compiled to JavaScript by GWT, together with the
+  // Java libraries ELK uses and GWT's own runtime.
+  "elkjs@0.9.3": {
+    bundled: [
+      {
+        name: "web-worker",
+        version: "1.3.0",
+        declared: "^1.0.0 (devDependency); only its browser entry, identical in 1.0.0 to 1.3.0",
+      },
+    ],
+    vendored: [
+      "Corresponding Source (EPL-2.0, section 3.1): lib/elk-worker.min.js is the Eclipse Layout",
+      "Kernel compiled to JavaScript with GWT. Its source is ELK at tag v0.9.1",
+      "(https://github.com/eclipse/elk, commit 62d5909f96fad541bc101ad52dabaece6b7eab7e), built by",
+      "elkjs at tag 0.9.3 (https://github.com/kieler/elkjs, commit",
+      "a8304cf79fde75bc2ab1a89d28320f53f8637436) with GWT 2.10.0, EMF GWT 2.12.4, Guava 31.1-jre, and",
+      "Xtext 2.28.0. elkjs's release procedure builds against ELK's matching release tag, and v0.9.1",
+      "was ELK's latest 0.9 release when elkjs 0.9.3 was tagged on 2024-04-16; the bundle itself does",
+      "not record the ELK commit.",
+      "",
+      "Compiled into the worker with ELK, under the Eclipse Public License 2.0 above:",
+      "  Eclipse Modeling Framework (org.eclipse.emf.common, org.eclipse.emf.ecore) and Xtext's",
+      "    xbase library (org.eclipse.xtext.xbase.lib) — Copyright the Eclipse contributors.",
+      "and under the Apache License, Version 2.0, whose full text is reproduced in this document under",
+      "the Apache-2.0 components:",
+      "  Guava (com.google.common) — Copyright The Guava Authors.",
+      "  GWT's runtime and Java runtime emulation (com.google.gwt, java.lang, java.util, java.math) —",
+      "    Copyright the GWT Project Authors.",
+      "lib/elk.bundled.js also contains Babel helper functions its build injected, under the MIT",
+      "License, whose text is reproduced in this document: Copyright (c) 2014-present Sebastian",
+      "McKenzie and other contributors (@babel/helpers).",
+    ],
+    apache: true,
+  },
   "katex@0.16.47": {
     vendored: [
       "dist/katex.mjs also contains hyphenate and escape, adapted from Facebook's React under the",
@@ -209,7 +253,7 @@ const PREBUILT_AUDITED = {
     apache: true,
   },
   "marked@16.3.0": {},
-  "mermaid@11.17.2": {
+  "mermaid@12.1.0": {
     vendored: [
       "src/diagrams/gantt/ganttRenderer.js contains checkUnique, adapted from a Stack Overflow answer",
       "by Justin Johnson (https://stackoverflow.com/a/1890233), posted 2009-12-12 and so licensed",
@@ -314,6 +358,7 @@ const NOT_IN_RUNTIME = {
   mermaid: { "@types/d3": "type declarations" },
   "@mermaid-js/parser": { "@chevrotain/types": "type declarations" },
   "@chevrotain/gast": { "@chevrotain/types": "type declarations" },
+  "@chevrotain/cst-dts-gen": { "@chevrotain/types": "type declarations" },
   chevrotain: {
     "@chevrotain/types": "type declarations",
     "@chevrotain/cst-dts-gen": "absent from the parser chunk's esbuild path comments",
@@ -361,6 +406,19 @@ const NOT_IN_RUNTIME = {
 const REFERENCE_HOSTS =
   /^https?:\/\/(www\.)?(w3\.org|w3c\.github\.io|ecma-international\.org|en\.wikipedia\.org|developer\.mozilla\.org|yaml\.org|unicode\.org|datatracker\.ietf\.org|url\.spec\.whatwg\.org|html\.spec\.whatwg\.org|lodash\.com|openjsf\.org|underscorejs\.org|mathworld\.wolfram\.com|dagrejs\.github\.io|bugs\.chromium\.org|bugs\.webkit\.org|tex\.stackexchange\.com|math\.stackexchange\.com)\//;
 const REVIEWED_URLS = {
+  "http://www.eclipse.org/emf/2002/Ecore": "reference",
+  "http://www.eclipse.org/emf/2003/XMLType": "reference",
+  "http://www.eclipse.org/legal/epl-2.0.": "reference",
+  "https://esbuild.github.io/content-types/#direct-eval": "reference",
+  "https://github.com/chevrotain/chevrotain/issues/869": "reference",
+  "https://github.com/mermaid-js/mermaid/issues/4121.": "reference",
+  "https://github.com/petkaantonov/bluebird/blob/b97c0d2d487e8c5076e8bd897e0dcd4622d31846/src/util.js#L201-L216":
+    "attributed",
+  "https://hackernoon.com/the-madness-of-parsing-real-world-javascript-regexps-d9ee336df983":
+    "reference",
+  "https://stackoverflow.com/a/4228528": "reference",
+  "https://www.eclipse.org/legal/epl-2.0/": "reference",
+  "https://www.typescriptlang.org/docs/handbook/functions.html#this-parameters": "reference",
   "http://dl.acm.org/citation.cfm?id=1498047": "reference",
   "http://engelschall.com": "attributed",
   "http://opensource.org/licenses/MIT": "reference",

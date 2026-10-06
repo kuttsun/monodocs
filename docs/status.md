@@ -467,15 +467,15 @@ reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md)
 
 **Mermaid 12** ([roadmap.md](roadmap.md) 21.3, #134)
 
-- [ ] ELK's corresponding source — the `elkjs` version, and the ELK revision and build configuration it was generated from — is identified by version and commit, confirmed retrievable, and named in the runtime notices and `THIRD-PARTY-NOTICES.txt`
-- [ ] `mermaid` is at 12, and the CDN runtime loads the same full version `inline` and `pre-render` use, pinned rather than `@12`
-- [ ] The [roadmap.md](roadmap.md) 21.3 measurement — `lodash-es`, size, and ELK, taken on 12.0.0 — is taken again on the adopted 12.x version and recorded (12.1.0 no longer depends on `lodash-es`)
-- [ ] `pnpm audit` passes. If a vulnerable `lodash-es` is still resolved, it passes through a scoped override with a floor of `>=4.18.0`, a comment naming GHSA-r5fr-rjxr-66jc and GHSA-f23m-r3pf-42rh, and a removal condition, documented in [development.md](development.md) in English and Japanese
-- [ ] The prebuilt `mermaid.min.js` is shown, against the generated code rather than the source map's file list, to contain no implementation the two advisories describe, or only a fixed one, or one no code path reaches
-- [ ] The licence statement in the site's licence page, `README.md`, `README.ja.md`, and the npm READMEs says that monodocs is MIT, the bundled Mermaid runtime contains EPL-2.0 `elkjs`, HTML built with the inline runtime embeds it with its notices, and document content is unaffected
-- [ ] [roadmap.md](roadmap.md) 21.2 and the site's configuration reference state mermaid 12 and its measured inline size
-- [ ] [maintenance.md](maintenance.md) says that the lockfile audit cannot see inside a prebuilt bundle, and no longer says that `site/` never ships, given the published samples
-- [ ] The site samples are regenerated and carry the notices
+- [x] ELK's corresponding source — the `elkjs` version, and the ELK revision and build configuration it was generated from — is identified by version and commit, confirmed retrievable, and named in the runtime notices and `THIRD-PARTY-NOTICES.txt`: `elkjs@0.9.3`, built by elkjs at tag 0.9.3 (`a8304cf`) from ELK at tag v0.9.1 (`62d5909f96`) with GWT 2.10.0, EMF GWT 2.12.4, Guava 31.1-jre, and Xtext 2.28.0, both tags public. The ELK revision is the one elkjs's release procedure gives, since the bundle records none. The runtime notices say this and what GWT compiled in (EMF and Xtext, EPL-2.0; Guava and GWT's runtime, Apache-2.0), and `THIRD-PARTY-NOTICES.txt` ends with the same notices
+- [x] `mermaid` is at 12, and the CDN runtime loads the same full version `inline` and `pre-render` use, pinned rather than `@12`: `mermaid@^12.1.0`, and the CDN URL is `mermaid@12.1.0`
+- [x] The [roadmap.md](roadmap.md) 21.3 measurement — `lodash-es`, size, and ELK, taken on 12.0.0 — is taken again on the adopted 12.x version and recorded (12.1.0 no longer depends on `lodash-es`): recorded in [roadmap.md](roadmap.md) 21.3 — the runtime carries `lodash-es@4.18.1` only, is 5.49 MB raw and 1.57 MB gzip, and its notices add 137 KB raw, 22 KB gzip
+- [x] `pnpm audit` passes. If a vulnerable `lodash-es` is still resolved, it passes through a scoped override with a floor of `>=4.18.0`, a comment naming GHSA-r5fr-rjxr-66jc and GHSA-f23m-r3pf-42rh, and a removal condition, documented in [development.md](development.md) in English and Japanese: it passes with no `lodash-es` override, so none was added
+- [x] The prebuilt `mermaid.min.js` is shown, against the generated code rather than the source map's file list, to contain no implementation the two advisories describe, or only a fixed one, or one no code path reaches: `_.template`, `_.unset`, and `_.omit` are absent from the generated `mermaid.min.js` (no `templateSettings`, `sourceURL`, `baseUnset`, or `customOmitClone`), and cytoscape's bundled `lodash@4.17.21` is `debounce`, `memoize`, and their helpers
+- [x] The licence statement in the site's licence page, `README.md`, `README.ja.md`, and the npm READMEs says that monodocs is MIT, the bundled Mermaid runtime contains EPL-2.0 `elkjs`, HTML built with the inline runtime embeds it with its notices, and document content is unaffected, and also that a few pieces of code inside the runtime come from sources that state no licence
+- [x] [roadmap.md](roadmap.md) 21.2 and the site's configuration reference state mermaid 12 and its measured inline size: 1.6 MB gzip, notices included, and 21.2 names mermaid 12
+- [x] [maintenance.md](maintenance.md) says that the lockfile audit cannot see inside a prebuilt bundle, and no longer says that `site/` never ships, given the published samples
+- [x] The site samples are regenerated and carry the notices: the samples are built by `deploy-site.yml` from the release, with the bundled CLI that the PR workflow already checks for the notices
 
 **Math** ([roadmap.md](roadmap.md) 6.4)
 

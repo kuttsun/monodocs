@@ -23,6 +23,12 @@ the committed lockfiles without installing, so a failure means an advisory, not 
 It is not redundant with Dependabot alerts: it is a second, independent check over the same
 committed lockfiles, and a failure opens an issue instead of waiting in the alerts list.
 
+Neither audit sees inside a prebuilt bundle. The lockfile lists `mermaid`, not the packages its
+`mermaid.min.js` carries, and those are the versions a reader's browser runs: the `lodash-es@4.17.23`
+inside mermaid 11.17.2's runtime was never reported, because nothing in `node_modules` resolved it. The
+runtime's contents are listed, with versions, in `app/packages/core/src/themes/mermaid-notices.txt`
+([development.md](development.md)); check an advisory for a JavaScript package against that list too.
+
 ## Release binary verification
 
 `verify-published.yml` covers the published npm package, but not the release binaries and not the
@@ -112,8 +118,10 @@ item is looking for.
 1. Separate a finding from a broken run. The scheduled audit's issue is opened by any job failure,
    including checkout, tool setup, and registry errors, and only the run log says which happened. An
    infrastructure failure tells you nothing about the dependencies — re-run it.
-2. Decide whether the finding reaches a user. `site/` never ships, and part of `app/` is dev-only
-   and excluded from the published bundle. Record that reasoning; do not silently close.
+2. Decide whether the finding reaches a user. `site/`'s dependencies never ship — the site publishes
+   sample HTML, but monodocs builds it, so what it carries is monodocs' own runtime — and part of
+   `app/` is dev-only and excluded from the published bundle. Record that reasoning; do not silently
+   close.
 3. Fix Critical and High before other work, per [SECURITY.md](../SECURITY.md).
 4. If no patched version exists yet, prefer a scoped `overrides` entry with a comment naming its
    removal condition, and add it to the quarterly re-check above. If the vulnerable copy that ships
