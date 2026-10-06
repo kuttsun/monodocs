@@ -137,9 +137,13 @@ export async function buildPages(
 
     for (const problem of rendered.math ?? []) {
       const where = { path: source.relativePath, line: problem.line, column: problem.column };
+      // An AsciiDoc formula has no line: Asciidoctor's HTML cannot point back at the source.
       const params = {
         path: source.relativePath,
-        line: String(problem.line ?? "?"),
+        where:
+          problem.line === undefined
+            ? source.relativePath
+            : `${source.relativePath}:${problem.line}`,
         source: problem.source,
       };
       warnings.push(

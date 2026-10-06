@@ -559,11 +559,13 @@ TeX を文字として持っており、見出しの ID はそのため TeX か�
 - **AsciiDoc。** latexmath の変換結果は、Asciidoctor 自身の変換器を包む変換器で置き換える。それを、あらかじめ
   作った変換器（Asciidoctor のそのための口である `_preCreatedConverter`）として渡すので、Asciidoctor が文書の
   読み込み中に節の ID を作るために変換する節のタイトルにも、マーカーが入る。この口は Asciidoctor の公開 API には
-  無い。それが効かなくなれば、見出しの ID と見出しの文字のテストが失敗する。マーカーは変換ごとに新しいトークンを
-  運び、それを持つ要素だけが数式になるので、passthrough の生 HTML が数式に成りすますことはできない。monodocs が
+  無い。それが効かなくなれば、見出しの ID と見出しの文字のテストが失敗する。マーカーは変換ごとに新しいキーだけを
+  運び、それが表す数式は変換器が持つので、passthrough の生 HTML は、数式に成りすますことも、数式の中身を
+  変えることもできない。ブロックの中身は、その置換にかかわらず、ブラウザが MathJax のために復号していたとおりに
+  復号し、書き手が周りに書いた `\[...\]` は、Asciidoctor が本来加える区切り記号として扱う。monodocs が
   読むタイトル（`doc.getDocumentTitle()`）は、数式を `$TeX$` として示す。asciimath は、ファイルと数式を名指す
-  `math/asciimath-not-rendered` として報告する。AsciiDoc の数式の診断には行が無い。Asciidoctor が書く HTML は
-  ソースを指し示せないからである。
+  `math/asciimath-not-rendered` として報告する。AsciiDoc の数式の診断は、行を付けずにファイルを名指す。
+  Asciidoctor が書く HTML はソースを指し示せないからである。
 - **数式の隣の改行。** `sources.lineBreak: join`（12.6）では、数式は境界である。その前後の改行は 2 つの東アジアの
   文字の間ではないので、文字でないほかの要素の隣と同じく空白のまま残る。
 

@@ -600,12 +600,14 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   Asciidoctor's own, handed in as the converter made beforehand (`_preCreatedConverter`, Asciidoctor's
   hook for that), so that a section title, which Asciidoctor converts while it loads the document to
   make the section's ID, gets the marker too. The hook is not in Asciidoctor's public API; the tests
-  of heading IDs and heading text fail if it stops being honoured. A marker carries a token new for
-  each conversion, and only an element with it becomes a formula, so raw HTML from a passthrough
-  cannot pass for one. The title monodocs reads (`doc.getDocumentTitle()`) shows a formula as `$TeX$`.
+  of heading IDs and heading text fail if it stops being honoured. A marker carries only a key, new for
+  each conversion; the formula it stands for is kept by the converter, so raw HTML from a passthrough
+  can neither pass for a formula nor change what one is. A block's content is decoded whatever its
+  substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is
+  taken as the delimiters Asciidoctor would otherwise have added. The title monodocs reads (`doc.getDocumentTitle()`) shows a formula as `$TeX$`.
   asciimath is reported as `math/asciimath-not-rendered`, naming the file and the formula. A
-  diagnostic for an AsciiDoc formula has no line: the HTML Asciidoctor writes cannot point back at
-  the source.
+  diagnostic for an AsciiDoc formula names the file without a line: the HTML Asciidoctor writes
+  cannot point back at the source.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
   line break before or after it is not between two East Asian characters and stays a space, as at
   any other element that is not text.

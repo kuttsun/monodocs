@@ -139,6 +139,53 @@ describe("AsciiDoc math", () => {
     expect(found[0]).toMatchObject({ path: "a.adoc" });
   });
 
+  it("resolves stem as Asciidoctor does", async () => {
+    const formulas = async (adoc: string) => attributes((await build(adoc)).html, "data-math-tex");
+    expect(await formulas("= T\n\n[stem,latexmath]\n++++\nx\n++++\n")).toEqual(["x"]);
+    expect(await formulas("= T\n:stem: tex\n\nstem:[y]\n")).toEqual(["y"]);
+    expect(await formulas("= T\n:stem: latex\n\nstem:[z]\n")).toEqual(["z"]);
+    expect(await formulas("= T\n:stem:\n\nstem:[w]\n")).toEqual([]);
+    expect(await formulas("= T\n:stem: latexmath\n\n[stem,asciimath]\n++++\nv\n++++\n")).toEqual(
+      [],
+    );
+  });
+
+  it("renders a formula in an AsciiDoc table cell", async () => {
+    const { html } = await build("= T\n:stem: latexmath\n\n|===\na|stem:[y]\n|===\n");
+    expect(html).toMatch(/<td[^>]*>[\s\S]*<span class="math math-inline"[^>]*><math /);
+  });
+
+  it("takes a block's own \\[...\\] as the delimiters Asciidoctor would have added", async () => {
+    const { html, result } = await build("= T\n\n[latexmath]\n++++\n\\[x+1\\]\n++++\n");
+    expect(attributes(html, "data-math-tex")).toEqual(["x+1"]);
+    expect(result.warnings.map((w) => w.code)).not.toContain("math/parse-failed");
+  });
+
+  it("reports a formula KaTeX cannot parse, naming the file without a line", async () => {
+    const { html, result } = await build("= T\n\nBroken latexmath:[x^{] here.\n");
+    const found = result.warnings.filter((w) => w.code === "math/parse-failed");
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toMatch(/^a\.adoc: /);
+    expect(found[0]!.message).toContain("latexmath:[x^{]");
+    expect(html).toContain('<span class="math-error">latexmath:[x^{]</span>');
+  });
+
+  it("writes the source of an asciimath block as written", async () => {
+    const { result } = await build("= T\n\n[asciimath]\n++++\na < b\n++++\n");
+    const found = result.warnings.find((w) => w.code === "math/asciimath-not-rendered");
+    expect(found!.message).toContain("[asciimath]\n++++\na < b\n++++");
+  });
+
+  it("shows a formula with < or quotes in the title as $TeX$", async () => {
+    const { html } = await build('= Q latexmath:[a < b, "c"]\n\ntext\n');
+    expect(pageData(html).title).toBe('Q $a &lt; b, "c"$');
+  });
+
+  it("does not let a passthrough's unclosed tag change what a formula is", async () => {
+    const { html } = await build('= T\n\n+++<span data-math-tex="\\alpha" +++latexmath:[x] tail\n');
+    expect(attributes(html, "data-math-tex")).not.toContain("\\alpha");
+  });
+
   it("does not take raw HTML that spells a marker for a formula", async () => {
     const { html } = await build(
       '= T\n\n++++\n<span class="math math-inline" data-math-tex="x" data-monodocs-math="guess">Visible</span>\n++++\n',

@@ -56,11 +56,17 @@ export async function createMathConverter(): Promise<AsciidocMath> {
   ).create("html5", {})) as Converter & object;
   const nonce = randomUUID();
   const asciimath: string[] = [];
+  // What each marker stands for, kept here rather than read back from the HTML: a passthrough's
+  // unclosed tag can swallow a marker's attributes, but not this.
+  const formulas = new Map<string, { tex: string; source: string; display: boolean }>();
 
-  const marker = (tex: string, source: string, display: boolean) =>
-    `<${display ? "div" : "span"} class="math ${display ? "math-display" : "math-inline"}"` +
-    ` data-math-source="${attribute(source)}" data-math-tex="${attribute(tex)}"` +
-    ` data-monodocs-math="${nonce}">${text(tex)}</${display ? "div" : "span"}>`;
+  const marker = (tex: string, source: string, display: boolean) => {
+    const key = `${nonce}-${formulas.size}`;
+    formulas.set(key, { tex, source, display });
+    const tag = display ? "div" : "span";
+    // The text is the TeX as Asciidoctor escapes it, which is what it makes a section's ID from.
+    return `<${tag} data-monodocs-math="${key}">${text(tex)}</${tag}>`;
+  };
 
   const convert = async (node: MathNode, transform?: string, opts?: unknown): Promise<string> => {
     const name = transform ?? node.getNodeName();
@@ -72,9 +78,12 @@ export async function createMathConverter(): Promise<AsciidocMath> {
       asciimath.push(`asciimath:[${decode(node.text ?? "")}]`);
     }
     if (name === "stem" && node.style === "latexmath") {
-      const content = (await node.content?.()) ?? "";
-      // A passthrough block's content is raw; with special characters substituted, it is escaped.
-      const tex = node.subs?.includes("specialcharacters") ? decode(content) : content;
+      // Decoded whatever the block's substitutions, as the browser decoded it for MathJax before; and
+      // without the `\\[...\\]` an author may have written around it, which Asciidoctor does not add
+      // a second time.
+      let tex = decode((await node.content?.()) ?? "");
+      const delimited = /^\s*\\\[([\s\S]*)\\\]\s*$/.exec(tex);
+      if (delimited) tex = delimited[1]!;
       const id = node.id ? ` id="${attribute(node.id)}"` : "";
       const role = node.role ? ` ${attribute(node.role)}` : "";
       const title = node.hasTitle?.() ? `<div class="title">${node.title}</div>\n` : "";
@@ -85,7 +94,7 @@ export async function createMathConverter(): Promise<AsciidocMath> {
       );
     }
     if (name === "stem" && node.style === "asciimath") {
-      asciimath.push(`[asciimath]\n++++\n${(await node.content?.()) ?? ""}\n++++`);
+      asciimath.push(`[asciimath]\n++++\n${decode((await node.content?.()) ?? "")}\n++++`);
     }
     return base.convert(node, transform, opts);
   };
@@ -93,6 +102,7 @@ export async function createMathConverter(): Promise<AsciidocMath> {
   const converter = new Proxy(base, {
     get(target, prop, receiver) {
       if (prop === "convert") return convert;
+      if (prop === "constructor") return target.constructor;
       const value = Reflect.get(target, prop, receiver) as unknown;
       return typeof value === "function"
         ? (value as (...args: unknown[]) => unknown).bind(target)
@@ -105,19 +115,30 @@ export async function createMathConverter(): Promise<AsciidocMath> {
     asciimath,
     markFormulas(tree) {
       visit(tree, "element", (node: Element) => {
-        if (node.properties.dataMonodocsMath !== nonce) return;
-        delete node.properties.dataMonodocsMath;
+        const key = node.properties.dataMonodocsMath;
+        const formula = typeof key === "string" ? formulas.get(key) : undefined;
+        if (!formula) return;
+        // A marker can appear more than once (a section title repeated in a TOC); each is made the same.
+        node.tagName = formula.display ? "div" : "span";
+        node.properties = {
+          className: ["math", formula.display ? "math-display" : "math-inline"],
+          dataMathSource: formula.source,
+          dataMathTex: formula.tex,
+        };
+        node.children = [{ type: "text", value: formula.tex }];
         node.data = { ...node.data, monodocsMath: true } as Element["data"];
         // Asciidoctor's HTML has no lines of the source to point at.
         delete node.position;
       });
     },
     titleText(html) {
-      const pattern = new RegExp(
-        `<span class="math math-inline" data-math-source="[^"]*" data-math-tex="[^"]*" data-monodocs-math="${nonce}">([^<]*)</span>`,
-        "g",
+      return html.replace(
+        new RegExp(`<span data-monodocs-math="(${nonce}-\\d+)">[^<]*</span>`, "g"),
+        (whole, key: string) => {
+          const formula = formulas.get(key);
+          return formula ? `$${text(formula.tex)}$` : whole;
+        },
       );
-      return html.replace(pattern, (_, tex: string) => `$${tex}$`);
     },
   };
 }
