@@ -351,7 +351,7 @@ Captured on 2026-10-06 (math: what GitHub renders as a formula):
 | a fenced `math` block | display math |
 
 **The rules, measured (v0.15).** The table above does not settle where a formula may start and end, so
-2,773 more inputs were captured the same way on the same day, varying the character before and after
+2,779 more inputs were captured the same way on the same day, varying the character before and after
 each delimiter systematically and covering the containers a formula can sit in; they are kept in
 `app/packages/core/scripts/data/github-math-probes-2026-10-06.json`. monodocs' parser reproduces every
 captured case, apart from the differences listed at the end of this paragraph. GitHub looks for formulas after
@@ -375,7 +375,7 @@ is a boundary. In that text:
 
 Two consequences follow GitHub as the notation says, and are documented for authors rather than changed.
 First, **backslash escapes are resolved before a formula is read**, as CommonMark resolves them anywhere:
-in `$...$` and `$$...$$`, `\{` is `{`, `\` is `\`, and `\,` is `,`. TeX that needs them is written as
+in `$...$` and `$$...$$`, `\{` is `{`, `\\` is `\`, and `\,` is `,`. TeX that needs them is written as
 ``$`...`$`` or a fenced `math` block, which keep a backslash as written. `\$` is the
 exception, by the rule below. Keeping every backslash was considered and rejected: a document previewed
 on GitHub has already been adjusted to GitHub's reading, doubling backslashes or switching to the code
@@ -390,7 +390,9 @@ HTML, and then rewrites that markup into the formula: `$$a *b* c$$` becomes the 
 nothing but text, line breaks, and HTML comments; otherwise it reads it by the inline rules, which keeps
 the markup. A paragraph holding a code span or a link is read the same way on both. The captured inputs
 where the result differs — those, the `\$` cases, and raw HTML, which monodocs drops — are listed with
-monodocs' result in the parser's tests.
+monodocs' result in the parser's tests. Two faults in GitHub's own output are not followed either: it
+escapes the text after an inline formula once more, so that a reader sees `&amp;` where `&` was written,
+and it drops the closing `$$` of `$$x` / `$$y$$` after the formula it finds; here that text stays as written.
 
 So the common forms of money and shell variables stay text, and the forms above marked math read as math
 here too, as they do on GitHub. The other deliberate difference is `\$`. GitHub's way out is

@@ -3,6 +3,7 @@ import { decodeNumericCharacterReference } from "micromark-util-decode-numeric-c
 import type { CompileContext, Extension as FromMarkdownExtension } from "mdast-util-from-markdown";
 import type { Token } from "micromark-util-types";
 import type {
+  Break,
   Code,
   Data,
   Html,
@@ -35,6 +36,8 @@ import type { Processor } from "unified";
  *   paragraph that mixes `$$...$$` with emphasis, struck-through text, images, or inline HTML, and
  *   rewrites that markup into the formula (`$$a *b* c$$` becomes the TeX `a _b_ c`); here such a
  *   paragraph is read by the inline rules.
+ *
+ * A tree in which no formula is found is left exactly as remark built it.
  */
 
 /** A formula found in text: `$...$`, `` $`...`$ ``, or `$$...$$`. */
@@ -63,85 +66,62 @@ interface BlockMathData extends Data {
   source: string;
 }
 
-/** A `\$`, kept apart from the text around it until the formulas have been found. */
-interface EscapedDollar extends Literal {
-  type: "escapedDollar";
-}
-
 declare module "mdast" {
   interface PhrasingContentMap {
     inlineMath: InlineMath;
-    escapedDollar: EscapedDollar;
   }
   interface RootContentMap {
     math: BlockMath;
     inlineMath: InlineMath;
-    escapedDollar: EscapedDollar;
+  }
+  interface RootData {
+    /** Offsets of the `\$` escapes in the document, recorded while mdast is built. */
+    mathEscapes?: number[];
   }
 }
 
 /**
  * remark plugin: finds the formulas and replaces them with `inlineMath` and `math` nodes. It must be
- * used before the document is parsed, since it marks `\$` while mdast is built.
+ * used before the document is parsed, since it records where `\$` was written while mdast is built.
  */
 export function remarkMath(this: Processor) {
   const data = this.data();
-  (data.fromMarkdownExtensions ??= []).push(escapedDollarExtension);
+  (data.fromMarkdownExtensions ??= []).push(escapeRecorder);
   return (tree: Root, file: { value: unknown }) => {
     findMath(tree, String(file.value));
   };
 }
 
-// --- `\$` ---------------------------------------------------------------------------------------
-
 /**
- * `\$` becomes a node of its own, so that the formula rules can tell it from a `$`. The default
- * handlers put an escape into the text node around it: `characterEscape` opens the text node and
- * `characterEscapeValue` closes it.
+ * Records the offset of each `\$` on the root, so that the formula rules can tell it from a `$`; the
+ * text is built as it would be without the plugin, so nothing that reads it before the formulas are
+ * found (GFM's autolink literals) sees a difference.
  */
-const escapedDollarExtension: FromMarkdownExtension = {
+const escapeRecorder: FromMarkdownExtension = {
   enter: {
     characterEscape(this: CompileContext, token: Token) {
-      if (this.sliceSerialize(token) !== "\\$") {
-        this.config.enter.data!.call(this, token);
-        return;
+      if (this.sliceSerialize(token) === "\\$") {
+        const root = this.stack[0] as Root;
+        ((root.data ??= {}).mathEscapes ??= []).push(token.start.offset);
       }
-      const parent = this.stack[this.stack.length - 1] as Parent;
-      const node: EscapedDollar = {
-        type: "escapedDollar",
-        value: "$",
-        position: { start: pointOf(token.start), end: pointOf(token.end) },
-      };
-      parent.children.push(node as never);
-      this.stack.push(node as never);
-    },
-  },
-  exit: {
-    characterEscapeValue(this: CompileContext, token: Token) {
-      const top = this.stack[this.stack.length - 1] as Nodes;
-      if (top.type === "escapedDollar") {
-        this.stack.pop();
-        return;
-      }
-      this.config.exit.data!.call(this, token);
+      this.config.enter.data!.call(this, token);
     },
   },
 };
-
-function pointOf(p: { line: number; column: number; offset: number }): Point {
-  return { line: p.line, column: p.column, offset: p.offset };
-}
 
 // --- The tree -----------------------------------------------------------------------------------
 
 /** Raw HTML elements whose content GitHub reads no formula in. */
 const RAW_SKIPPING = new Set(["em", "b", "a", "code"]);
 
-/** Exported for tests: find the formulas in a parsed tree, then put `\$` back as text. */
+/** Find the formulas in a tree parsed with the plugin's extension, from the Markdown it was parsed from. */
 export function findMath(tree: Root, raw: string): void {
-  const doc = new Doc(raw);
-  walkBlocks(tree, doc, false);
-  restoreEscapedDollars(tree);
+  const escapes = new Set(tree.data?.mathEscapes);
+  if (tree.data?.mathEscapes) {
+    delete tree.data.mathEscapes;
+    if (Object.keys(tree.data).length === 0) delete tree.data;
+  }
+  walkBlocks(tree, new Doc(raw, escapes), false);
 }
 
 function walkBlocks(parent: Parent, doc: Doc, inListItem: boolean): void {
@@ -172,31 +152,33 @@ function walkBlocks(parent: Parent, doc: Doc, inListItem: boolean): void {
 }
 
 function blockMath(node: Code, doc: Doc): BlockMath {
+  const value = lf(node.value);
   const start = node.position?.start.offset;
   const end = node.position?.end.offset;
-  let source = "```math\n" + node.value + "\n```";
+  let source = "```math\n" + value + "\n```";
   if (start !== undefined && end !== undefined) {
     const lines = doc.raw.slice(start, end).split(/\r\n|\r|\n/);
-    const open = stripPrefix(lines[0]!);
-    const last = lines.length > 1 ? stripPrefix(lines[lines.length - 1]!) : "";
-    const close = /^(`{3,}|~{3,})[ \t]*$/.test(last) ? "\n" + last.trimEnd() : "";
-    source = open.trimEnd() + "\n" + node.value + close;
+    const open = lines[0]!.replace(/^[ \t>]*/, "").trimEnd();
+    const fence = /^(`{3,}|~{3,})/.exec(open)![1]!;
+    const last = lines.length > 1 ? lines[lines.length - 1]!.replace(/^[ \t>]*/, "").trimEnd() : "";
+    // The last line closes the block only if it is a fence of the same character, at least as long.
+    const closes = last.length >= fence.length && last === fence[0]!.repeat(last.length);
+    source = open + "\n" + value + (closes ? "\n" + last : "");
   }
-  return { type: "math", value: node.value, data: { source }, position: node.position };
-}
-
-function stripPrefix(line: string): string {
-  return line.replace(/^[ \t>]*/, "");
+  return { type: "math", value, data: { source }, position: node.position };
 }
 
 function displayCandidate(children: PhrasingContent[]): boolean {
-  return children.every(
-    (c) => c.type === "text" || c.type === "escapedDollar" || c.type === "break" || isComment(c),
-  );
+  return children.every((c) => c.type === "text" || c.type === "break" || isComment(c));
 }
 
 function isComment(node: Nodes): boolean {
   return node.type === "html" && node.value.startsWith("<!--");
+}
+
+/** Line endings as `\n`, so that a formula reads the same whatever the file's line endings. */
+function lf(s: string): string {
+  return s.replace(/\r\n?/g, "\n");
 }
 
 // --- Runs of text -------------------------------------------------------------------------------
@@ -208,7 +190,7 @@ function isComment(node: Nodes): boolean {
  */
 interface Unit {
   ch: string;
-  node: Text | EscapedDollar | PhrasingContent;
+  node: Text | Break;
   /** Index into a text node's value. */
   index: number;
   /** A `\$`: a dollar sign that delimits nothing. */
@@ -234,7 +216,7 @@ interface Found {
 function inlineMath(parent: Parent, doc: Doc, display: boolean): void {
   const children = parent.children as PhrasingContent[];
   if (display) {
-    const run = toRun(children, true);
+    const run = toRun(children, doc);
     if (startsAndEndsWithDoubleDollar(run.units)) {
       parent.children = rebuild(run, findDisplay(run.units), doc) as never;
       return;
@@ -270,7 +252,7 @@ function splitRuns(children: PhrasingContent[], doc: Doc): PhrasingContent[] {
     if (pending.length === 0) return;
     if (skipping > 0) out.push(...pending);
     else {
-      const run = toRun(pending, false);
+      const run = toRun(pending, doc);
       out.push(...rebuild(run, findInline(run.units, 0, run.units.length), doc));
     }
     pending = [];
@@ -283,8 +265,10 @@ function splitRuns(children: PhrasingContent[], doc: Doc): PhrasingContent[] {
       if (
         before?.type === "text" &&
         before.value.endsWith("$") &&
+        !doc.isEscaped(before, before.value.length - 1) &&
         after?.type === "text" &&
-        after.value.startsWith("$")
+        after.value.startsWith("$") &&
+        !doc.isEscaped(after, 0)
       ) {
         const math = codeSpanMath(before, child, after, doc);
         flush();
@@ -292,7 +276,7 @@ function splitRuns(children: PhrasingContent[], doc: Doc): PhrasingContent[] {
         continue;
       }
     }
-    if (child.type === "text" || child.type === "escapedDollar" || isComment(child)) {
+    if (child.type === "text" || isComment(child)) {
       pending.push(child);
       continue;
     }
@@ -315,48 +299,38 @@ function splitRuns(children: PhrasingContent[], doc: Doc): PhrasingContent[] {
  * two dollar signs are taken from the texts around the code span, which is replaced by the formula.
  */
 function codeSpanMath(before: Text, code: InlineCode, after: Text, doc: Doc): InlineMath {
+  const open = doc.sourceOf(before, before.value.length - 1, before.value.length);
+  const close = doc.sourceOf(after, 0, 1);
+  const codeStart = code.position?.start.offset;
+  const codeEnd = code.position?.end.offset;
+  const source =
+    open !== undefined && close !== undefined && codeStart !== undefined && codeEnd !== undefined
+      ? open + doc.raw.slice(codeStart, codeEnd).replace(/(?:\r\n|\r|\n)[ \t>]*/g, "\n") + close
+      : "$`" + code.value + "`$";
   const start = doc.offsetIn(before, before.value.length - 1);
   const end = doc.offsetIn(after, 1);
-  doc.trim(before, 0);
-  doc.trim(after, 1);
+  doc.trimHead(after, 1);
   before.value = before.value.slice(0, -1);
   after.value = after.value.slice(1);
-  const math: InlineMath = {
+  return {
     type: "inlineMath",
     value: code.value,
-    data: {
-      source:
-        start !== undefined && end !== undefined
-          ? normalizeSource(doc.raw.slice(start, end))
-          : "$`" + code.value + "`$",
-      display: false,
-    },
+    data: { source, display: false },
     ...positionOf(doc, start, end),
   };
-  return math;
 }
 
-function toRun(nodes: PhrasingContent[], display: boolean): Run {
+function toRun(nodes: PhrasingContent[], doc: Doc): Run {
   const units: Unit[] = [];
   const comments: Run["comments"] = [];
   for (const node of nodes) {
     if (node.type === "text") {
       for (let i = 0; i < node.value.length; i++) {
         const c = node.value[i]!;
-        // A display paragraph is read from its text: GitHub does not escape js-display-math.
-        const html = display
-          ? c
-          : c === "&"
-            ? "&amp;"
-            : c === "<"
-              ? "&lt;"
-              : c === ">"
-                ? "&gt;"
-                : c;
-        for (const ch of html) units.push({ ch, node, index: i, escaped: false });
+        const escaped = c === "$" && doc.isEscaped(node, i);
+        const html = c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c;
+        for (const ch of html) units.push({ ch, node, index: i, escaped });
       }
-    } else if (node.type === "escapedDollar") {
-      units.push({ ch: "$", node, index: 0, escaped: true });
     } else if (node.type === "break") {
       units.push({ ch: "\n", node, index: 0, escaped: false });
     } else if (isComment(node)) {
@@ -375,8 +349,8 @@ const WORD = /[A-Za-z0-9_]/;
 /**
  * `$...$` and `$$...$$` within one run, as GitHub reads them: the opening delimiter comes after the
  * start of the run, an ASCII space, or `(`, and before a character that is neither a space nor `$`;
- * the formula holds no `$` and no newline; the closing delimiter is not followed by an ASCII letter,
- * digit, or `_`, and a closing `$` not by the character just before it.
+ * the formula holds no `$` and no line ending; the closing delimiter is not followed by an ASCII
+ * letter, digit, or `_`, and a closing `$` not by the character just before it.
  */
 function findInline(units: Unit[], from: number, to: number): Found[] {
   const found: Found[] = [];
@@ -394,7 +368,7 @@ function findInline(units: Unit[], from: number, to: number): Found[] {
       continue;
     }
     let j = i + width;
-    while (j < to && !isDollar(units[j]) && units[j]!.ch !== "\n") j++;
+    while (j < to && !isDollar(units[j]) && units[j]!.ch !== "\n" && units[j]!.ch !== "\r") j++;
     const closes =
       j < to && isDollar(units[j]) && (width === 1 || (j + 1 < to && isDollar(units[j + 1])));
     const after = j + width < to ? units[j + width]!.ch : undefined;
@@ -458,11 +432,11 @@ function rebuild(run: Run, found: Found[], doc: Doc): PhrasingContent[] {
       }
       if (k === to) break;
       const u = units[k]!;
-      if (u.node.type !== "text") {
+      if (u.node.type === "break") {
         flushText();
-        out.push(u.node as PhrasingContent);
+        out.push(u.node);
       } else if (!continues(units, k, from)) {
-        text += (u.node as Text).value[u.index];
+        text += u.node.value[u.index];
       }
     }
     flushText();
@@ -470,7 +444,7 @@ function rebuild(run: Run, found: Found[], doc: Doc): PhrasingContent[] {
   let at = 0;
   for (const f of found) {
     emit(at, f.from);
-    out.push(toMath(units, f, doc));
+    out.push(toMath(run, f, doc));
     at = f.to + 1;
   }
   emit(at, units.length);
@@ -484,38 +458,45 @@ function continues(units: Unit[], k: number, from: number): boolean {
   );
 }
 
-function toMath(units: Unit[], f: Found, doc: Doc): InlineMath {
+function toMath(run: Run, f: Found, doc: Doc): InlineMath {
+  const { units } = run;
   let tex = "";
   for (let k = f.from + f.width; k <= f.to - f.width; k++) {
     const u = units[k]!;
-    if (u.node.type === "text") {
-      if (!continues(units, k, f.from + f.width)) tex += (u.node as Text).value[u.index];
-    } else if (u.node.type === "escapedDollar") {
-      tex += "\\$";
-    } else if (u.node.type === "break") {
-      tex += "\n";
-    }
+    if (u.node.type === "break") tex += "\n";
+    else if (u.escaped) tex += "\\$";
+    else if (!continues(units, k, f.from + f.width)) tex += u.node.value[u.index];
   }
-  const first = units[f.from]!;
-  const last = units[f.to]!;
-  const start = doc.offsetOf(first);
-  const end = doc.offsetAfter(last);
+  tex = lf(tex);
+
+  // The source, piece by piece: the stretch of each text node as written, a hard break as written,
+  // and a comment as mdast holds it, which is without the prefixes of a quote or list.
+  let source: string | undefined = "";
+  let k = f.from;
+  while (k <= f.to && source !== undefined) {
+    for (const c of run.comments) if (c.at === k && k > f.from) source += c.node.value;
+    const u = units[k]!;
+    if (u.node.type === "break") {
+      const p = u.node.position;
+      source = p ? source + lf(doc.raw.slice(p.start.offset, p.end.offset)) : undefined;
+      k++;
+      continue;
+    }
+    let e = k;
+    while (e + 1 <= f.to && units[e + 1]!.node === u.node) e++;
+    const piece = doc.sourceOf(u.node, u.index, units[e]!.index + 1);
+    source = piece === undefined ? undefined : source + piece;
+    k = e + 1;
+  }
   const delimiter = f.width === 2 ? "$$" : "$";
-  const source =
-    start !== undefined && end !== undefined
-      ? normalizeSource(doc.raw.slice(start, end))
-      : delimiter + tex + delimiter;
+  const start = doc.offsetOf(units[f.from]!);
+  const end = doc.offsetAfter(units[f.to]!);
   return {
     type: "inlineMath",
     value: tex,
-    data: { source, display: f.display },
+    data: { source: source ?? delimiter + tex + delimiter, display: f.display },
     ...positionOf(doc, start, end),
   };
-}
-
-/** A formula's source without the prefixes a quote or list puts at the start of its lines. */
-function normalizeSource(source: string): string {
-  return source.replace(/(?:\r\n|\r|\n)[ \t>]*/g, "\n");
 }
 
 function positionOf(
@@ -527,67 +508,70 @@ function positionOf(
   return { position: { start: doc.point(start), end: doc.point(end) } };
 }
 
-function restoreEscapedDollars(node: Nodes): void {
-  if (!("children" in node)) return;
-  const out: Nodes[] = [];
-  for (const child of node.children as Nodes[]) {
-    restoreEscapedDollars(child);
-    const value = child.type === "escapedDollar" ? "$" : undefined;
-    const prev = out[out.length - 1];
-    if (child.type === "text" || value !== undefined) {
-      const text = value ?? (child as Text).value;
-      if (text === "") continue;
-      if (prev?.type === "text") {
-        prev.value += text;
-        if (prev.position && child.position)
-          prev.position = { ...prev.position, end: child.position.end };
-        else delete prev.position;
-        continue;
-      }
-      out.push({
-        type: "text",
-        value: text,
-        ...(child.position ? { position: child.position } : {}),
-      });
-      continue;
-    }
-    out.push(child);
-  }
-  (node as Parent).children = out as never;
-}
-
 // --- Where a character was written ---------------------------------------------------------------
 
+interface Alignment {
+  /** The offset of each character of the value, and one past the end. */
+  map: number[];
+  /** Stretches of the Markdown left out of the value: a line's prefix, `[start, end)`. */
+  skips: [number, number][];
+}
+
 /**
- * Maps a character of a text node's value back to its offset in the Markdown. The value differs from
- * what was written where an escape or a character reference was resolved and where a line's prefix
+ * Maps a character of a text node's value back to the Markdown. The value differs from what was
+ * written where an escape or a character reference was resolved and where a line's prefix
  * (indentation, `>`) or trailing spaces were removed.
  */
 class Doc {
-  private readonly maps = new Map<Text, number[] | null>();
+  private readonly alignments = new Map<Text, Alignment | null>();
   private readonly heads = new Map<Text, number>();
   private lineStarts: number[] | undefined;
 
-  constructor(readonly raw: string) {}
+  constructor(
+    readonly raw: string,
+    private readonly escapes: Set<number>,
+  ) {}
 
   /** Characters about to be taken from the start of a text node's value. */
-  trim(node: Text, head: number): void {
-    this.mapOf(node);
-    this.heads.set(node, (this.heads.get(node) ?? 0) + head);
+  trimHead(node: Text, count: number): void {
+    this.alignmentOf(node);
+    this.heads.set(node, (this.heads.get(node) ?? 0) + count);
   }
 
   offsetIn(node: Text, index: number): number | undefined {
-    const map = this.mapOf(node);
-    return map ? map[index + (this.heads.get(node) ?? 0)] : undefined;
+    return this.alignmentOf(node)?.map[index + (this.heads.get(node) ?? 0)];
+  }
+
+  /** Whether the `$` at this index of a text node was written `\$`. */
+  isEscaped(node: Text, index: number): boolean {
+    const offset = this.offsetIn(node, index);
+    return offset !== undefined && this.escapes.has(offset);
+  }
+
+  /** A text node's characters `from` to `to` as written, line prefixes left out. */
+  sourceOf(node: Text, from: number, to: number): string | undefined {
+    const alignment = this.alignmentOf(node);
+    const start = this.offsetIn(node, from);
+    const end = this.offsetIn(node, to);
+    if (!alignment || start === undefined || end === undefined) return undefined;
+    let out = "";
+    let at = start;
+    for (const [a, b] of alignment.skips) {
+      if (a >= start && b <= end) {
+        out += this.raw.slice(at, a);
+        at = b;
+      }
+    }
+    return lf(out + this.raw.slice(at, end));
   }
 
   offsetOf(unit: Unit): number | undefined {
-    if (unit.node.type === "text") return this.offsetIn(unit.node as Text, unit.index);
+    if (unit.node.type === "text") return this.offsetIn(unit.node, unit.index);
     return unit.node.position?.start.offset;
   }
 
   offsetAfter(unit: Unit): number | undefined {
-    if (unit.node.type === "text") return this.offsetIn(unit.node as Text, unit.index + 1);
+    if (unit.node.type === "text") return this.offsetIn(unit.node, unit.index + 1);
     return unit.node.position?.end.offset;
   }
 
@@ -603,18 +587,18 @@ class Doc {
     return { line: lo + 1, column: offset - this.lineStarts[lo]! + 1, offset };
   }
 
-  private mapOf(node: Text): number[] | null {
-    let map = this.maps.get(node);
-    if (map === undefined) {
+  private alignmentOf(node: Text): Alignment | null {
+    let alignment = this.alignments.get(node);
+    if (alignment === undefined) {
       const start = node.position?.start.offset;
       const end = node.position?.end.offset;
-      map =
+      alignment =
         start === undefined || end === undefined
           ? null
           : align(node.value, this.raw.slice(start, end), start);
-      this.maps.set(node, map);
+      this.alignments.set(node, alignment);
     }
-    return map;
+    return alignment;
   }
 }
 
@@ -630,59 +614,97 @@ function lineStartsOf(raw: string): number[] {
 const ASCII_PUNCTUATION = /[!-/:-@[-`{-~]/;
 const REFERENCE = /^&(?:#[xX]([0-9a-fA-F]{1,6})|#([0-9]{1,7})|([A-Za-z][A-Za-z0-9]{0,31}));/;
 
+function decodeReference(m: RegExpExecArray): string | false {
+  if (m[1] !== undefined) return decodeNumericCharacterReference(m[1], 16);
+  if (m[2] !== undefined) return decodeNumericCharacterReference(m[2], 10);
+  return decodeNamedCharacterReference(m[3]!);
+}
+
 /**
- * The offset of each character of `value` in `written` (plus `base`), and one past the end; `null`
+ * Lines `value` up with `written`, the Markdown it was built from (starting at offset `base`); `null`
  * when the two cannot be lined up, in which case a formula's source is rebuilt from its TeX.
+ *
+ * After a line ending, the next line's prefix — spaces, tabs, and `>` — is not in the value. Where
+ * the value's next character is itself `>` or a space, how much of the prefix to skip is ambiguous,
+ * and the longest skip that lets the rest line up is taken.
  */
-export function align(value: string, written: string, base: number): number[] | null {
+export function align(value: string, written: string, base: number): Alignment | null {
   const map: number[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < value.length) {
-    const c = value[i]!;
-    if (c === "\n") {
-      map.push(base + j);
-      while (j < written.length && written[j] !== "\n" && written[j] !== "\r") j++;
-      if (j >= written.length) return null;
-      j += written[j] === "\r" && written[j + 1] === "\n" ? 2 : 1;
-      while (j < written.length && /[ \t>]/.test(written[j]!) && written[j] !== value[i + 1]) j++;
-      i++;
-      continue;
-    }
-    if (
-      written[j] === "\\" &&
-      ASCII_PUNCTUATION.test(written[j + 1] ?? "") &&
-      written[j + 1] === c
-    ) {
-      map.push(base + j);
-      j += 2;
-      i++;
-      continue;
-    }
-    if (written[j] === "&") {
-      const m = REFERENCE.exec(written.slice(j, j + 40));
-      const decoded = m
-        ? m[1] !== undefined
-          ? decodeNumericCharacterReference(m[1], 16)
-          : m[2] !== undefined
-            ? decodeNumericCharacterReference(m[2], 10)
-            : decodeNamedCharacterReference(m[3]!)
-        : false;
-      if (m && decoded && value.startsWith(decoded, i)) {
-        for (let k = 0; k < decoded.length; k++) map.push(base + j);
-        i += decoded.length;
-        j += m[0].length;
+  const skips: [number, number][] = [];
+  const failed = new Set<string>();
+
+  const go = (i: number, j: number): boolean => {
+    while (i < value.length) {
+      const c = value[i]!;
+      if (c === "\n" || c === "\r") {
+        const valueEnding = c === "\r" && value[i + 1] === "\n" ? 2 : 1;
+        // Trailing spaces before the line ending are not in the value.
+        let k = j;
+        while (written[k] === " " || written[k] === "\t") k++;
+        if (written[k] !== "\n" && written[k] !== "\r") return false;
+        for (let n = 0; n < valueEnding; n++) map.push(base + j);
+        k += written[k] === "\r" && written[k + 1] === "\n" ? 2 : 1;
+        let end = k;
+        while (end < written.length && /[ \t>]/.test(written[end]!)) end++;
+        const next = i + valueEnding;
+        const candidates: number[] = [];
+        for (let p = end; p >= k; p--) {
+          const fits =
+            next >= value.length ||
+            written[p] === value[next] ||
+            written[p] === "\\" ||
+            written[p] === "&";
+          if (fits && !failed.has(`${next}:${p}`)) candidates.push(p);
+        }
+        if (candidates.length === 1) {
+          // No choice to make: carry on without recursing, so a long paragraph cannot overflow the stack.
+          if (candidates[0]! > k) skips.push([base + k, base + candidates[0]!]);
+          i = next;
+          j = candidates[0]!;
+          continue;
+        }
+        for (const p of candidates) {
+          const mapLength = map.length;
+          const skipsLength = skips.length;
+          if (p > k) skips.push([base + k, base + p]);
+          if (go(next, p)) return true;
+          map.length = mapLength;
+          skips.length = skipsLength;
+          failed.add(`${next}:${p}`);
+        }
+        return false;
+      }
+      if (
+        written[j] === "\\" &&
+        ASCII_PUNCTUATION.test(written[j + 1] ?? "") &&
+        written[j + 1] === c
+      ) {
+        map.push(base + j);
+        j += 2;
+        i++;
         continue;
       }
+      if (written[j] === "&") {
+        const m = REFERENCE.exec(written.slice(j, j + 40));
+        const decoded = m ? decodeReference(m) : false;
+        if (m && decoded && value.startsWith(decoded, i)) {
+          for (let n = 0; n < decoded.length; n++) map.push(base + j);
+          i += decoded.length;
+          j += m[0].length;
+          continue;
+        }
+      }
+      if (written[j] === c) {
+        map.push(base + j);
+        i++;
+        j++;
+        continue;
+      }
+      return false;
     }
-    if (written[j] === c) {
-      map.push(base + j);
-      i++;
-      j++;
-      continue;
-    }
-    return null;
-  }
-  map.push(base + j);
-  return map;
+    map.push(base + j);
+    return true;
+  };
+
+  return go(0, 0) ? { map, skips } : null;
 }

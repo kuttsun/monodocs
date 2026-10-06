@@ -13699,6 +13699,30 @@
     {
       "input": "w \\$`x`$ w",
       "html": "<p>w <math-renderer class=\"js-inline-math\">$x$</math-renderer> w</p>"
+    },
+    {
+      "input": "$$a$$ $a&$& $$b$$",
+      "html": "<p><math-renderer class=\"js-display-math\">$$a$$</math-renderer> <math-renderer class=\"js-inline-math\">$a&amp;amp;$</math-renderer>&amp;amp; <math-renderer class=\"js-display-math\">$$b$$</math-renderer></p>"
+    },
+    {
+      "input": "$$a$$ $a<$< $$b$$",
+      "html": "<p><math-renderer class=\"js-display-math\">$$a$$</math-renderer> <math-renderer class=\"js-inline-math\">$a&amp;lt;$</math-renderer>&amp;lt; <math-renderer class=\"js-display-math\">$$b$$</math-renderer></p>"
+    },
+    {
+      "input": "w www.x.com/p\\$q w",
+      "html": "<p>w <a href=\"http://www.x.com/p%5C$q\" rel=\"nofollow\">www.x.com/p\\$q</a> w</p>"
+    },
+    {
+      "input": "<b>www.x.com/a\\$b</b> $x$",
+      "html": "<p><b>www.x.com/a$b</b> <math-renderer class=\"js-inline-math\">$x$</math-renderer></p>"
+    },
+    {
+      "input": "> $$a\n> \\>b$$",
+      "html": "<blockquote>\n<p><math-renderer class=\"js-display-math\">$$a\n&gt;b$$</math-renderer></p>\n</blockquote>"
+    },
+    {
+      "input": "> a $x$ \\>\n> &gt; $y$ b",
+      "html": "<blockquote>\n<p>a <math-renderer class=\"js-inline-math\">$x$</math-renderer> &gt;<br>\n&gt; <math-renderer class=\"js-inline-math\">$y$</math-renderer> b</p>\n</blockquote>"
     }
   ]
 }

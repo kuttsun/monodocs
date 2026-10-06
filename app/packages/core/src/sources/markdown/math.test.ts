@@ -87,6 +87,12 @@ function textOf(tree: Root): string {
 function githubTextOf(html: string): string {
   return decode(
     html
+      // GitHub escapes the text after an inline formula once more, as it does the formula: a reader
+      // sees `&amp;` there. That is not followed; the text is compared as the author wrote it.
+      .replace(
+        /(<math-renderer class="js-inline-math"[^>]*>[\s\S]*?<\/math-renderer>)([^<]+)/g,
+        (_, formula, text) => formula + decode(text),
+      )
       .replace(
         /<math-renderer class="js-(inline|display)-math"[^>]*>([\s\S]*?)<\/math-renderer>/g,
         (_, kind, body) => {
@@ -147,7 +153,19 @@ const DIFFERENCES: Record<string, Formula[]> = {
   "w <div>$x$</div> w": [{ display: false, tex: "x" }],
 };
 
+/** Inputs whose formulas match GitHub's but whose text around them does not, and why. */
+const TEXT_DIFFERENCES: Record<string, string> = {
+  // GitHub drops the `$$` after `y`: text lost, which is not followed.
+  "$$x\n$$y$$": "GitHub loses text",
+};
+
 describe("Markdown math against GitHub's captured output", () => {
+  it("reads both captures in full", () => {
+    // A data file emptied, or GitHub's markup no longer matched, would let every case pass vacuously.
+    expect(CAPTURED).toHaveLength(2836);
+    expect(CAPTURED.filter((c) => githubFormulas(c.html).length > 0)).toHaveLength(925);
+  });
+
   it("lists every difference against an input that was captured", () => {
     const inputs = new Set(CAPTURED.map((c) => c.input));
     expect(Object.keys(DIFFERENCES).filter((k) => !inputs.has(k))).toEqual([]);
@@ -167,10 +185,18 @@ describe("Markdown math against GitHub's captured output", () => {
     expect(mismatches.join("\n")).toBe("");
   });
 
-  it("leaves the text around the formulas as GitHub does", () => {
+  it("leaves the text around the formulas as GitHub does, for every one-paragraph input", () => {
     const mismatches: string[] = [];
+    let compared = 0;
     for (const c of CAPTURED) {
-      if (!c.batched || c.input in DIFFERENCES) continue;
+      if (
+        c.input in DIFFERENCES ||
+        c.input in TEXT_DIFFERENCES ||
+        !/^<p>[\s\S]*<\/p>$/.test(c.html) ||
+        c.html.indexOf("</p>") !== c.html.length - 4
+      )
+        continue;
+      compared++;
       const actual = textOf(parse(c.input));
       const expected = githubTextOf(c.html);
       if (actual !== expected)
@@ -179,29 +205,35 @@ describe("Markdown math against GitHub's captured output", () => {
         );
     }
     expect(mismatches.join("\n")).toBe("");
+    expect(compared).toBeGreaterThan(2700);
   });
 });
 
-describe("a formula's source", () => {
-  const sources = (input: string) => {
-    const out: string[] = [];
-    const walk = (node: Nodes) => {
-      if (node.type === "inlineMath" || node.type === "math") out.push(node.data.source);
-      else if ("children" in node) node.children.forEach((c) => walk(c as Nodes));
-    };
-    walk(parse(input));
-    return out;
+/** Every formula with its source and the Markdown at its position. */
+function formulasWithSource(input: string) {
+  const out: { source: string; at: string | undefined }[] = [];
+  const walk = (node: Nodes) => {
+    if (node.type === "inlineMath" || node.type === "math") {
+      const p = node.position;
+      out.push({ source: node.data.source, at: p && input.slice(p.start.offset, p.end.offset) });
+    } else if ("children" in node) node.children.forEach((c) => walk(c as Nodes));
   };
+  walk(parse(input));
+  return out;
+}
 
-  it("is taken from the Markdown, not rebuilt, for every captured formula", () => {
-    const missing: string[] = [];
+const sources = (input: string) => formulasWithSource(input).map((f) => f.source);
+
+describe("a formula's source", () => {
+  it("is the Markdown at the formula's own position, for every captured formula", () => {
+    const wrong: string[] = [];
     for (const c of CAPTURED) {
-      for (const source of sources(c.input)) {
-        if (!c.input.includes(source))
-          missing.push(`${JSON.stringify(c.input)}: ${JSON.stringify(source)}`);
+      for (const f of formulasWithSource(c.input)) {
+        const at = f.at?.replace(/(?:\r\n|\r|\n)[ \t>]*/g, "\n");
+        if (f.source !== at) wrong.push(`${JSON.stringify(c.input)}: ${JSON.stringify(f)}`);
       }
     }
-    expect(missing).toEqual([]);
+    expect(wrong).toEqual([]);
   });
 
   it("is the formula as written, delimiters and character references included", () => {
@@ -214,17 +246,40 @@ describe("a formula's source", () => {
     expect(sources("w $x <!-- c --> y$ w")).toEqual(["$x <!-- c --> y$"]);
     expect(sources("Cost $x = \\$4$ here")).toEqual(["$x = \\$4$"]);
     expect(sources("w $\\{x\\}$ w")).toEqual(["$\\{x\\}$"]);
+    expect(sources("$$a  \nc$$")).toEqual(["$$a  \nc$$"]);
   });
 
-  it("drops the prefixes of a quote or a list from a formula across lines", () => {
+  it("drops the prefixes of a quote or a list from a formula across lines, and nothing else", () => {
     expect(sources("> $$a\n> b$$")).toEqual(["$$a\nb$$"]);
     expect(sources("> > $$x\n> > y$$")).toEqual(["$$x\ny$$"]);
     expect(sources("> ```math\n> a\n> ```")).toEqual(["```math\na\n```"]);
     expect(sources("- x\n\n  ~~~~math\n  a\n  b\n  ~~~~")).toEqual(["~~~~math\na\nb\n~~~~"]);
+    // A line of the formula that itself starts with `>`, written escaped or as a reference.
+    expect(sources("> $$a\n> \\>b$$")).toEqual(["$$a\n\\>b$$"]);
+    expect(sources("> $$a\n> &gt;b$$")).toEqual(["$$a\n&gt;b$$"]);
+    expect(sources("> a $x$ \\>\n> &gt; $y$ b")).toEqual(["$x$", "$y$"]);
+  });
+
+  it("keeps a comment inside a formula as mdast holds it", () => {
+    expect(sources("$$x <!--\n  c --> y$$")).toEqual(["$$x <!--\nc --> y$$"]);
   });
 
   it("keeps a fence that runs to the end of the document as it is", () => {
     expect(sources("```math\na")).toEqual(["```math\na"]);
+    expect(sources("````math\na\n```")).toEqual(["````math\na\n```"]);
+    expect(sources("~~~math\na\n```")).toEqual(["~~~math\na\n```"]);
+  });
+
+  it("reads CRLF line endings as LF, in the TeX and in the source", () => {
+    const tree = parse("$$a\r\nb$$\r\n\r\n```math\r\nc\r\nd\r\n```\r\n");
+    expect(formulasOf(tree)).toEqual([
+      { display: true, tex: "a\nb" },
+      { display: true, tex: "c\nd" },
+    ]);
+    expect(sources("$$a\r\nb$$\r\n\r\n```math\r\nc\r\nd\r\n```\r\n")).toEqual([
+      "$$a\nb$$",
+      "```math\nc\nd\n```",
+    ]);
   });
 });
 
@@ -240,12 +295,71 @@ describe("what a formula leaves behind", () => {
     );
     expect(types).toEqual(["text", "<!-- k -->", "text", "inlineMath", "text"]);
   });
+});
 
-  it("changes nothing in a document without formulas", () => {
-    const input = "# T\n\nIt costs $5 and \\$10, *a $b$ c*, `$x$`, [$y$](u).\n\n```js\n$z$\n```\n";
-    const plain = unified().use(remarkParse).use(remarkGfm);
-    const strip = (n: unknown): unknown =>
-      JSON.parse(JSON.stringify(n, (k, v) => (k === "position" ? undefined : v)));
-    expect(strip(parse(input))).toEqual(strip(plain.runSync(plain.parse(input))));
+describe("a document without formulas", () => {
+  const plain = unified().use(remarkParse).use(remarkGfm);
+  const unchanged = (input: string) =>
+    expect(parse(input), JSON.stringify(input)).toEqual(plain.runSync(plain.parse(input), input));
+
+  it("parses to the very tree it gets without the plugin, positions included", () => {
+    unchanged("# T\n\nIt costs $5 and \\$10, *a $b$ c*, `$x$`, [$y$](u).\n\n```js\n$z$\n```\n");
+    // GFM finds these autolinks after mdast is built; `\$` must not cut them short.
+    unchanged("<br>www.example.com/a\\$b");
+    unchanged("<b>www.x.com/a\\$b</b>");
+    unchanged("Price:$www.x.com/a\\$b");
+    unchanged("> x www.x.com> a");
+  });
+
+  it("does so for every captured input without a formula", () => {
+    let checked = 0;
+    for (const c of CAPTURED) {
+      if (formulasOf(parse(c.input)).length > 0) continue;
+      unchanged(c.input);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(1800);
+  });
+
+  it("does so for generated snippets of dollar signs, escapes, links, and markup", () => {
+    const pieces = [
+      "$",
+      "\\$",
+      "$$",
+      "www.x.com/",
+      "a",
+      "1",
+      " ",
+      "\n",
+      "> ",
+      "&amp;",
+      "<!-- c -->",
+      "`",
+      "*",
+      "_",
+      "\r\n",
+      "𝑥",
+      "(",
+      ")",
+      "<b>",
+      "~~",
+      "- ",
+      "|",
+      "[l](u)",
+      "&#36;",
+      "\\",
+    ];
+    let seed = 1;
+    const random = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+    let checked = 0;
+    for (let n = 0; n < 3000; n++) {
+      let input = "";
+      const length = 2 + Math.floor(random() * 12);
+      for (let k = 0; k < length; k++) input += pieces[Math.floor(random() * pieces.length)];
+      if (formulasOf(parse(input)).length > 0) continue;
+      unchanged(input);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(1000);
   });
 });
