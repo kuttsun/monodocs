@@ -634,9 +634,9 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 
 | Key            | Type    | Default | Description                                                                                                             |
 | -------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `math.enabled` | boolean | `true`  | Render formulas (`$...$`, `$$...$$`, a fenced `math` block) to MathML at build time. `false` prints them as text instead. |
+| `math.enabled` | boolean | `true`  | Render formulas (`$...$`, `$$...$$`, a fenced `math` block) to MathML at build time. `false` prints them as text, and a fenced `math` block as code, as before. |
 
-A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. A formula KaTeX cannot parse is reported (`math/parse-failed`) and shown as written.
+A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. A formula KaTeX cannot parse (`math/parse-failed`) or that uses a link or HTML command such as `\href` (`math/command-not-allowed`) is reported and shown as written. A style Unicode has no characters for (`math/style-unsupported`, e.g. `\mathit{123}`) and an automatic equation number (`math/numbering-unsupported`, e.g. an unstarred `equation`) are reported, and the formula is rendered without them.
 
 ### `html`
 

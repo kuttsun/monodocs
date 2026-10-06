@@ -13,16 +13,12 @@ import { visit, SKIP } from "unist-util-visit";
  */
 
 /** A problem with one formula, reported by the caller with the file it came from. */
-export type MathProblem =
-  | { kind: "parse"; source: string; detail: string; line?: number; column?: number }
-  | {
-      kind: "style";
-      source: string;
-      variant: string;
-      chars: string;
-      line?: number;
-      column?: number;
-    };
+export type MathProblem = { source: string; line?: number; column?: number } & (
+  | { kind: "parse"; detail: string }
+  | { kind: "not-allowed"; commands: string }
+  | { kind: "numbering" }
+  | { kind: "style"; variant: string; chars: string }
+);
 
 /** The hast element a formula is written as before it is rendered. */
 export function mathPlaceholder(
@@ -63,8 +59,12 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
       const display = (node.properties.className as string[]).includes("math-display");
       const where = { line: node.position?.start.line, column: node.position?.start.column };
       const result = renderFormula(tex, display);
-      if ("error" in result) {
-        report({ kind: "parse", source, detail: result.error, ...where });
+      if ("error" in result || "notAllowed" in result) {
+        report(
+          "error" in result
+            ? { kind: "parse", source, detail: result.error, ...where }
+            : { kind: "not-allowed", source, commands: result.notAllowed.join(", "), ...where },
+        );
         // Shown as written, as it was before math was rendered, rather than as KaTeX's error box.
         node.properties.className = ["math-error"];
         delete node.properties.dataMathTex;
@@ -73,18 +73,33 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
         return SKIP;
       }
       for (const s of result.unsupported) report({ kind: "style", source, ...s, ...where });
+      if (result.numbered) report({ kind: "numbering", source, ...where });
       node.children = [result.math];
       return SKIP;
     });
   };
 }
 
-/** One formula as a MathML `<math>` element, or KaTeX's reason for not rendering it. */
+/**
+ * The largest size, in em, a formula may ask for (`\rule`, `\kern`, `\hspace`, and the like). KaTeX's
+ * own `maxSize` limits only its HTML output, so the MathML's sizes are limited here.
+ */
+const MAX_SIZE_EM = 100;
+
+/**
+ * One formula as a MathML `<math>` element; or KaTeX's reason for not parsing it; or the commands it
+ * uses that monodocs does not allow (links, images, and raw HTML attributes: `\href`, `\url`,
+ * `\includegraphics`, `\htmlClass`, and the rest), which KaTeX would otherwise render as red text.
+ */
 export function renderFormula(
   tex: string,
   display: boolean,
-): { math: Element; unsupported: { variant: string; chars: string }[] } | { error: string } {
+):
+  | { math: Element; unsupported: { variant: string; chars: string }[]; numbered: boolean }
+  | { error: string }
+  | { notAllowed: string[] } {
   let html: string;
+  const notAllowed: string[] = [];
   try {
     html = katex.renderToString(tex, {
       output: "mathml",
@@ -93,10 +108,15 @@ export function renderFormula(
       // Non-Latin text in math mode is rendered as text; KaTeX's console warning about it is not
       // something a reader of the build's output could act on.
       strict: "ignore",
+      trust: (context) => {
+        notAllowed.push(context.command);
+        return false;
+      },
     });
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }
+  if (notAllowed.length > 0) return { notAllowed: [...new Set(notAllowed)] };
   let math: Element | undefined;
   visit(fromHtml(html, { fragment: true }), "element", (node) => {
     if (node.tagName === "math") {
@@ -106,7 +126,34 @@ export function renderFormula(
   });
   if (!math) return { error: "KaTeX produced no <math> element" };
   const unsupported = resolveMathvariants(math);
-  return { math, unsupported };
+  const numbered = dropClasses(math);
+  limitSizes(math);
+  return { math, unsupported, numbered };
+}
+
+/**
+ * Remove the classes KaTeX puts in its MathML, which only its stylesheet gives a meaning to, and say
+ * whether one of them was an equation number: KaTeX draws `equation`, `align`, and `gather` numbers
+ * with a CSS counter on `mml-eqn-num`, so without the stylesheet the number is not there.
+ */
+function dropClasses(math: Element): boolean {
+  let numbered = false;
+  visit(math, "element", (node: Element) => {
+    const className = node.properties.className;
+    if (Array.isArray(className) && className.includes("mml-eqn-num")) numbered = true;
+    delete node.properties.className;
+  });
+  return numbered;
+}
+
+/** Clamp every size in em beyond {@link MAX_SIZE_EM}, so that one formula cannot break the page. */
+function limitSizes(math: Element): void {
+  visit(math, "element", (node: Element) => {
+    for (const [key, value] of Object.entries(node.properties)) {
+      const m = typeof value === "string" ? /^(-?)(\d*\.?\d+)em$/.exec(value) : null;
+      if (m && Number(m[2]) > MAX_SIZE_EM) node.properties[key] = `${m[1]}${MAX_SIZE_EM}em`;
+    }
+  });
 }
 
 // --- mathvariant --------------------------------------------------------------------------------

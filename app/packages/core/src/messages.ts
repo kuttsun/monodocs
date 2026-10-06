@@ -132,6 +132,10 @@ const EN = {
     "{path}:{line}: the formula {source} cannot be rendered and is shown as written: {detail}",
   "pages.mathStyleUnsupported":
     'Unicode has no {variant} form of "{chars}" in the formula {source} ({path}:{line}); it is shown without the style.',
+  "pages.mathNotAllowed":
+    "{path}:{line}: the formula {source} uses {commands}, which monodocs does not render; it is shown as written.",
+  "pages.mathNumbering":
+    "{path}:{line}: the formula {source} is numbered, and the number is not rendered; use a starred environment, or a tag.",
   "pages.aliasCollision":
     'Alias collision: "{alias}" is claimed by both "{first}" and "{second}". An alias resolves to one page.',
   "pages.aliasShadowed":
@@ -441,6 +445,10 @@ const JA: Record<MessageKey, string> = {
     "{path}:{line}: 数式 {source} を描画できないため、書かれたとおりに表示します: {detail}",
   "pages.mathStyleUnsupported":
     'Unicode には "{chars}" の {variant} の形がありません（数式 {source}、{path}:{line}）。スタイルなしで表示します。',
+  "pages.mathNotAllowed":
+    "{path}:{line}: 数式 {source} は monodocs が描かない {commands} を使っているため、書かれたとおりに表示します。",
+  "pages.mathNumbering":
+    "{path}:{line}: 数式 {source} には番号が付きますが、番号は描かれません。星付きの環境かタグを使ってください。",
   "pages.aliasCollision":
     '別名の衝突: "{alias}" を "{first}" と "{second}" の両方が主張しています。別名が指すページは 1 つです。',
   "pages.aliasShadowed":

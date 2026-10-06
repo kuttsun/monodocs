@@ -496,12 +496,25 @@ Markdown から捨てる生 HTML も数式を運ばない。HTML ブロックの
 - **アクセシビリティ。** 支援技術が読むのは MathML である。`alttext` は付けない。TeX を読み上げても、それが
   重複する MathML より悪くなるからである。
 
-**描画（v0.15）。** KaTeX が各数式を `output: "mathml"` で MathML に描き、`<math>` 要素だけを残す。KaTeX の
-クラス、スクリプト、スタイルシートは出力に入らない。数式は `span.math`（フェンスのブロックは `div.math`）で、
+**描画（v0.15）。** KaTeX が各数式を `output: "mathml"` で MathML に描き、`<math>` 要素だけを、KaTeX の
+クラスを取り除いて残す。KaTeX のクラス、スクリプト、スタイルシートは出力に入らない。KaTeX が MathML の属性として
+書くものは残り、インラインの `style`（`\pmb` の影）も含む。数式は `span.math`（フェンスのブロックは `div.math`）で、
 クラス `math-inline` か `math-display` を持ち、`data-math-source` と `data-math-tex` を運ぶ。描画するまでは
 TeX を文字として持っており、見出しの ID はそのため TeX から作られる。見出しの一覧と検索の文字は
 `data-math-tex` を読み、MathML は読まない。KaTeX が解析できない数式は、ファイル、行、数式を名指す
 `math/parse-failed` として報告し、KaTeX のエラー表示ではなく、`span.math-error` の中に書かれたとおりに示す。
+
+- **描かないもの。** KaTeX が `trust` オプションの後ろに置くコマンド——`\href`、`\url`、`\includegraphics`、
+  `\htmlClass`、`\htmlId`、`\htmlStyle`、`\htmlData`——は信頼しない。それを使う数式は
+  `math/command-not-allowed` として報告し、KaTeX が代わりに置く赤いコマンド名ではなく、書かれたとおりに示す。
+  自動の数式番号（星の無い `equation`、`align`、`gather`）は KaTeX のスタイルシートが CSS カウンタで描くので、
+  それが無ければ現れない。番号の付く数式は `math/numbering-unsupported` として報告し、番号なしで描く。
+  `\tag{}` は描くが、右端には置かれない。KaTeX は MathML Core が無視する `width` 属性で位置を決めるからである。
+  100em を超える大きさ（`\rule`、`\kern`、`\hspace`）は 100em に切り詰める。KaTeX 自身の `maxSize` は HTML
+  出力しか制限しないからである。KaTeX は書体の違う隣り合う数字を 1 つのトークンにまとめる
+  （`\mathbf{0}\mathbb{0}` は太字の `00` 1 つになる）。これは KaTeX のふるまいで、検出しない。
+- **数式の隣の改行。** `sources.lineBreak: join`（12.6）では、数式は境界である。その前後の改行は 2 つの東アジアの
+  文字の間ではないので、文字でないほかの要素の隣と同じく空白のまま残る。
 
 - **依存としての KaTeX。** KaTeX 0.16.47 は MIT である。Mermaid のランタイムがすでに同梱している版と同じで、
   2 つが食い違うとテストが失敗するので、告知が名指す KaTeX は 1 つになる。告知では、バンドルのほかの
@@ -1136,6 +1149,9 @@ mermaid:
   runtime: "inline"
 
 highlight:
+  enabled: true
+
+math:
   enabled: true
 
 html:

@@ -27,6 +27,48 @@ describe("renderFormula", () => {
     expect(render("x", true).html).toMatch(/^<math [^>]*display="block"/);
   });
 
+  it("leaves none of KaTeX's classes, which only its stylesheet gives a meaning to", () => {
+    for (const tex of [
+      "\\begin{equation} x \\end{equation}",
+      "\\begin{align} a &= b \\\\ c &= d \\end{align}",
+      "\\begin{pmatrix} 1 & 2 \\end{pmatrix}",
+      "x \\tag{1}",
+    ]) {
+      expect(render(tex, true).html, tex).not.toContain("class=");
+    }
+  });
+
+  it("says when a formula is numbered, since the number needs KaTeX's stylesheet", () => {
+    const numbered = (tex: string) => {
+      const result = renderFormula(tex, true);
+      return "math" in result && result.numbered;
+    };
+    expect(numbered("\\begin{equation} x \\end{equation}")).toBe(true);
+    expect(numbered("\\begin{align} a &= b \\end{align}")).toBe(true);
+    expect(numbered("\\begin{equation*} x \\end{equation*}")).toBe(false);
+    expect(numbered("x \\tag{1}")).toBe(false);
+  });
+
+  it("does not render links, images, or HTML attributes, and names the commands", () => {
+    for (const [tex, command] of [
+      ["\\href{http://a}{x}", "\\href"],
+      ["\\url{http://a}", "\\url"],
+      ["\\includegraphics{a.png}", "\\includegraphics"],
+      ["\\htmlClass{c}{x}", "\\htmlClass"],
+      ["\\htmlId{i}{x}", "\\htmlId"],
+      ["\\htmlStyle{color:red}{x}", "\\htmlStyle"],
+      ["\\htmlData{a=b}{x}", "\\htmlData"],
+    ]) {
+      expect(renderFormula(tex!, false), tex).toEqual({ notAllowed: [command] });
+    }
+  });
+
+  it("caps the sizes a formula may ask for", () => {
+    const { html } = render("\\rule{100000em}{1em}");
+    expect(html).not.toContain('width="100000em"');
+    expect(html).toContain('width="100em"');
+  });
+
   it("returns KaTeX's reason for a formula it cannot parse", () => {
     expect(render("x^{")).toEqual({ error: expect.stringContaining("Expected '}'") });
   });
@@ -115,6 +157,11 @@ describe("mathvariant", () => {
     }
     expect(render("\\mathbf{E} + \\mathbb{R}").html).toContain("𝐄");
     expect(render("\\mathbf{E} + \\mathbb{R}").html).toContain("ℝ");
+  });
+
+  it("applies a style a token inherits from the element around it", () => {
+    expect(render("\\textbf{a \\textit{b}}").html).toMatch(/𝐚.*𝒃|𝐚.*𝑏/);
+    expect(render("\\boldsymbol{x + \\alpha}").html).toContain("𝒙");
   });
 
   it("reports the letters and digits a style has no Unicode form for, and keeps them", () => {

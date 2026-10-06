@@ -528,12 +528,28 @@ are the same text.
   read aloud would be worse than the MathML it duplicates.
 
 **Rendering (v0.15).** KaTeX renders each formula to MathML with `output: "mathml"`, and only the
-`<math>` element is kept, so no KaTeX class, script, or stylesheet reaches the output. A formula is a
+`<math>` element is kept, with KaTeX's classes removed, so no KaTeX class, script, or stylesheet
+reaches the output; what KaTeX writes as MathML attributes stays, an inline `style` included (`\pmb`'s
+shadow). A formula is a
 `span.math` (a `div.math` for a fenced block), with class `math-inline` or `math-display`, carrying
 `data-math-source` and `data-math-tex`. Until it is rendered it holds the TeX as text, which is how a
 heading's ID comes from the TeX. The lists of headings and the search text read `data-math-tex`, never
 the MathML. A formula KaTeX cannot parse is reported as `math/parse-failed`, naming the file, the line,
 and the formula, and is shown as written in a `span.math-error`, not as KaTeX's error box.
+
+- **What is not rendered.** The commands KaTeX gates behind its `trust` option — `\href`, `\url`,
+  `\includegraphics`, `\htmlClass`, `\htmlId`, `\htmlStyle`, `\htmlData` — are not trusted: a formula
+  using one is reported as `math/command-not-allowed` and shown as written, rather than as the red
+  command name KaTeX would put in its place. Automatic equation numbers (`equation`, `align`, `gather`,
+  unstarred) are drawn by KaTeX's stylesheet with a CSS counter, so without it they are not there; a
+  numbered formula is reported as `math/numbering-unsupported` and rendered without its number. A
+  `\tag{}` is rendered, but not at the right margin: KaTeX places it with `width` attributes MathML Core
+  ignores. A size beyond 100em (`\rule`, `\kern`, `\hspace`) is clamped to 100em, since KaTeX's own
+  `maxSize` limits only its HTML output. KaTeX merges adjacent digits of different styles into one
+  token (`\mathbf{0}\mathbb{0}` becomes one bold `00`); that is KaTeX's doing and is not detected.
+- **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
+  line break before or after it is not between two East Asian characters and stays a space, as at
+  any other element that is not text.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
@@ -1171,6 +1187,9 @@ mermaid:
   runtime: "inline"
 
 highlight:
+  enabled: true
+
+math:
   enabled: true
 
 html:

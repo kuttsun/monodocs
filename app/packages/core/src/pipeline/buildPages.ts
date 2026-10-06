@@ -149,15 +149,23 @@ export async function buildPages(
               t("pages.mathParseFailed", { ...params, detail: problem.detail }),
               where,
             )
-          : warn(
-              "math/style-unsupported",
-              t("pages.mathStyleUnsupported", {
-                ...params,
-                variant: problem.variant,
-                chars: problem.chars,
-              }),
-              where,
-            ),
+          : problem.kind === "not-allowed"
+            ? warn(
+                "math/command-not-allowed",
+                t("pages.mathNotAllowed", { ...params, commands: problem.commands }),
+                where,
+              )
+            : problem.kind === "numbering"
+              ? warn("math/numbering-unsupported", t("pages.mathNumbering", params), where)
+              : warn(
+                  "math/style-unsupported",
+                  t("pages.mathStyleUnsupported", {
+                    ...params,
+                    variant: problem.variant,
+                    chars: problem.chars,
+                  }),
+                  where,
+                ),
       );
     }
 

@@ -127,6 +127,37 @@ describe("Markdown math", () => {
     expect(html).not.toContain("katex-error");
   });
 
+  it("reports a link or an HTML command, and shows the formula as written", async () => {
+    const { html, result } = await build("# T\n\nSee $\\htmlClass{c}{x}$ here.\n");
+    const found = result.warnings.filter((w) => w.code === "math/command-not-allowed");
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain("\\htmlClass");
+    expect(html).toContain('<span class="math-error">$\\htmlClass{c}{x}$</span>');
+  });
+
+  it("reports a numbered environment, whose number cannot be drawn", async () => {
+    const { result } = await build("# T\n\n$$\\begin{equation} x \\end{equation}$$\n");
+    expect(result.warnings.map((w) => w.code)).toContain("math/numbering-unsupported");
+  });
+
+  it("renders a formula in a table cell", async () => {
+    const { html } = await build("# T\n\n| a |\n|---|\n| $x\\|y$ |\n");
+    expect(html).toMatch(
+      /<td><span class="math math-inline" data-math-source="\$x\\\|y\$" data-math-tex="x\|y"><math/,
+    );
+  });
+
+  it("names a heading by its TeX in the heading-level warning", async () => {
+    const { result } = await build("# T\n\n### Energy $E=mc^2$\n");
+    const found = result.warnings.find((w) => w.code === "heading/level-skipped");
+    expect(found!.message).toContain("Energy $E=mc^2$");
+  });
+
+  it("keeps a formula a boundary under lineBreak: join", async () => {
+    const { html } = await build("# T\n\n日本語の\n$x$\nです。\n", "sources:\n  lineBreak: join\n");
+    expect(html).toMatch(/日本語の\n<span class="math math-inline"[^]*<\/span>\nです。/);
+  });
+
   it("reports a style Unicode has no form for", async () => {
     const { result } = await build("# T\n\n$\\mathit{123}$\n");
     const found = result.warnings.filter((w) => w.code === "math/style-unsupported");
