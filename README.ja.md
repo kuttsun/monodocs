@@ -77,5 +77,8 @@ monodocs validate ./docs                              # リンク切れ・画像
 
 npm 公開物の `dist/monodocs.cjs` には依存ライブラリをバンドルするため、ビルド時に第三者ライセンスを
 まとめた `dist/THIRD-PARTY-NOTICES.txt` を生成し、配布物に添付します（`pnpm bundle` で出力）。
-埋め込む依存はすべて寛容ライセンス（MIT / ISC / BSD /
-Apache-2.0 等）で、`dompurify` のみ `MPL-2.0 OR Apache-2.0` のうち Apache-2.0 を選択しています。
+埋め込む依存の大半は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 等）で、`dompurify` は
+`MPL-2.0 OR Apache-2.0` のうち Apache-2.0 を選択しています。埋め込む Mermaid ランタイムは、ほかに
+`elkjs`（EPL-2.0。EMF の一部は EPL-1.0）、CC BY-SA の断片、ライセンスを示していない出典のコードを
+含みます。inline ランタイムでビルドした HTML はそれらを表記とともに埋め込みますが、文書の内容は影響を
+受けません。詳しくは[ライセンスのページ](https://kuttsun.github.io/monodocs/ja/docs/license)を参照してください。

@@ -3,7 +3,8 @@ import { createRequire } from "node:module";
 import type { MermaidRuntime } from "../config.js";
 import { embeddedAssets } from "./index.js";
 
-const MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+// The exact version the inline runtime and pre-render embed, so the three modes draw alike.
+const MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@12.1.0/dist/mermaid.esm.min.mjs";
 
 /**
  * Mermaid のクライアントランタイムを注入する <script> 群を生成する。
@@ -22,11 +23,21 @@ const VISIBLE_MERMAID = "#content article:not([hidden]) .mermaid";
  * `window.__sdRenderMermaid()` を定義する JS（runtime 共通）。
  * 通常は app.js がルート確定後（ページ表示のたび）に呼ぶ。ランタイムが遅れて
  * 読み込まれた場合に備え、既にルート確定済み（`__sdRouted`）なら自分で 1 度描画する。
+ *
+ * It returns a promise that settles when this run and every run before it have finished. mermaid
+ * marks a diagram processed, and even puts an empty <svg> in it, before the layout (ELK's is
+ * asynchronous) is done, so the PDF waits on this promise rather than on the DOM; a run started
+ * earlier, such as the one a late runtime starts itself, skips diagrams already marked, which is why
+ * the earlier runs are chained in.
  */
-function renderHelper(mermaidExpr: string): string {
+export function renderHelper(mermaidExpr: string): string {
   return (
     `window.__sdRenderMermaid=function(){` +
-    `${mermaidExpr}.run({querySelector:"${VISIBLE_MERMAID}"});` +
+    `var run=Promise.resolve().then(function(){` +
+    `return ${mermaidExpr}.run({querySelector:"${VISIBLE_MERMAID}"});` +
+    `}).catch(function(){});` +
+    `window.__sdMermaidPending=Promise.all([window.__sdMermaidPending,run]);` +
+    `return window.__sdMermaidPending;` +
     `};if(window.__sdRouted)window.__sdRenderMermaid();`
   );
 }

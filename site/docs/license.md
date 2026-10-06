@@ -30,15 +30,30 @@ SOFTWARE.
 
 ## Third-party licenses
 
-monodocs depends only on permissively licensed open-source software
-(MIT / ISC / BSD / Apache-2.0 and the like). There are **no copyleft
-(GPL / LGPL / AGPL) dependencies**.
+monodocs itself is MIT. Most of its dependencies are permissively licensed
+(MIT / ISC / BSD / Apache-2.0 / Apache-1.1 and the like). The Mermaid runtime
+monodocs embeds also carries code under other terms:
 
+- the Eclipse Layout Kernel (`elkjs`), under the **Eclipse Public License 2.0**
+  (EPL-2.0), a weak copyleft license, with parts of EMF compiled into it under
+  the **Eclipse Public License 1.0**;
+- a few snippets adapted from Stack Overflow answers, under **CC BY-SA** 2.5 or
+  3.0 by the date each was posted, a share-alike license;
+- a few pieces of code from sources that state no license.
+
+The notices name each of them, its author, and its terms.
+
+- **What reaches your documents.** HTML built with the inline Mermaid runtime
+  (`mermaid.runtime: inline`, the default) from a document with diagrams embeds
+  that runtime, ELK included, together with its third-party notices, which say
+  where ELK's and EMF's source is. The EPL covers ELK and EMF themselves; the content of your
+  document is not affected. `mermaid.runtime: cdn`, `mermaid.mode: pre-render`,
+  and a document without diagrams put no ELK in the output.
 - `dompurify` is dual-licensed under `MPL-2.0 OR Apache-2.0`; monodocs elects
   the **Apache-2.0** terms.
 
 The single-file distribution (`monodocs.cjs` and the standalone binary) embeds
 its dependencies, so every build writes a `THIRD-PARTY-NOTICES.txt` alongside
-the output. It reproduces the license of each bundled component (~190 in total,
-including the Mermaid runtime and its dependencies such as d3, cytoscape, katex,
-dagre and roughjs).
+the output. It reproduces the license of each bundled component, and ends with
+the notices for the Mermaid runtime (d3, cytoscape, katex, dagre, roughjs, ELK
+and the rest), the same notices HTML built with the inline runtime carries.

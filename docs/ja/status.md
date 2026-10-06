@@ -466,15 +466,15 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 
 **Mermaid 12**（[roadmap.md](roadmap.md) 21.3、#134）
 
-- [ ] ELK の対応するソース——`elkjs` のバージョンと、それを生成した ELK のリビジョンとビルド設定——をバージョンとコミットで特定し、取得できることを確かめ、ランタイムの表記と `THIRD-PARTY-NOTICES.txt` に挙げる
-- [ ] `mermaid` を 12 にし、CDN ランタイムは `inline` と `pre-render` が使うのと同じ完全なバージョンを、`@12` ではなく固定して読み込む
-- [ ] 12.0.0 で取った [roadmap.md](roadmap.md) 21.3 の実測——`lodash-es`、サイズ、ELK——を、採用する 12.x の版で測り直して記録する（12.1.0 は `lodash-es` に依存しない）
-- [ ] `pnpm audit` が通る。脆弱な `lodash-es` がまだ解決されるなら、範囲を限った override のもとで通す。下限は `>=4.18.0`、コメントは GHSA-r5fr-rjxr-66jc と GHSA-f23m-r3pf-42rh と削除の条件を挙げ、[development.md](development.md) に英語と日本語で書く
-- [ ] ビルド済みの `mermaid.min.js` について、ソースマップのファイル一覧ではなく生成されたコードに対して、2 つの勧告が述べる実装を含まないこと、修正版だけを含むこと、またはどのコード経路からも到達しないことを示す
-- [ ] サイトのライセンスのページ、`README.md`、`README.ja.md`、npm の README のライセンスの記述が、monodocs は MIT であり、同梱の Mermaid ランタイムは EPL-2.0 の `elkjs` を含み、inline ランタイムでビルドした HTML はそれを表記とともに埋め込み、文書の内容は影響を受けない、と書く
-- [ ] [roadmap.md](roadmap.md) 21.2 とサイトの設定リファレンスが、mermaid 12 とその inline の実測サイズを書く
-- [ ] [maintenance.md](maintenance.md) が、ロックファイルの監査はビルド済みバンドルの中を見られないことを書き、公開している見本があるので「`site/` は配布されない」とはもう書かない
-- [ ] サイトの見本を再生成し、表記を持つことを確かめる
+- [x] ELK の対応するソース——`elkjs` のバージョンと、それを生成した ELK のリビジョンとビルド設定——をバージョンとコミットで特定し、取得できることを確かめ、ランタイムの表記と `THIRD-PARTY-NOTICES.txt` に挙げる：`elkjs@0.9.3`。elkjs のタグ 0.9.3（`a8304cf`）で、ELK の master の `9bc93474` から、GWT 2.10.0、EMF for GWT 2.12.4、Guava 31.1-jre、Xtext 2.28.0、そして同じ ELK のツリーにソースがある ELK 自身のメタコンパイラとともにビルドされ、いずれも公開されている。バンドルは ELK のコミットを記録していない。ワーカーが master の `7ca51784` を含むので、リリース v0.9.1 ではない。そこから `9bc93474` までの変更はメタコンパイラだけである。ランタイムの表記はこれと、ELK の著作権表示、GWT が一緒にコンパイルしたもの（Xtext は EPL-2.0、EMF for GWT は EPL-1.0 で全文とソースの入手先つき、その中の Xerces 由来の部分は Apache Software License 1.1 で全文と求められる謝辞つき、Guava と GWT のランタイムは Apache-2.0）を書き、`THIRD-PARTY-NOTICES.txt` は末尾に同じ表記を持つ
+- [x] `mermaid` を 12 にし、CDN ランタイムは `inline` と `pre-render` が使うのと同じ完全なバージョンを、`@12` ではなく固定して読み込む：`mermaid@^12.1.0`、CDN の URL は `mermaid@12.1.0`
+- [x] 12.0.0 で取った [roadmap.md](roadmap.md) 21.3 の実測——`lodash-es`、サイズ、ELK——を、採用する 12.x の版で測り直して記録する（12.1.0 は `lodash-es` に依存しない）：[roadmap.md](roadmap.md) 21.3 に記録した。ランタイムが含むのは `lodash-es@4.18.1` だけで、無圧縮で 5.49 MB、gzip で 1.57 MB、表記は無圧縮で 153 KB、gzip で 25 KB を加える
+- [x] `pnpm audit` が通る。脆弱な `lodash-es` がまだ解決されるなら、範囲を限った override のもとで通す。下限は `>=4.18.0`、コメントは GHSA-r5fr-rjxr-66jc と GHSA-f23m-r3pf-42rh と削除の条件を挙げ、[development.md](development.md) に英語と日本語で書く：`lodash-es` の override 無しで通るので、加えていない
+- [x] ビルド済みの `mermaid.min.js` について、ソースマップのファイル一覧ではなく生成されたコードに対して、2 つの勧告が述べる実装を含まないこと、修正版だけを含むこと、またはどのコード経路からも到達しないことを示す：モジュール一覧とパーサーのチャンクのパスコメントは template・unset・omit のモジュールを挙げず、生成された `mermaid.min.js` には `_.template` の文字列リテラル（`templateSettings`、`sourceURL`）が無く、cytoscape が取り込む `lodash@4.17.21` は `debounce`、`memoize` とその補助である
+- [x] サイトのライセンスのページ、`README.md`、`README.ja.md`、npm の README のライセンスの記述が、monodocs は MIT であり、同梱の Mermaid ランタイムは EPL-2.0 の `elkjs` を含み、inline ランタイムでビルドした HTML はそれを表記とともに埋め込み、文書の内容は影響を受けない、と書く。あわせて、ランタイムの中のいくつかのコードはライセンスを示していない出典から来ていることも書く
+- [x] [roadmap.md](roadmap.md) 21.2 とサイトの設定リファレンスが、mermaid 12 とその inline の実測サイズを書く：表記を含めて gzip で 1.6 MB。21.2 は mermaid 12 を挙げる
+- [x] [maintenance.md](maintenance.md) が、ロックファイルの監査はビルド済みバンドルの中を見られないことを書き、公開している見本があるので「`site/` は配布されない」とはもう書かない
+- [ ] サイトの見本を再生成し、表記を持つことを確かめる。`deploy-site.yml` が `scripts/site-build.sh` を通して、リリースタグからビルドした CLI（`packages/cli/dist/index.js`）で生成する。その CLI はテストが確かめているのと同じランタイムのスクリプトを出力する。リリースのデプロイ後に確かめる
 
 **数式**（[roadmap.md](roadmap.md) 6.4）
 

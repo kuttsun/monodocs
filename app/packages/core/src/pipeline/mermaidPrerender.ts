@@ -43,9 +43,12 @@ const RESOLVE_MERMAID =
   "var ns=window.__esbuild_esm_mermaid_nm;var m=ns&&ns.mermaid;m=m&&(m.default||m);" +
   "if(!m&&window.mermaid)m=window.mermaid;";
 
-function mermaidThemeFor(colorScheme: ColorScheme): "dark" | "default" {
-  // pre-render はビルド時にテーマを固定する。auto は light（default）に倒す。
-  return colorScheme === "dark" ? "dark" : "default";
+// pre-render fixes the theme at build time, and auto falls back to light. Light names no theme, so
+// each diagram gets mermaid 12's own default (the redux-color look) exactly as the client runtime,
+// which names none, does; naming "default" would bring back mermaid 11's look. Dark takes that
+// look's dark counterpart.
+function mermaidThemeFor(colorScheme: ColorScheme): "redux-dark-color" | undefined {
+  return colorScheme === "dark" ? "redux-dark-color" : undefined;
 }
 
 /**
@@ -74,9 +77,10 @@ export function createPuppeteerPrerenderer(options: {
       await p.setContent("<!doctype html><html><body></body></html>");
       await p.addScriptTag({ content: await loadMermaidInline() });
       await p.evaluate(
-        `(function(){${RESOLVE_MERMAID}window.__sdMermaid=m;m.initialize({startOnLoad:false,theme:${JSON.stringify(
-          theme,
-        )}});})()`,
+        `(function(){${RESOLVE_MERMAID}window.__sdMermaid=m;m.initialize(${JSON.stringify({
+          startOnLoad: false,
+          ...(theme ? { theme } : {}),
+        })});})()`,
       );
       page = p;
       return p;

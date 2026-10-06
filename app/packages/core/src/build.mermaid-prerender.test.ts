@@ -93,4 +93,21 @@ describe.skipIf(!chromium)("buildSite - mermaid pre-render (real Chromium)", () 
     expect(html).not.toContain("cdn.jsdelivr.net/npm/mermaid");
     expect(html).not.toContain("mermaid.initialize");
   }, 60_000);
+
+  it("draws in mermaid 12's own look, light and dark, as the client runtime does", async () => {
+    // Light names no theme, so mermaid 12's per-diagram default applies: not mermaid 11's fill.
+    await buildSite({ inputDir: docs, outputFile: out, format: "html" });
+    expect(await readFile(out, "utf8")).not.toMatch(/#ececff/i);
+    // Dark takes that look's dark counterpart, redux-dark-color.
+    const darkConfig = join(dir, "dark.yml");
+    await writeFile(darkConfig, "mermaid:\n  mode: pre-render\nhtml:\n  colorScheme: dark\n");
+    const darkOut = join(dir, "dist", "dark.html");
+    await buildSite({
+      inputDir: docs,
+      configFile: darkConfig,
+      outputFile: darkOut,
+      format: "html",
+    });
+    expect(await readFile(darkOut, "utf8")).toMatch(/#111113|rgb\(17, 17, 19\)/i);
+  }, 60_000);
 });

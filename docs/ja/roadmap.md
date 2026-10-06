@@ -2001,7 +2001,7 @@ mermaid:
 ```
 
 ビルド時に Puppeteer（`puppeteer-core` + システム Chromium）で各図を SVG 化し、HTML に埋め込む
-（当初案の Mermaid CLI ではなく既存依存の mermaid@11 を 1 ページ内で `mermaid.render` 実行し、id 衝突を
+（当初案の Mermaid CLI ではなく既存依存の mermaid（当時は 11、v0.15 から 12）を 1 ページ内で `mermaid.render` 実行し、id 衝突を
 自前制御する方針に変更）。実装は `pipeline/mermaidPrerender.ts` と `postprocess.ts` の
 `processMermaidPrerender`。SVG は raw ノードで挿入し、id は全 HTML で一意な `mermaid-{n}` を採番する。
 
@@ -2010,7 +2010,7 @@ mermaid:
 - PDF 化に強い
 - JavaScript なしでも表示できる
 - 印刷結果が安定する
-- 図が少数なら inline ランタイム（約 975KB gzip 固定）より小さい
+- 図が少数なら inline ランタイム（mermaid 12 で約 1.6MB gzip 固定、11 では約 975KB）より小さい
 
 デメリット：
 
@@ -2066,6 +2066,34 @@ EPL-2.0 の部品を表記とともに埋め込む、と書く。
 想定している。`cdn` を既定にすると、オフラインで自己完結する既定が壊れる。`pre-render` を既定にすると
 Chromium が要り、スタンドアロンバイナリからは動かない。読者に見えるライセンス表示、ソースのミラー、
 完全な SBOM、ELK を含まない mermaid の独自ビルドは後回しにし、バージョンアップを妨げない。
+
+**採用した 12.1.0 での測り直し（v0.15）。**
+
+- `lodash-es`：ランタイムが含むのは、両方の advisory が修正済みの `lodash-es@4.18.1` だけで、4.17.23 は
+  chevrotain 11 とともに無くなった。ソースマップのファイル一覧ではなく生成された `mermaid.min.js` に対して
+  読むと、`_.template`（`templateSettings` も `sourceURL` も無い）も `_.unset` / `_.omit` も tree-shaking を生き残っていない。cytoscape が取り込む `lodash@4.17.21` の
+  コードは `debounce`、`memoize` とその補助である。関数名は minify で残らないので、根拠は、template・unset・
+  omit のモジュールを挙げないモジュール一覧とパーサーのチャンクのパスコメント、そして `_.template` の文字列
+  リテラルが無いことである。`pnpm audit` は `lodash-es` の override 無しで通るので、override は加えない。
+- サイズ：inline ランタイムは無圧縮で 5.49 MB、gzip で 1.57 MB（3.57 MB と約 975 KB から）、CLI バンドルは
+  17.7 MiB から 19.7 MiB になる。ランタイムの表記は、図を含む HTML に無圧縮で 153 KB、gzip で 25 KB を
+  加え、その大半は EPL-2.0 と EPL-1.0 の本文である。
+- ELK：`elkjs@0.9.3`。その `elk.bundled.js` は、elkjs の API、`web-worker` のブラウザ向け入口
+  （Apache-2.0）、`elk-worker.min.js` を browserify でまとめたもので、後者は ELK を、Xtext の xbase ライブラリ
+  （EPL-2.0）、EMF for GWT（EPL-1.0）、Guava、GWT のランタイムと Java エミュレーション（Apache-2.0）とともに
+  GWT でコンパイルしたものである。対応するソースは、ELK の master のコミット
+  `9bc93474e1dc649450e8c97abb45d16b7c88e35b`（2024-04-15）を、elkjs のタグ 0.9.3（コミット
+  `a8304cf79fde75bc2ab1a89d28320f53f8637436`）で GWT 2.10.0、EMF for GWT 2.12.4、Guava 31.1-jre、Xtext 2.28.0、
+  ELK のメタコンパイラ 0.10.0-SNAPSHOT とともにビルドしたものである。バンドルは ELK のコミットを記録して
+  いない。リリース v0.9.1 ではない。ワーカーは master が `7ca51784`（2024-04-09）で取り込んだ変更を含み、
+  それはそれ以前のどのリリースにも無い。そこから elkjs 0.9.3 のタグ付け前の最後のコミット `9bc93474` まで
+  の変更はメタコンパイラだけで、コンパイルされない。EMF for GWT の 2.12.4 のソースは Maven Central の
+  sources jar で公開されている（プロジェクトの github.com/Axellience/emfgwt はその版をタグ付けしていない）。
+  Xtext のソースは github.com/eclipse/xtext-lib で公開されている。表記は
+  これらをすべて書き、minify でランタイムから落ちる ELK 自身の著作権表示と、EPL-1.0 の全文も持つ。
+  EMF の XML Schema の正規表現エンジンと Base64 / hexBinary の変換は Apache Xerces に由来し、Apache Software License 1.1 でもあるので、
+  その表示と、それが求める謝辞も持つ。
+- CDN ランタイムは、`inline` と `pre-render` が埋め込むのと同じ `mermaid@12.1.0` を読み込む。
 
 **ライセンスを示していない出典のコード（v0.15）。** 表記を生成するにあたってランタイムを構成するソースをすべて
 読んだところ、その中の 4 つのコードは、ライセンスを示していない出典から来ていた。Michael Jackson の RGB/HSL

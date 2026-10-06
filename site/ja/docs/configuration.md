@@ -554,18 +554,18 @@ numbering:
 | ----------------- | ---------------------- | -------- | --------------------------------------------------------------- |
 | `mermaid.enabled` | boolean                | `true`   | Mermaid コードブロックを図としてレンダリングする。              |
 | `mermaid.mode`    | `client` `pre-render`  | `client` | `client` はブラウザで mermaid ランタイムを実行（`runtime` で配給方法を選ぶ）。`pre-render` はビルド時にヘッドレス Chromium で各図を SVG 化して埋め込む（JS 不要・印刷安定・図が少数なら `inline` より小さい）。 |
-| `mermaid.runtime` | `inline` `cdn`         | `inline` | **client mode 専用。** `inline`（既定）は mermaid ランタイムを HTML に埋め込み**完全オフラインで自己完結**（図があると約 975KB(gzip) 増）。`cdn` は CDN から読み込み HTML は最小だが**表示にネット接続が必要**。 |
+| `mermaid.runtime` | `inline` `cdn`         | `inline` | **client mode 専用。** `inline`（既定）は mermaid ランタイムを HTML に埋め込み**完全オフラインで自己完結**（図があると、第三者表記を含め約 1.6MB(gzip) 増）。`cdn` は CDN から読み込み HTML は最小だが**表示にネット接続が必要**。 |
 
 #### `client` と `pre-render` の比較
 
-同じ mermaid エンジンで描画するため、図の形・レイアウトは基本的に一致する。ただし次の違いがある。
+同じ mermaid エンジンで描画するため、図の形・レイアウトは基本的に一致する。client mode には、mermaid 12 を実行できるブラウザが要る。mermaid 12 は `Object.groupBy` などの ES2024 の機能を使うので、Chrome と Edge は 117、Firefox は 119、Safari は 17.4 以降である。それより古いブラウザでは図が描画されない。ただし次の違いがある。
 
 | 観点                    | `client`（cdn / inline）                 | `pre-render`                                   |
 | ----------------------- | ---------------------------------------- | ---------------------------------------------- |
 | 自己完結                | cdn = 要ネット / inline = 自己完結       | 自己完結（SVG を埋め込み）                      |
 | JavaScript              | 必要                                     | 不要                                           |
-| 追加サイズ              | cdn ≈ 0 / inline ≈ 975KB(gzip) 固定      | 図の数に比例（1 図あたり数 KB）                |
-| ダーク配色              | 追従しない（mermaid 既定テーマで固定）   | `html.colorScheme` で固定（`dark`→dark / 他→light） |
+| 追加サイズ              | cdn ≈ 0 / inline ≈ 1.6MB(gzip) 固定      | 図の数に比例（1 図あたり数 KB）                |
+| ダーク配色              | 追従しない（mermaid 既定テーマで固定）   | `html.colorScheme` で固定（`dark`→`redux-dark-color` / 他→mermaid の既定） |
 | フォント                | 読者のブラウザ・フォントで描画           | **ビルド環境のフォントで計測・焼き込み**       |
 | 対話機能（`click` 等）  | 有効                                     | 無効（静的 SVG）                               |
 | 印刷・未訪問ページの図  | 崩れる場合がある                         | 常に表示される                                 |

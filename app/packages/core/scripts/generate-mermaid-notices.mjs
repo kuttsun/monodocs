@@ -48,8 +48,20 @@ function digestOf(text) {
   return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 
+/** A licence text vendored under scripts/data/, with its line endings normalized. */
+async function readData(file) {
+  const text = await readFile(new URL(`./data/${file}`, import.meta.url), "utf8");
+  return text.replace(/\r\n?/g, "\n").trim();
+}
+
 async function generatorHash() {
-  const text = (await readFile(fileURLToPath(import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
+  // The licence texts this script vendors count as part of it.
+  const parts = [
+    await readFile(fileURLToPath(import.meta.url), "utf8"),
+    await readData("EPL-1.0.txt"),
+    await readData("Xerces-ASL-1.1.txt"),
+  ];
+  const text = parts.join("\n").replace(/\r\n?/g, "\n");
   return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 const SUB = "-".repeat(80);
@@ -109,11 +121,20 @@ const PREBUILT_AUDITED = {
     ],
   },
   // Inside the pre-bundled parser, single files over 20 KB of the package's own code.
-  "chevrotain@11.1.2": {},
-  "langium@4.2.1": {},
-  "vscode-jsonrpc@8.2.0": {},
-  "vscode-languageserver-protocol@3.17.5": {},
-  "vscode-languageserver-types@3.17.5": {},
+  "@chevrotain/regexp-to-ast@13.2.0": {},
+  "@chevrotain/utils@13.2.0": {
+    vendored: [
+      "src/to-fast-properties.ts is based on bluebird's util.js",
+      "(https://github.com/petkaantonov/bluebird), under the MIT License:",
+      "  Copyright (c) 2013-2018 Petka Antonov.",
+    ],
+  },
+  "chevrotain@13.2.0": {},
+  "chevrotain-allstar@0.5.0": {},
+  "langium@4.4.0": {},
+  "vscode-jsonrpc@9.0.3": {},
+  "vscode-languageserver-protocol@3.18.4": {},
+  "vscode-languageserver-types@3.18.4": {},
   "cose-base@1.0.3": {}, // requires layout-base rather than carrying it
   "cose-base@2.2.0": {},
   "cytoscape@3.34.0": {
@@ -162,6 +183,65 @@ const PREBUILT_AUDITED = {
   "dayjs@1.11.21": {},
   "dompurify@3.4.12": {},
   "js-yaml@4.3.0": {},
+  // lib/elk.bundled.js is a browserify bundle of elkjs's API, its worker, and web-worker's browser
+  // entry; the worker (elk-worker.min.js) is ELK compiled to JavaScript by GWT, together with the
+  // Java libraries ELK uses and GWT's own runtime.
+  "elkjs@0.9.3": {
+    bundled: [
+      {
+        name: "web-worker",
+        version: "1.3.0",
+        declared: "^1.0.0 (devDependency); only its browser entry, identical in 1.0.0 to 1.3.0",
+      },
+    ],
+    vendored: [
+      "Source Code (EPL-2.0, section 3.1(a)): the Source Code of the ELK and elkjs code in this",
+      "component is available under the Eclipse Public License 2.0 above, from:",
+      "  ELK: https://github.com/eclipse/elk, branch master at commit",
+      "    9bc93474e1dc649450e8c97abb45d16b7c88e35b (2024-04-15). lib/elk-worker.min.js contains the",
+      "    change master took in commit 7ca51784e42a24201f29bc13e458728b6fc61cdc (2024-04-09), which no",
+      "    ELK release before it has, and the commits from there to 9bc93474 change only ELK's",
+      "    meta-compiler, which is not compiled in, so either commit yields the same code. The bundle",
+      "    itself does not record the commit.",
+      "  elkjs: https://github.com/kieler/elkjs, tag 0.9.3 (commit",
+      "    a8304cf79fde75bc2ab1a89d28320f53f8637436), which compiles ELK to JavaScript with GWT 2.10.0",
+      "    against EMF for GWT 2.12.4, Guava 31.1-jre, and Xtext 2.28.0, generating code from ELK's",
+      "    .melk files with ELK's own meta-compiler, whose source is the same ELK tree",
+      "    (plugins/org.eclipse.elk.core.meta at 9bc93474).",
+      "ELK: Copyright (c) 2017, 2021 Kiel University and others.",
+      "",
+      "Compiled into lib/elk-worker.min.js with ELK:",
+      "  Xtext's xbase library (org.eclipse.xtext.xbase.lib 2.28.0), under the EPL-2.0 above:",
+      "    Copyright (c) itemis AG (http://www.itemis.eu) and others. Source Code:",
+      "    https://github.com/eclipse/xtext-lib, tag v2.28.0, and",
+      "    org.eclipse.xtext.xbase.lib-2.28.0-sources.jar at",
+      "    https://repo1.maven.org/maven2/org/eclipse/xtext/org.eclipse.xtext.xbase.lib/2.28.0/.",
+      "  EMF for GWT (com.genmymodel.emf.gwt emf-common and emf-ecore 2.12.4), under the Eclipse",
+      "    Public License 1.0, whose full text follows below: Copyright IBM Corporation and others,",
+      "    and in part Ed Merks and others. Its Source Code is available under the EPL-1.0 as",
+      "    emf-common-2.12.4-sources.jar and emf-ecore-2.12.4-sources.jar at",
+      "    https://repo1.maven.org/maven2/com/genmymodel/emf/gwt/ (the project is",
+      "    https://github.com/Axellience/emfgwt, which does not tag 2.12.4).",
+      "    Its XML Schema regular-expression engine and Base64 / hexBinary conversions",
+      "    (org.eclipse.emf.ecore.xml.type.internal.RegEx and DataValue) derive from Apache Xerces",
+      "    and are also under the Apache Software License, Version 1.1,",
+      "    whose notice follows below the EPL-1.0. As that licence asks: This product includes",
+      "    software developed by the Apache Software Foundation (http://www.apache.org/).",
+      "  Under the Apache License, Version 2.0, whose full text is reproduced in this document under",
+      "  the Apache-2.0 components:",
+      "    Guava 31.1-jre (com.google.common): Copyright (C) The Guava Authors.",
+      "    GWT 2.10.0's runtime and Java emulation (com.google.gwt, java.lang, java.util): Copyright",
+      "      Google Inc.; its java.math emulation derives from Apache Harmony, licensed to the Apache",
+      "      Software Foundation.",
+      "lib/elk.bundled.js also contains, under the MIT License, whose text is reproduced in this",
+      "document: the helper functions Babel 6 injected (Copyright (c) 2014-2017 Sebastian McKenzie),",
+      "browserify's module prelude (browser-pack, Copyright James Halliday), and its UMD wrapper",
+      "(umd, Copyright Forbes Lindesay).",
+    ],
+    // EMF for GWT is EPL-1.0, with a Xerces-derived part also under ASL 1.1: both texts in full.
+    licenceTexts: ["EPL-1.0.txt", "Xerces-ASL-1.1.txt"],
+    apache: true,
+  },
   "katex@0.16.47": {
     vendored: [
       "dist/katex.mjs also contains hyphenate and escape, adapted from Facebook's React under the",
@@ -209,7 +289,7 @@ const PREBUILT_AUDITED = {
     apache: true,
   },
   "marked@16.3.0": {},
-  "mermaid@11.17.2": {
+  "mermaid@12.1.0": {
     vendored: [
       "src/diagrams/gantt/ganttRenderer.js contains checkUnique, adapted from a Stack Overflow answer",
       "by Justin Johnson (https://stackoverflow.com/a/1890233), posted 2009-12-12 and so licensed",
@@ -314,9 +394,10 @@ const NOT_IN_RUNTIME = {
   mermaid: { "@types/d3": "type declarations" },
   "@mermaid-js/parser": { "@chevrotain/types": "type declarations" },
   "@chevrotain/gast": { "@chevrotain/types": "type declarations" },
+  "@chevrotain/cst-dts-gen": { "@chevrotain/types": "type declarations" },
   chevrotain: {
     "@chevrotain/types": "type declarations",
-    "@chevrotain/cst-dts-gen": "absent from the parser chunk's esbuild path comments",
+    "@chevrotain/cst-dts-gen": "listed: mermaid 12 bundles it with chevrotain 13",
   },
   langium: { "vscode-languageserver": "absent from the parser chunk's esbuild path comments" },
   "d3-delaunay": { delaunator: "only src/index.js is in the runtime; Delaunay is tree-shaken" },
@@ -361,6 +442,19 @@ const NOT_IN_RUNTIME = {
 const REFERENCE_HOSTS =
   /^https?:\/\/(www\.)?(w3\.org|w3c\.github\.io|ecma-international\.org|en\.wikipedia\.org|developer\.mozilla\.org|yaml\.org|unicode\.org|datatracker\.ietf\.org|url\.spec\.whatwg\.org|html\.spec\.whatwg\.org|lodash\.com|openjsf\.org|underscorejs\.org|mathworld\.wolfram\.com|dagrejs\.github\.io|bugs\.chromium\.org|bugs\.webkit\.org|tex\.stackexchange\.com|math\.stackexchange\.com)\//;
 const REVIEWED_URLS = {
+  "http://www.eclipse.org/emf/2002/Ecore": "reference",
+  "http://www.eclipse.org/emf/2003/XMLType": "reference",
+  "http://www.eclipse.org/legal/epl-2.0.": "reference",
+  "https://esbuild.github.io/content-types/#direct-eval": "reference",
+  "https://github.com/chevrotain/chevrotain/issues/869": "reference",
+  "https://github.com/mermaid-js/mermaid/issues/4121.": "reference",
+  "https://github.com/petkaantonov/bluebird/blob/b97c0d2d487e8c5076e8bd897e0dcd4622d31846/src/util.js#L201-L216":
+    "attributed",
+  "https://hackernoon.com/the-madness-of-parsing-real-world-javascript-regexps-d9ee336df983":
+    "reference",
+  "https://stackoverflow.com/a/4228528": "reference",
+  "https://www.eclipse.org/legal/epl-2.0/": "reference",
+  "https://www.typescriptlang.org/docs/handbook/functions.html#this-parameters": "reference",
   "http://dl.acm.org/citation.cfm?id=1498047": "reference",
   "http://engelschall.com": "attributed",
   "http://opensource.org/licenses/MIT": "reference",
@@ -711,7 +805,13 @@ export async function render(components, mermaidVersion) {
       unexplained.push(`${labelOf(c)} → ${dep}`);
     }
     const audit = c.version ? PREBUILT_AUDITED[`${c.name}@${c.version}`] : undefined;
-    const vendored = audit?.vendored ? `\n\n${SUB}\n\n${audit.vendored.join("\n")}` : "";
+    const vendored =
+      (audit?.vendored ? `\n\n${SUB}\n\n${audit.vendored.join("\n")}` : "") +
+      (
+        await Promise.all(
+          (audit?.licenceTexts ?? []).map(async (f) => `\n\n${SUB}\n\n${await readData(f)}`),
+        )
+      ).join("");
     const extra = c.notice ? `\n\n${c.notice}` : "";
     const body = note + licenceText(labelOf(c), found) + extra + vendored;
     let license = licenseOf(found.pkg);
