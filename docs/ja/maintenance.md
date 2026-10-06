@@ -86,8 +86,9 @@ PowerShell だけ入れさせる理由は無く、またプラットフォーム
 - [ ] **Dependabot のプルリクエスト。** 1 サイクル以上放置されているものが無く、CI が黙って落ちて
       いるものも無いこと。
 - [ ] **未対応の alert。** Dependabot alerts をトリアージし、open のまま残すものには理由を残す。
-- [ ] **セキュリティ override。** [development.md](development.md) に記録した各 override を
-      削除条件と突き合わせ、結論が変わらなかった場合も「再点検した日付」を更新する。
+- [ ] **セキュリティ override と監査から除外した advisory。** [development.md](development.md) に
+      記録した各 override と、監査から除外した各 advisory を削除条件と突き合わせ、
+      結論が変わらなかった場合も「再点検した日付」を更新する。
 - [ ] **npm の maintainer。** `monodocs` を publish できるアカウントが意図したものだけであり、
       いずれも 2FA が有効であること。
 - [ ] **Trusted Publisher。** npm 側の設定が、現在のリポジトリ・`release.yml`・リリース用
@@ -115,6 +116,9 @@ PowerShell だけ入れさせる理由は無く、またプラットフォーム
    含まれない依存がある。その判断の根拠を残す。黙って閉じない。
 3. [SECURITY.md](../../SECURITY.ja.md) のとおり、Critical / High を他の作業より優先する。
 4. 修正版がまだ無い場合は、削除条件をコメントに書いた最小限の `overrides` を選び、上の四半期棚卸しの
-   対象に加える。
+   対象に加える。出荷される脆弱なコピーが依存の解決で変わらない場合（パッケージのバンドルにビルド済みで
+   入っているコード）は、override は監査を黙らせるだけで出荷物を何も変えない。代わりに advisory を
+   `auditConfig.ignoreGhsas` に挙げ、理由と削除条件を [development.md](development.md) に書き、同じ
+   棚卸しの対象に加える。
 5. 修正は現行系列の新しい patch としてリリースする。公開済みバージョンを作り直さず、旧版へ
    バックポートもしない（[SECURITY.ja.md](../../SECURITY.ja.md)）。

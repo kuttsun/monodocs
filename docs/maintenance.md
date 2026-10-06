@@ -87,9 +87,9 @@ item is looking for.
       for 60 days. Check that `Scheduled Audit` has recent runs; re-enable it if it stopped.
 - [ ] **Dependabot pull requests.** None open longer than a cycle; none silently failing CI.
 - [ ] **Open alerts.** Dependabot alerts triaged, with anything left open explained.
-- [ ] **Security overrides.** Re-check each documented override in
-      [development.md](development.md) against their removal conditions and update the "Last checked"
-      line, whether or not the answer changed.
+- [ ] **Security overrides and ignored advisories.** Re-check each documented override and each
+      advisory ignored in the audit in [development.md](development.md) against their removal
+      conditions and update the "Last checked" line, whether or not the answer changed.
 - [ ] **npm maintainers.** Only intended accounts can publish `monodocs`, and each has 2FA enabled.
 - [ ] **Trusted Publisher.** The npm setting still names this repository, `release.yml`, and the
       release environment. Renaming any of the three breaks publishing silently — the failure shows
@@ -116,6 +116,10 @@ item is looking for.
    and excluded from the published bundle. Record that reasoning; do not silently close.
 3. Fix Critical and High before other work, per [SECURITY.md](../SECURITY.md).
 4. If no patched version exists yet, prefer a scoped `overrides` entry with a comment naming its
-   removal condition, and add it to the quarterly re-check above.
+   removal condition, and add it to the quarterly re-check above. If the vulnerable copy that ships
+   cannot change with dependency resolution — code prebuilt into a package's bundle — an override
+   would silence the audit and change nothing that ships: list the advisory under
+   `auditConfig.ignoreGhsas` instead, with the reason and removal condition in
+   [development.md](development.md), and add it to the same re-check.
 5. Release the fix as a new patch on the current line. Do not rebuild an already-published version,
    and do not backport it to an older one ([SECURITY.md](../SECURITY.md)).
