@@ -135,6 +135,52 @@ export async function buildPages(
       page: { id, route, relativePath: source.relativePath, format: source.format },
     });
 
+    for (const problem of rendered.math ?? []) {
+      const where = { path: source.relativePath, line: problem.line, column: problem.column };
+      const params = {
+        path: source.relativePath,
+        line: String(problem.line ?? "?"),
+        source: problem.source,
+      };
+      warnings.push(
+        problem.kind === "parse"
+          ? warn(
+              "math/parse-failed",
+              t("pages.mathParseFailed", { ...params, detail: problem.detail }),
+              where,
+            )
+          : problem.kind === "not-allowed"
+            ? warn(
+                "math/command-not-allowed",
+                t("pages.mathNotAllowed", { ...params, commands: problem.commands }),
+                where,
+              )
+            : problem.kind === "construct"
+              ? warn(
+                  "math/construct-unsupported",
+                  t("pages.mathConstruct", { ...params, constructs: problem.constructs }),
+                  where,
+                )
+              : problem.kind === "notation"
+                ? warn(
+                    "math/notation-unsupported",
+                    t("pages.mathNotation", { ...params, notations: problem.notations }),
+                    where,
+                  )
+                : problem.kind === "numbering"
+                  ? warn("math/numbering-unsupported", t("pages.mathNumbering", params), where)
+                  : warn(
+                      "math/style-unsupported",
+                      t("pages.mathStyleUnsupported", {
+                        ...params,
+                        variant: problem.variant,
+                        chars: problem.chars,
+                      }),
+                      where,
+                    ),
+      );
+    }
+
     const { title, fromFilename } = resolveTitle(meta, source.relativePath, options);
     // ファイル名へフォールバックしたら警告する。ただし titleFrom: "filename" のときは
     // ファイル名が指定された取得元なので「タイトル欠落」ではなく、警告しない。

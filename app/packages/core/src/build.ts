@@ -125,7 +125,7 @@ export async function preparePages(
   const { pages, warnings } = await buildPages(
     sources,
     [
-      createMarkdownRenderer({ lineBreak: config.lineBreak }),
+      createMarkdownRenderer({ lineBreak: config.lineBreak, math: config.mathEnabled }),
       createAsciidocRenderer(config.asciidocAttributes, rootDir, {
         lineBreak: config.lineBreak,
         refuseSectnums: config.numberingSections !== false,

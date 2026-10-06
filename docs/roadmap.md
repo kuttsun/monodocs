@@ -527,6 +527,99 @@ are the same text.
 - **Accessibility.** The MathML is what assistive technology reads; no `alttext` is added, since TeX
   read aloud would be worse than the MathML it duplicates.
 
+**Rendering (v0.15).** KaTeX renders each formula to MathML with `output: "mathml"`, and only the
+`<math>` element is kept, with KaTeX's classes removed, so no KaTeX class, script, or stylesheet
+reaches the output; what KaTeX writes as MathML attributes stays, an inline `style` included (`\pmb`'s
+shadow). A formula is a
+`span.math` (a `div.math` for a fenced block), with class `math-inline` or `math-display`, carrying
+`data-math-source` and `data-math-tex`. Until it is rendered it holds the TeX as text, which is how a
+heading's ID comes from the TeX. The lists of headings and the search text read `data-math-tex`, never
+the MathML. A formula KaTeX cannot parse is reported as `math/parse-failed`, naming the file, the line,
+and the formula, and is shown as written in a `span.math-error`, not as KaTeX's error box.
+
+- **What is not rendered.** The commands KaTeX gates behind its `trust` option — `\href`, `\url`,
+  `\includegraphics`, `\htmlClass`, `\htmlId`, `\htmlStyle`, `\htmlData` — are not trusted: a formula
+  using one is reported as `math/command-not-allowed` and shown as written, rather than as the red
+  command name KaTeX would put in its place. Automatic equation numbers (`equation`, `align`, `gather`,
+  unstarred) are drawn by KaTeX's stylesheet with a CSS counter, so without it they are not there; a
+  numbered formula is reported as `math/numbering-unsupported` and rendered without its number. A
+  `\tag{}` at the top level of a display formula, after a starred environment for one, is rendered, but
+  not at the right margin: KaTeX places it with `width` attributes MathML Core ignores. Inside a numbered
+  environment KaTeX drops a `\tag{}` altogether, so the warning points at the starred form. Every length is written in a unit CSS has: KaTeX keeps TeX's units (`bp`,
+  `dd`, `sp`, `mu`, its own `px`), which MathML Core would ignore. A unit CSS has stays, so that an
+  absolute length stays absolute under `\Huge`; `mu` becomes em, and TeX's other units points. A length
+  beyond 100em (`\rule`, `\kern`, `\hspace`, `\raisebox`) is clamped to 100em, since KaTeX's own
+  `maxSize` does not reach every size it writes into MathML. Three `mpadded` forms MathML Core reads
+  otherwise than KaTeX means them are rewritten: the box grown around `\colorbox` and `\fcolorbox` by
+  a signed size (`width="+6pt"`) becomes padding in points; a `\raisebox`, which only moves its term,
+  makes room on the side it moves to, as TeX does; and `\mathllap` and `\mathclap`, which shift by the
+  term's own width (`lspace="-1width"`), shift by a CSS transform. A display formula's box has a
+  quarter-em of room above and below, since glyphs reach past the box MathML gives them. KaTeX merges adjacent digits of different styles into one
+  token (`\mathbf{0}\mathbb{0}` becomes one bold `00`); that is KaTeX's doing and is not detected.
+- **Enclosures.** KaTeX writes `\cancel`, `\bcancel`, `\xcancel`, `\sout`, `\boxed`, `\fbox`, and
+  `\angl` as `menclose`, which MathML Core does not have, so Chromium would draw the term and nothing
+  around it — a cancelled term reading as if it stood. Each becomes an `mrow` that draws its notation with
+  an inline style, as KaTeX itself does for `\fcolorbox`: borders for a box and its sides, and for a
+  strike a linear gradient on an empty element laid over the term, so that a background in the term
+  (`\colorbox`) cannot hide it. The strike, and anything a formula draws as a background (`\rule`,
+  `\colorbox`), is printed even with `pdf.printBackground` off (`print-color-adjust: exact`), since a
+  cancelled term printed uncancelled changes the formula. A notation CSS cannot draw this way (`phasorangle` from `\phase`, and the others MathML
+  defines) is reported as `math/notation-unsupported`, and the term is shown without it.
+- **Width.** A display formula wider than the column scrolls sideways, as a code block does, rather
+  than being cut off. On paper there is no scroll: a formula cannot wrap, so it is printed at its full
+  width, and one wider than the page is cut at the page's edge.
+- **What MathML Core reads otherwise.** KaTeX writes MathML for MathML 3 renderers, and a number of
+  its elements and attributes are left out of MathML Core or read differently. A survey of KaTeX
+  0.16.47's MathML builder listed them; each that changes what a formula says is rewritten into what
+  Core draws as KaTeX means it, and checked in real Chromium:
+  - an array's `columnalign`, `columnspacing`, `rowspacing`, `columnlines`, and `rowlines` become cell
+    CSS — `text-align` in the `-webkit-` values Chromium aligns a cell's content by (`columnalign`
+    stays for Firefox, which reads it), padding, and borders — and the frame KaTeX draws around an
+    array with its sides named crosswise (`top` for a leading `|`) gets them put right; a row with
+    fewer cells than the array has columns, which KaTeX writes as it is, gets the missing cells, so
+    that a column's line reaches it;
+  - `\\` and `\newline` outside an array, which Core does not break at, become the rows of a
+    one-column table at the top of a formula, with the room `\\[2em]` asks for below its line;
+  - a negative space (`\!`, a negative `\kern`), which Core cannot draw, becomes a negative margin;
+  - `\overbrace` and `\underbrace` are set as accents, as in TeX, rather than as small scripts;
+  - a `\tag` outside an environment is set at the right margin, its table and the boxes above it
+    spanning the line.
+
+  What cannot be rewritten is reported as `math/construct-unsupported`: `\vcenter`, whose centring
+  KaTeX leaves to its stylesheet; `\mathchoice` in a script or a fraction (written directly, or through
+  `\bmod`), whose branch KaTeX picks by a style it does not carry into scripts and fractions; `\overlinesegment` and `\underlinesegment`, which KaTeX writes as the
+  text "undefined" and monodocs as an overline; a line break inside part of a formula; and `\boldsymbol` on a relation, a bracket, or punctuation
+  (`\boldsymbol{\rightarrow}`), which KaTeX writes into MathML only for letters, digits, and binary
+  operators; `\\[2em]` between the rows of an environment, whose room KaTeX's MathML leaves out (both
+  found in KaTeX's parse tree, since the MathML no longer shows them); a negative `\\[...]` and an `\arraystretch`
+  below 1, which padding cannot give. The parse tree is read after macros are expanded, and only its
+  MathML branch. Accepted as
+  KaTeX's own and not detected: a dashed frame around an array is drawn solid, `\xrightequilibrium` and
+  `\xleftequilibrium` are drawn as ordinary harpoons, and nested size commands compound.
+- **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
+  line break before or after it is not between two East Asian characters and stays a space, as at
+  any other element that is not text.
+
+- **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
+  bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
+  `THIRD-PARTY-NOTICES.txt` with the bundle's other packages and in the runtime's own notices. Measured on
+  Linux x64 when it was added, it makes the CLI bundle 0.50 MiB larger (20,626,667 to 21,150,252 bytes)
+  and the standalone binary 0.50 MiB larger (145,493,184 to 146,017,472 bytes). The HTML output does not
+  grow by KaTeX itself, only by the formulas' MathML.
+- **`mathvariant`.** MathML Core applies only `mathvariant="normal"`, so every other value is resolved at
+  build time into Unicode's Mathematical Alphanumeric Symbols (U+1D400–U+1D7FF) and the Letterlike
+  Symbols that fill its holes (`ℎ`, `ℬ`, `ℭ`, `ℝ`, and the rest), and the attribute is removed. This
+  covers bold, italic, bold-italic, script, bold-script, fraktur, bold-fraktur, double-struck,
+  sans-serif, bold-sans-serif, sans-serif-italic, sans-serif-bold-italic, and monospace for Latin
+  letters. Digits are covered for bold, double-struck, sans-serif, bold-sans-serif, and monospace. Greek
+  is covered for bold, italic, bold-italic, bold-sans-serif, and sans-serif-bold-italic, as are bold
+  `Ϝϝ` and italic dotless `ıȷ`. A letter or digit with no form in its style (`\mathit{123}`, or Japanese
+  in `\textbf{}`) is kept unstyled and reported as `math/style-unsupported`. A symbol (punctuation, an operator)
+  has no styled form either, but CSS can make it bold or italic, which it does (`\boldsymbol{+}`); the
+  other styles are not ones a symbol is drawn in, and spaces have no style.
+- **`math.enabled: false`** turns the parser off, so the formulas' delimiters print as text, as in the
+  release before. A document without a formula builds byte for byte the same either way.
+
 
 
 ---
@@ -1144,6 +1237,9 @@ mermaid:
   runtime: "inline"
 
 highlight:
+  enabled: true
+
+math:
   enabled: true
 
 html:

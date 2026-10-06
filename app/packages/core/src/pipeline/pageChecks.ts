@@ -1,6 +1,6 @@
 import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
-import type { ElementContent, Root as HastRoot } from "hast";
+import type { Element, ElementContent, Root as HastRoot } from "hast";
 import { headingLevel, pageFlow } from "./pageBreakHeadings.js";
 import { type Diagnostic, warn } from "../diagnostics.js";
 import { t } from "../messages.js";
@@ -33,7 +33,28 @@ import type { Page } from "../types.js";
  * reports a skip the reader cannot see, and an `h3` inside one hides the real `h2` → `h4` around it.
  * `pdf.pageBreakLevel` already draws this line, and the two now draw it in the same place.
  */
+/**
+ * Each heading element with the text the lists of headings show for it, a formula as `$TeX$`. The
+ * page's headings are in document order, so the n-th heading with an ID is paired with the n-th
+ * entry for that ID, which keeps two headings sharing an ID apart.
+ */
+function headingTitles(tree: HastRoot, page: Page): Map<Element, string> {
+  const queues = new Map<string, string[]>();
+  for (const h of page.headings) {
+    if (!queues.has(h.id)) queues.set(h.id, []);
+    queues.get(h.id)!.push(h.text);
+  }
+  const titles = new Map<Element, string>();
+  visit(tree, "element", (node: Element) => {
+    if (headingLevel(node) === 0 || typeof node.properties.id !== "string") return;
+    const text = queues.get(node.properties.id)?.shift();
+    if (text !== undefined) titles.set(node, text);
+  });
+  return titles;
+}
+
 export function checkHeadingLevels(tree: HastRoot, page: Page, diagnostics: Diagnostic[]): void {
+  const titles = headingTitles(tree, page);
   let previous: number | undefined;
   for (const node of pageFlow(tree.children as ElementContent[])) {
     if (node.type !== "element") continue;
@@ -44,7 +65,8 @@ export function checkHeadingLevels(tree: HastRoot, page: Page, diagnostics: Diag
         warn(
           "heading/level-skipped",
           t("check.headingLevelSkipped", {
-            title: toText(node).trim(),
+            // The heading as the lists of headings show it, a formula as `$TeX$`.
+            title: (titles.get(node) ?? toText(node)).trim(),
             from: previous,
             to: level,
             path: page.relativePath,

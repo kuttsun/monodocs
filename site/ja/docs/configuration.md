@@ -135,6 +135,9 @@ mermaid:
 highlight:
   enabled: true
 
+math:
+  enabled: true
+
 html:
   theme: default
   colorScheme: light # light | dark | auto（OS 設定に追従）
@@ -579,6 +582,14 @@ numbering:
 | キー                | 型      | 既定値 | 説明                                       |
 | ------------------- | ------- | ------ | ------------------------------------------ |
 | `highlight.enabled` | boolean | `true` | コードブロックをシンタックスハイライト（shiki）。 |
+
+### `math`
+
+| キー           | 型      | 既定値 | 説明                                                                                                         |
+| -------------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| `math.enabled` | boolean | `true` | 数式（`$...$`、`$$...$$`、言語が `math` のフェンスのブロック）をビルド時に MathML に描く。`false` では以前と同じく、数式を文字として、`math` のフェンスのブロックをコードとして出力する。 |
+
+数式は KaTeX が MathML だけに描き、出力にスクリプトもスタイルシートも加えない。KaTeX が解析できない数式（`math/parse-failed`）や、`\href` などのリンクや HTML のコマンドを使う数式（`math/command-not-allowed`）は、報告して書かれたとおりに示す。Unicode に文字の無い書体（`math/style-unsupported`、例：`\mathit{123}`）、自動の数式番号（`math/numbering-unsupported`、例：星の無い `equation`）、CSS で描けない囲み（`math/notation-unsupported`、例：`\phase`）、ブラウザが書かれたとおりに描けない構文（`math/construct-unsupported`、例：`\vcenter`）は報告し、それらなしで数式を描く。
 
 ### `html`
 

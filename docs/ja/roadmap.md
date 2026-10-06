@@ -496,6 +496,89 @@ Markdown から捨てる生 HTML も数式を運ばない。HTML ブロックの
 - **アクセシビリティ。** 支援技術が読むのは MathML である。`alttext` は付けない。TeX を読み上げても、それが
   重複する MathML より悪くなるからである。
 
+**描画（v0.15）。** KaTeX が各数式を `output: "mathml"` で MathML に描き、`<math>` 要素だけを、KaTeX の
+クラスを取り除いて残す。KaTeX のクラス、スクリプト、スタイルシートは出力に入らない。KaTeX が MathML の属性として
+書くものは残り、インラインの `style`（`\pmb` の影）も含む。数式は `span.math`（フェンスのブロックは `div.math`）で、
+クラス `math-inline` か `math-display` を持ち、`data-math-source` と `data-math-tex` を運ぶ。描画するまでは
+TeX を文字として持っており、見出しの ID はそのため TeX から作られる。見出しの一覧と検索の文字は
+`data-math-tex` を読み、MathML は読まない。KaTeX が解析できない数式は、ファイル、行、数式を名指す
+`math/parse-failed` として報告し、KaTeX のエラー表示ではなく、`span.math-error` の中に書かれたとおりに示す。
+
+- **描かないもの。** KaTeX が `trust` オプションの後ろに置くコマンド——`\href`、`\url`、`\includegraphics`、
+  `\htmlClass`、`\htmlId`、`\htmlStyle`、`\htmlData`——は信頼しない。それを使う数式は
+  `math/command-not-allowed` として報告し、KaTeX が代わりに置く赤いコマンド名ではなく、書かれたとおりに示す。
+  自動の数式番号（星の無い `equation`、`align`、`gather`）は KaTeX のスタイルシートが CSS カウンタで描くので、
+  それが無ければ現れない。番号の付く数式は `math/numbering-unsupported` として報告し、番号なしで描く。
+  別行立ての数式の最上位にある `\tag{}`（星付きの環境の後ろに書くものを含む）は描くが、右端には置かれない。
+  KaTeX は MathML Core が無視する `width` 属性で位置を決めるからである。番号の付く環境の中の `\tag{}` は KaTeX が
+  まるごと落とすので、警告は星付きの形を案内する。
+  長さはすべて CSS にある単位で書く。KaTeX は TeX の単位（`bp`、`dd`、`sp`、`mu`、独自の `px`）を残すが、MathML
+  Core はそれを無視するからである。CSS にある単位はそのまま残し、絶対的な長さは `\Huge` の下でも絶対的なままに
+  する。`mu` は em に、TeX のほかの単位はポイントにする。100em を超える長さ（`\rule`、`\kern`、`\hspace`、
+  `\raisebox`）は 100em に切り詰める。KaTeX 自身の `maxSize` は、MathML に書くすべての大きさには届かないからで
+  ある。MathML Core が KaTeX の意図と違って読む `mpadded` の形を 3 つ書き換える。`\colorbox` と `\fcolorbox` の
+  周りを符号付きの大きさ（`width="+6pt"`）で広げる箱はポイントの padding にする。項を動かすだけの `\raisebox`
+  は、TeX と同じく、動く側に場所を空ける。項自身の幅（`lspace="-1width"`）でずらす `\mathllap` と `\mathclap`
+  は CSS の transform でずらす。グリフは MathML が与える箱の外に少しはみ出すので、別行立ての数式の箱には
+  上下に 4 分の 1 em の余白を置く。KaTeX は書体の違う隣り合う数字を 1 つのトークンにまとめる
+  （`\mathbf{0}\mathbb{0}` は太字の `00` 1 つになる）。これは KaTeX のふるまいで、検出しない。
+- **囲み。** KaTeX は `\cancel`、`\bcancel`、`\xcancel`、`\sout`、`\boxed`、`\fbox`、`\angl` を `menclose` と
+  して書くが、MathML Core にはそれが無いので、Chromium は項だけを描き、その周りを描かない。打ち消した項が、
+  打ち消されていないように読めてしまう。そこで、KaTeX 自身が `\fcolorbox` でするように、それぞれを、記法を
+  インラインの style で描く `mrow` にする。箱とその辺は罫線で描く。打ち消し線は、項の上に重ねた空の要素の線形
+  グラデーションで描くので、項の中の背景（`\colorbox`）に隠されない。打ち消し線と、数式が背景として描くもの
+  （`\rule`、`\colorbox`）は、`pdf.printBackground` を無効にしても印刷する（`print-color-adjust: exact`）。打ち消した
+  項が打ち消されずに印刷されれば、数式の意味が変わるからである。この方法で CSS が描けない記法
+  （`\phase` の `phasorangle` と、MathML が定めるほかのもの）は `math/notation-unsupported` として報告し、項は
+  それなしで示す。
+- **幅。** 列より幅の広い別行立ての数式は、切り捨てられるのではなく、コードブロックと同じく横にスクロールする。
+  紙にはスクロールが無い。数式は折り返せないので、その幅のまま印刷され、紙より広いものは紙の端で切れる。
+- **MathML Core が違って読むもの。** KaTeX は MathML 3 のレンダラ向けに MathML を書き、その要素や属性の
+  いくつかは MathML Core に無いか、違って読まれる。KaTeX 0.16.47 の MathML の組み立てを調べてそれらを
+  挙げ、数式の意味を変えるものは、KaTeX の意図どおりに Core が描く形に書き換え、実際の Chromium で確かめた：
+  - 配列の `columnalign`、`columnspacing`、`rowspacing`、`columnlines`、`rowlines` はセルの CSS にする——
+    `text-align` は Chromium がセルの中身を揃える `-webkit-` の値で（`columnalign` は、それを読む Firefox の
+    ために残す）、padding と罫線にする。KaTeX が辺の名前を取り違えて（先頭の `|` を `top` として）配列の
+    周りに描く枠は、辺を正しくする。配列の列数よりセルの少ない行（KaTeX はそのまま書く）には欠けたセルを
+    補い、列の罫線がその行まで届くようにする
+  - Core が改行しない、配列の外の `\\` と `\newline` は、数式の最上位で 1 列の表の行にし、`\\[2em]` が求める
+    場所を、その行の下に空ける
+  - Core が描けない負の空き（`\!`、負の `\kern`）は、負の margin にする
+  - `\overbrace` と `\underbrace` は、小さな添字ではなく、TeX と同じくアクセントとして置く
+  - 環境の外の `\tag` は、その表と上の箱を行の幅にして、右端に置く
+
+  書き換えられないものは `math/construct-unsupported` として報告する。中央寄せを KaTeX がスタイルシートに
+  任せる `\vcenter`、添字や分数に伝えないスタイルで KaTeX が枝を選ぶ、添字や分数の中の `\mathchoice`（直接書いたものも、`\bmod` を通したものも）、KaTeX が "undefined" と
+  いう文字として書き、monodocs が上線として描く `\overlinesegment` と `\underlinesegment`、数式の一部の中の
+  改行、そして関係記号、括弧、句読点に付けた `\boldsymbol`（`\boldsymbol{\rightarrow}`）である。KaTeX は
+  `\boldsymbol` を、文字、数字、二項演算子にしか MathML に書かない。環境の行の間の `\\[2em]`
+  も報告する。KaTeX の MathML はその場所を書かない。この 2 つは MathML からはもう分からないので、KaTeX の
+  構文木から見つける。padding では与えられない負の `\\[...]` と 1 未満の
+  `\arraystretch` も報告する。構文木はマクロを展開した後のものを、MathML に出る分岐だけ読む。KaTeX 自身のものとして受け入れ、検出しないもの：配列の周りの破線の枠は実線で描かれ、
+  `\xrightequilibrium` と `\xleftequilibrium` は普通の銛矢印として描かれ、入れ子の大きさの指定は積み重なる。
+- **数式の隣の改行。** `sources.lineBreak: join`（12.6）では、数式は境界である。その前後の改行は 2 つの東アジアの
+  文字の間ではないので、文字でないほかの要素の隣と同じく空白のまま残る。
+
+- **依存としての KaTeX。** KaTeX 0.16.47 は MIT である。Mermaid のランタイムがすでに同梱している版と同じで、
+  2 つが食い違うとテストが失敗するので、告知が名指す KaTeX は 1 つになる。告知では、バンドルのほかの
+  パッケージとともに `THIRD-PARTY-NOTICES.txt` に、そしてランタイム自身の告知に現れる。追加したときに
+  Linux x64 で測ると、CLI バンドルは 0.50 MiB（20,626,667 から 21,150,252 バイト）、単体バイナリは 0.50 MiB
+  （145,493,184 から 146,017,472 バイト）大きくなる。HTML の出力は KaTeX 自身では大きくならず、数式の
+  MathML の分だけ大きくなる。
+- **`mathvariant`。** MathML Core が適用するのは `mathvariant="normal"` だけなので、それ以外の値は
+  ビルド時に、Unicode の Mathematical Alphanumeric Symbols（U+1D400–U+1D7FF）と、その欠けを埋める
+  Letterlike Symbols（`ℎ`、`ℬ`、`ℭ`、`ℝ` など）の文字に置き換え、属性は取り除く。対象は、ラテン文字では
+  bold、italic、bold-italic、script、bold-script、fraktur、bold-fraktur、double-struck、sans-serif、
+  bold-sans-serif、sans-serif-italic、sans-serif-bold-italic、monospace である。数字は bold、double-struck、
+  sans-serif、bold-sans-serif、monospace が対象である。ギリシャ文字は bold、italic、bold-italic、
+  bold-sans-serif、sans-serif-bold-italic が対象で、bold の `Ϝϝ` と italic の点のない `ıȷ` も含む。その
+  スタイルに形のない文字や数字（`\mathit{123}`、`\textbf{}` の中の日本語）はスタイルなしで残し、
+  `math/style-unsupported` として報告する。記号（句読点、演算子）にもスタイルのついた形は
+  ないが、CSS で太字や斜体にはできるので、そうする（`\boldsymbol{+}`）。ほかの書体は記号を描く書体ではなく、空白には
+  書体がない。
+- **`math.enabled: false`** ではパーサを使わないので、数式の区切り記号は以前のリリースと同じく文字として
+  出力される。数式の無い文書は、どちらでもバイト単位で同じに組み上がる。
+
 
 
 ---
@@ -1110,6 +1193,9 @@ mermaid:
   runtime: "inline"
 
 highlight:
+  enabled: true
+
+math:
   enabled: true
 
 html:

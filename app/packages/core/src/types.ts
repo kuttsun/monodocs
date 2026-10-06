@@ -8,6 +8,7 @@
 
 import type { Diagnostic } from "./diagnostics.js";
 import type { OutputSize } from "./pipeline/outputSize.js";
+import type { MathProblem } from "./sources/mathRender.js";
 
 /** 対応するソース形式。将来 "html" / "rst" などを追加できる。 */
 export type SourceFormat = "markdown" | "asciidoc";
@@ -178,6 +179,8 @@ export type RenderedContent = {
   anchors: string[];
   links: LinkRef[];
   assets: AssetRef[];
+  /** Formulas the renderer could not render as written, reported by the build with the file. */
+  math?: MathProblem[];
 };
 
 /**
