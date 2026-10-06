@@ -1,0 +1,183 @@
+{
+  "capturedOn": "2026-10-06",
+  "method": "gh api markdown -f mode=gfm -f text=<input> (GitHub's comment rendering; the API's file mode renders no math)",
+  "reading": "A formula is a <math-renderer> element; class js-inline-math is inline and js-display-math is display; its text is the formula with its delimiters.",
+  "cases": [
+    {
+      "input": "Let $x$ be real.",
+      "html": "<p>Let <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"3205664e103d4b9da5a98252b1e51760\">$x$</math-renderer> be real.</p>"
+    },
+    {
+      "input": "It costs $5 and $10 today.",
+      "html": "<p>It costs $5 and $10 today.</p>"
+    },
+    {
+      "input": "Pay $4.50/$5 now.",
+      "html": "<p>Pay $4.50/$5 now.</p>"
+    },
+    {
+      "input": "Set $HOME and $PATH.",
+      "html": "<p>Set $HOME and $PATH.</p>"
+    },
+    {
+      "input": "$HOME/$USER is set.",
+      "html": "<p>$HOME/$USER is set.</p>"
+    },
+    {
+      "input": "Price $$5 and $$6.",
+      "html": "<p>Price $$5 and $$6.</p>"
+    },
+    {
+      "input": "a $$ x $$ b",
+      "html": "<p>a $$ x $$ b</p>"
+    },
+    {
+      "input": "Price $$5$$ here.",
+      "html": "<p>Price <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"164fc202152a5f4414d37bd09e0a11ff\">$$5$$</math-renderer> here.</p>"
+    },
+    {
+      "input": "Between $5 and 10$ or so.",
+      "html": "<p>Between <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"0f2a9754db4d1078addef3f2e1ca2d57\">$5 and 10$</math-renderer> or so.</p>"
+    },
+    {
+      "input": "costs 5$, $10, or 15$",
+      "html": "<p>costs 5$, <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"4e8a0741b1576c3c395ce93d0d058e31\">$10, or 15$</math-renderer></p>"
+    },
+    {
+      "input": "pay $5; refund $",
+      "html": "<p>pay <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"3d02907d8dd49e7a1c47caef86e4dc5f\">$5; refund $</math-renderer></p>"
+    },
+    {
+      "input": "from $5 up to 10$",
+      "html": "<p>from <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"da9f120e8249128c621d65f6304e71a7\">$5 up to 10$</math-renderer></p>"
+    },
+    {
+      "input": "tip: $5$ max",
+      "html": "<p>tip: <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"c398123e1e9e6465ac8f6dcfa5cd444d\">$5$</math-renderer> max</p>"
+    },
+    {
+      "input": "$(pwd)/$(ls)",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"b4297bcff54b07e2db7a456b44b8840f\">$(pwd)/$</math-renderer>(ls)</p>"
+    },
+    {
+      "input": "Between \\$5 and 10$ or so.",
+      "html": "<p>Between <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"dbdbc43c97d1946a540e0f699aa3299e\">$5 and 10$</math-renderer> or so.</p>"
+    },
+    {
+      "input": "Use $`a+b`$ here.",
+      "html": "<p>Use <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"9b3f04b246fe0e48808a6823e085a10a\">$a+b$</math-renderer> here.</p>"
+    },
+    {
+      "input": "[$x$](u)",
+      "html": "<p><a href=\"u\">$x$</a></p>"
+    },
+    {
+      "input": "*$x$*",
+      "html": "<p><em>$x$</em></p>"
+    },
+    {
+      "input": "_a $x$ b_",
+      "html": "<p><em>a $x$ b</em></p>"
+    },
+    {
+      "input": "***a $x$ b***",
+      "html": "<p><em><strong>a $x$ b</strong></em></p>"
+    },
+    {
+      "input": "**a *$x$* b**",
+      "html": "<p><strong>a <em>$x$</em> b</strong></p>"
+    },
+    {
+      "input": "# *$x$*",
+      "html": "<h1><em>$x$</em></h1>"
+    },
+    {
+      "input": "> *$x$*",
+      "html": "<blockquote>\n<p><em>$x$</em></p>\n</blockquote>"
+    },
+    {
+      "input": "[**$x$**](u)",
+      "html": "<p><a href=\"u\"><strong>$x$</strong></a></p>"
+    },
+    {
+      "input": "**bold $x$**",
+      "html": "<p><strong>bold <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"65544023c0bb9c94dc3931b840e11935\">$x$</math-renderer></strong></p>"
+    },
+    {
+      "input": "**bold $x$ here**",
+      "html": "<p><strong>bold <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"2951a88d3b84472e3298fd29790b4ff6\">$x$</math-renderer> here</strong></p>"
+    },
+    {
+      "input": "__a $x$__",
+      "html": "<p><strong>a <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"1862cd30a8e66c48a164be33eee3d36d\">$x$</math-renderer></strong></p>"
+    },
+    {
+      "input": "~~$x$~~",
+      "html": "<p><del><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"942d3900e230bac4d07846e210536210\">$x$</math-renderer></del></p>"
+    },
+    {
+      "input": "Cost $x = \\$4$ here",
+      "html": "<p>Cost $x = <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"6870ce73044c5d40870ab8bc2544a895\">$4$</math-renderer> here</p>"
+    },
+    {
+      "input": "a $\\$$ b",
+      "html": "<p>a $$$ b</p>"
+    },
+    {
+      "input": "Use $`\\sqrt{\\$4}`$ here.",
+      "html": "<p>Use <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"0038eaf07efff568366c98766d5a2de5\">$\\sqrt{\\$4}$</math-renderer> here.</p>"
+    },
+    {
+      "input": "$a*b*c$",
+      "html": "<p>$a<em>b</em>c$</p>"
+    },
+    {
+      "input": "`$x$`",
+      "html": "<p><code class=\"notranslate\">$x$</code></p>"
+    },
+    {
+      "input": "![$x$](i.png)",
+      "html": "<p><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"i.png\"><img src=\"i.png\" alt=\"$x$\" style=\"max-width: 100%;\"></a></p>"
+    },
+    {
+      "input": "$$x$$",
+      "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"bebfa2b27f5e6f31a29c4700e64cd788\">$$x$$</math-renderer></p>"
+    },
+    {
+      "input": "$$\nx\n$$",
+      "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"4620a424f03f41878996b97955f72208\">$$\nx\n$$</math-renderer></p>"
+    },
+    {
+      "input": "$$x$$\n$$y$$",
+      "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"38f0c3d49c88f8f1d6434bb47685b32b\">$$x$$</math-renderer>\n<math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"38f0c3d49c88f8f1d6434bb47685b32b\">$$y$$</math-renderer></p>"
+    },
+    {
+      "input": "text\n$$x$$\nmore",
+      "html": "<p>text<br>\n<math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"0bcd534cedc94c2be40a7174d929ae72\">$$x$$</math-renderer><br>\nmore</p>"
+    },
+    {
+      "input": "| a | b |\n|---|---|\n| $x$ | c |",
+      "html": "<markdown-accessiblity-table><table role=\"table\">\n<thead>\n<tr>\n<th>a</th>\n<th>b</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"593fa3313636dabbba5f768341f0017e\">$x$</math-renderer></td>\n<td>c</td>\n</tr>\n</tbody>\n</table></markdown-accessiblity-table>"
+    },
+    {
+      "input": "```math\nx^2\n```",
+      "html": "<math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"a0161a007b3fcae07ea14a0757fbc8ce\">$$x^2$$</math-renderer>"
+    },
+    {
+      "input": "To split <span>$</span>100 in half, we calculate $100/2$",
+      "html": "<p>To split <span>$</span>100 in half, we calculate <math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"32e99001c8343574d286425f8607fd8c\">$100/2$</math-renderer></p>"
+    },
+    {
+      "input": "$x<!-- c -->y$",
+      "html": "<p><math-renderer class=\"js-inline-math\" style=\"display: inline-block\" data-run-id=\"42d4ea780e0ebd6c695a9ba4dfd711ac\">$xy$</math-renderer></p>"
+    },
+    {
+      "input": "a $x\ny$ b",
+      "html": "<p>a $x<br>\ny$ b</p>"
+    },
+    {
+      "input": "$$x\ny$$",
+      "html": "<p><math-renderer class=\"js-display-math\" style=\"display: block\" data-run-id=\"174a70f6f460e6e670fd89de9a5138ca\">$$x\ny$$</math-renderer></p>"
+    }
+  ]
+}

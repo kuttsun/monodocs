@@ -304,10 +304,13 @@ the rest of the document. monodocs therefore parses math itself. Its tests pin c
 as captured on a stated date through `gh api markdown -f mode=gfm`, not to the live renderer, which has
 no version and may change; a later capture that differs is a decision to follow it or not, made then.
 That mode is how GitHub renders comments; the API's mode for repository files renders no math at all,
-so a file's rendering cannot be captured this way. What a comment shows is taken as what a file shows,
-except where comments and files differ anyway: in a comment a newline is a line break, so a formula
-spanning a newline (`a $x` then `y$ b`) is not captured, and its rule is left to the implementation's
-own fixtures.
+so a file's rendering cannot be captured this way, and what a comment shows is taken as the rule. The
+capture is kept in full — every input as sent, the options, and GitHub's HTML — in
+`app/packages/core/scripts/data/github-math-2026-10-06.json`, where a formula is a `<math-renderer>`
+element whose class says inline or display. It includes formulas across a newline: a single-`$`
+formula does not cross one (`a $x` then `y$ b` is text, the newline a `<br>` in a comment), and a
+`$$...$$` one does (`$$x` then `y$$` is display math), and that is the rule here, whether or not a
+repository file would differ.
 
 Captured on 2026-10-06 (math: what GitHub renders as a formula):
 
@@ -366,15 +369,16 @@ whatever `:stem:` says, and `stem:[...]` and the `[stem]` block, rendered when t
 They are rendered wherever Asciidoctor produces them, a monospace span or a block with macros
 substituted included, since Asciidoctor treats them as math there. Otherwise `stem` means asciimath:
 with `:stem:` unset, set with no value, or set to anything else, and `asciimath:[...]` always.
-asciimath is not rendered: KaTeX does not read it. It stays as text, with a diagnostic naming the file
-and the formula and pointing at `:stem: latexmath` or `latexmath:[...]`. A 1.x release may add a
+asciimath is not rendered: KaTeX does not read it. Its output is unchanged, Asciidoctor's `\$...\$`
+as before, and a warning names the file and the formula and points at `:stem: latexmath` or
+`latexmath:[...]`; like any warning, it fails `monodocs validate --strict`. A 1.x release may add a
 converter, but only behind a key, since rendering what 1.0 printed as text changes an existing
 document's output (12.4); rendering asciimath by default would wait for 2.0.
 
 Math is on by default, and `math.enabled: false` turns it off. Default on is why math had to come
 before 1.0 (12.4). With the key off, the output is what the previous release produced: Markdown
-math forms print as text, AsciiDoc's stem output keeps MathJax's `\(...\)` / `\[...\]` delimiters, and
-no asciimath diagnostic is raised.
+math forms print as text, AsciiDoc's latexmath keeps MathJax's `\(...\)` / `\[...\]` delimiters and
+asciimath its `\$...\$`, and no asciimath warning is raised.
 
 What an existing document could contain whose meaning this changes:
 
@@ -386,6 +390,8 @@ What an existing document could contain whose meaning this changes:
 - a fenced code block whose language is `math`, which printed as code
 - in AsciiDoc, `latexmath:[...]`, the `[latexmath]` block, and `stem:[...]` or the `[stem]` block when
   they mean latexmath, which printed with MathJax's `\(...\)` / `\[...\]` delimiters
+- in AsciiDoc, asciimath: its output is unchanged, but a new warning appears in the build's output and
+  in `monodocs validate`, `--format json` included, and fails `validate --strict`
 
 What does not change: dollar signs inside a code span or a code block, a link's text, an image's alt
 text, and italics (bold italics, and anything inside italics, included), which GitHub leaves as written,
@@ -397,8 +403,8 @@ Alternatives considered:
 
 - **GitHub's forms without the single `$`.** Fewer cases of money become math (`Price $$5$$ here.`
   still does), but `$x$`, the first form GitHub documents, stays text. Rejected: the cases the single
-  `$` misreads are few and, with `\$`, escapable, while the mismatch with GitHub would be in every
-  document that uses it.
+  `$` misreads can be escaped with `\$`, while the mismatch with GitHub would be in every document
+  that uses it.
 - **remark-math as it is.** Its rules differ from GitHub's in both directions, as measured above.
   Rejected; monodocs parses math itself, against GitHub's output.
 - **LaTeX's `\(...\)` and `\[...\]`.** Unambiguous, but GitHub does not render them, and in Markdown
@@ -4362,9 +4368,9 @@ Completion criteria:
   maintenance.md says that the lockfile audit cannot see inside a prebuilt bundle and no longer says
   that `site/` never ships, and the site samples are regenerated and carry the notices
 - The math notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are
-  recorded in 6.4 with the alternatives and why they lost. The common forms of money in prose stay
-  text by the notation's own rules, checked against the renderer the notation follows, the forms that
-  still read as math are named, and any spelling an existing
+  recorded in 6.4 with the alternatives and why they lost. The forms of money tabulated there stay text
+  by the notation's own rules, checked against the renderer the notation follows, the forms that still
+  read as math are named, and any spelling an existing
   document could contain whose meaning the choice changes is listed there. Whether math is
   recognised by default or only behind a key is decided there with its reason, and what happens to
   `asciimath` is decided and stated
