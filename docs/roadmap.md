@@ -344,7 +344,8 @@ Captured on 2026-10-06 (math: what GitHub renders as a formula):
 | a paragraph that is only `$$x$$`; `$$` on lines around `x`; `$$x$$` and `$$y$$` on two lines | display math |
 | `$$x$$` on a line between two lines of text in one paragraph | inline math |
 | `To split <span>$</span>100 in half, we calculate $100/2$` | math: `100/2` |
-| `$a &lt; b$`, `$a &#60; b$`, `$a < b$` | math: `a < b` (references decoded) |
+| `$a &lt; b$`, `$a &#60; b$`, `$a < b$`, `$$a &lt; b$$` | math: `a < b` (references decoded) |
+| ``$`a &lt; b`$``, a fenced `math` block holding `a &lt; b` | math: `a &lt; b` (code: not decoded) |
 | `$&alpha;$`, `$&#x3B1;$` | math: `α` |
 | `$x$` in a table cell | inline math |
 | a fenced `math` block | display math |
@@ -420,8 +421,13 @@ author wrote it, so that what a reader copies, what search finds, and what a hea
 - **Where the source lives.** Each rendered formula carries its source in the HTML, on the element
   that wraps its MathML: the TeX, and for Markdown the form it was written in (`$...$`, ``$`...`$``,
   `$$...$$`, or a fenced block). For AsciiDoc, monodocs replaces the converter's output for a formula
-  inside Asciidoctor's conversion with a marker element whose text is the TeX, escaped, and renders
-  the markers afterwards; text an author wrote as `\(x\)` is not a marker and stays text. Asciidoctor
+  inside Asciidoctor's conversion with a marker element whose text is the formula's text as Asciidoctor
+  gives it — `node.text`, already escaped, so it goes out as it is — and renders the markers
+  afterwards; text an author wrote as `\(x\)` is not a marker and stays text. The same converter is used
+  where monodocs reads a document's title, so a formula there can be shown as `$TeX$`. An asciimath
+  marker is turned back into Asciidoctor's `\$...\$` with its warning, its output unchanged. A macro
+  given its own substitutions, such as `latexmath:a[...]`, carries what those substitutions made of
+  the text rather than the bare TeX. Asciidoctor
   has already resolved `stem` by then — `stem:[x]` under `:stem: latexmath` arrives as latexmath — so
   the form recorded is `latexmath:[...]` inline, with `]` escaped as `\]`, and a `[latexmath]` block
   with `++++` delimiters for display, which also keeps a pasted formula from being read as asciimath
@@ -456,8 +462,8 @@ author wrote it, so that what a reader copies, what search finds, and what a hea
   which would otherwise see MathML tokens and the TeX annotation together. In AsciiDoc, Asciidoctor
   makes the IDs; because the marker's text is the TeX, it makes the same ones: measured with a
   converter that emits the marker, `== Let latexmath:[x] be real`, `== Energy latexmath:[E=mc^2]`, and
-  `== Lt latexmath:[a < b]` keep `_let_x_be_real`, `_energy_emc2`, and `_lt_a_b`, the last only with
-  the marker's text escaped.
+  `== Lt latexmath:[a < b]` keep `_let_x_be_real`, `_energy_emc2`, and `_lt_a_b`, the last because the
+  marker carries `node.text` as Asciidoctor escaped it; unescaped, `<` would end the ID at `_lt_a`.
 - **Size.** A formula's TeX appears three times — in the MathML's annotation, in the stored source,
   and in the search data — and a formula in a heading once more in each list of headings; the size
   report counts it where it falls, in the document and the page data.
