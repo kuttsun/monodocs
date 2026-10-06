@@ -2135,14 +2135,14 @@ and do not block the bump.
 
 - `lodash-es`: the runtime carries `lodash-es@4.18.1` only, patched for both advisories, and 4.17.23 is
   gone with chevrotain 11. Read against the generated `mermaid.min.js` rather than the source map's file
-  list, neither `_.template` (no `templateSettings`, no `sourceURL`) nor `_.unset` / `_.omit` (no
-  `baseUnset`, no `customOmitClone`) survives tree-shaking, and the `lodash@4.17.21` code cytoscape bundles
+  list, neither `_.template` (no `templateSettings`, no `sourceURL`) nor `_.unset` / `_.omit`
+  survives tree-shaking, and the `lodash@4.17.21` code cytoscape bundles
   is `debounce`, `memoize`, and their helpers. Function names do not survive minification, so the
   evidence is the module list and the parser chunk's path comments, which name no template, unset, or
   omit module, and the absence of `_.template`'s string literals. `pnpm audit` passes with no
   `lodash-es` override, so none is added.
 - Size: the inline runtime is 5.49 MB raw and 1.57 MB gzip (from 3.57 MB and about 975 KB), and the CLI
-  bundle grows from 17.7 MiB to 19.7 MiB. The runtime's notices add 150 KB raw, 24 KB gzip, to HTML with
+  bundle grows from 17.7 MiB to 19.7 MiB. The runtime's notices add 153 KB raw, 25 KB gzip, to HTML with
   diagrams, the EPL-2.0 and EPL-1.0 texts most of it.
 - ELK: `elkjs@0.9.3`. Its `elk.bundled.js` is a browserify bundle of elkjs's API, `web-worker`'s browser
   entry (Apache-2.0), and `elk-worker.min.js`, which is ELK compiled by GWT together with Xtext's xbase
@@ -2156,6 +2156,8 @@ and do not block the bump.
   not compiled in. EMF for GWT's source is published as sources jars on Maven Central and at
   github.com/Axellience/emfgwt, and Xtext's at github.com/eclipse/xtext-lib. The notices say all of
   this, with ELK's own copyright line, which minification drops from the runtime, and the full EPL-1.0.
+  EMF's XML Schema regular-expression engine derives from Apache Xerces and is also under the Apache
+  Software License 1.1, so its notice and the acknowledgement it asks for are carried too.
 - The CDN runtime loads `mermaid@12.1.0`, the version `inline` and `pre-render` embed.
 
 **Code whose source states no licence (v0.15).** Generating the notices meant reading every source the

@@ -59,6 +59,7 @@ async function generatorHash() {
   const parts = [
     await readFile(fileURLToPath(import.meta.url), "utf8"),
     await readData("EPL-1.0.txt"),
+    await readData("Xerces-ASL-1.1.txt"),
   ];
   const text = parts.join("\n").replace(/\r\n?/g, "\n");
   return createHash("sha256").update(text).digest("hex").slice(0, 16);
@@ -205,7 +206,8 @@ const PREBUILT_AUDITED = {
       "  elkjs: https://github.com/kieler/elkjs, tag 0.9.3 (commit",
       "    a8304cf79fde75bc2ab1a89d28320f53f8637436), which compiles ELK to JavaScript with GWT 2.10.0",
       "    against EMF for GWT 2.12.4, Guava 31.1-jre, and Xtext 2.28.0, generating code from ELK's",
-      "    .melk files with org.eclipse.elk.core.meta 0.10.0-SNAPSHOT.",
+      "    .melk files with ELK's own meta-compiler, whose source is the same ELK tree",
+      "    (plugins/org.eclipse.elk.core.meta at 9bc93474).",
       "ELK: Copyright (c) 2017, 2021 Kiel University and others.",
       "",
       "Compiled into lib/elk-worker.min.js with ELK:",
@@ -215,11 +217,15 @@ const PREBUILT_AUDITED = {
       "    org.eclipse.xtext.xbase.lib-2.28.0-sources.jar at",
       "    https://repo1.maven.org/maven2/org/eclipse/xtext/org.eclipse.xtext.xbase.lib/2.28.0/.",
       "  EMF for GWT (com.genmymodel.emf.gwt emf-common and emf-ecore 2.12.4), under the Eclipse",
-      "    Public License 1.0, whose full text follows below: Copyright (c) 2002-2010 IBM Corporation",
-      "    and others. Its Source Code is available under the EPL-1.0 as",
+      "    Public License 1.0, whose full text follows below: Copyright IBM Corporation and others,",
+      "    and in part Ed Merks and others. Its Source Code is available under the EPL-1.0 as",
       "    emf-common-2.12.4-sources.jar and emf-ecore-2.12.4-sources.jar at",
-      "    https://repo1.maven.org/maven2/com/genmymodel/emf/gwt/, and at",
-      "    https://github.com/Axellience/emfgwt.",
+      "    https://repo1.maven.org/maven2/com/genmymodel/emf/gwt/ (the project is",
+      "    https://github.com/Axellience/emfgwt, which does not tag 2.12.4).",
+      "    Its XML Schema regular-expression engine (org.eclipse.emf.ecore.xml.type.internal.RegEx)",
+      "    derives from Apache Xerces and is also under the Apache Software License, Version 1.1,",
+      "    whose notice follows below the EPL-1.0. As that licence asks: This product includes",
+      "    software developed by the Apache Software Foundation (http://www.apache.org/).",
       "  Under the Apache License, Version 2.0, whose full text is reproduced in this document under",
       "  the Apache-2.0 components:",
       "    Guava 31.1-jre (com.google.common): Copyright (C) The Guava Authors.",
@@ -231,8 +237,8 @@ const PREBUILT_AUDITED = {
       "browserify's module prelude (browser-pack, Copyright James Halliday), and its UMD wrapper",
       "(umd, Copyright Forbes Lindesay).",
     ],
-    // EMF for GWT is EPL-1.0, so its full text is carried after the vendored notes.
-    licenceTexts: ["EPL-1.0.txt"],
+    // EMF for GWT is EPL-1.0, with a Xerces-derived part also under ASL 1.1: both texts in full.
+    licenceTexts: ["EPL-1.0.txt", "Xerces-ASL-1.1.txt"],
     apache: true,
   },
   "katex@0.16.47": {

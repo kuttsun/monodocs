@@ -111,16 +111,15 @@ export interface PdfGenerator {
 // 外してから呼ぶ。単一 HTML では非表示ページは display:none で幅が取れず図が壊れるため、
 // この「全ページ展開 → 描画」を PDF 側で行う（themes/mermaid.ts の設計コメント参照）。
 const PREPARE_MERMAID =
-  "document.querySelectorAll('.page[hidden]').forEach(function(el){el.removeAttribute('hidden');});" +
-  "if(typeof window.__sdRenderMermaid==='function')window.__sdRenderMermaid();";
+  "document.querySelectorAll('.page[hidden]').forEach(function(el){el.removeAttribute('hidden');});";
 
-// Whether every .mermaid holds its <svg>. mermaid sets data-processed="true" before it awaits the
-// render, so that attribute can be true while a diagram is still being laid out, and mermaid 12's
-// asynchronous ELK layout widens that window; a syntax error still ends in mermaid's error <svg>.
-// With no diagrams, every() is true at once.
-const MERMAID_DONE =
-  "Array.prototype.every.call(document.querySelectorAll('.mermaid'),function(el){" +
-  "return !!el.querySelector('svg');})";
+// Renders every diagram once the runtime is there (the CDN runtime arrives asynchronously) and
+// resolves when mermaid's run, and any run before it, has finished. A diagram mermaid cannot parse
+// ends the run like any other, drawn as mermaid's error diagram.
+const RENDER_MERMAID =
+  "new Promise(function(resolve){(function wait(){" +
+  "if(typeof window.__sdRenderMermaid==='function')resolve(window.__sdRenderMermaid());" +
+  "else setTimeout(wait,50);})();})";
 
 /** client Mermaid の描画完了を待つ上限（超えても PDF 生成は続行する）。 */
 const MERMAID_WAIT_TIMEOUT_MS = 30_000;
@@ -385,14 +384,16 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
 
       if (options.waitForMermaid) {
         await page.evaluate(`(function(){${PREPARE_MERMAID}})()`);
-        try {
-          await page.waitForFunction(`(function(){return ${MERMAID_DONE};})()`, {
-            timeout: MERMAID_WAIT_TIMEOUT_MS,
-          });
-        } catch {
-          // 描画が完了しなくても PDF 生成は続行する（cdn runtime でネットワーク不通の場合など。
-          // 当該図はソース表示のまま出力される）。
-        }
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        // Whichever settles first: the render, or the cap. A render that fails or is still running
+        // at the cap does not stop the PDF (the cdn runtime without a network, say: those diagrams
+        // print as their source), and its late outcome is caught so nothing is left unhandled.
+        await Promise.race([
+          page.evaluate(RENDER_MERMAID).catch(() => {}),
+          new Promise<void>((resolve) => {
+            timer = setTimeout(resolve, MERMAID_WAIT_TIMEOUT_MS);
+          }),
+        ]).finally(() => clearTimeout(timer));
       }
 
       // 本文のページ間リンク（hash route）を PDF 内で有効な内部リンクへ書き換える。

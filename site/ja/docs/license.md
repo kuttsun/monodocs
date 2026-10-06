@@ -32,10 +32,11 @@ SOFTWARE.
 
 ## 第三者ライセンス
 
-monodocs 自体は MIT です。依存は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 など）
-ですが、例外が 1 つあります。monodocs が埋め込む Mermaid ランタイムは Eclipse Layout
-Kernel（`elkjs`）を含み、これは弱いコピーレフトの **Eclipse Public License 2.0**
-（EPL-2.0）です。その中には、**Eclipse Public License 1.0** の EMF の一部もコンパイルされています。
+monodocs 自体は MIT です。依存は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 /
+Apache-1.1 など）ですが、monodocs が埋め込む Mermaid ランタイムの中に例外があります。
+Eclipse Layout Kernel（`elkjs`）は弱いコピーレフトの **Eclipse Public License 2.0**
+（EPL-2.0）で、その中には **Eclipse Public License 1.0** の EMF の一部もコンパイルされて
+います。
 
 - **文書に届くもの。** inline の Mermaid ランタイム（`mermaid.runtime: inline`、既定）で
   図を含む文書をビルドした HTML は、ELK を含むそのランタイムを、第三者表記とともに

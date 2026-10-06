@@ -31,10 +31,10 @@ SOFTWARE.
 ## Third-party licenses
 
 monodocs itself is MIT. Its dependencies are permissively licensed
-(MIT / ISC / BSD / Apache-2.0 and the like), with one exception: the Mermaid
-runtime monodocs embeds contains the Eclipse Layout Kernel (`elkjs`), under the
-**Eclipse Public License 2.0** (EPL-2.0), a weak copyleft license, and compiled into
-it, parts of EMF under the **Eclipse Public License 1.0**.
+(MIT / ISC / BSD / Apache-2.0 / Apache-1.1 and the like), with one exception in
+the Mermaid runtime monodocs embeds: the Eclipse Layout Kernel (`elkjs`), under
+the **Eclipse Public License 2.0** (EPL-2.0), a weak copyleft license, with parts
+of EMF compiled into it under the **Eclipse Public License 1.0**.
 
 - **What reaches your documents.** HTML built with the inline Mermaid runtime
   (`mermaid.runtime: inline`, the default) from a document with diagrams embeds
