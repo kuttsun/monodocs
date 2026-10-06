@@ -162,6 +162,13 @@ describe("Markdown math", () => {
     expect(found!.message).toContain("Energy $E=mc^2$");
   });
 
+  it("names the skipped heading itself when two headings share an ID", async () => {
+    await writeFile(join(dir, "b.adoc"), "= T\n\n[[dup]]\n== First\n\n[[dup]]\n==== Second\n");
+    const { result } = await build("# A\n");
+    const found = result.warnings.filter((w) => w.code === "heading/level-skipped");
+    expect(found.map((w) => w.message)).toEqual([expect.stringContaining('"Second"')]);
+  });
+
   it("keeps a formula a boundary under lineBreak: join", async () => {
     const { html } = await build("# T\n\n日本語の\n$x$\nです。\n", "sources:\n  lineBreak: join\n");
     expect(html).toMatch(/日本語の\n<span class="math math-inline"[^]*<\/span>\nです。/);

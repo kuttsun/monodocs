@@ -158,7 +158,7 @@ function limitSizes(math: Element): void {
     for (const [key, value] of Object.entries(node.properties)) {
       const m =
         typeof value === "string"
-          ? /^([-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?)([a-z]{2})$/i.exec(value.trim())
+          ? /^([-+]?(?:Infinity|(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?))([a-z]{2})$/i.exec(value.trim())
           : null;
       const perEm = m ? UNITS_PER_EM[m[2]!.toLowerCase()] : undefined;
       if (!m || perEm === undefined) continue;
@@ -189,7 +189,8 @@ const UNITS_PER_EM: Record<string, number> = {
   nd: 10 / (685 / 642),
   nc: 10 / (1370 / 107),
   sp: 10 * 65536,
-  px: 10 / (72.27 / 96),
+  // KaTeX's px is 803/800 of a point, not CSS's 1/96 inch.
+  px: 10 / (803 / 800),
 };
 
 // --- mathvariant --------------------------------------------------------------------------------

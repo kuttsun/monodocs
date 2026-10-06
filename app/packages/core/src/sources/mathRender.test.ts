@@ -72,6 +72,12 @@ describe("renderFormula", () => {
     expect(render("\\raisebox{100000cm}{x}").html).toContain('voffset="100em"');
     expect(render("\\raisebox{-100000pt}{x}").html).toContain('voffset="-100em"');
     expect(render("\\raisebox{2cm}{x}").html).toContain('voffset="2cm"');
+    // KaTeX's px: 1200px is 120.45em, 1000px 100.375em, 990px 99.37em.
+    expect(render("\\raisebox{1200px}{x}").html).toContain('voffset="100em"');
+    expect(render("\\raisebox{-1200px}{x}").html).toContain('voffset="-100em"');
+    expect(render("\\raisebox{990px}{x}").html).toContain('voffset="990px"');
+    expect(render(`\\raisebox{${"9".repeat(400)}em}{x}`).html).toContain('voffset="100em"');
+    expect(render(`\\raisebox{-${"9".repeat(400)}em}{x}`).html).toContain('voffset="-100em"');
   });
 
   it("returns KaTeX's reason for a formula it cannot parse", () => {
