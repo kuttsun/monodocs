@@ -200,7 +200,7 @@ docs/
     faq.md
 ```
 
-### 6.4 Math (decided in v0.14)
+### 6.4 Math (decided in v0.14, notation settled in v0.15)
 
 Math is unsupported, and syntax.md gives the reason: keeping the HTML self-contained means not
 introducing a MathJax or KaTeX dependency. The reason is out of date rather than wrong. KaTeX can
@@ -281,8 +281,137 @@ so the conditions do not depend on it, and the decision stands on both platforms
 conditions. 1.x could add it only behind an opt-in key, since every candidate delimiter can already
 appear in a document and 12.4 lets a minor release add only markup that none could contain; and a
 default that 1.0 sets cannot change before 2.0. Bringing it forward keeps the choice of recognising
-math by default open, to be made with the notation (v0.15). The notation, the alternatives it
-was chosen over, and the design of copying and search are recorded here when v0.15 settles them.
+math by default open, to be made with the notation (v0.15). The notation and the alternatives
+it was chosen over follow; the design of copying and search is recorded here when v0.15 settles it.
+
+**The notation (decided in v0.15).**
+
+Markdown takes the four forms GitHub renders, read by GitHub's rules:
+
+| Form | Use |
+| --- | --- |
+| `$...$` | inline math |
+| ``$`...`$`` | inline math, the backticks keeping Markdown out of the formula |
+| `$$...$$` | display math in a paragraph of its own, inline math within other text |
+| a fenced code block whose language is `math` | display math |
+
+A document written for GitHub renders the same formulas here. The reference is GitHub's renderer, not
+a library. GitHub documents the forms but not the rules that decide where a formula starts and ends, and
+remark-math, the obvious library, reads them differently: with its single `$` on, `It costs $5 and $10
+today.` becomes a formula `5 and `, which GitHub leaves as text, and with it off, a paragraph that is
+only `$$x$$` is inline where GitHub displays it, and a line starting `$$` with no closing one swallows
+the rest of the document. monodocs therefore parses math itself. Its tests pin cases to GitHub's output
+as captured on a stated date through `gh api markdown -f mode=gfm`, not to the live renderer, which has
+no version and may change; a later capture that differs is a decision to follow it or not, made then.
+That mode is how GitHub renders comments; the API's mode for repository files renders no math at all,
+so a file's rendering cannot be captured this way, and what a comment shows is taken as the rule. The
+capture is kept in full — every input as sent, the options, and GitHub's HTML — in
+`app/packages/core/scripts/data/github-math-2026-10-06.json`, where a formula is a `<math-renderer>`
+element whose class says inline or display. It includes formulas across a newline: a single-`$`
+formula does not cross one (`a $x` then `y$ b` is text, the newline a `<br>` in a comment), and a
+`$$...$$` one does (`$$x` then `y$$` is display math), and that is the rule here, whether or not a
+repository file would differ.
+
+Captured on 2026-10-06 (math: what GitHub renders as a formula):
+
+| Input | GitHub |
+| --- | --- |
+| `Let $x$ be real.` | math: `x` |
+| `It costs $5 and $10 today.` | text |
+| `Pay $4.50/$5 now.` | text |
+| `Set $HOME and $PATH.` | text |
+| `$HOME/$USER is set.` | text |
+| `Price $$5 and $$6.` | text |
+| `a $$ x $$ b` | text |
+| `Price $$5$$ here.` | math: `5` |
+| `Between $5 and 10$ or so.` | math: `5 and 10` |
+| `costs 5$, $10, or 15$` | math: `10, or 15` |
+| `pay $5; refund $` | math: `5; refund ` |
+| `from $5 up to 10$` | math: `5 up to 10` |
+| `tip: $5$ max` | math: `5` |
+| `$(pwd)/$(ls)` | math: `(pwd)/` |
+| `Between \$5 and 10$ or so.` | math: `5 and 10` |
+| ``Use $`a+b`$ here.`` | math: `a+b` |
+| `[$x$](u)` | text (link text) |
+| `*$x$*`, `_a $x$ b_`, `***a $x$ b***`, `**a *$x$* b**`, `# *$x$*`, `> *$x$*` | text (in italics) |
+| `[**$x$**](u)` | text (in link text) |
+| `**bold $x$**`, `**bold $x$ here**`, `__a $x$__`, `~~$x$~~` | math: `x` |
+| `Cost $x = \$4$ here` | math: `4` |
+| `a $\$$ b` | text |
+| ``Use $`\sqrt{\$4}`$ here.`` | math: `\sqrt{\$4}` |
+| `$a*b*c$` | text (the emphasis wins) |
+| `` `$x$` ``, `![$x$](i.png)` | text (code span, image alt) |
+| a paragraph that is only `$$x$$`; `$$` on lines around `x`; `$$x$$` and `$$y$$` on two lines | display math |
+| `$$x$$` on a line between two lines of text in one paragraph | inline math |
+| `To split <span>$</span>100 in half, we calculate $100/2$` | math: `100/2` |
+| `$x$` in a table cell | inline math |
+| a fenced `math` block | display math |
+
+So the common forms of money and shell variables stay text, and the forms above marked math read as math
+here too, as they do on GitHub. The one deliberate difference is `\$`. GitHub's way out is
+`<span>$</span>`, and monodocs drops raw HTML in Markdown, so `\$` is made an escape instead: a
+backslash before a dollar sign never opens or closes a formula. Outside a formula it prints a `$`;
+inside `$...$` or `$$...$$` it stays `\$`, TeX's dollar sign, which is what GitHub tells authors to
+write there. Inside ``$`...`$`` it is part of the code span, as on GitHub. So `Between \$5 and 10$`
+stays text, `Cost $x = \$4$ here` is the formula `x = \$4`, and `a $\$$ b` is the formula `\$`, where
+GitHub renders math, the formula `4`, and text. Every input with a `\$` outside ``$`...`$`` may differ
+from GitHub this way, and those cases are the tests not pinned to GitHub. GitHub's own escape still
+works as it does there: an inline HTML tag is a boundary no formula crosses, so the `$` in
+`<span>$</span>` is text, and the tags are then dropped as monodocs drops raw HTML, leaving the `$`. An
+HTML comment is not a boundary, as on GitHub: `$x<!-- c -->y$` is the formula `xy`. A document written
+for GitHub that puts `\$` in a formula, as GitHub advises, comes out as its author meant here, so the
+difference corrects rather than breaks it.
+
+AsciiDoc keeps Asciidoctor's own markup: `latexmath:[...]` and the `[latexmath]` block, rendered
+whatever `:stem:` says, and `stem:[...]` and the `[stem]` block, rendered when they mean latexmath —
+`:stem:` set to `latexmath`, `latex`, or `tex`, unless a block's style says otherwise
+(`[stem,asciimath]`), or the block's style says so (`[stem,latexmath]`).
+They are rendered wherever Asciidoctor produces them, a monospace span or a block with macros
+substituted included, since Asciidoctor treats them as math there. Otherwise `stem` means asciimath:
+with `:stem:` unset, set with no value, or set to anything else, and `asciimath:[...]` always.
+asciimath is not rendered: KaTeX does not read it. Its output is unchanged, Asciidoctor's `\$...\$`
+as before, and a warning names the file and the formula and points at `:stem: latexmath` or
+`latexmath:[...]`; like any warning, it fails `monodocs validate --strict`. A 1.x release may add a
+converter, but only behind a key, since rendering what 1.0 printed as text changes an existing
+document's output (12.4); rendering asciimath by default would wait for 2.0.
+
+Math is on by default, and `math.enabled: false` turns it off. Default on is why math had to come
+before 1.0 (12.4). With the key off, the output is what the previous release produced: Markdown
+math forms print as text, AsciiDoc's latexmath keeps MathJax's `\(...\)` / `\[...\]` delimiters and
+asciimath its `\$...\$`, and no asciimath warning is raised.
+
+What an existing document could contain whose meaning this changes:
+
+- in Markdown, a `$...$` or `$$...$$` that GitHub reads as math (with a `\$` in it, by the rule above),
+  which printed as text, including in a heading (its text, and so its slug, its table-of-contents
+  entry, and what search indexes), a table cell, or bold or struck-through text
+- `$` immediately followed by a code span and then `$`, which printed a code span between two dollar
+  signs
+- a fenced code block whose language is `math`, which printed as code
+- in AsciiDoc, `latexmath:[...]`, the `[latexmath]` block, and `stem:[...]` or the `[stem]` block when
+  they mean latexmath, which printed with MathJax's `\(...\)` / `\[...\]` delimiters
+- in AsciiDoc, asciimath: its output is unchanged, but a new warning appears in the build's output and
+  in `monodocs validate`, `--format json` included, and fails `validate --strict`
+
+What does not change: dollar signs inside a code span or a code block, a link's text, an image's alt
+text, and italics (bold italics, and anything inside italics, included), which GitHub leaves as written,
+and `\$` outside a formula. Raw HTML, which monodocs drops from
+Markdown, carries no math either; Markdown paragraphs between HTML blocks are Markdown, and follow the
+rules above.
+
+Alternatives considered:
+
+- **GitHub's forms without the single `$`.** Fewer cases of money become math (`Price $$5$$ here.`
+  still does), but `$x$`, the first form GitHub documents, stays text. Rejected: the cases the single
+  `$` misreads can be escaped with `\$`, while the mismatch with GitHub would be in every document
+  that uses it.
+- **remark-math as it is.** Its rules differ from GitHub's in both directions, as measured above.
+  Rejected; monodocs parses math itself, against GitHub's output.
+- **LaTeX's `\(...\)` and `\[...\]`.** Unambiguous, but GitHub does not render them, and in Markdown
+  `\(` is an escaped `(`, so an existing document's text changes. Rejected.
+- **Off by default, behind a key.** No existing document changes, but every author who wants math has
+  to find the key, until 2.0. Rejected in favour of on by default with a key to turn it off.
+
 
 ---
 
@@ -4239,8 +4368,9 @@ Completion criteria:
   maintenance.md says that the lockfile audit cannot see inside a prebuilt bundle and no longer says
   that `site/` never ships, and the site samples are regenerated and carry the notices
 - The math notation for inline and display formulas in Markdown, and its AsciiDoc counterpart, are
-  recorded in 6.4 with the alternatives and why they lost. Prose about currency is not read as math
-  by the choice itself, rather than by a warning after the fact, and any spelling an existing
+  recorded in 6.4 with the alternatives and why they lost. The forms of money tabulated there come out
+  as the table classifies them — text stays text, math is math — by the notation's own rules, checked
+  against the renderer the notation follows, and any spelling an existing
   document could contain whose meaning the choice changes is listed there. Whether math is
   recognised by default or only behind a key is decided there with its reason, and what happens to
   `asciimath` is decided and stated
