@@ -300,8 +300,9 @@ function filler(n: number, word: string): string {
   return Array.from({ length: n }, (_, i) => `${word} paragraph ${i} of plain text.`).join("\n\n");
 }
 
-// These launch a real Chromium, and most of them print a PDF twice or more, which takes well over the
-// default 20 s on a loaded runner, as the other real-Chromium PDF tests already allow for.
+// These launch a real Chromium, and most of them print a PDF twice or more. Under the default 20 s,
+// one of them hit the limit on Linux CI twice in a row (and others locally); the other real-Chromium
+// PDF tests already allow 60-240 s.
 describe.skipIf(!chromium)(
   "a printed table of contents (real Chromium)",
   { timeout: 120_000 },
