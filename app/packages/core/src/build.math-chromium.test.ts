@@ -24,7 +24,9 @@ beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "monodocs-math-chromium-"));
   await writeFile(
     join(dir, "a.md"),
-    "# T\n\n$$\\cancel{\\colorbox{white}{abcdefghijkl}}$$\n\n$$\\rule{80em}{0.1em}+x$$\n",
+    "# T\n\n$$\\cancel{\\colorbox{white}{abcdefghijkl}}$$\n\n$$\\rule{80em}{0.1em}+x$$\n\n" +
+      "$$a\\raisebox{3em}{x}b$$\n\n$$a\\raisebox{-3em}{x}b$$\n\n" +
+      "$$a\\mathllap{XYZ}b \\quad c\\mathclap{XYZ}d$$\n",
   );
   const configFile = join(dir, "monodocs.config.yml");
   await writeFile(configFile, "");
@@ -75,6 +77,30 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           return getComputedStyle(wide).overflowX;
         });
       expect(await overflow()).toBe("auto");
+      const placed = await page.evaluate(() => {
+        const displays = document.querySelectorAll("#content .math-display");
+        // The moved term lies inside the display's box, which cuts off what lies outside it.
+        const inside = (display: Element) => {
+          const box = display.getBoundingClientRect();
+          const term = display.querySelector("mpadded mi, mpadded mtext")!.getBoundingClientRect();
+          return term.top >= box.top && term.bottom <= box.bottom;
+        };
+        const laps = displays[4]!.querySelectorAll("mpadded");
+        const edges = [...laps].map((pad) => {
+          const own = pad.getBoundingClientRect();
+          const text = pad.querySelector("mi, mtext")!.parentElement!.getBoundingClientRect();
+          return { at: own.left, left: text.left, right: text.right };
+        });
+        return { raised: inside(displays[2]!), lowered: inside(displays[3]!), edges };
+      });
+      // A raised or lowered term is not cut off by the display's scroll box.
+      expect(placed.raised).toBe(true);
+      expect(placed.lowered).toBe(true);
+      // \\mathllap ends where it stands; \\mathclap is centred on it.
+      const [llap, clap] = placed.edges;
+      expect(Math.abs(llap!.right - llap!.at)).toBeLessThan(1);
+      expect(Math.abs((clap!.left + clap!.right) / 2 - clap!.at)).toBeLessThan(1);
+
       await page.emulateMediaType("print");
       expect(await overflow()).toBe("visible");
     } finally {

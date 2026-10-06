@@ -162,59 +162,118 @@ function dropClasses(math: Element): boolean {
   return numbered;
 }
 
-/** A TeX length in em, signed, and whether it was written relative (`+6pt`), or undefined. */
-function lengthInEm(value: unknown): { em: number; relative: boolean } | undefined {
+/** A TeX length as written: its sign, size, and unit, and whether it was written relative (`+6pt`). */
+interface Length {
+  size: number;
+  unit: string;
+  relative: boolean;
+}
+
+function parseLength(value: unknown): Length | undefined {
   if (typeof value !== "string") return undefined;
   const m = /^([-+]?)(Infinity|(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?)([a-z]{2})$/i.exec(value.trim());
-  const perEm = m ? UNITS_PER_EM[m[3]!.toLowerCase()] : undefined;
-  if (!m || perEm === undefined) return undefined;
-  const size = Number(m[2]) / perEm;
-  return { em: m[1] === "-" ? -size : size, relative: m[1] !== "" };
+  const unit = m?.[3]!.toLowerCase();
+  if (!m || unit === undefined || UNITS_PER_EM[unit] === undefined) return undefined;
+  const size = Number(m[2]);
+  return { size: m[1] === "-" ? -size : size, unit, relative: m[1] !== "" };
 }
 
-/** An em length as MathML Core reads it, within {@link MAX_SIZE_EM}. */
-function em(size: number): string {
-  const clamped = Math.max(-MAX_SIZE_EM, Math.min(MAX_SIZE_EM, size));
-  return `${Number(clamped.toFixed(4))}em`;
-}
+/** The units CSS reads as TeX means them (TeX's point is within 0.4% of CSS's); the others are converted. */
+const CSS_UNITS = new Set(["em", "ex", "pt", "mm", "cm", "in", "pc"]);
 
 /**
- * Write every length as MathML Core reads it. KaTeX writes TeX's units (`bp`, `dd`, `mu`, and the
- * rest), which are not CSS lengths and would be ignored, and an `mpadded` that grows its content by a
- * signed amount (`width="+6pt" lspace="3pt"`, for `\colorbox` and `\fcolorbox`), which MathML Core
- * reads as an absolute size, so that the box would not fit what it holds. Lengths become em, clamped
- * to {@link MAX_SIZE_EM} so that one formula cannot break the page; a growing `mpadded` becomes
- * padding around its content.
+ * A TeX length as MathML Core reads it, within {@link MAX_SIZE_EM}: a unit CSS has stays, so that an
+ * absolute length stays absolute and a relative one relative; `mu` becomes em, as it is a fraction of
+ * one; TeX's other absolute units (`bp`, `dd`, `cc`, `nd`, `nc`, `sp`, and KaTeX's `px`) become points.
+ */
+function cssLength(length: Length): string {
+  const inEm = length.size / UNITS_PER_EM[length.unit]!;
+  if (!(Math.abs(inEm) <= MAX_SIZE_EM)) return `${inEm < 0 ? "-" : ""}${MAX_SIZE_EM}em`;
+  const round = (n: number) => Number(n.toFixed(4));
+  if (CSS_UNITS.has(length.unit)) return `${round(length.size)}${length.unit}`;
+  if (length.unit === "mu") return `${round(inEm)}em`;
+  return `${round(inEm * 10)}pt`;
+}
+
+/** A length in em, for arithmetic between lengths. */
+const inEm = (length: Length | undefined) =>
+  length ? length.size / UNITS_PER_EM[length.unit]! : 0;
+
+/**
+ * Write every length as MathML Core reads it (see {@link cssLength}), and the `mpadded` forms it reads
+ * differently from KaTeX:
+ *
+ * - a signed amount that grows the content (`width="+6pt" lspace="3pt"`, for `\colorbox` and
+ *   `\fcolorbox`) is read as an absolute size, so that the box would not fit what it holds: it becomes
+ *   padding around the content;
+ * - a `voffset` alone (`\raisebox`) moves the content without making room for it, so that a display
+ *   formula's box cuts it off: room is made on the side it moves to, as TeX does;
+ * - a size in the content's own width (`lspace="-1width"`, for `\mathllap` and `\mathclap`) is not a
+ *   length at all: the content is moved by that fraction of its width with a transform.
  */
 function normalizeLengths(math: Element): void {
   visit(math, "element", (node: Element) => {
-    if (node.tagName === "mpadded") growByPadding(node);
+    if (node.tagName === "mpadded") {
+      growByPadding(node);
+      makeRoomForOffset(node);
+      shiftByOwnWidth(node);
+    }
     for (const [key, value] of Object.entries(node.properties)) {
-      const length = lengthInEm(value);
-      if (length) node.properties[key] = em(length.em);
+      const length = parseLength(value);
+      if (length) node.properties[key] = cssLength(length);
     }
   });
 }
 
-function growByPadding(node: Element): void {
-  const width = lengthInEm(node.properties.width);
-  const height = lengthInEm(node.properties.height);
-  const depth = lengthInEm(node.properties.depth);
-  if (!width?.relative && !height?.relative && !depth?.relative) return;
-  const lspace = lengthInEm(node.properties.lspace)?.em ?? 0;
-  const voffset = lengthInEm(node.properties.voffset)?.em ?? 0;
-  const padding = {
-    left: lspace,
-    right: (width?.relative ? width.em : 0) - lspace,
-    top: (height?.relative ? height.em : 0) - voffset,
-    bottom: (depth?.relative ? depth.em : 0) + voffset,
-  };
-  // Shrinking has no padding to become; such an mpadded is left as KaTeX wrote it.
-  if (Object.values(padding).some((p) => p < 0)) return;
-  for (const key of ["width", "height", "depth", "lspace", "voffset"]) delete node.properties[key];
-  const style = `padding: ${em(padding.top)} ${em(padding.right)} ${em(padding.bottom)} ${em(padding.left)}`;
+function addStyle(node: Element, style: string): void {
   node.properties.style =
     typeof node.properties.style === "string" ? `${style}; ${node.properties.style}` : style;
+}
+
+function growByPadding(node: Element): void {
+  const width = parseLength(node.properties.width);
+  const height = parseLength(node.properties.height);
+  const depth = parseLength(node.properties.depth);
+  if (!width?.relative && !height?.relative && !depth?.relative) return;
+  const lspace = parseLength(node.properties.lspace);
+  const voffset = parseLength(node.properties.voffset);
+  const padding = [
+    (height?.relative ? inEm(height) : 0) - inEm(voffset),
+    (width?.relative ? inEm(width) : 0) - inEm(lspace),
+    (depth?.relative ? inEm(depth) : 0) + inEm(voffset),
+    inEm(lspace),
+  ];
+  // Shrinking has no padding to become; such an mpadded is left as KaTeX wrote it.
+  if (padding.some((p) => p < 0)) return;
+  for (const key of ["width", "height", "depth", "lspace", "voffset"]) delete node.properties[key];
+  // KaTeX grows a box by points, a fixed amount, so the padding is in points too.
+  const pt = (n: number) => cssLength({ size: n * 10, unit: "pt", relative: false });
+  addStyle(node, `padding: ${padding.map(pt).join(" ")}`);
+}
+
+function makeRoomForOffset(node: Element): void {
+  const voffset = parseLength(node.properties.voffset);
+  if (!voffset || voffset.size === 0) return;
+  if (node.properties.height !== undefined || node.properties.depth !== undefined) return;
+  const room = cssLength({ ...voffset, size: Math.abs(voffset.size), relative: false });
+  addStyle(node, voffset.size > 0 ? `padding-top: ${room}` : `padding-bottom: ${room}`);
+}
+
+function shiftByOwnWidth(node: Element): void {
+  const m =
+    typeof node.properties.lspace === "string"
+      ? /^([-+]?(?:\d+\.?\d*|\.\d+))width$/.exec(node.properties.lspace.trim())
+      : null;
+  if (!m) return;
+  delete node.properties.lspace;
+  node.children = [
+    {
+      type: "element",
+      tagName: "mrow",
+      properties: { style: `transform: translateX(${Number(m[1]) * 100}%)` },
+      children: node.children,
+    },
+  ];
 }
 
 /**

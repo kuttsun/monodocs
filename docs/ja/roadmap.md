@@ -512,11 +512,15 @@ TeX を文字として持っており、見出しの ID はそのため TeX か�
   別行立ての数式の最上位にある `\tag{}`（星付きの環境の後ろに書くものを含む）は描くが、右端には置かれない。
   KaTeX は MathML Core が無視する `width` 属性で位置を決めるからである。番号の付く環境の中の `\tag{}` は KaTeX が
   まるごと落とすので、警告は星付きの形を案内する。
-  長さはすべて em で書く。KaTeX は TeX の単位（`bp`、`dd`、`mu`）を残すが、それは CSS の長さではなく、MathML
-  Core に無視されるからである。100em を超える長さ（`\rule`、`\kern`、`\hspace`、`\raisebox`）は 100em に
-  切り詰める。KaTeX 自身の `maxSize` は、MathML に書くすべての大きさには届かないからである。KaTeX が
-  `\colorbox` と `\fcolorbox` の周りに符号付きの `mpadded`（`width="+6pt"`）で広げる箱は、MathML Core が絶対的な
-  大きさとして読むので、項の周りの padding にする。KaTeX は書体の違う隣り合う数字を 1 つのトークンにまとめる
+  長さはすべて CSS にある単位で書く。KaTeX は TeX の単位（`bp`、`dd`、`sp`、`mu`、独自の `px`）を残すが、MathML
+  Core はそれを無視するからである。CSS にある単位はそのまま残し、絶対的な長さは `\Huge` の下でも絶対的なままに
+  する。`mu` は em に、TeX のほかの単位はポイントにする。100em を超える長さ（`\rule`、`\kern`、`\hspace`、
+  `\raisebox`）は 100em に切り詰める。KaTeX 自身の `maxSize` は、MathML に書くすべての大きさには届かないからで
+  ある。MathML Core が KaTeX の意図と違って読む `mpadded` の形を 3 つ書き換える。`\colorbox` と `\fcolorbox` の
+  周りを符号付きの大きさ（`width="+6pt"`）で広げる箱はポイントの padding にする。項を動かすだけの `\raisebox`
+  は、TeX と同じく、動く側に場所を空ける。項自身の幅（`lspace="-1width"`）でずらす `\mathllap` と `\mathclap`
+  は CSS の transform でずらす。グリフは MathML が与える箱の外に少しはみ出すので、別行立ての数式の箱には
+  上下に 4 分の 1 em の余白を置く。KaTeX は書体の違う隣り合う数字を 1 つのトークンにまとめる
   （`\mathbf{0}\mathbb{0}` は太字の `00` 1 つになる）。これは KaTeX のふるまいで、検出しない。
 - **囲み。** KaTeX は `\cancel`、`\bcancel`、`\xcancel`、`\sout`、`\boxed`、`\fbox`、`\angl` を `menclose` と
   して書くが、MathML Core にはそれが無いので、Chromium は項だけを描き、その周りを描かない。打ち消した項が、

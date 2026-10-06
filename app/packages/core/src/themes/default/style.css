@@ -717,6 +717,8 @@ body.content-wide #content {
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  /* Glyphs reach a little past the box MathML gives them, and the scroll box would cut that off. */
+  padding: 0.25em 0;
 }
 
 /* What a formula draws as a background — `\rule`, `\colorbox` — is part of what it says, so it is

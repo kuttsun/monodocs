@@ -71,13 +71,14 @@ describe("renderFormula", () => {
     expect(render("a \\kern{-100000em} b").html).not.toMatch(/"-?1000+em"/);
     expect(render("\\raisebox{100000cm}{x}").html).toContain('voffset="100em"');
     expect(render("\\raisebox{-100000pt}{x}").html).toContain('voffset="-100em"');
-    // Within the cap, a length is written in em, which MathML Core reads, whatever TeX unit it had.
-    expect(render("\\raisebox{2cm}{x}").html).toContain('voffset="5.6906em"');
-    expect(render("\\raisebox{72bp}{x}").html).toContain('voffset="7.227em"');
+    // Within the cap, a unit CSS has stays, so that an absolute length stays absolute, and TeX's
+    // other units become points, which MathML Core reads.
+    expect(render("\\raisebox{2cm}{x}").html).toContain('voffset="2cm"');
+    expect(render("\\raisebox{72bp}{x}").html).toContain('voffset="72.27pt"');
     // KaTeX's px: 1200px is 120.45em, 1000px 100.375em, 990px 99.37em.
     expect(render("\\raisebox{1200px}{x}").html).toContain('voffset="100em"');
     expect(render("\\raisebox{-1200px}{x}").html).toContain('voffset="-100em"');
-    expect(render("\\raisebox{990px}{x}").html).toContain('voffset="99.3712em"');
+    expect(render("\\raisebox{990px}{x}").html).toContain('voffset="993.7125pt"');
     expect(render(`\\raisebox{${"9".repeat(400)}em}{x}`).html).toContain('voffset="100em"');
     expect(render(`\\raisebox{-${"9".repeat(400)}em}{x}`).html).toContain('voffset="-100em"');
   });
@@ -104,13 +105,21 @@ describe("renderFormula", () => {
     expect(drawn("\\phase{x}").html).not.toContain("menclose");
   });
 
-  it("writes every length in em, and a box that grows its content as padding", () => {
-    const { html } = render("\\mkern18mu \\kern1dd \\colorbox{red}{abcdefgh}");
-    expect(html).not.toMatch(/="[-+]?[\d.]+(?:mu|dd|bp|pt|cc|sp)"/);
-    expect(html).toMatch(
-      /<mpadded mathbackground="red" style="padding: 0\.3em 0\.3em 0\.3em 0\.3em">/,
+  it("writes every length in a unit CSS has, and the mpadded forms MathML Core reads otherwise", () => {
+    const lengths = render("\\mkern18mu \\kern1dd \\kern2sp \\colorbox{red}{abcdefgh}").html!;
+    expect(lengths).not.toMatch(/="[-+]?[\d.]+(?:mu|dd|bp|cc|sp|nd|nc|px)"/);
+    // \colorbox grows its content by 3pt on each side: padding, in points, not a size.
+    expect(lengths).toMatch(/<mpadded mathbackground="red" style="padding: 3pt 3pt 3pt 3pt">/);
+    expect(lengths).not.toMatch(/<mpadded[^>]*width=/);
+    // \raisebox makes room on the side the content moves to.
+    expect(render("\\raisebox{3em}{x}").html).toMatch(/voffset="3em" style="padding-top: 3em"/);
+    expect(render("\\raisebox{-3em}{x}").html).toMatch(
+      /voffset="-3em" style="padding-bottom: 3em"/,
     );
-    expect(html).not.toMatch(/<mpadded[^>]*width=/);
+    // \mathllap and \mathclap move their content by its own width.
+    expect(render("a\\mathllap{XYZ}b").html).toContain('style="transform: translateX(-100%)"');
+    expect(render("a\\mathclap{XYZ}b").html).toContain('style="transform: translateX(-50%)"');
+    expect(render("a\\mathllap{XYZ}b").html).not.toContain('width"');
   });
 
   it("returns KaTeX's reason for a formula it cannot parse", () => {
