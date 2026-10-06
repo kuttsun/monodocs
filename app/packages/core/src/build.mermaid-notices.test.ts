@@ -82,6 +82,8 @@ describe("the Mermaid runtime notices", () => {
     expect(notices).toContain("Sebastian McKenzie and other contributors");
     expect(notices).toContain("adapted from Facebook's React");
     expect(notices).toContain("https://stackoverflow.com/a/19303725");
+    expect(notices).toContain("https://creativecommons.org/licenses/by-sa/3.0/");
+    expect(notices).toContain("https://stackoverflow.com/a/1890233");
     expect(notices).toContain("Ralf S. Engelschall");
     expect(notices).toContain("Event object based on jQuery events");
     expect(notices).toContain("Copyright Joyent, Inc. and other Node contributors.");
@@ -119,6 +121,8 @@ describe("the Mermaid runtime notices", () => {
     expect(await check(notices.replace(/^Permission is hereby granted.*\n/m, ""))).toMatch(
       /edited after/,
     );
+    // The header too: dompurify's licence election.
+    expect(await check(notices.replace(/^Note: "dompurify".*\n.*\n/m, ""))).toMatch(/edited after/);
     expect(await check(notices.replace(/^Generator: \w+$/m, "Generator: 0000"))).toMatch(
       /changed after/,
     );
@@ -133,6 +137,7 @@ describe("the Mermaid runtime notices", () => {
     ) as unknown;
     const cites: string[] = ownSourceCitations(map);
     expect(cites.some((c) => c.includes("entity-decode/blob/v2.0.1"))).toBe(true);
+    expect(cites.some((c) => c.includes("From this stack exchange question"))).toBe(true);
     // esbuild's closing licence comment is not attributed to the parser's last source file.
     expect(cites.some((c) => c.includes("Jeremy Ashkenas"))).toBe(false);
   });

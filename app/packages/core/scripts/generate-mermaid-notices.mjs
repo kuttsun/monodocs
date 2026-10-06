@@ -123,7 +123,9 @@ const PREBUILT_AUDITED = {
       "    Copyright (c) 2014-present Sebastian McKenzie and other contributors (@babel/helpers).",
       "It also contains",
       "  RandomSeed.nextDouble, adapted from a Stack Overflow answer by Antti Kissaniemi",
-      "    (https://stackoverflow.com/a/19303725), which Stack Overflow marks CC BY-SA 4.0.",
+      "    (https://stackoverflow.com/a/19303725), posted 2013-10-10 and so licensed under CC BY-SA 3.0",
+      "    (https://creativecommons.org/licenses/by-sa/3.0/), the licence Stack Overflow applied to",
+      "    contributions of that date. The code is unchanged in the answer's later revisions.",
     ],
   },
   "layout-base@2.0.1": {
@@ -137,12 +139,20 @@ const PREBUILT_AUDITED = {
       "    Copyright (c) 2014-present Sebastian McKenzie and other contributors (@babel/helpers).",
       "It also contains",
       "  RandomSeed.nextDouble, adapted from a Stack Overflow answer by Antti Kissaniemi",
-      "    (https://stackoverflow.com/a/19303725), which Stack Overflow marks CC BY-SA 4.0.",
+      "    (https://stackoverflow.com/a/19303725), posted 2013-10-10 and so licensed under CC BY-SA 3.0",
+      "    (https://creativecommons.org/licenses/by-sa/3.0/), the licence Stack Overflow applied to",
+      "    contributions of that date. The code is unchanged in the answer's later revisions.",
     ],
     apache: true,
   },
   "marked@16.3.0": {},
   "mermaid@11.17.2": {
+    vendored: [
+      "src/diagrams/gantt/ganttRenderer.js contains checkUnique, adapted from a Stack Overflow answer",
+      "by Justin Johnson (https://stackoverflow.com/a/1890233), posted 2009-12-12 and so licensed",
+      "under CC BY-SA 2.5 (https://creativecommons.org/licenses/by-sa/2.5/), the licence Stack",
+      "Overflow applied to contributions of that date.",
+    ],
     // src/utils.ts copies entity-decode's browser decoder ("source: …/entity-decode/blob/v2.0.1").
     bundled: [
       {
@@ -203,7 +213,7 @@ const PREBUILT_AUDITED = {
 export function ownSourceCitations(map) {
   const cites = [];
   const re =
-    /(source:|adapted from|ported from|copied from|taken from|copyright|licen[cs]ed under)/i;
+    /(source:|adapted from|ported from|copied from|taken from|from this|copyright|licen[cs]ed under|stackoverflow\.com|stackexchange\.com)/i;
   map.sources.forEach((source, i) => {
     const content = map.sourcesContent?.[i] ?? "";
     let at = source;
@@ -572,8 +582,9 @@ export async function render(components, mermaidVersion) {
   const text = [...blocks.values()]
     .map((b) => `${SEP}\n${b.labels.join("\n")}\n${SUB}\n${b.body}\n`)
     .join("\n");
-  // The digest covers everything after the header, so --check sees a hand edit to any notice.
-  return `${header.replace("{digest}", digestOf(text))}\n${text}`;
+  // The digest covers the whole file but its own value, so --check sees a hand edit anywhere.
+  const file = `${header}\n${text}`;
+  return file.replace("{digest}", digestOf(file));
 }
 
 async function main() {
@@ -603,8 +614,7 @@ async function main() {
       process.exit(1);
     }
     const digest = /^Digest: (\w+)$/m.exec(text)?.[1];
-    const afterHeader = text.slice(text.indexOf(`${SEP}\n`));
-    if (digest !== digestOf(afterHeader)) {
+    if (digest !== digestOf(text.replace(/^Digest: \w+$/m, "Digest: {digest}"))) {
       console.error("mermaid-notices.txt was edited after it was generated; regenerate it");
       process.exit(1);
     }
@@ -623,7 +633,8 @@ async function main() {
   if (cites.length > 0) {
     console.log(`mermaid's own sources cite (audit by hand):\n  ${cites.join("\n  ")}`);
   }
-  console.log(`mermaid-notices: ${NOTICES_FILE} (${components.length} components)`);
+  const shown = NOTICES_FILE instanceof URL ? fileURLToPath(NOTICES_FILE) : NOTICES_FILE;
+  console.log(`mermaid-notices: ${shown} (${components.length} components)`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) await main();
