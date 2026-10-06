@@ -203,7 +203,8 @@ describe("the Mermaid runtime notices", () => {
         "<script>{{appJs}}</script>{{bodyScripts}}</body></html>",
     );
     const html = await build(
-      `mermaid:\n  runtime: inline\nhtml:\n  branding: false\n  theme: "${theme}"\n`,
+      // Relative to the configuration file, so a Windows path never meets YAML's escapes.
+      'mermaid:\n  runtime: inline\nhtml:\n  branding: false\n  theme: "./theme"\n',
     );
     expect(count(html, HEADER)).toBe(1);
   });
