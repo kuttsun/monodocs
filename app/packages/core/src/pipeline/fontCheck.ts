@@ -51,6 +51,37 @@ const MAX_SAMPLES = 8;
 const MAX_MATH_FONTS = 8;
 
 /**
+ * MathML Core's italic mapping, which `text-transform: math-auto` applies to a text of one
+ * character: each entry maps `count` code points from `from` on to `to` on.
+ */
+const MATH_ITALIC: ReadonlyArray<readonly [from: number, to: number, count: number]> = [
+  [0x41, 0x1d434, 26], // A-Z
+  [0x61, 0x1d44e, 7], // a-g
+  [0x68, 0x210e, 1], // h, which the alphanumerics leave to Letterlike Symbols
+  [0x69, 0x1d456, 18], // i-z
+  [0x131, 0x1d6a4, 1], // dotless i
+  [0x237, 0x1d6a5, 1], // dotless j
+  [0x391, 0x1d6e2, 17], // Alpha-Rho
+  [0x3f4, 0x1d6f3, 1], // capital theta symbol, where U+03A2 has none
+  [0x3a3, 0x1d6f4, 7], // Sigma-Omega
+  [0x2207, 0x1d6fb, 1], // nabla
+  [0x3b1, 0x1d6fc, 25], // alpha-omega
+  [0x2202, 0x1d715, 1], // partial
+  [0x3f5, 0x1d716, 1], // epsilon symbol
+  [0x3d1, 0x1d717, 1], // theta symbol
+  [0x3f0, 0x1d718, 1], // kappa symbol
+  [0x3d5, 0x1d719, 1], // phi symbol
+  [0x3f1, 0x1d71a, 1], // rho symbol
+  [0x3d6, 0x1d71b, 1], // pi symbol
+];
+
+/** The code point Chromium draws for a one-character `math-auto` text, for the tests. */
+export function mathItalicOf(code: number): number {
+  const entry = MATH_ITALIC.find(([from, , count]) => code >= from && code < from + count);
+  return entry === undefined ? code : entry[1] + code - entry[0];
+}
+
+/**
  * The browser-side check.
  *
  * **Detection.** Three ways of asking whether a glyph exists were measured in the development
@@ -105,37 +136,6 @@ const MAX_MATH_FONTS = 8;
  * every drawn `<math>` apart from the walk, so a walk cut short still has its formulas' fonts
  * measured, and the measurement does not rest on the reference, so an unsound one still has it.
  */
-/**
- * MathML Core's italic mapping, which `text-transform: math-auto` applies to a text of one
- * character: each entry maps `count` code points from `from` on to `to` on.
- */
-const MATH_ITALIC: ReadonlyArray<readonly [from: number, to: number, count: number]> = [
-  [0x41, 0x1d434, 26], // A-Z
-  [0x61, 0x1d44e, 7], // a-g
-  [0x68, 0x210e, 1], // h, which the alphanumerics leave to Letterlike Symbols
-  [0x69, 0x1d456, 18], // i-z
-  [0x131, 0x1d6a4, 1], // dotless i
-  [0x237, 0x1d6a5, 1], // dotless j
-  [0x391, 0x1d6e2, 17], // Alpha-Rho
-  [0x3f4, 0x1d6f3, 1], // capital theta symbol, where U+03A2 has none
-  [0x3a3, 0x1d6f4, 7], // Sigma-Omega
-  [0x2207, 0x1d6fb, 1], // nabla
-  [0x3b1, 0x1d6fc, 25], // alpha-omega
-  [0x2202, 0x1d715, 1], // partial
-  [0x3f5, 0x1d716, 1], // epsilon symbol
-  [0x3d1, 0x1d717, 1], // theta symbol
-  [0x3f0, 0x1d718, 1], // kappa symbol
-  [0x3d5, 0x1d719, 1], // phi symbol
-  [0x3f1, 0x1d71a, 1], // rho symbol
-  [0x3d6, 0x1d71b, 1], // pi symbol
-];
-
-/** The code point Chromium draws for a one-character `math-auto` text, for the tests. */
-export function mathItalicOf(code: number): number {
-  const entry = MATH_ITALIC.find(([from, , count]) => code >= from && code < from + count);
-  return entry === undefined ? code : entry[1] + code - entry[0];
-}
-
 function fontCheckScript(probes: string[]): string {
   return `(async function(){
 var SIZE = ${MEASURE_SIZE};
@@ -320,7 +320,9 @@ function walk(root) {
 }
 
 // The font stacks of the formulas under a root that are drawn, the way the walk prunes: not under
-// display: none or content-visibility: hidden, and not visibility: hidden themselves.
+// display: none or content-visibility: hidden, and not visibility: hidden themselves. A hidden
+// <math> whose content turns visibility back on is left out, which the walk would measure; no
+// formula monodocs writes does that.
 var mathFonts = [];
 function gatherMathFonts(root) {
   var formulas = root.querySelectorAll('math');
@@ -551,8 +553,13 @@ export function describeFontCheck(
 }
 
 /** The line for formulas drawn in a font without a MATH table, or undefined when there is none. */
-export function describeMathTable(outcome: FontCheckOutcome): string | undefined {
-  if (outcome.status === "unmeasurable") return undefined;
+export function describeMathTable(
+  outcome: FontCheckOutcome,
+  context: FontCheckContext = "pdf",
+): string | undefined {
+  // A pre-rendered diagram's formulas are drawn again by the reader's browser, and a PDF build
+  // measures the same diagram in the body, so the finding is the PDF's alone.
+  if (context === "prerender" || outcome.status === "unmeasurable") return undefined;
   const fonts = outcome.noMathTable;
   if (fonts === undefined || fonts.length === 0) return undefined;
   return t("fontCheck.noMathTable", { fonts: fonts.join("; ") });
@@ -590,7 +597,7 @@ export async function runFontCheck(
   }
   const outcome = await inspectFonts(page, options.probes);
   const message = describeFontCheck(outcome, options.context);
-  const mathMessage = describeMathTable(outcome);
+  const mathMessage = describeMathTable(outcome, options.context);
   if (options.mode === "error") {
     if (outcome.status === "missing" && message !== undefined) {
       // One error stops the build, so the other finding is still told, as a warning.

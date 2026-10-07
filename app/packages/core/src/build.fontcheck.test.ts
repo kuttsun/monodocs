@@ -121,6 +121,8 @@ describe("font check reporting", () => {
     // 括弧が伸びるかの測定は私用領域の基準に依らないので、基準が不成立でも所見は出す。
     expect(describeMathTable({ status: "unusable", noMathTable: ["math"] })).toBeDefined();
     expect(describeMathTable({ status: "unmeasurable" })).toBeUndefined();
+    // pre-render の図の数式は読者のブラウザが描き直し、PDF では本文の検査が同じ図を測る。
+    expect(describeMathTable({ status: "ok", noMathTable: ["math"] }, "prerender")).toBeUndefined();
   });
 
   it("maps a formula's one-character token as MathML Core's italic mapping does", () => {
