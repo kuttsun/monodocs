@@ -1,5 +1,11 @@
 # <img src="site/public/favicon.svg" alt="" height="28">&nbsp;monodocs
 
+[![npm](https://img.shields.io/npm/v/monodocs)](https://www.npmjs.com/package/monodocs)
+[![Release](https://img.shields.io/github/actions/workflow/status/kuttsun/monodocs/release.yml?label=release)](https://github.com/kuttsun/monodocs/actions/workflows/release.yml)
+[![Node.js](https://img.shields.io/node/v/monodocs)](#インストール)
+[![Downloads](https://img.shields.io/npm/dm/monodocs)](https://www.npmjs.com/package/monodocs)
+[![License](https://img.shields.io/npm/l/monodocs)](LICENSE)
+
 [English](README.md)
 
 **単一ファイル配布に特化した軽量ドキュメントジェネレータ**です。複数の Markdown / AsciiDoc ファイルから **単一の HTML または PDF** ドキュメントを生成する CLI ツールで、ドキュメントは複数ファイルに分割して管理しながら、配布時には 1 ファイルにまとめられます。

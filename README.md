@@ -1,5 +1,11 @@
 # <img src="site/public/favicon.svg" alt="" height="28">&nbsp;monodocs
 
+[![npm](https://img.shields.io/npm/v/monodocs)](https://www.npmjs.com/package/monodocs)
+[![Release](https://img.shields.io/github/actions/workflow/status/kuttsun/monodocs/release.yml?label=release)](https://github.com/kuttsun/monodocs/actions/workflows/release.yml)
+[![Node.js](https://img.shields.io/node/v/monodocs)](#installation)
+[![Downloads](https://img.shields.io/npm/dm/monodocs)](https://www.npmjs.com/package/monodocs)
+[![License](https://img.shields.io/npm/l/monodocs)](LICENSE)
+
 [日本語](README.ja.md)
 
 `monodocs` is a **lightweight documentation generator focused on single-file distribution**. It is a CLI tool that turns a directory of Markdown and AsciiDoc files into a **single HTML or PDF document** — keep your documentation as multiple source files, and distribute it as one self-contained file.
