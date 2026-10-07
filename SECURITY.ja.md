@@ -23,7 +23,8 @@ version を公開します。
 
 ## 脆弱性の報告
 
-脆弱性や機密情報に関わる問題を、公開 Issue、Pull Request、Discussion へ投稿しないでください。
+> [!CAUTION]
+> 脆弱性や機密情報に関わる問題を、公開 Issue、Pull Request、Discussion へ投稿しないでください。
 
 GitHub の Private vulnerability reporting を唯一の報告窓口として使用します。リポジトリの
 Security ページで `Report a vulnerability` を選択し、非公開フォームから報告してください。

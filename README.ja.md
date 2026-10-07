@@ -8,7 +8,7 @@
 
 [English](README.md)
 
-**単一ファイル配布に特化した軽量ドキュメントジェネレータ**です。複数の Markdown / AsciiDoc ファイルから **単一の HTML または PDF** ドキュメントを生成する CLI ツールで、ドキュメントは複数ファイルに分割して管理しながら、配布時には 1 ファイルにまとめられます。
+複数の Markdown / AsciiDoc ファイルから **自己完結した単一の HTML または PDF** を生成する CLI です。書くときは複数ファイル、配るときは 1 ファイルにできます。
 
 **📖 ドキュメント → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス。[単一ファイルのサンプル](https://kuttsun.github.io/monodocs/ja/sample.html)もあります。
 
@@ -47,7 +47,8 @@ PDF には表紙と印刷用の目次を付けられ、本文の各ページに�
 npm install -g monodocs
 ```
 
-PDF 出力と Mermaid pre-render には、システムにインストールされた Chromium / Google Chrome が必要です（`monodocs` は自動ダウンロードしません）。Linux / Windows では標準的な配置場所から自動検出します（Windows では Chromium ベースの Microsoft Edge もフォールバックとして使います）。標準的でない場所や、自動検出の候補がない macOS などでは、`PUPPETEER_EXECUTABLE_PATH` で実行ファイルを明示してください。
+> [!IMPORTANT]
+> PDF 出力と Mermaid pre-render には、システムにインストールされた Chromium / Google Chrome が必要です（`monodocs` はダウンロードしません）。Linux / Windows では自動検出します（Windows では Chromium ベースの Microsoft Edge にもフォールバックします）。macOS など自動検出の無い環境や標準的でない場所では、`PUPPETEER_EXECUTABLE_PATH` を設定してください。
 
 Node.js 無しで動くスタンドアロンバイナリを、Linux x64 / Windows x64 向けに各[リリース](https://github.com/kuttsun/monodocs/releases)へ添付しています。ヘッドレスブラウザをバンドルから外しているため、PDF 出力と Mermaid pre-render はバイナリでは利用できません。
 
@@ -60,7 +61,7 @@ Node.js 無しで動くスタンドアロンバイナリを、Linux x64 / Window
 
 ## クイックスタート
 
-入力は Markdown / AsciiDoc を混在でき、フォルダ構造がそのままサイドバーになります。
+Markdown / AsciiDoc を混在でき、フォルダ構造がそのままサイドバーになります。
 
 ```bash
 monodocs init                                         # 手を入れずにビルドできる設定と最初のページ
@@ -70,7 +71,7 @@ monodocs serve ./docs                                 # 編集しながらライ
 monodocs validate ./docs                              # リンク切れ・画像欠落を検出
 ```
 
-全コマンド・オプションと、設定ファイル `monodocs.config.yml` のリファレンスは[ドキュメントサイト](https://kuttsun.github.io/monodocs/ja/docs/getting-started)を参照してください。
+コマンド・オプションと `monodocs.config.yml` のリファレンスは[ドキュメントサイト](https://kuttsun.github.io/monodocs/ja/docs/getting-started)にあります。
 
 ## プロジェクトドキュメント
 
@@ -95,10 +96,10 @@ monodocs validate ./docs                              # リンク切れ・画像
 
 [MIT License](LICENSE) © 2026 kuttsun
 
-npm 公開物の `dist/monodocs.cjs` には依存ライブラリをバンドルするため、ビルド時に第三者ライセンスを
-まとめた `dist/THIRD-PARTY-NOTICES.txt` を生成し、配布物に添付します（`pnpm bundle` で出力）。
-埋め込む依存の大半は寛容ライセンス（MIT / ISC / BSD / Apache-2.0 等）で、`dompurify` は
-`MPL-2.0 OR Apache-2.0` のうち Apache-2.0 を選択しています。埋め込む Mermaid ランタイムは、ほかに
-`elkjs`（EPL-2.0。EMF の一部は EPL-1.0）、CC BY-SA の断片、ライセンスを示していない出典のコードを
-含みます。inline ランタイムでビルドした HTML はそれらを表記とともに埋め込みますが、文書の内容は影響を
-受けません。詳しくは[ライセンスのページ](https://kuttsun.github.io/monodocs/ja/docs/license)を参照してください。
+> [!NOTE]
+> npm 公開物の `dist/monodocs.cjs` は依存ライブラリをバンドルするため、第三者ライセンスをまとめた
+> `dist/THIRD-PARTY-NOTICES.txt`（`pnpm bundle` で生成）を添付します。埋め込む依存の大半は寛容ライセンス
+> （MIT / ISC / BSD / Apache-2.0 等）で、`dompurify` は `MPL-2.0 OR Apache-2.0` のうち Apache-2.0 を選択しています。
+> 埋め込む Mermaid ランタイムは、ほかに `elkjs`（EPL-2.0。EMF の一部は EPL-1.0）、CC BY-SA の断片、
+> ライセンスを示していない出典のコードを含みます。inline ランタイムでビルドした HTML はそれらを表記とともに
+> 埋め込みますが、文書の内容は影響を受けません。詳しくは[ライセンスのページ](https://kuttsun.github.io/monodocs/ja/docs/license)を参照してください。

@@ -7,18 +7,20 @@ platform is [GitHub](https://github.com/kuttsun/monodocs).
 
 ## Before You Start
 
-- Report security vulnerabilities through the process in [SECURITY.md](SECURITY.md), not through a public issue.
+> [!CAUTION]
+> Report security vulnerabilities through the process in [SECURITY.md](SECURITY.md), not through a public issue.
+
 - Discuss the purpose and design of substantial changes in an issue before implementation.
 - Small bug fixes and documentation corrections may be submitted directly as pull requests.
-- Maintenance is provided on a best-effort basis. Response times for issues and pull requests are not guaranteed.
+- Maintenance is best-effort; response times for issues and pull requests are not guaranteed.
 - No particular editor, AI assistant, or automated review product is required to contribute.
 
 ## Repository Language Policy
 
-- Use English as the default language for human-readable repository documents. Keep the default document at
-  its conventional path, such as `README.md` or `docs/development.md`.
-- Maintain a Japanese counterpart for each human-readable document. Use `*.ja.md` at the repository or package
-  root, and mirror files under `docs/ja/` and `site/ja/` for documentation trees.
+- Use English as the default language for human-readable documents, at the conventional path (`README.md`,
+  `docs/development.md`).
+- Maintain a Japanese counterpart for each human-readable document: `*.ja.md` at the repository or package root,
+  and mirrors under `docs/ja/` and `site/ja/` for documentation trees.
 - Add reciprocal language links near the beginning of each English/Japanese document pair, except where the
   documentation framework provides its own locale switcher.
 - Update both language versions in the same change when shared facts, instructions, or behavior change.
@@ -28,7 +30,10 @@ platform is [GitHub](https://github.com/kuttsun/monodocs).
 
 ## Development Environment
 
-Development, builds, and tests run in Docker. Do not install Node.js or pnpm globally on the host.
+Development, builds, and tests run in Docker.
+
+> [!IMPORTANT]
+> Do not install Node.js or pnpm globally on the host.
 
 ```bash
 scripts/app.sh pnpm install
@@ -36,8 +41,10 @@ scripts/app.sh pnpm build
 scripts/app.sh pnpm test
 ```
 
-When using VS Code Dev Containers or an existing container shell, change to `app/` and run `pnpm` commands
-directly. See the [development guide](docs/development.md) for setup details and command variants.
+> [!TIP]
+> In VS Code Dev Containers or an existing container shell, run `pnpm` commands directly in `app/`.
+
+See the [development guide](docs/development.md) for setup details and command variants.
 
 ## Required Checks
 
@@ -47,14 +54,14 @@ Before submitting a pull request, run the application verification suite:
 scripts/app.sh pnpm ci:check
 ```
 
-This runs the format check, build, typecheck, tests, and CLI bundle generation. When changing npm distribution,
+It runs the format check, build, typecheck, tests, and CLI bundle generation. When changing npm distribution,
 also verify the staged package:
 
 ```bash
 scripts/app.sh pnpm package:verify
 ```
 
-Run an individual Vitest file or matching test with:
+To run one Vitest file or matching test:
 
 ```bash
 scripts/app.sh pnpm exec vitest run packages/core/src/route.test.ts
@@ -65,10 +72,9 @@ The complete test policy and coverage map are in [docs/testing.md](docs/testing.
 
 ## Change Guidelines
 
-- Preserve the source renderer architecture: process each source format with its own renderer, then normalize
-  it into the shared `Page` model. See [docs/architecture.md](docs/architecture.md).
-- Preserve the single-file output invariants documented in [docs/architecture.md](docs/architecture.md),
-  including globally unique element IDs, stable routes, and page reachability.
+- Preserve the architecture in [docs/architecture.md](docs/architecture.md): one renderer per source format,
+  normalized into the shared `Page` model, and the single-file output invariants (globally unique element IDs,
+  stable routes, page reachability).
 - Add or update tests when behavior changes.
 - Update the README and relevant files under `docs/` when user-facing behavior, configuration, supported syntax,
   or limitations change.

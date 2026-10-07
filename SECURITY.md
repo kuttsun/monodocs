@@ -14,7 +14,8 @@ Changes to this policy are announced in the release notes. The support window is
 
 ## Reporting a vulnerability
 
-Do not post vulnerabilities or sensitive information in a public issue, pull request, or discussion.
+> [!CAUTION]
+> Do not post vulnerabilities or sensitive information in a public issue, pull request, or discussion.
 
 Use GitHub Private Vulnerability Reporting as the only reporting channel. Open the repository's Security page, select **Report a vulnerability**, and submit the private form. Vulnerability reports are not accepted by email.
 

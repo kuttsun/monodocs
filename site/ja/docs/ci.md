@@ -1,8 +1,6 @@
 # CI で使う
 
-自動化する価値があるのは 2 つです。Pull Request ごとにドキュメントを検証することと、既定ブランチやタグの更新時に配布用の HTML / PDF を生成することです。
-
-monodocs は普通の npm CLI なので、専用の Action やプラグインは要りません。`npm` / `npx` でインストールし、ローカルと同じコマンドを実行します。
+自動化する価値があるのは 2 つです。Pull Request ごとにドキュメントを検証することと、既定ブランチやタグの更新時に配布用の HTML / PDF を生成することです。monodocs は普通の npm CLI なので、専用の Action やプラグインは要りません。`npm` / `npx` でインストールし、ローカルと同じコマンドを実行します。
 
 ## CI に必要なもの
 
@@ -16,7 +14,8 @@ monodocs は普通の npm CLI なので、専用の Action やプラグインは
 
 ビルドを再現可能にするため、バージョンは固定してください。devDependency として追加して（`npm install -D monodocs`）`npm exec` から呼ぶか、`npx` に厳密なバージョンを渡します。
 
-そのうえで、固定した値を更新し続けてください。セキュリティ修正は新しいバージョンとしてのみ公開されます。monodocs のサポート対象は npm の `latest` が指す版だけで、過去の版へバックポートすることはありません（[セキュリティポリシー](https://github.com/kuttsun/monodocs/blob/main/SECURITY.ja.md)）。固定値の更新は Dependabot や Renovate に提案させ、リポジトリのセキュリティアドバイザリを購読してください。これは見た目以上に重要です。monodocs は依存物を公開 CLI にバンドルしているため、あなたの lockfile を読むスキャナに見えるのは `monodocs` であって、その中のライブラリではありません。
+> [!IMPORTANT]
+> 固定した値は更新し続けてください。セキュリティ修正は新しいバージョンとしてのみ公開されます。サポート対象は npm の `latest` が指す版だけで、バックポートはしません（[セキュリティポリシー](https://github.com/kuttsun/monodocs/blob/main/SECURITY.ja.md)）。固定値の更新は Dependabot や Renovate に提案させ、リポジトリのセキュリティアドバイザリを購読してください。monodocs は依存物を公開 CLI にバンドルしているため、lockfile を読むスキャナに見えるのは `monodocs` だけで、その中のライブラリは見えません。
 
 ## GitHub Actions
 
@@ -42,7 +41,7 @@ jobs:
 
 ### 単一 HTML と PDF を生成する
 
-GitHub ホストランナーには Google Chrome が同梱されており、monodocs が自動検出します。`ubuntu-latest` と `windows-latest` では PDF 生成に追加設定は不要です。
+GitHub ホストランナーには Google Chrome が同梱されており、monodocs が自動検出するので、`ubuntu-latest` と `windows-latest` では PDF 生成に追加設定は不要です。
 
 ```yaml
 name: Build docs
@@ -75,7 +74,7 @@ jobs:
 
 `--format both` では `-o` をディレクトリとして扱い、`docs.html` と `docs.pdf` を出力します（0.8.0 以前は `manual.html` と `manual.pdf`）。
 
-ビルド成果物ではなくリリースに添付する場合は、ワークフローを `release: types: [published]` で起動し、ジョブに `permissions: contents: write` を与えて、upload ステップを次に置き換えます。ファイル名ではなく拡張子で選べば、どのバージョンを固定していてもこのステップは動きます。
+リリースに添付する場合は、ワークフローを `release: types: [published]` で起動し、ジョブに `permissions: contents: write` を与えて、upload ステップを次に置き換えます。拡張子でファイルを選ぶので、どのバージョンを固定していても動きます。
 
 ```yaml
       - name: Attach to the release
@@ -86,7 +85,7 @@ jobs:
 
 ### GitHub Pages で公開する
 
-単一 HTML は自己完結しているため、公開は Pages の成果物に 1 ファイルをコピーするだけです。このリポジトリの [`deploy-site.yml`](https://github.com/kuttsun/monodocs/blob/main/.github/workflows/deploy-site.yml) は、VitePress サイトと併せてこれを行っています。
+単一 HTML は自己完結しているため、公開は Pages の成果物に 1 ファイルをコピーするだけです。このリポジトリの [`deploy-site.yml`](https://github.com/kuttsun/monodocs/blob/main/.github/workflows/deploy-site.yml) も、VitePress サイトと併せてそうしています。
 
 ## GitLab CI
 
@@ -113,9 +112,9 @@ docs:
 ## 注意点
 
 - **Chromium の検出**：`PUPPETEER_EXECUTABLE_PATH` が常に最優先です。未指定の場合、Linux と Windows では標準のインストール先を探索します（Windows では Chromium ベースの Microsoft Edge にフォールバックします）。コンテナイメージと macOS では明示的に指定してください。
-- **PDF のフォントはランナー側のもの**：フォントが無い文字は PDF で tofu（□）になります。日本語には `fonts-noto-cjk`、絵文字には `fonts-noto-color-emoji` が必要です。数式には OpenType MATH テーブルを持つフォント（`fonts-lmodern` の Latin Modern Math など）が必要で、無いと括弧が伸びず、文字が tofu になることがあります。HTML は閲覧側のフォントを使うため影響を受けません。ランナーが描けない文字や、MATH テーブルの無い数式フォント（`font/no-math-table`）があるとビルドが警告し、[`fontCheck: error`](/ja/docs/configuration#font-check) にすればその警告でジョブを落とせます。
+- **PDF のフォントはランナー側のもの**：フォントが無い文字は PDF で tofu（□）になります。日本語には `fonts-noto-cjk`、絵文字には `fonts-noto-color-emoji`、数式には OpenType MATH テーブルを持つフォント（`fonts-lmodern` の Latin Modern Math など。無いと括弧が伸びず、文字が tofu になることがあります）が必要です。HTML は閲覧側のフォントを使うため影響を受けません。ランナーが描けない文字や、MATH テーブルの無い数式フォント（`font/no-math-table`）があるとビルドが警告し、[`fontCheck: error`](/ja/docs/configuration#font-check) にすればその警告でジョブを落とせます。
 - **オフラインビルド**：`mermaid.mode: client` は既定で CDN からランタイムを読み込みます。ランナーが外部ネットワークに出られない場合は `inline` か `pre-render` を使ってください。
-- **警告では `build` も `validate` も失敗しない**：リンク切れやタイトルの欠落は報告され、出力も生成されます。`validate` がジョブを失敗させるのは **エラー** のときです。警告もゲートにしたい場合は [`--strict`](/ja/docs/commands#validate) を付けてください。
+- **警告では `build` も `validate` も失敗しない**：リンク切れやタイトルの欠落は報告され、出力も生成されます。警告でも `validate` を失敗させるには [`--strict`](/ja/docs/commands#validate) を付けてください。
 
 ## 関連ページ
 
