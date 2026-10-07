@@ -682,7 +682,8 @@ jobs:
                 || close < 0 || close > inline.indexOf('</script>', at)) {
               fail('the notices are not in a comment inside the runtime script');
             }
-            if (!/mermaid@12\./.test(inline.slice(at, close))) fail('the notices do not name mermaid 12');
+            // The version the notices are for is the one on their first line, not one a component names.
+            if (!inline.startsWith(header + ' (mermaid@12.', at)) fail('the notices are not for mermaid 12');
             for (const f of ['cdn.html', 'prerender.html', 'plain.html']) {
               if (count(read(f)) !== 0) fail(f + ' carries the notices');
             }
