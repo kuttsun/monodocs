@@ -256,7 +256,8 @@ export function rewriteForCore(math: Element): CoreGaps {
     if (Array.isArray(className) && className.includes("vcenter")) constructs.add("\\vcenter");
     if (node.tagName === "mo" && textOf(node) === "undefined") {
       // \overlinesegment and \underlinesegment have no MathML character in KaTeX, which writes
-      // "undefined"; an overline is the nearest, without the segment's end ticks.
+      // "undefined"; a line over or under the term is the nearest (drawn by drawLines), without
+      // the segment's end ticks.
       node.children = [{ type: "text", value: "\u203E" }];
       constructs.add("\\overlinesegment, \\underlinesegment");
     }
@@ -282,6 +283,7 @@ export function rewriteForCore(math: Element): CoreGaps {
   negativeSpaces(math);
   braceAccents(math);
   spacingAccents(math);
+  drawLines(math);
   normalizeLengths(math);
   const notations = drawEnclosures(math);
   return { notations, constructs: [...constructs] };
@@ -572,6 +574,41 @@ function spacingAccents(math: Element): void {
     if (script?.tagName !== "mo") return;
     const replacement = SPACING_ACCENTS[textOf(script)];
     if (replacement !== undefined) script.children = [{ type: "text", value: replacement }];
+  });
+}
+
+/** TeX's default rule thickness, which `\\overline` and `\\underline` are drawn at. */
+const RULE = "0.04em";
+
+/**
+ * `\\overline` and `\\underline` (and the segments KaTeX writes as "undefined", above) are a rule
+ * as wide as the term, which KaTeX writes as a stretchy `‾` (U+203E) over or under it. Whether that
+ * stretches is the font's: Latin Modern Math has no `‾`, and the browser drew a fallback font's, one
+ * letter wide over a longer term. The line becomes a border on an `mrow` around the term, which is
+ * as wide as the term whatever the font, set as TeX sets it: the default rule thickness, a gap of
+ * three times that between it and the term, and once more beyond it.
+ */
+function drawLines(math: Element): void {
+  visit(math, "element", (node: Element) => {
+    const over = node.tagName === "mover";
+    if (!over && node.tagName !== "munder") return;
+    const [base, script, ...rest] = node.children.filter((c): c is Element => c.type === "element");
+    if (!base || script?.tagName !== "mo" || rest.length > 0 || textOf(script) !== "\u203E") return;
+    // Only the accent KaTeX writes for a line; `\\overset` of a `‾` character is a symbol set over
+    // the term, and stays one.
+    const accent = over ? node.properties.accent : node.properties.accentunder;
+    if (String(accent) !== "true" || String(script.properties.stretchy) !== "true") return;
+    node.tagName = "mrow";
+    node.properties = {};
+    node.children = [base];
+    addStyle(
+      node,
+      over
+        ? // The term under an overline is set cramped, as TeX sets it and as MathML Core sets an
+          // accent's base, so that its superscripts stay as low as they were.
+          `border-top: ${RULE} solid; padding-top: 0.12em; margin-top: ${RULE}; math-shift: compact`
+        : `border-bottom: ${RULE} solid; padding-bottom: 0.12em; margin-bottom: ${RULE}`,
+    );
   });
 }
 

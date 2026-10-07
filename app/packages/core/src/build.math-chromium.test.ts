@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -191,6 +191,85 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(found.closer).toBe(true);
       process.stdout.write("DBG " + JSON.stringify(found.dbg) + "\n");
       expect(found.tagged).toBe(true);
+    } finally {
+      await browser.close();
+    }
+  }, 60_000);
+
+  it("draws \\overline and \\underline as wide as their term, whatever the font", async () => {
+    const lines = join(dir, "lines");
+    await mkdir(lines, { recursive: true });
+    await writeFile(
+      join(lines, "l.md"),
+      "# L\n\n$$\\overline{a+b+c} \\quad \\underline{a+b+c}$$\n\n$$x^2 \\quad \\overline{x^2}$$\n",
+    );
+    const configFile = join(lines, "monodocs.config.yml");
+    await writeFile(configFile, "");
+    const built = join(lines, "out.html");
+    await buildSite({ configFile, inputDir: lines, outputFile: built, format: "html" });
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.goto(pathToFileURL(built).href);
+      const drawn = await page.evaluate(() =>
+        [
+          ...document
+            .querySelector("#content .math-display math")!
+            .querySelectorAll(":scope > semantics > mrow > mrow"),
+        ]
+          .filter((m) => /border-(top|bottom)/.test(m.getAttribute("style") ?? ""))
+          .map((line) => {
+            const style = getComputedStyle(line);
+            const top = parseFloat(style.borderTopWidth) > 0;
+            const side = top ? "Top" : "Bottom";
+            const term = line.firstElementChild!.getBoundingClientRect();
+            const box = line.getBoundingClientRect();
+            const scroll = line.closest(".math-display")!.getBoundingClientRect();
+            // The line's edge of the box, which the border draws along the whole of it.
+            const edge = top ? box.top : box.bottom;
+            return {
+              side: side.toLowerCase(),
+              solid: style[`border${side}Style`] === "solid",
+              visible: !/rgba\(\d+, \d+, \d+, 0\)|transparent/.test(style[`border${side}Color`]),
+              // Set apart from the term, on its side, and not cut off by the scroll box.
+              apart: top ? edge < term.top : edge > term.bottom,
+              inside: edge >= scroll.top && edge <= scroll.bottom,
+              // The term is several letters wide, and the line, the box's edge, as wide as it.
+              // As wide as the term, no wider: the line runs along the box's edge.
+              wide: term.width > 40 && Math.abs(box.width - term.width) < 0.5,
+            };
+          }),
+      );
+      expect(drawn).toEqual([
+        { side: "top", solid: true, visible: true, apart: true, inside: true, wide: true },
+        { side: "bottom", solid: true, visible: true, apart: true, inside: true, wide: true },
+      ]);
+      // The term under an overline is cramped, as TeX sets it: its superscript is lower than the
+      // same superscript outside one, measured from the base letter. A math font's constants tell
+      // the two apart, which the fallback's do not.
+      const font = readFileSync(
+        new URL("../test-fixtures/fonts/lm-math/opentype/latinmodern-math.otf", import.meta.url),
+      ).toString("base64");
+      await page.addStyleTag({
+        content:
+          `@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }` +
+          ' math { font-family: "Fixture Math"; }',
+      });
+      await page.evaluate(() => document.fonts.ready);
+      const raised = await page.evaluate(() => {
+        const display = document.querySelectorAll("#content .math-display math")[1]!;
+        const [plain, under] = [...display.querySelectorAll("msup")].map((m) => {
+          const [base, sup] = [...m.children].map((c) => c.getBoundingClientRect());
+          return base!.top - sup!.top;
+        });
+        const term = [...display.querySelectorAll("mrow")].find((m) =>
+          (m.getAttribute("style") ?? "").includes("border-top"),
+        )!;
+        return { plain, under, shift: getComputedStyle(term).getPropertyValue("math-shift") };
+      });
+      expect(raised.shift).toBe("compact");
+      expect(raised.under).toBeLessThan(raised.plain);
     } finally {
       await browser.close();
     }
