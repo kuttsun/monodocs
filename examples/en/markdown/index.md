@@ -16,7 +16,7 @@ monodocs build examples/en -o dist/sample.html
 ```
 
 Open each category from the left sidebar:
-[Text formatting](text.md) / [Lists](lists.md) / [Code and tables](code-and-tables.md) / [Footnotes and link references](footnotes.md) / [Alerts](alerts.md) / [Wide content](wide-content.md) / [Advanced (nested hierarchy)](advanced/index.md).
+[Text formatting](text.md) / [Lists](lists.md) / [Code and tables](code-and-tables.md) / [Footnotes and link references](footnotes.md) / [Alerts](alerts.md) / [Wide content](wide-content.md) / [Math](math.md) / [Advanced (nested hierarchy)](advanced/index.md).
 
 ## Headings (ATX)
 

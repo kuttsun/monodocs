@@ -301,7 +301,7 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           // Every width the paragraph can take, each giving its own line breaks.
           for (let width = 80; width <= 400; width += 1) {
             p.style.width = `${width}px`;
-            let lastTop: number | undefined;
+            let lastMiddle: number | undefined;
             let lastChar: string | undefined;
             const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
             for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -313,13 +313,16 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
                 const range = document.createRange();
                 range.setStart(text, i);
                 range.setEnd(text, i + 1);
-                const top = range.getClientRects()[0]?.top;
-                if (top === undefined) continue;
-                if (lastTop !== undefined && top > lastTop + 5) {
+                const rect = range.getClientRects()[0];
+                if (rect === undefined) continue;
+                // A character starts a new line when it sits below the middle of the last one. Its
+                // top alone cannot tell: a math font puts a variable's top several pixels lower
+                // than the text beside it on the same line.
+                if (lastMiddle !== undefined && rect.top > lastMiddle) {
                   if (!inFormula) starts.add(text.data[i]!);
                   if (lastChar !== undefined) ends.add(lastChar);
                 }
-                lastTop = top;
+                lastMiddle = (rect.top + rect.bottom) / 2;
                 lastChar = inFormula ? undefined : text.data[i]!;
               }
             }

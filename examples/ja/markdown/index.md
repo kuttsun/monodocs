@@ -17,7 +17,7 @@ monodocs build examples/ja -o dist/sample.html
 ```
 
 各カテゴリは左サイドバーから開けます:
-[テキスト書式](text.md) / [リスト](lists.md) / [コードと表](code-and-tables.md) / [脚注とリンク参照](footnotes.md) / [アラート](alerts.md) / [幅の広いコンテンツ](wide-content.md) / [応用（ネスト階層）](advanced/index.md)。
+[テキスト書式](text.md) / [リスト](lists.md) / [コードと表](code-and-tables.md) / [脚注とリンク参照](footnotes.md) / [アラート](alerts.md) / [幅の広いコンテンツ](wide-content.md) / [数式](math.md) / [応用（ネスト階層）](advanced/index.md)。
 
 ## 見出し（ATX）
 
