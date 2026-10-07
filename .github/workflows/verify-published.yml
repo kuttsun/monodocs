@@ -682,7 +682,7 @@ jobs:
                 || close < 0 || close > inline.indexOf('</script>', at)) {
               fail('the notices are not in a comment inside the runtime script');
             }
-            if (!/mermaid@12\./.test(inline.slice(at, at + 200))) fail('the notices do not name mermaid 12');
+            if (!/mermaid@12\./.test(inline.slice(at, close))) fail('the notices do not name mermaid 12');
             for (const f of ['cdn.html', 'prerender.html', 'plain.html']) {
               if (count(read(f)) !== 0) fail(f + ' carries the notices');
             }
@@ -734,7 +734,13 @@ jobs:
             // Five formulas, and the dollar signs in the code span none of them.
             if (count('<math') !== 5) fail('expected five formulas, found ' + count('<math'));
             if (!on.includes('<code>\$5 and \$10</code>')) fail('the code span did not keep its dollar signs');
-            if (count('data-math-source=') !== 5) fail('not every formula carries its source for copying');
+            // Each formula's own element carries its source for copying, as written: the TeX in it,
+            // in document order (Markdown, then the AsciiDoc page rebuilt as latexmath).
+            const sources = [...on.matchAll(/class=\"math math-(?:inline|display)\"[^>]*data-math-source=\"([^\"]*)\"[^>]*>\s*<math/g)].map((m) => m[1]);
+            const expected = ['x', '\\\\mathbb{R}', '\\\\int_0^1', 'latexmath:[\\\\alpha]', 'latexmath:[y^2]'];
+            if (sources.length !== 5 || expected.some((tex, i) => !sources[i].includes(tex))) {
+              fail('the formulas do not carry their sources: ' + JSON.stringify(sources));
+            }
             if (/katex/i.test(on)) fail('KaTeX markup or a stylesheet reached the output');
             if (/mathvariant=\"(?!normal\")/.test(on)) fail('a mathvariant other than normal reached the output');
             // Non-ASCII written as escapes, as in the message-language step: U+211D is \\mathbb{R}.
