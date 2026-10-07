@@ -251,6 +251,18 @@ describe("Markdown math", () => {
     expect(outputs[0]).toBe(outputs[1]);
   }, 120_000);
 
+  it("keeps the punctuation next to an inline formula on its line", async () => {
+    const { html } = await build("# A\n\n値は ($x$) と $y$、 $z$。そして $w$ です。\n");
+    const kept = [
+      ...html.matchAll(/<span style="white-space: nowrap">(.*?<\/math><\/span>)(.*?)<\/span>/g),
+    ].map((m) => m[1]!.match(/^[^<]*/)![0] + "F" + m[2]!);
+    // `(` before x and `)` after it, `、` after y, `。` after z; nothing around w, which a space follows.
+    expect(kept).toEqual(["(F)", "F、", "F。"]);
+    // The formulas themselves are as they were: their source and TeX, and nothing else inside.
+    expect(html).toContain('data-math-source="$y$"');
+    expect(html).not.toMatch(/<span class="math math-inline"[^>]*>[^<]*[、。]/);
+  });
+
   it("builds the math fixture, its Markdown and AsciiDoc pages giving the same formulas", async () => {
     // examples/math: the formulas v0.14 measured, 7 inline and 14 display, on each page.
     const fixture = fileURLToPath(new URL("../../../../examples/math", import.meta.url));

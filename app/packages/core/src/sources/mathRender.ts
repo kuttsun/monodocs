@@ -93,7 +93,65 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
       node.children = [result.math];
       return SKIP;
     });
+    keepPunctuationWithFormulas(tree);
   };
+}
+
+/** Punctuation that may not start a line, and that may not end one, as the line breaker reads it. */
+const NO_LINE_START = /^[,.;:!?)\]}、。，．：；！？）］｝」』】〕〉》〙〗〛”’…‥]+/;
+const NO_LINE_END = /[(\[{（［｛「『【〔〈《〘〖〚“‘]+$/;
+
+/**
+ * Chromium breaks a line on either side of an inline box, a formula included, even where it never
+ * breaks between two characters: measured, a line could start with `、`, `。`, `,`, or `）` right
+ * after an inline formula, and an inline-block did the same, while text alone never did. The
+ * punctuation that may not start a line after a formula, and that may not end one before it, is
+ * kept with the formula in a span that does not wrap. The formula's own element is left as it is,
+ * so copying and search read it as before; the style is inline, so a theme cannot lose it.
+ */
+function keepPunctuationWithFormulas(tree: HastRoot): void {
+  const wrappers = new Set<Element>();
+  visit(tree, (parent) => {
+    if (!("children" in parent)) return;
+    // A wrapper made here holds its formula already, and a formula's MathML holds none.
+    if (parent.type === "element" && (wrappers.has(parent) || isMath(parent))) return SKIP;
+    const children = parent.children as ElementContent[];
+    for (let i = 0; i < children.length; i++) {
+      const formula = children[i]!;
+      if (formula.type !== "element" || !isMath(formula)) continue;
+      if (!(formula.properties.className as string[]).includes("math-inline")) continue;
+      const before = children[i - 1];
+      const after = children[i + 1];
+      const opening = before?.type === "text" ? NO_LINE_END.exec(before.value)?.[0] : undefined;
+      const closing = after?.type === "text" ? NO_LINE_START.exec(after.value)?.[0] : undefined;
+      if (opening === undefined && closing === undefined) continue;
+      const kept: ElementContent[] = [];
+      let start = i;
+      let end = i + 1;
+      if (opening !== undefined && before?.type === "text") {
+        kept.push({ type: "text", value: opening });
+        const rest = before.value.slice(0, -opening.length);
+        if (rest === "") start = i - 1;
+        else before.value = rest;
+      }
+      kept.push(formula);
+      if (closing !== undefined && after?.type === "text") {
+        kept.push({ type: "text", value: closing });
+        const rest = after.value.slice(closing.length);
+        if (rest === "") end = i + 2;
+        else after.value = rest;
+      }
+      const wrapper: Element = {
+        type: "element",
+        tagName: "span",
+        properties: { style: "white-space: nowrap" },
+        children: kept,
+      };
+      wrappers.add(wrapper);
+      children.splice(start, end - start, wrapper);
+      i = start;
+    }
+  });
 }
 
 /**

@@ -83,6 +83,15 @@ describe("AsciiDoc math", () => {
     expect(html).not.toMatch(/katex/i);
   });
 
+  it("keeps the punctuation after an inline formula on its line, as in Markdown", async () => {
+    const { html } = await build("= A\n\n値は latexmath:[x]、次に latexmath:[y]。\n");
+    expect(
+      html.match(/<span style="white-space: nowrap"><span class="math math-inline"/g),
+    ).toHaveLength(2);
+    expect(html).toMatch(/<\/math><\/span>、<\/span>/);
+    expect(html).toMatch(/<\/math><\/span>。<\/span>/);
+  });
+
   it("records each formula's TeX, and a source rebuilt as latexmath", async () => {
     const { html } = await build(DOC);
     expect(attributes(html, "data-math-tex")).toEqual([

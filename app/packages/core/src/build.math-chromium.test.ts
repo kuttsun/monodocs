@@ -275,6 +275,56 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
     }
   }, 60_000);
 
+  it("starts no line with the punctuation after an inline formula", async () => {
+    const root = join(dir, "breaks");
+    await mkdir(root, { recursive: true });
+    await writeFile(
+      join(root, "b.md"),
+      "# B\n\n" + "値は $x$、次に $y^2$。また ($z$) とする。".repeat(6) + "\n",
+    );
+    const configFile = join(root, "monodocs.config.yml");
+    await writeFile(configFile, 'lang: "ja"\n');
+    const built = join(root, "out.html");
+    await buildSite({ configFile, inputDir: root, outputFile: built, format: "html" });
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.goto(pathToFileURL(built).href);
+      const starts = await page.evaluate(() => {
+        const p = document.querySelector("#content article:not([hidden]) p") as HTMLElement;
+        const seen = new Set<string>();
+        // Every width the paragraph can take, each giving its own line breaks.
+        for (let width = 80; width <= 400; width += 1) {
+          p.style.width = `${width}px`;
+          let lastTop: number | undefined;
+          const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+          for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            // A formula's own text follows the lines too, so that a line it starts is not read
+            // as one its punctuation starts; only what is outside a formula is recorded.
+            const inFormula = node.parentElement!.closest("math") !== null;
+            const text = node as Text;
+            for (let i = 0; i < text.data.length; i++) {
+              const range = document.createRange();
+              range.setStart(text, i);
+              range.setEnd(text, i + 1);
+              const top = range.getClientRects()[0]?.top;
+              if (top === undefined) continue;
+              if (lastTop !== undefined && top > lastTop + 5 && !inFormula) seen.add(text.data[i]!);
+              lastTop = top;
+            }
+          }
+        }
+        return [...seen].join("");
+      });
+      // Lines do break, at other characters, and never before the punctuation.
+      expect(starts.length).toBeGreaterThan(3);
+      expect(starts).not.toMatch(/[、。)]/);
+    } finally {
+      await browser.close();
+    }
+  }, 60_000);
+
   it("copies a formula as its source, and its MathML as HTML", async () => {
     const page3 = join(dir, "c");
     await mkdir(page3, { recursive: true });

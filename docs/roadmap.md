@@ -676,8 +676,12 @@ and `\utilde` still keep about the size of a letter with that font: KaTeX writes
 U+0330). Written with those instead, Chromium stretched U+0302 over part of a long term and set the
 others unstretched and left of their letter, so the result is the font's and the browser's, and no
 character serves every font; this is accepted until the Windows check shows how Cambria Math sets
-them. And a line of Japanese can start with `、` or `。` right after an inline formula, which Chromium
-breaks before as it does not between two characters. The Windows check is still to be made, and is
+them. And a line of Japanese could start with `、` or `。` right after an inline formula: Chromium
+breaks a line on either side of an inline box, as it does not between two characters, and did so
+for an inline-block too. The punctuation that may not start a line after an inline formula
+(`、`, `。`, `,`, `)`, and the like) and that may not end one before it (`(`, `「`, and the like) is now
+kept with the formula in a span that does not wrap; the formula's own element is as it was, so
+copying and search are unchanged. The Windows check is still to be made, and is
 to include where Cambria Math sets `\bar`, `\acute`, and `\grave` now that they are written as the
 Latin-1 accents.
 
