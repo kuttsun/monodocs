@@ -38,17 +38,17 @@ builds, so, like 0.13.0, it went out without a prerelease, and the published pac
 binaries, and the HTML they produce were verified after `latest` moved. The Windows host script and
 the Windows checks a person has to make are still open, for 0.14.0 as for 0.13.0.
 
-0.15.0 has not been released yet; it comes before 1.0, for the reasons in [roadmap.md](roadmap.md).
-Its implementation has landed: notices for the inline Mermaid runtime, mermaid 12, and math in
-Markdown and AsciiDoc, rendered at build time to MathML, with copying, search, and a font check that
-covers formulas. Two things change what existing documents build: every diagram is drawn by mermaid
+0.15.0 is released, ahead of 1.0 for the reasons in [roadmap.md](roadmap.md). It brings notices
+for the inline Mermaid runtime, mermaid 12, and math in Markdown and AsciiDoc, rendered at build
+time to MathML, with copying, search, and a font check that covers formulas. Two things change what existing documents build: every diagram is drawn by mermaid
 12, and the four math forms GitHub renders in Markdown, with AsciiDoc's latexmath and `stem` where it
 means latexmath, now render as formulas. AsciiDoc's asciimath still prints as text, but now raises a
 warning, which fails `validate --strict`. `math.enabled: false` turns both off. So `0.15.0-beta.1`
 went out under `next` first, and what it was for is done: the published package verified on Linux
 and Windows, every diagram looked at under mermaid 12, and the math fixture checked on Windows with
-Cambria Math. 0.15.0 goes out under `latest` with the CI guide pinned to it, and the published
-package and the release binaries are verified after `latest` moves.
+Cambria Math. 0.15.0 went out under `latest` with the CI guide pinned to it, and the published
+package, the release binaries, and the HTML they produce were verified after `latest` moved. The
+Windows host script and the Windows checks a person has to make are still open, as for 0.14.0.
 
 ## Completion Criteria Status
 
@@ -484,7 +484,7 @@ package and the release binaries are verified after `latest` moves.
 - [x] The licence statement in the site's licence page, `README.md`, `README.ja.md`, and the npm READMEs says that monodocs is MIT, the bundled Mermaid runtime contains EPL-2.0 `elkjs`, HTML built with the inline runtime embeds it with its notices, and document content is unaffected, and also that a few pieces of code inside the runtime come from sources that state no licence
 - [x] [roadmap.md](roadmap.md) 21.2 and the site's configuration reference state mermaid 12 and its measured inline size: 1.6 MB gzip, notices included, and 21.2 names mermaid 12
 - [x] [maintenance.md](maintenance.md) says that the lockfile audit cannot see inside a prebuilt bundle, and no longer says that `site/` never ships, given the published samples
-- [ ] The site samples are regenerated and carry the notices. `deploy-site.yml` builds them through `scripts/site-build.sh` with the CLI built from the release tag (`packages/cli/dist/index.js`), which emits the same runtime script the tests check; this is checked once the release is deployed
+- [x] The site samples are regenerated and carry the notices. `deploy-site.yml` builds them through `scripts/site-build.sh` with the CLI built from the release tag (`packages/cli/dist/index.js`), which emits the same runtime script the tests check; this is checked once the release is deployed — the deployed `sample.html` in both languages reads `monodocs v0.15.0` and carries the `mermaid@12.1.0` notices exactly once
 
 **Math** ([roadmap.md](roadmap.md) 6.4)
 
@@ -508,13 +508,13 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 - [x] `verify-published.yml` gains a 0.15 gate and steps for the runtime notices and for math, merged before anything below runs — the notices once inside the inline runtime's script and naming mermaid 12, and none for the CDN runtime, pre-render, or a page without a diagram; five formulas across Markdown and AsciiDoc as MathML with no KaTeX markup or stylesheet, `mathvariant` only `normal`, `\mathbb` as its own letter, each with its source, none under `math.enabled: false`, a PDF built, and asciimath reported as `math/asciimath-not-rendered` without failing `validate`; both run against the CLI built here before merging
 - [x] Publish `0.15.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the log says `verifying monodocs 0.15.0-beta.1` and that the 0.15 steps ran rather than being skipped — published from CI on the `v0.15.0-beta.1` tag with provenance after the `npm` environment was approved, carrying `next` while `latest` stays on 0.14.0. The run with `dist_tag: next` logs `verifying monodocs 0.15.0-beta.1` on Linux x64 and Windows x64, and both 0.15 steps ran and passed on both; the PDF's font check warned of no MATH table on Linux and said nothing on Windows, where Cambria Math has one. `verify-release-binaries.yml` passed on both platforms
 - [x] During the beta, build the documents this repository publishes — `examples/en`, `examples/ja`, and the site samples — with the beta and look at every diagram under mermaid 12; a diagram that no longer reads is fixed or recorded before `0.15.0` is cut — `examples/en` and `examples/ja` built by the beta, their three diagrams each drawn in Chromium and compared with 0.14.0's: every one reads. Mermaid 12 draws boxes white with dark borders and edges at right angles where 0.14.0 drew light purple boxes and curves, and wraps some labels of the wide pipeline diagram, whose SVG is then narrower (1,704px against 0.14.0's 2,055px), so that shrunk to the column its text is slightly larger; diagrams sitting left in their frame and a wide one shrunk to the column are as they were. Nothing to fix; the change of look goes into the release notes. The single-file site samples are built from the same examples
-- [ ] Publish `0.15.0` under the `latest` tag, with release notes stating the change in diagrams and the licence change, and verify it the same way with `dist_tag: 0.15.0`
-- [ ] Verify the `v0.15.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [x] Publish `0.15.0` under the `latest` tag, with release notes stating the change in diagrams and the licence change, and verify it the same way with `dist_tag: 0.15.0` — published from CI on the `v0.15.0` tag with provenance after the `npm` environment was approved, carrying `latest`, with release notes stating how diagrams change and the license change. The run with `dist_tag: 0.15.0` logs `verifying monodocs 0.15.0` on Linux x64 and Windows x64, and both 0.15 steps ran and passed on both
+- [x] Verify the `v0.15.0` release binaries through `verify-release-binaries.yml` on both platforms — run on publish, passing on Linux x64 and Windows x64
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.15.0` assets on a Windows 11 host
-- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.15.0` assets on a Linux x64 host without Node.js ([maintenance.md](maintenance.md))
-- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: diagrams rendering under mermaid 12 with the notices in the source, and formulas drawn with a MATH font
-- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
-- [ ] Move the `next` dist-tag onto `0.15.0`, and confirm that the deployed CI guide pins `monodocs@0.15.0` in English and Japanese
+- [x] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.15.0` assets on a Linux x64 host without Node.js ([maintenance.md](maintenance.md)) — run in a `debian:stable-slim` container with no Node.js against the published `v0.15.0` assets: all sixteen checks pass
+- [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: diagrams rendering under mermaid 12 with the notices in the source, and formulas drawn with a MATH font — the published asset checked against its `.sha256`, run with a minimal environment and no Node.js on `examples/en` and `examples/math`, and its output driven in Chromium with `fonts-lmodern` installed through eleven checks: the sidebar rendering, a link navigating and marking the current page, next, search returning results and highlighting them in the page it opens, `Escape` clearing the box, dark mode surviving a reload, the drawer at 375px opening and closing after a link, the footer reading `monodocs v0.15.0`, no script errors, and the two new ones: the diagram drawn under mermaid 12 with the `mermaid@12.1.0` notices once in the source, and the 21 formulas drawn in Latin Modern Math, the matrix's bracket stretched to 3.2em
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — in part: the math fixture's HTML looked at in Edge, and its PDF with formulas opened, during the beta (above); printing it, `serve --open`, and Mark of the Web with SmartScreen are still to be done
+- [x] Move the `next` dist-tag onto `0.15.0`, and confirm that the deployed CI guide pins `monodocs@0.15.0` in English and Japanese — `next` and `latest` both read `0.15.0`, and the deployed CI guide pins `monodocs@0.15.0` four times in each language
 
 ## Supported Syntax
 
