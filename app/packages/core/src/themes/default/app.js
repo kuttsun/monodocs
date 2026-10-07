@@ -510,6 +510,18 @@
             folded: fold(htext),
           };
         }),
+        // Each formula's TeX with the section it falls in: a query that matches a formula, and no
+        // heading, opens the formula's section rather than the page's top.
+        formulas: (p.formulas || []).map(function (f) {
+          var tex = f.tex || "";
+          return {
+            folded: fold(tex),
+            // Without its control words, for a term that is not one: "left" is prose, and should
+            // not find every \left.
+            foldedWords: fold(tex.replace(/\\[A-Za-z]+/g, " ")),
+            section: f.section || null,
+          };
+        }),
       };
     });
     return searchIndex;
@@ -543,6 +555,8 @@
     // 見出しの本文が語を含むだけの見出しより優先する。
     var numberHits = Object.create(null);
     var pageNumberHit = false;
+    // Section ID → the number of terms a formula in it matched ("" for before the first heading).
+    var formulaHits = Object.create(null);
 
     for (var i = 0; i < terms.length; i++) {
       var term = terms[i];
@@ -567,6 +581,18 @@
         score += SCORE_HEADING;
         matched = true;
       }
+
+      // Each term counts once per section, however many of the section's formulas it is in.
+      var termSections = Object.create(null);
+      entry.formulas.forEach(function (f) {
+        // A term with a backslash in it is TeX (`\\frac`, a pasted `e^{i\\pi}`); one without is a word.
+        var tex = term.indexOf("\\") !== -1 ? f.folded : f.foldedWords;
+        if (tex.indexOf(term) === -1) return;
+        var key = f.section || "";
+        if (termSections[key]) return;
+        termSections[key] = true;
+        formulaHits[key] = (formulaHits[key] || 0) + 1;
+      });
 
       var positions = occurrences(entry.textFolded, term);
       if (positions.length > 0) {
@@ -595,6 +621,7 @@
       headingHits: headingHits,
       numberHits: numberHits,
       pageNumberHit: pageNumberHit,
+      formulaHits: formulaHits,
     };
   }
 
@@ -620,7 +647,24 @@
         bestCount = count;
       }
     });
-    return best;
+    if (best || anyNumberHit) return best;
+    // No heading matched: a formula that did opens its section (the one most terms matched in, the
+    // first in document order on a tie); one before the first heading leaves the page's top.
+    var formulaBest = null;
+    var formulaCount = 0;
+    entry.formulas.forEach(function (f) {
+      var count = scored.formulaHits[f.section || ""] || 0;
+      if (count > formulaCount) {
+        formulaBest = f.section;
+        formulaCount = count;
+      }
+    });
+    if (!formulaBest) return null;
+    var section = null;
+    entry.headings.forEach(function (h) {
+      if (!section && h.id === formulaBest) section = h;
+    });
+    return section;
   }
 
   /**
@@ -1743,6 +1787,247 @@
     });
   }
 
+  // ---- copying formulas ----
+  // A browser copies a formula's MathML as its tokens one per line, the radical and the fraction bar
+  // gone (roadmap 6.4). When a selection holds a formula, the copy is written here instead: the plain
+  // text with each formula as its source as written (a display formula on lines of its own), and the
+  // HTML as the selection's own markup, MathML included. A selection that starts or ends inside a
+  // formula takes the whole formula. A selection without one is left to the browser.
+  var FORMULA_SOURCE = "data-math-source";
+
+  function closestFormula(node) {
+    for (var n = node; n; n = n.parentNode) {
+      if (n.nodeType === 1 && n.hasAttribute(FORMULA_SOURCE)) return n;
+    }
+    return null;
+  }
+
+  /** Whether a range takes in any of a formula's shown text (its TeX annotation is not shown). */
+  function takesFormula(range, formula) {
+    var part = document.createRange();
+    part.selectNodeContents(formula);
+    // The part of the formula inside the range, and nothing outside it.
+    if (range.compareBoundaryPoints(Range.START_TO_START, part) > 0) {
+      part.setStart(range.startContainer, range.startOffset);
+    }
+    if (range.compareBoundaryPoints(Range.END_TO_END, part) < 0) {
+      part.setEnd(range.endContainer, range.endOffset);
+    }
+    var taken = document.createElement("div");
+    taken.appendChild(part.cloneContents());
+    Array.prototype.forEach.call(taken.querySelectorAll("annotation"), function (a) {
+      a.parentNode.removeChild(a);
+    });
+    return taken.textContent !== "";
+  }
+
+  /**
+   * A selection range as copied: within the page shown (a select-all reaches the hidden pages and
+   * the page's scripts), and with a formula it starts or ends inside taken whole, or left out when
+   * none of its text was selected. Null when nothing of the page shown is in it.
+   */
+  function copyRange(selected, page) {
+    var range = selected.cloneRange();
+    if (!range.intersectsNode(page)) return null;
+    var pageRange = document.createRange();
+    pageRange.selectNodeContents(page);
+    if (range.compareBoundaryPoints(Range.START_TO_START, pageRange) < 0) {
+      range.setStart(pageRange.startContainer, pageRange.startOffset);
+    }
+    if (range.compareBoundaryPoints(Range.END_TO_END, pageRange) > 0) {
+      range.setEnd(pageRange.endContainer, pageRange.endOffset);
+    }
+    var first = closestFormula(range.startContainer);
+    var last = closestFormula(range.endContainer);
+    var takeFirst = first ? takesFormula(range, first) : false;
+    var takeLast = last ? (last === first ? takeFirst : takesFormula(range, last)) : false;
+    if (first) {
+      if (takeFirst) range.setStartBefore(first);
+      else range.setStartAfter(first);
+    }
+    if (last) {
+      if (takeLast) range.setEndAfter(last);
+      else range.setEndBefore(last);
+    }
+    // A range inside one formula that took none of it is empty now.
+    if (range.collapsed) return null;
+    return range;
+  }
+
+  /** Whether a range takes a formula, looked for only under the range's common ancestor. */
+  function rangeHasFormula(range) {
+    var root = range.commonAncestorContainer;
+    if (root.nodeType !== 1) root = root.parentNode;
+    if (!root || closestFormula(root)) return Boolean(root);
+    return Array.prototype.some.call(
+      root.querySelectorAll("[" + FORMULA_SOURCE + "]"),
+      function (formula) {
+        return range.intersectsNode(formula);
+      },
+    );
+  }
+
+  /**
+   * Copy what a range takes that the page shows, as the browser's own copy leaves out what the
+   * page's styles hide: an element not displayed, text not visible (an element made visible again
+   * inside it is kept), and the body of a closed details. Only the nodes the range takes are read,
+   * and the page is not touched. Each copied element is listed in `styled` with its computed
+   * display and white space, for the plain text to be laid out as on the page. A formula is copied
+   * whole, with the hidden parts (the TeX annotation) that belong to it.
+   */
+  function cloneShown(range, page, styled) {
+    function shown(node, visible) {
+      if (node.nodeType === 3) {
+        if (!visible) return null;
+        var value = node.nodeValue;
+        var end = node === range.endContainer ? range.endOffset : value.length;
+        var start = node === range.startContainer ? range.startOffset : 0;
+        return document.createTextNode(value.slice(start, end));
+      }
+      // By local name, which an SVG script has in lower case too.
+      if (node.nodeType !== 1 || /^(script|style|template|noscript)$/i.test(node.localName)) {
+        return null;
+      }
+      var style = getComputedStyle(node);
+      if (style.display === "none") return null;
+      if (node.hasAttribute(FORMULA_SOURCE)) {
+        return style.visibility === "visible" ? node.cloneNode(true) : null;
+      }
+      var copy = node.cloneNode(false);
+      // What is not visible is left out below, so an element's own style must not hide, where the
+      // HTML is pasted, the visible content kept inside it.
+      // However the style writes it (a custom property, say), it is what hides the element here.
+      if (
+        style.visibility !== "visible" &&
+        copy.style &&
+        copy.style.getPropertyValue("visibility")
+      ) {
+        copy.style.removeProperty("visibility");
+        if (!copy.getAttribute("style")) copy.removeAttribute("style");
+      }
+      styled.push({ copy: copy, display: style.display, whiteSpace: style.whiteSpace });
+      within(node, copy, style.visibility === "visible");
+      return copy;
+    }
+    function within(node, into, visible) {
+      var only = null;
+      if (folded(node)) {
+        only = node.querySelector(":scope > summary");
+        if (!only) return;
+      }
+      for (var child = node.firstChild; child; child = child.nextSibling) {
+        if ((only && child !== only) || !range.intersectsNode(child)) continue;
+        var copy = shown(child, visible);
+        if (copy) into.appendChild(copy);
+      }
+    }
+    function folded(node) {
+      return node.localName === "details" && !node.open;
+    }
+    var holder = document.createElement("div");
+    var root = range.commonAncestorContainer;
+    if (root.nodeType !== 1) root = root.parentNode;
+    // Nothing is shown of a selection inside an element not displayed, or inside a closed
+    // details' body, both above where the walk starts.
+    for (var el = root; el && el !== page; el = el.parentNode) {
+      var parent = el.parentNode;
+      if (getComputedStyle(el).display === "none") return holder;
+      if (parent && folded(parent) && el !== parent.querySelector(":scope > summary")) {
+        return holder;
+      }
+    }
+    // The common ancestor is kept, as the browser keeps it: a selection inside a paragraph is
+    // still a paragraph.
+    if (root === page) {
+      within(page, holder, getComputedStyle(page).visibility === "visible");
+    } else {
+      var copy = shown(root, true);
+      if (copy) holder.appendChild(copy);
+    }
+    return holder;
+  }
+
+  function setupFormulaCopy() {
+    document.addEventListener("copy", function (event) {
+      // A copy from a text field (the search box, a code block's fallback) is the field's own.
+      var target = event.target;
+      if (
+        target &&
+        target.nodeType === 1 &&
+        (/^(INPUT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable)
+      ) {
+        return;
+      }
+      var selection = window.getSelection();
+      var page = document.querySelector("#content article.page:not([hidden])");
+      if (!selection || selection.isCollapsed || !event.clipboardData || !page) return;
+      // Each range is copied on its own and the copies joined by a line break, as the ranges of a
+      // selection are apart on the page.
+      var ranges = [];
+      for (var i = 0; i < selection.rangeCount; i++) {
+        var range = copyRange(selection.getRangeAt(i), page);
+        if (range) ranges.push(range);
+      }
+      // A copy that takes no formula is left to the browser, before anything else is done.
+      if (!ranges.some(rangeHasFormula)) return;
+      var copies = ranges.map(function (r) {
+        var styled = [];
+        return { holder: cloneShown(r, page, styled), styled: styled };
+      });
+      // A formula the page hides is not copied either.
+      if (
+        !copies.some(function (c) {
+          return c.holder.querySelector("[" + FORMULA_SOURCE + "]");
+        })
+      ) {
+        return;
+      }
+      var htmls = [];
+      var texts = [];
+      copies.forEach(function (c) {
+        var holder = c.holder;
+        htmls.push(holder.innerHTML);
+        // The plain text is laid out with the page's display and white space, which the page's
+        // selectors no longer give to the copy.
+        c.styled.forEach(function (s) {
+          s.copy.style.display = s.display;
+          s.copy.style.whiteSpace = s.whiteSpace;
+          // What is not visible is already left out; an element's own style must not hide the
+          // visible text kept inside it.
+          s.copy.style.visibility = "visible";
+        });
+        Array.prototype.forEach.call(
+          holder.querySelectorAll("[" + FORMULA_SOURCE + "]"),
+          function (formula) {
+            var display = formula.classList.contains("math-display");
+            var source = document.createElement(display ? "div" : "span");
+            source.textContent = formula.getAttribute(FORMULA_SOURCE) || "";
+            // A display formula's source can span lines, which are kept.
+            source.style.whiteSpace = "pre";
+            formula.parentNode.replaceChild(source, formula);
+          },
+        );
+        // Nothing that loads while the copy is laid out below.
+        Array.prototype.forEach.call(
+          holder.querySelectorAll("iframe, video, audio, object, embed, img"),
+          function (el) {
+            el.parentNode.removeChild(el);
+          },
+        );
+        // innerText gives the selection's line structure only to an element that is rendered.
+        holder.style.cssText = "position:fixed;left:-99999px;top:0;";
+        document.body.appendChild(holder);
+        texts.push(holder.innerText);
+        document.body.removeChild(holder);
+      });
+      var text = texts.join("\n");
+      var html = htmls.join("\n");
+      event.clipboardData.setData("text/plain", text);
+      event.clipboardData.setData("text/html", html);
+      event.preventDefault();
+    });
+  }
+
   // ---- init ----
   function init() {
     // ルート確定済みの目印。これ以降に読み込まれた Mermaid ランタイムは
@@ -1758,6 +2043,7 @@
     setupSidebarDirs();
     setupCodeBlocks();
     setupImageLightbox();
+    setupFormulaCopy();
 
     if (window.location.hash) {
       onRouteChange();
