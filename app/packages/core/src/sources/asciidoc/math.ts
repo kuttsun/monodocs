@@ -217,6 +217,15 @@ export async function createMathConverter(
     visit(tree, (node) => {
       if (node.type === "text" || node.type === "comment") node.value = restore(node.value);
       else if (node.type === "element") {
+        const element = node as Element;
+        // A display formula's marker, written back as Asciidoctor writes the block's content.
+        const key = element.properties.dataMonodocsMath;
+        const formula = typeof key === "string" ? formulas.get(key) : undefined;
+        if (formula?.display) {
+          element.properties = { className: ["content"] };
+          element.children = [{ type: "text", value: `\n\\[${formula.tex}\\]\n` }];
+          return SKIP;
+        }
         restoreProperties(node as Element);
         if ((node as Element).tagName === "template" && (node as Element).content) {
           restoreAll((node as Element).content!);

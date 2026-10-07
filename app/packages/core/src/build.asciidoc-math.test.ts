@@ -304,6 +304,16 @@ describe("AsciiDoc math", () => {
     expect(block(on.html)).toBe(block(off.html));
   });
 
+  it("writes a display formula in a template back as Asciidoctor writes it", async () => {
+    const adoc =
+      "= T\n\n++++\n<template>\n++++\n\n[latexmath]\n++++\nx\n++++\n\n++++\n</template>\n++++\n";
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(on.html).not.toMatch(/[\uE000-\uE01F]/);
+    const template = (html: string) => /<template>[\s\S]*?<\/template>/.exec(html)![0];
+    expect(template(on.html)).toBe(template(off.html));
+  });
+
   it("does not point a block formula's diagnostic at a line of Asciidoctor's HTML", async () => {
     const { result } = await build("= T\n\n[latexmath]\n++++\nx^{\n++++\n");
     const found = result.warnings.find((w) => w.code === "math/parse-failed");
