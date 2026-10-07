@@ -57,6 +57,9 @@ importers:
       hast-util-from-html:
         specifier: ^2.0.3
         version: 2.0.3
+      hast-util-to-html:
+        specifier: ^9.0.5
+        version: 9.0.5
       hast-util-to-text:
         specifier: ^4.0.2
         version: 4.0.2
@@ -139,9 +142,6 @@ importers:
       happy-dom:
         specifier: ^20.14.5
         version: 20.14.5
-      hast-util-to-html:
-        specifier: ^9.0.5
-        version: 9.0.5
       micromark-util-types:
         specifier: ^2.0.2
         version: 2.0.2

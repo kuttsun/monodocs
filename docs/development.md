@@ -49,9 +49,15 @@ copies that reach users are prebuilt into the two bundles of the one mermaid ver
 `mermaid.min.js`, which the inline runtime and pre-render embed, and the ESM bundle `mermaid.runtime: cdn`
 loads from jsDelivr at that exact version. Both carry KaTeX 0.16.47. Overriding the KaTeX version this
 repository resolves reaches neither, and mermaid 11 and 12 both require `katex ^0.16.47`; an override
-would silence the audit without changing what ships. The risk is accepted as low: exploiting it needs both
+would silence the audit without changing what ships. monodocs also renders formulas with KaTeX at build
+time (`@monodocs/core` depends on it directly), at the same 0.16.47, kept in step with the version the
+Mermaid runtime bundles so that the notices name one KaTeX and the MathML rewrites (roadmap 6.4) are those
+measured against it; it sets `trust` explicitly, as a function that refuses every command, so an inherited `trust` cannot turn
+the gated commands on there; other options could still be inherited, which again needs code that has
+already polluted `Object.prototype`. The risk is accepted as low: exploiting it needs both
 code that has already polluted `Object.prototype` and attacker-controlled formulas, and mermaid passes its
-output through DOMPurify. Remove the entry when the mermaid monodocs uses carries a patched KaTeX. Last
+output through DOMPurify. Remove the entry when the mermaid monodocs uses carries a patched KaTeX, and move the build-time KaTeX to
+that version with it, surveying its MathML against MathML Core again. Last
 checked 2026-10-06: mermaid 12.1.0 still requires `katex ^0.16.47`.
 
 ### App Dependency Security Override (Removed)

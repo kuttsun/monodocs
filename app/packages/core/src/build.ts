@@ -129,6 +129,7 @@ export async function preparePages(
       createAsciidocRenderer(config.asciidocAttributes, rootDir, {
         lineBreak: config.lineBreak,
         refuseSectnums: config.numberingSections !== false,
+        math: config.mathEnabled,
       }),
     ],
     {

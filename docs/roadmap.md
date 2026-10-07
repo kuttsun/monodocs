@@ -596,6 +596,38 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   MathML branch. Accepted as
   KaTeX's own and not detected: a dashed frame around an array is drawn solid, `\xrightequilibrium` and
   `\xleftequilibrium` are drawn as ordinary harpoons, and nested size commands compound.
+- **AsciiDoc.** The converter's output for latexmath is replaced through a converter that wraps
+  Asciidoctor's own, handed in as the converter made beforehand (`_preCreatedConverter`, Asciidoctor's
+  hook for that), so that a section title, which Asciidoctor converts while it loads the document to
+  make the section's ID, gets the marker too. The hook is not in Asciidoctor's public API; the tests
+  of heading IDs and heading text fail if it stops being honoured. The wrapped converter is made with
+  the `htmlsyntax` the configuration sets, as Asciidoctor makes its own.
+  - An inline formula is marked with characters, not a tag: private-use characters, each end carrying
+    a key, around what Asciidoctor converted the formula's text to, where the default output has `\(`
+    and `\)`.
+    Asciidoctor makes a section's ID from its converted title, taking out tags and every character
+    that is not a word character, so a title with formulas gives the very ID it gave before, whatever
+    the formulas hold (`latexmath:a[&#945;]`, or raw `<` and `>` from a formula's own substitutions,
+    which Asciidoctor reads as a tag across formulas). A tag in place of the delimiters would not
+    give the same ID: its `>` can end such a bracketed run. A display formula, which is in no title,
+    is marked with an element.
+  - A key is new for each conversion, and the formula it stands for (its TeX and its source) is kept
+    by the converter, so raw HTML from a passthrough can neither pass for a formula nor change what one
+    is. A formula the HTML around it broke apart (inside strong text, its own substitutions let a
+    `</strong>` through) is written back with `\(` and `\)`, as Asciidoctor writes it, and reported as
+    `math/construct-unsupported`. A marker, whole or one end of it, wherever the HTML put it — a text,
+    an attribute's value or name, a list of classes, a comment, a script or style or other element
+    whose content is text only, a template's content — is written back the same way (a display
+    formula as the block Asciidoctor wrote for it, which the converter keeps), with its text as
+    the HTML parser left it; a private-use character an author wrote is left as written.
+  - Character references are decoded once, by the same HTML parser the formulas are read with, so
+    the two always agree (`&#128;` is `€`, as HTML has it). A block's content is decoded whatever its
+    substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is
+    taken as the delimiters Asciidoctor would otherwise have added.
+  - The title monodocs reads (`doc.getDocumentTitle()`) shows a formula as `$TeX$`. asciimath is
+    reported as `math/asciimath-not-rendered`. A diagnostic for an AsciiDoc formula names the file
+    without a line: the HTML Asciidoctor writes cannot point back at the source. A formula in a section
+    title, converted again for each copy (a TOC entry, an xref's text), is reported once.
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
   line break before or after it is not between two East Asian characters and stays a space, as at
   any other element that is not text.
