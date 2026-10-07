@@ -331,7 +331,9 @@ What it does and does not see:
   otherwise have been fine. Choosing `error` accepts that one stops CI too.
 - **It checks its own reference**, against a second private-use codepoint and a noncharacter. If
   this machine turns out to draw something that should have no glyph, the check says so and reports
-  nothing else, rather than producing findings it cannot stand behind. If it runs out of patience
+  no missing characters, rather than producing findings it cannot stand behind. Whether a formula
+  font has a MATH table does not rest on that reference, so it is still reported, and still stops
+  the build under `error`. If it runs out of patience
   before the end of a very large document, it says that too rather than reporting a clean bill.
 - **The default page-number footer is measured too.** A replacement `pdf.header` / `pdf.footer`
   fragment is not: it is arbitrary HTML that brings a font of its own.

@@ -318,19 +318,24 @@ const UNASSIGNED = "\u{50000}";
  * fontconfig に訊く（検査そのものとは独立した尺度であることが要点。Windows には無いので
  * その場合はスキップする）。
  */
-function fontconfigCovers(codepoint: string): boolean {
+function fontconfigCovers(codepoint: string): boolean | undefined {
   try {
     return (
       execFileSync("fc-list", [`:charset=${codepoint}`, "family"], { encoding: "utf8" }).trim()
         .length > 0
     );
   } catch {
-    return false;
+    // fontconfig が無い（Windows）なら、あるとも無いとも言えない。
+    return undefined;
   }
 }
-const hasCjkAndEmoji = fontconfigCovers("65E5") && fontconfigCovers("2705");
-/** A machine that draws a formula's italic letters has a math font, which the image does not. */
-const hasMathFont = fontconfigCovers("1D465");
+const hasCjkAndEmoji = fontconfigCovers("65E5") === true && fontconfigCovers("2705") === true;
+/**
+ * 数式用のフォントが無いと確かめられたときだけ、その不在を前提にする試験を走らせる。数式の
+ * イタリックの文字を描くフォントが一つも無ければ、MATH テーブルを持つフォントも無い（その逆は
+ * 言えないので、在ることの判定には使わない）。開発用イメージがこれに当たる。
+ */
+const noMathFont = fontconfigCovers("1D465") === false;
 
 /** Latin Modern Math, a font with an OpenType MATH table, kept for these tests (GUST Font License). */
 const MATH_FONT = new URL(
@@ -460,7 +465,7 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
   }, 120_000);
 
   // 開発イメージには数式用のフォントが無い（v0.14 の実測）。それがある機械ではこの所見は出ない。
-  it.skipIf(hasMathFont)(
+  it.runIf(noMathFont)(
     "reports a formula's letters as Chromium draws them, and a font with no MATH table",
     async () => {
       const result = await buildPdf("real-math-missing", "# Home\n\n$x + \\alpha$ and $\\sin$\n");
@@ -478,7 +483,7 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     120_000,
   );
 
-  it.skipIf(hasMathFont)(
+  it.runIf(noMathFont)(
     "measures the formulas' font even where the walk was cut short before them",
     async () => {
       // 40 件の所見で走査は止まる。数式のフォントは走査とは別に集めるので、その後ろでも測られる。
@@ -502,7 +507,9 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
       // The default theme's stylesheet, which a theme's own replaces, with the math font added.
       readFileSync(new URL("./themes/default/style.css", import.meta.url), "utf8") +
         `\n@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }\n` +
-        'math { font-family: "Fixture Math"; }\n',
+        'math { font-family: "Fixture Math"; }\n' +
+        // What the page's styles do to its formulas does not reach the measurement.
+        "mspace { display: none; } mo { font-size: 1px !important; }\n",
     );
     const result = await buildPdf(
       "real-math-ok",

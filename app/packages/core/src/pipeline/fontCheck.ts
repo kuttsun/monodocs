@@ -47,8 +47,6 @@ const MAX_PAIRS = 50_000;
 const MAX_FINDINGS = 40;
 /** Clusters named in the message. The rest are counted rather than listed. */
 const MAX_SAMPLES = 8;
-/** Distinct font stacks of formulas checked for a MATH table. A document has one or two. */
-const MAX_MATH_FONTS = 8;
 
 /**
  * MathML Core's italic mapping, which `text-transform: math-auto` applies to a text of one
@@ -142,7 +140,6 @@ var SIZE = ${MEASURE_SIZE};
 var MAX_PAIRS = ${MAX_PAIRS};
 var MAX_FINDINGS = ${MAX_FINDINGS};
 var PROBES = ${JSON.stringify(probes)};
-var MAX_MATH_FONTS = ${MAX_MATH_FONTS};
 var MATH_ITALIC = ${JSON.stringify(MATH_ITALIC)};
 var MATHML = 'http://www.w3.org/1998/Math/MathML';
 
@@ -326,7 +323,8 @@ function walk(root) {
 var mathFonts = [];
 function gatherMathFonts(root) {
   var formulas = root.querySelectorAll('math');
-  for (var i = 0; i < formulas.length && mathFonts.length < MAX_MATH_FONTS; i++) {
+  // Every distinct stack is measured: a stack left out would be a formula font passed unchecked.
+  for (var i = 0; i < formulas.length; i++) {
     var formula = formulas[i];
     if (formula.namespaceURI !== MATHML) continue;
     var drawn = formula.checkVisibility
@@ -405,8 +403,17 @@ try {
      ['visibility','visible']]
       .forEach(function (d) { mathHost.style.setProperty(d[0], d[1], 'important'); });
     document.body.appendChild(mathHost);
+    // The measurement is set apart from the page's stylesheet, which could hide or resize what it
+    // measures (a theme's 'mspace { display: none }'), and from what it would inherit; the
+    // document's font faces still reach it, and the stack is given to it explicitly.
+    var mathInto = mathHost;
+    if (mathHost.attachShadow) {
+      mathInto = document.createElement('div');
+      mathInto.style.cssText = 'all:initial;display:block';
+      mathHost.attachShadow({ mode: 'open' }).appendChild(mathInto);
+    }
     for (var m = 0; m < mathFonts.length; m++) {
-      if (!stretches(mathFonts[m], mathHost)) noMathTable.push(mathFonts[m]);
+      if (!stretches(mathFonts[m], mathInto)) noMathTable.push(mathFonts[m]);
     }
   }
 } finally {
