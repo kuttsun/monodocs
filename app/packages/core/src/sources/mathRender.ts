@@ -97,60 +97,131 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
   };
 }
 
-/** Punctuation that may not start a line, and that may not end one, as the line breaker reads it. */
-const NO_LINE_START = /^[,.;:!?)\]}、。，．：；！？）］｝」』】〕〉》〙〗〛”’…‥]+/;
+/**
+ * Punctuation that may not start a line, and brackets that may not end one, as Chromium's line
+ * breaker treats them between two characters: measured, each of these stayed off the start (or
+ * the end) of a line in text, and did not after an inline formula. `ー`, small kana, and `—` start a
+ * line in text too, and are left out.
+ */
+const NO_LINE_START =
+  /^[,.;:!?)\]}'"\-‐–%％‰°′″℃、。，．：；！？）］｝」』】〕〉》〙〗〛”’…‥・〜々゠〟‼⁉]+/;
 const NO_LINE_END = /[(\[{（［｛「『【〔〈《〘〖〚“‘]+$/;
+
+/** Inline elements a formula can sit at the edge of, which take its place at a line break. */
+const INLINE = new Set([
+  "a",
+  "abbr",
+  "b",
+  "bdi",
+  "bdo",
+  "cite",
+  "del",
+  "dfn",
+  "em",
+  "i",
+  "ins",
+  "kbd",
+  "mark",
+  "q",
+  "s",
+  "small",
+  "span",
+  "strong",
+  "sub",
+  "sup",
+  "u",
+  "var",
+]);
+
+type Parent = HastRoot | Element;
 
 /**
  * Chromium breaks a line on either side of an inline box, a formula included, even where it never
  * breaks between two characters: measured, a line could start with `、`, `。`, `,`, or `）` right
  * after an inline formula, and an inline-block did the same, while text alone never did. The
- * punctuation that may not start a line after a formula, and that may not end one before it, is
- * kept with the formula in a span that does not wrap. The formula's own element is left as it is,
- * so copying and search read it as before; the style is inline, so a theme cannot lose it.
+ * punctuation that may not start a line after a formula, and the brackets that may not end one
+ * before it, are kept with it in a span that does not wrap. Where the formula is the last (or first)
+ * thing in strong text, emphasis, or a link, that element is what the punctuation follows (or what
+ * the bracket precedes), and a footnote reference right after the formula goes with it. The
+ * formula's own element is left as it is, so the text copied and searched is unchanged; the style is
+ * inline, so a theme cannot lose it.
  */
 function keepPunctuationWithFormulas(tree: HastRoot): void {
-  const wrappers = new Set<Element>();
-  visit(tree, (parent) => {
-    if (!("children" in parent)) return;
-    // A wrapper made here holds its formula already, and a formula's MathML holds none.
-    if (parent.type === "element" && (wrappers.has(parent) || isMath(parent))) return SKIP;
-    const children = parent.children as ElementContent[];
-    for (let i = 0; i < children.length; i++) {
-      const formula = children[i]!;
-      if (formula.type !== "element" || !isMath(formula)) continue;
-      if (!(formula.properties.className as string[]).includes("math-inline")) continue;
-      const before = children[i - 1];
-      const after = children[i + 1];
-      const opening = before?.type === "text" ? NO_LINE_END.exec(before.value)?.[0] : undefined;
-      const closing = after?.type === "text" ? NO_LINE_START.exec(after.value)?.[0] : undefined;
-      if (opening === undefined && closing === undefined) continue;
-      const kept: ElementContent[] = [];
-      let start = i;
-      let end = i + 1;
-      if (opening !== undefined && before?.type === "text") {
-        kept.push({ type: "text", value: opening });
-        const rest = before.value.slice(0, -opening.length);
-        if (rest === "") start = i - 1;
-        else before.value = rest;
+  const found: { formula: Element; ancestors: Parent[] }[] = [];
+  const walk = (node: Parent, ancestors: Parent[]): void => {
+    for (const child of node.children) {
+      if (child.type !== "element") continue;
+      if (isMath(child)) {
+        const classes = child.properties.className as string[];
+        if (classes.includes("math-inline"))
+          found.push({ formula: child, ancestors: [...ancestors, node] });
+        continue;
       }
-      kept.push(formula);
-      if (closing !== undefined && after?.type === "text") {
-        kept.push({ type: "text", value: closing });
-        const rest = after.value.slice(closing.length);
-        if (rest === "") end = i + 2;
-        else after.value = rest;
-      }
-      const wrapper: Element = {
-        type: "element",
-        tagName: "span",
-        properties: { style: "white-space: nowrap" },
-        children: kept,
-      };
-      wrappers.add(wrapper);
-      children.splice(start, end - start, wrapper);
-      i = start;
+      walk(child, [...ancestors, node]);
     }
+  };
+  walk(tree, []);
+  for (const { formula, ancestors } of found) {
+    // The element the formula stands for at its end, and at its start, with the parent holding it.
+    const edge = (last: boolean): { unit: Element; parent: Parent } => {
+      let unit: Element = formula;
+      let k = ancestors.length - 1;
+      for (; k > 0; k--) {
+        const parent = ancestors[k]!;
+        const kids = parent.children;
+        if (parent.type !== "element" || !INLINE.has(parent.tagName)) break;
+        if ((last ? kids[kids.length - 1] : kids[0]) !== unit) break;
+        unit = parent;
+      }
+      return { unit, parent: ancestors[k]! };
+    };
+    const end = edge(true);
+    const start = edge(false);
+    if (end.unit === start.unit) {
+      keep(end.parent, end.unit, true, true);
+    } else {
+      keep(end.parent, end.unit, false, true);
+      keep(start.parent, start.unit, true, false);
+    }
+  }
+}
+
+/** Wrap `unit` in `parent` with the bracket before it and the punctuation after it, if any. */
+function keep(parent: Parent, unit: Element, before: boolean, after: boolean): void {
+  const children = parent.children as ElementContent[];
+  let first = children.indexOf(unit);
+  if (first < 0) return;
+  let last = first;
+  const kept: ElementContent[] = [unit];
+  if (after) {
+    // A footnote reference is set right after the formula, and goes with it.
+    while (
+      children[last + 1]?.type === "element" &&
+      (children[last + 1] as Element).tagName === "sup"
+    ) {
+      kept.push(children[++last]!);
+    }
+  }
+  const prev = before ? children[first - 1] : undefined;
+  const next = after ? children[last + 1] : undefined;
+  const opening = prev?.type === "text" ? NO_LINE_END.exec(prev.value)?.[0] : undefined;
+  const closing = next?.type === "text" ? NO_LINE_START.exec(next.value)?.[0] : undefined;
+  if (opening === undefined && closing === undefined && kept.length === 1) return;
+  if (opening !== undefined && prev?.type === "text") {
+    kept.unshift({ type: "text", value: opening });
+    prev.value = prev.value.slice(0, -opening.length);
+    if (prev.value === "") first--;
+  }
+  if (closing !== undefined && next?.type === "text") {
+    kept.push({ type: "text", value: closing });
+    next.value = next.value.slice(closing.length);
+    if (next.value === "") last++;
+  }
+  children.splice(first, last - first + 1, {
+    type: "element",
+    tagName: "span",
+    properties: { style: "white-space: nowrap" },
+    children: kept,
   });
 }
 

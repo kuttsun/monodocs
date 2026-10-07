@@ -263,6 +263,21 @@ describe("Markdown math", () => {
     expect(html).not.toMatch(/<span class="math math-inline"[^>]*>[^<]*[、。]/);
   });
 
+  it("keeps the punctuation after strong text or a footnote reference ending in a formula", async () => {
+    const { html } = await build(
+      "# A\n\n値は **$x$**、次に $y$[^1]。そして $n$-dimensional と $p$%。\n\n[^1]: 注。\n",
+    );
+    const nowrap = '<span style="white-space: nowrap">';
+    // Strong text ending in a formula, and the 、 after it.
+    expect(html).toContain(`${nowrap}<strong><span class="math math-inline"`);
+    expect(html).toMatch(/<\/math><\/span><\/strong>、<\/span>/);
+    // A footnote reference after a formula, and the 。 after both.
+    expect(html).toMatch(/<\/math><\/span><sup>.*?<\/sup>。<\/span>/);
+    // A hyphen and a percent sign, which do not start a line in text.
+    expect(html).toMatch(/<\/math><\/span>-<\/span>dimensional/);
+    expect(html).toMatch(/<\/math><\/span>%。<\/span>/);
+  });
+
   it("builds the math fixture, its Markdown and AsciiDoc pages giving the same formulas", async () => {
     // examples/math: the formulas v0.14 measured, 7 inline and 14 display, on each page.
     const fixture = fileURLToPath(new URL("../../../../examples/math", import.meta.url));

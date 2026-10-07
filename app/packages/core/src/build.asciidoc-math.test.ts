@@ -92,6 +92,18 @@ describe("AsciiDoc math", () => {
     expect(html).toMatch(/<\/math><\/span>。<\/span>/);
   });
 
+  it("keeps punctuation between two formulas, and brackets around them, with them", async () => {
+    const { html } = await build(
+      "= A\n\n値は latexmath:[x]、latexmath:[y]。また（latexmath:[a]）（latexmath:[b]）。\n",
+    );
+    const wrapped = [
+      ...html.matchAll(
+        /<span style="white-space: nowrap">((?:(?!<span style=).)*?<\/math><\/span>[^<]*)<\/span>/g,
+      ),
+    ].map((m) => m[1]!.replace(/<span class="math.*?<\/math><\/span>/g, "F"));
+    expect(wrapped).toEqual(["F、", "F。", "（F）", "（F）。"]);
+  });
+
   it("records each formula's TeX, and a source rebuilt as latexmath", async () => {
     const { html } = await build(DOC);
     expect(attributes(html, "data-math-tex")).toEqual([
