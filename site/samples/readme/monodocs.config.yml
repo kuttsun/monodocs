@@ -1,0 +1,15 @@
+# The PDF sample pages in the top README (scripts/readme-pdf-sample.sh).
+# The version and date are fixed so that regenerating does not change the images.
+title: "Orbit Lab Handbook"
+lang: en
+fontCheck: error
+document:
+  version: "1.0"
+  date: "2026-10-07"
+  authors:
+    - Orbit Lab Team
+pdf:
+  cover:
+    enabled: true
+  toc:
+    enabled: true

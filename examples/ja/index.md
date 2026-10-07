@@ -38,7 +38,7 @@ monodocs serve examples/ja            # http://127.0.0.1:4173/
 
 - [全文検索](search.md) / ページ内目次（スクロール連動）/ 前後ページナビ
 - ダークモード / サイドバー折りたたみ・自動展開
-- コードハイライト（shiki）/ Mermaid 図
+- コードハイライト（shiki）/ Mermaid 図 / [数式](markdown/math.md)（MathML）
 - 画像の data URI 埋め込み / ファイル間リンク・AsciiDoc xref / 脚注
 - 本文幅より広い表・コード・画像・図の表示（[Markdown](markdown/wide-content.md) / [AsciiDoc](asciidoc/wide-content.adoc)）
 - 印刷時の全ページ縦展開 / [PDF 出力](pdf.md)（しおり・クリック可能なリンク付き）

@@ -38,7 +38,7 @@ navigation, and body highlighting behave.
 
 - [Full-text search](search.md) / in-page table of contents (scroll-synced) / prev–next navigation
 - Dark mode / sidebar collapse & auto-expand
-- Code highlighting (shiki) / Mermaid diagrams
+- Code highlighting (shiki) / Mermaid diagrams / [Math](markdown/math.md) (MathML)
 - Image data URI embedding / cross-file links & AsciiDoc xref / footnotes
 - Tables, code, images, and diagrams wider than the body width ([Markdown](markdown/wide-content.md) / [AsciiDoc](asciidoc/wide-content.adoc))
 - Full vertical expansion of all pages when printing / [PDF output](pdf.md) (with bookmarks and clickable links)

@@ -127,6 +127,13 @@ scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0
 scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/docs.html
 ```
 
+トップの README に載せる PDF 見本（`docs/assets/pdf-sample-*.png`）は、`site/samples/readme/` や PDF の版面を
+変えたら作り直す:
+
+```bash
+scripts/app.sh pnpm build && scripts/readme-pdf-sample.sh
+```
+
 ### `sources.lineBreak: join` の Unicode データ
 
 `join` には East_Asian_Width プロパティが要るが、JavaScript の正規表現はこれを扱えない。

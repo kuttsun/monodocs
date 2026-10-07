@@ -16,6 +16,7 @@ site/
   docs/                  英語ドキュメント
   ja/docs/               日本語ドキュメント
   samples/density/       版面密度の比較のために monodocs 自身に組ませる原稿
+  samples/readme/        トップの README に載せる PDF 見本の原稿（scripts/readme-pdf-sample.sh）
   public/sample.html     monodocs 自身で生成する単一 HTML デモ（生成物・git 管理外）
   public/density/        同じ原稿を各 pdf.density で組んだ PDF とサムネイル（生成物・git 管理外）
 ```

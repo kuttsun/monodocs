@@ -25,6 +25,20 @@
   <img alt="フォルダ階層に置かれた Markdown / AsciiDoc / 画像ファイルを monodocs build ./docs でまとめ、ページの階層がそのままサイドバーになる単一の docs.html、または単一の docs.pdf を生成する図。画像は出力に埋め込まれる。" src="docs/assets/bundle-light.svg">
 </picture>
 
+## PDF 出力
+
+PDF には表紙と印刷用の目次を付けられ、本文の各ページには既定でフッターにページ番号が入ります。数式はビルド時に描画されます。
+
+<p>
+  <img src="docs/assets/pdf-sample-cover.png" width="32%" alt="PDF の表紙。タイトル Orbit Lab Handbook、版 1.0、日付、著者">
+  <img src="docs/assets/pdf-sample-toc.png" width="32%" alt="印刷用の目次。各ページと節をページ番号付きで並べる">
+  <img src="docs/assets/pdf-sample-math.png" width="32%" alt="文中と別行の数式、行列、表を含む本文のページ。フッターにページ番号 4 / 4">
+</p>
+
+> [!NOTE]
+> 表紙と目次は既定では付きません。`monodocs.config.yml` の `pdf.cover.enabled` と `pdf.toc.enabled` で有効にします。
+> 上の見本は [`site/samples/readme`](site/samples/readme) から生成しています。
+
 ## インストール
 
 `monodocs` は **npm パッケージ**として配布し、Node.js 22.12.0 以上で動作します。対応対象は Linux x64 と Windows x64 です。

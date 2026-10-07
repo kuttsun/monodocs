@@ -181,6 +181,13 @@ To output a single HTML (distributable) to a file:
 scripts/app.sh node packages/cli/dist/index.js build ../examples/ja -o dist/docs.html
 ```
 
+To regenerate the PDF sample pages shown in the top README (`docs/assets/pdf-sample-*.png`) after changing
+`site/samples/readme/` or the PDF layout:
+
+```bash
+scripts/app.sh pnpm build && scripts/readme-pdf-sample.sh
+```
+
 ### Unicode Data for `sources.lineBreak: join`
 
 `join` needs the East_Asian_Width property, which JavaScript regular expressions do not expose. The
