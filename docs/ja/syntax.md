@@ -35,15 +35,15 @@ CommonMark に加え、`remark-gfm` により GitHub Flavored Markdown を有効
 - ` ```mermaid ` コードブロック → Mermaid 図（`mermaid.mode`: `client` 既定 / `pre-render` = ビルド時 SVG 化）
 - 画像（`![alt](path)`）→ 入力配下の実体を data URI 化して埋め込み
 - **数式**（v0.15）: GitHub が描く 4 つの形を、GitHub の規則で読む（[roadmap.md](roadmap.md) 6.4）
-  - `$...$` は文中の数式。`$` が数式を始めるのは、ASCII の空白・`(` の後、または段落や要素の先頭で、
+  - `$...$` は文中の数式。`$` が数式を始めるのは、ASCII の空白・`(` の後、段落の先頭、または要素の中や直後で、
     空白でも `$` でもない文字の前にあるとき。同じ行の次の `$` で閉じるが、その `$` が ASCII の英字・
     数字・`_` の前にあるときは数式にならない。そのため `It costs $5 and $10 today.` や `$HOME/$USER` は
     文字のまま残るが、`Between $5 and 10$` は数式になる。そこでドル記号を書くには `\$` と書く。全角
-    スペースの後では始まらない。`値は$x$です` は文字、`値は $x$ です` は数式である
+    スペースの後でも始まらない（`値は　$x$　です` は文字）。`値は$x$です` は文字、`値は $x$ です` は数式である
   - ``$`...`$`` は、前後の文字を問わず文中の数式になる（`値は$`x`$です` は数式）
   - `$$...$$`: `$$` で始まり `$$` で終わり、文字だけを含む段落では、その中の `$$...$$` がすべて別行立てに
     なる。行をまたいでもよく、間の文は文字のまま残る。リスト項目・見出し・表のセルの中や、ほかの文と
-    並ぶ `$$...$$` は文中の数式になる
+    並ぶ `$$...$$` は、`$...$` と同じ規則で文中の数式になる
   - 言語がちょうど `math` のフェンスのコードブロックは別行立ての数式（`Math` はコード）
 
   バックスラッシュのエスケープは、CommonMark がどこでもそうするように、数式を読む前に解決される。
@@ -110,7 +110,7 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
   （Asciidoctor 出力の `.admonitionblock`）を、postprocess で共通の `<div class="admonition admonition-TYPE">`
   構造へ正規化する。5 種（NOTE / TIP / IMPORTANT / WARNING / CAUTION）は両形式で一致するため、
   CSS・配色を 1 セットで共有する（[postprocess.ts](../../app/packages/core/src/pipeline/postprocess.ts)）。
-- **数式**（v0.15）: 数式はビルド時に KaTeX が MathML だけに描き、KaTeX のスクリプトもスタイルシートも出力に加えない。描くのはブラウザで、OpenType MATH フォントを使う。そのフォントは、PDF を印刷するマシンにも、読者のブラウザにも要る。Windows には Cambria Math が付属し、Linux では `fonts-lmodern` が Latin Modern Math を提供する。PDF では `fontCheck` が、どのフォントも描かない数式の文字と、MATH テーブルの無い数式フォントを報告する。Chromium（MathML Core）は `normal` 以外の `mathvariant` を無視するので、`\mathbb`・`\mathbf`・`\mathcal` などの書体は Unicode の数学用の文字にする。HTML で数式を含む選択をコピーすると、数式はソースになる。Markdown では書いたとおり、AsciiDoc では Asciidoctor が `stem` を解決した後なので `latexmath` としてである。検索はその TeX を読む。PDF からのコピーはビューアのものである。見出しの ID は、数式が入る前と同じく、Markdown では TeX から、AsciiDoc では Asciidoctor が作る。見出しやページタイトルを文字で示す場所（サイドバー、目次、検索結果、PDF のしおり）では、数式を `$TeX$` で示す。`math.enabled: false` で数式を止めると、以前の出力になる。`examples/math` は v0.14 が測った数式を両形式で持ち、マシンのフォントを確かめるのに使える。
+- **数式**（v0.15）: 数式はビルド時に KaTeX が MathML だけに描き、KaTeX のスクリプトもスタイルシートも出力に加えない。描くのはブラウザで、OpenType MATH フォントを使う。そのフォントは、PDF を印刷するマシンにも、読者のブラウザにも要る。Windows には Cambria Math が付属し、Debian と Ubuntu では `fonts-lmodern` が Latin Modern Math を提供する。PDF では `fontCheck` が、どのフォントも描かない数式の文字と、MATH テーブルの無い数式フォントを報告する。Chromium（MathML Core）は `normal` 以外の `mathvariant` を無視するので、`\mathbb`・`\mathbf`・`\mathcal` などの書体は Unicode の数学用の文字にする。HTML で数式を含む選択をコピーすると、数式はソースになる。Markdown では書いたとおり、AsciiDoc では Asciidoctor が `stem` を解決した後なので `latexmath` としてである。検索は数式の TeX を読む。PDF からのコピーはビューアのものである。見出しの ID は、数式が入る前と同じく、Markdown では TeX から、AsciiDoc では Asciidoctor が作る。見出しやページタイトルを文字で示す場所（サイドバー、目次、検索結果、PDF のしおりなど）では、数式を `$TeX$` で示す。`math.enabled: false` で数式を止めると、以前の出力になる。`examples/math` は v0.14 が測った数式を両形式で持ち、マシンのフォントを確かめるのに使える。
 
 ## 制限・非対応（理由つき）
 
