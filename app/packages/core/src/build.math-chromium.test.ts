@@ -359,6 +359,10 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
         inline.style.visibility = "hidden";
         inline.innerHTML = 'INLINE<span class="shown">AGAIN</span>';
         p.appendChild(inline);
+        const variable = document.createElement("span");
+        variable.setAttribute("style", "--v: hidden; visibility: var(--v)");
+        variable.innerHTML = 'VARIABLE<span class="shown">ONCE MORE</span>';
+        p.appendChild(variable);
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         const svgScript = document.createElementNS("http://www.w3.org/2000/svg", "script");
         svgScript.setAttribute("style", "display:block");
@@ -435,7 +439,10 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(hidden.text).not.toContain("INLINE");
       expect(hidden.text).toContain("AGAIN");
       expect(hidden.html).toContain("AGAIN");
-      expect(hidden.html).not.toMatch(/visibility:\s*(?:hidden|collapse)/);
+      expect(hidden.html).not.toMatch(/visibility:/);
+      expect(hidden.text).not.toContain("VARIABLE");
+      expect(hidden.text).toContain("ONCE MORE");
+      expect(hidden.html).toContain("ONCE MORE");
       expect(hidden.html).not.toContain("SVGSCRIPT");
       expect(hidden.text).not.toContain("SVGSCRIPT");
       expect(hidden.text).toContain("SUMMARY");
