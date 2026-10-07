@@ -8,6 +8,10 @@ auditConfig:
     # The copies that reach users are prebuilt into the bundles of the mermaid version monodocs
     # uses (mermaid.min.js, and the ESM the CDN runtime loads at that exact version), which
     # overriding the katex version resolved here cannot reach; mermaid 11 and 12 both require
-    # katex ^0.16.47. It needs Object.prototype already polluted by other code. Remove this entry
-    # when that mermaid carries a patched KaTeX (docs/development.md).
+    # katex ^0.16.47. monodocs also renders formulas with katex 0.16.47 at build time, kept at the
+    # version the mermaid runtime bundles (a test pins it), and sets `trust` explicitly, so a
+    # polluted prototype cannot turn the gated commands on there. It needs Object.prototype already
+    # polluted by other code. Remove this entry when
+    # that mermaid carries a patched KaTeX, and move the build-time katex with it
+    # (docs/development.md).
     - GHSA-238p-pmpm-9mq7
