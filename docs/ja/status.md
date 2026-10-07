@@ -24,7 +24,7 @@
 | 入力ルート / route の別名 / AsciiDoc 属性 | ✅ 完了   | v0.12          |
 | 出力サイズと予算 / 透かし / 表紙 / 改行 | ✅ 完了   | v0.13          |
 | 見出し番号 / 紙の目次               | ✅ 完了   | v0.14          |
-| Mermaid ランタイムの表記 / Mermaid 12 / 数式 | 🚧 進行中 | v0.15          |
+| Mermaid ランタイムの表記 / Mermaid 12 / 数式 | ✅ 完了   | v0.15          |
 | 表面の凍結 / JSON スキーマ v1       | 🚧 予定   | 1.0            |
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
@@ -45,7 +45,8 @@ mermaid 12 が描くことと、GitHub が描く Markdown の 4 つの数式の�
 `validate --strict` を失敗させる。`math.enabled: false` でどちらも止められる。そのため、まずプレリリース
 （`0.15.0-beta.1`）を `next` に出した。プレリリースで確かめたのは、`verify-published.yml` に
 よる Linux と Windows での公開パッケージの検証、mermaid 12 でのすべての図の目視、Cambria Math を使う Windows
-での数式のフィクスチャの確認で、どれも済んだ。次は `latest` への 0.15.0 である。
+での数式のフィクスチャの確認で、どれも済んだ。0.15.0 は、CI ガイドをそれに固定して `latest` に出し、公開
+パッケージとリリースバイナリは `latest` を動かしたあとに検証する。
 
 ## 完了条件の達成状況
 
@@ -501,7 +502,7 @@ mermaid 12 が描くことと、GitHub が描く Markdown の 4 つの数式の�
 
 mermaid 12 では図を含む既存の文書がすべて違うものにビルドされるので、このリリースは 0.13.0 や 0.14.0 と違い、ベータを経る。
 
-- [ ] ドキュメントサイトの CI ガイド（英語・日本語とも）は、サイトがリリースからデプロイされるので、`v0.15.0` タグを作る前に、版の変更そのものの中で `monodocs@0.15.0` に固定する
+- [x] ドキュメントサイトの CI ガイド（英語・日本語とも）は、サイトがリリースからデプロイされるので、`v0.15.0` タグを作る前に、版の変更そのものの中で `monodocs@0.15.0` に固定する——`site/docs/ci.md` と `site/ja/docs/ci.md` の 4 か所ずつを、CLI を 0.15.0 に上げる変更の中で固定した
 - [x] `verify-published.yml` に 0.15 のゲートと、ランタイムの表記と数式の段を加え、以下のどれよりも先にマージする——インラインのランタイムの script の中に表記が 1 回あり mermaid 12 を名指すこと、CDN のランタイム・pre-render・図の無いページには無いこと。Markdown と AsciiDoc の 5 つの数式が KaTeX のマークアップもスタイルシートも無い MathML になり、`mathvariant` は `normal` だけ、`\mathbb` はその文字になり、それぞれソースを持ち、`math.enabled: false` では無いこと、PDF が組めること、asciimath が `validate` を失敗させずに `math/asciimath-not-rendered` として報告されること。どちらもマージ前にここでビルドした CLI で走らせた
 - [x] `0.15.0-beta.1` を npm の `next` タグに公開し、`verify-published.yml` を `dist_tag: next` で実行して Linux x64 と Windows x64 で検証する。ログが `verifying monodocs 0.15.0-beta.1` と出し、0.15 の段が飛ばされずに実行されたことを確かめる——`npm` 環境を承認したあと `v0.15.0-beta.1` タグで CI から provenance 付きで公開し、`next` を付けた（`latest` は 0.14.0 のまま）。`dist_tag: next` の実行は Linux x64 と Windows x64 で `verifying monodocs 0.15.0-beta.1` を出力し、0.15 の 2 つの段は両方で実行されて通った。PDF のフォント検査は、Linux では MATH テーブルの不在を警告し、MATH テーブルを持つ Cambria Math のある Windows では何も言わなかった。`verify-release-binaries.yml` は両プラットフォームで通った
 - [x] ベータの間に、このリポジトリが公開している文書——`examples/en`、`examples/ja`、サイトの見本——をベータでビルドし、mermaid 12 でのすべての図を見る。読めなくなった図は、`0.15.0` を出す前に直すか記録する——ベータで `examples/en` と `examples/ja` をビルドし、それぞれ 3 つの図を Chromium で描いて 0.14.0 と比べた。どれも読める。mermaid 12 は、0.14.0 の薄紫の箱と曲線の代わりに、白地に濃い枠線の箱と直角に曲がる線を描き、横長の処理の流れの図ではラベルの一部を折り返し、SVG の幅が狭くなる（0.14.0 の 2,055px に対して 1,704px）ので、段の幅に縮めると文字が少し大きくなる。図が枠の左に寄ることと、横長の図が段の幅に縮むことは以前と同じ。直すものは無く、見た目の変化はリリースノートに書く。単一ファイルのサイトの見本は同じ examples から作る
