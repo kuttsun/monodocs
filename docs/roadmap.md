@@ -690,9 +690,11 @@ not kept either: the line may break at the space.
 
 On Windows with Cambria Math, built by `0.15.0-beta.1` from npm, the fixture's PDF embeds Cambria
 Math, and the same holds: no tofu, the styled letters told apart, the brackets and radicals
-stretching, and `aligned` without a gap. Every accent sits over its letter there, `\vec`'s
-combining arrow centred, as v0.14 measured in Edge, and `\bar` in its Latin-1 form as well. The
-fixture has no wide accent, so how Cambria Math sets `\widehat` and the others is not yet seen.
+stretching, and `aligned` without a gap, and no line starting with `、`; its HTML was looked at in Edge. The
+fixture's accents (`\hat`, `\bar` in its Latin-1 form, `\vec`, `\dot`) all sit over their letters
+there, `\vec`'s combining arrow centred, as v0.14 saw the accents in Edge. The fixture has no
+`\acute` or `\grave`, nor a wide accent, so how Cambria Math sets those, and `\widehat` and the
+others, is not yet seen.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
