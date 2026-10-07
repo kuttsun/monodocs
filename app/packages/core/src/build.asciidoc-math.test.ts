@@ -109,6 +109,12 @@ describe("AsciiDoc math", () => {
       "= A\n\n値は latexmath:[x]footnote:[注]。また latexmath:[y]^上付きの文^、\n",
     );
     expect(html).toMatch(/<\/math><\/span><sup class="footnote"[^>]*>.*?<\/sup>。<\/span>/);
+    // Half-width forms, as a Japanese text may use them.
+    const half = (await build("= A\n\n値は latexmath:[x]､次に｢latexmath:[y]｣｡\n")).html;
+    expect(half).toMatch(/<\/math><\/span>､<\/span>/);
+    expect(half).toMatch(
+      /white-space: nowrap">｢<span class="math[\s\S]*?<\/math><\/span>｣｡<\/span>/,
+    );
     // A named footnote referred to again, which Asciidoctor marks as `footnoteref`, goes along too.
     const again = (
       await build("= A\n\nlatexmath:[x]footnote:n[注]。再び latexmath:[y]footnote:n[]。\n")

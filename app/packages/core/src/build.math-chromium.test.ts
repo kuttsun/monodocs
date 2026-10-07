@@ -339,6 +339,7 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       });
       const loose = await measure();
       expect(loose.starts).toMatch(/[、。)]/);
+      expect(loose.ends).toMatch(/\(/);
     } finally {
       await browser.close();
     }

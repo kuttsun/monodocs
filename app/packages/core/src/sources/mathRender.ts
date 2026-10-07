@@ -104,8 +104,8 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
  * line in text too, and are left out.
  */
 const NO_LINE_START =
-  /^[,.;:!?)\]}'"\-‐–%％‰°′″℃、。，．：；！？）］｝」』】〕〉》〙〗〛”’…‥・〜々゠〟‼⁉]+/;
-const NO_LINE_END = /[(\[{（［｛「『【〔〈《〘〖〚“‘]+$/;
+  /^[,.;:!?)\]}'"\-‐–%％‰°′″℃、。，．：；！？）］｝」』】〕〉》〙〗〛”’…‥・〜々゠〟‼⁉｡､｣･]+/;
+const NO_LINE_END = /[(\[{（［｛「『【〔〈《〘〖〚“‘｢]+$/;
 
 /**
  * Inline elements that may hold a formula and nothing else, and then stand for it at a line break.

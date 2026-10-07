@@ -679,7 +679,7 @@ character serves every font; this is accepted until the Windows check shows how 
 them. And a line of Japanese could start with `、` or `。` right after an inline formula: Chromium
 breaks a line on either side of an inline box, as it does not between two characters, and did so
 for an inline-block too. The punctuation that may not start a line after an inline formula
-(`、`, `。`, `,`, `)`, `-`, `%`, `・`, `〜`, and the like) and the brackets that may not end one before
+(`、`, `。`, `,`, `)`, `-`, `%`, `・`, `〜`, their half-width forms, and the like) and the brackets that may not end one before
 it (`(`, `「`, and the like) are now kept with the formula in a span that does not wrap. Where
 strong text, emphasis, or a link holds the formula and nothing else (`**$x$**、`), that element is
 what is kept, and a footnote reference right after a formula goes with it; nothing longer than that
