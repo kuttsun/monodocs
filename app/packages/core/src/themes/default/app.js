@@ -1854,6 +1854,32 @@
     return range;
   }
 
+  var HIDDEN_MARK = "data-monodocs-copy-hidden";
+
+  /**
+   * Mark the elements the ranges reach that the page's styles do not show (display: none, or
+   * visibility: hidden), outside formulas, whose own hidden parts (the TeX annotation) belong to them.
+   */
+  function markHidden(page, ranges) {
+    var marked = [];
+    Array.prototype.forEach.call(page.querySelectorAll("*"), function (el) {
+      if (closestFormula(el.parentNode)) return;
+      if (
+        !ranges.some(function (r) {
+          return r.intersectsNode(el);
+        })
+      ) {
+        return;
+      }
+      var style = getComputedStyle(el);
+      if (style.display === "none" || style.visibility === "hidden") {
+        el.setAttribute(HIDDEN_MARK, "");
+        marked.push(el);
+      }
+    });
+    return marked;
+  }
+
   function setupFormulaCopy() {
     document.addEventListener("copy", function (event) {
       // A copy from a text field (the search box, a code block's fallback) is the field's own.
@@ -1870,15 +1896,33 @@
       if (!selection || selection.isCollapsed || !event.clipboardData || !page) return;
       // Each range is copied on its own and the copies joined by a line break, as the ranges of a
       // selection are apart on the page.
-      var holders = [];
-      var anyFormula = false;
+      var ranges = [];
       for (var i = 0; i < selection.rangeCount; i++) {
         var range = copyRange(selection.getRangeAt(i), page);
-        if (!range) continue;
-        var holder = document.createElement("div");
-        holder.appendChild(range.cloneContents());
-        if (holder.querySelector("[" + FORMULA_SOURCE + "]")) anyFormula = true;
-        holders.push(holder);
+        if (range) ranges.push(range);
+      }
+      // What the page's styles hide is not copied, as the browser's own copy leaves it out: such
+      // elements are marked for the copies to drop, the marks taken off again at once.
+      var marked = markHidden(page, ranges);
+      var holders = [];
+      var anyFormula = false;
+      try {
+        ranges.forEach(function (r) {
+          var holder = document.createElement("div");
+          holder.appendChild(r.cloneContents());
+          Array.prototype.forEach.call(
+            holder.querySelectorAll("[" + HIDDEN_MARK + "]"),
+            function (el) {
+              el.parentNode.removeChild(el);
+            },
+          );
+          if (holder.querySelector("[" + FORMULA_SOURCE + "]")) anyFormula = true;
+          holders.push(holder);
+        });
+      } finally {
+        marked.forEach(function (el) {
+          el.removeAttribute(HIDDEN_MARK);
+        });
       }
       if (!anyFormula) return;
       var htmls = [];
@@ -1910,11 +1954,12 @@
             el.parentNode.removeChild(el);
           },
         );
-        // innerText gives the selection's line structure only to an element that is rendered.
+        // innerText gives the selection's line structure only to an element that is rendered, and
+        // the page's own styles (white space in code, say) only to one inside the page.
         holder.style.cssText = "position:fixed;left:-99999px;top:0;";
-        document.body.appendChild(holder);
+        page.appendChild(holder);
         texts.push(holder.innerText);
-        document.body.removeChild(holder);
+        page.removeChild(holder);
       });
       var text = texts.join("\n");
       var html = htmls.join("\n");

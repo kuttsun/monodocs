@@ -333,6 +333,37 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(copied.all).not.toContain("<script");
       expect(copied.all).not.toMatch(/<[^>]* hidden[\s=>]/);
       expect(copied.fieldHandled).toBe(false);
+      // An element the page's styles hide is left out of both formats, as the browser leaves it out.
+      const hidden = await page.evaluate(() => {
+        const style = document.createElement("style");
+        style.textContent = "#content .omitted { display: none; }";
+        document.head.appendChild(style);
+        const quote = document.querySelector("#content blockquote")!;
+        const span = document.createElement("span");
+        span.className = "omitted";
+        span.textContent = "OMITTED";
+        quote.querySelector("p")!.appendChild(span);
+        const range = document.createRange();
+        range.selectNodeContents(quote);
+        const selection = window.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(range);
+        const event = new ClipboardEvent("copy", {
+          clipboardData: new DataTransfer(),
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(event);
+        return {
+          text: event.clipboardData!.getData("text/plain"),
+          html: event.clipboardData!.getData("text/html"),
+          marksLeft: document.querySelectorAll("[data-monodocs-copy-hidden]").length,
+        };
+      });
+      expect(hidden.text).not.toContain("OMITTED");
+      expect(hidden.html).not.toContain("OMITTED");
+      expect(hidden.html).toContain("<annotation");
+      expect(hidden.marksLeft).toBe(0);
     } finally {
       await browser.close();
     }
