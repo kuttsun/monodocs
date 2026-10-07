@@ -34,16 +34,25 @@ In addition to CommonMark, GitHub Flavored Markdown is enabled via `remark-gfm`.
 - YAML frontmatter (`---`). Reads `title` / `order` / `hidden` / `description` ([roadmap.md](roadmap.md) Chapter 13) and `aliases`, the old hash routes the page still answers to ([roadmap.md](roadmap.md) 15.5)
 - ` ```mermaid ` code blocks → Mermaid diagrams (`mermaid.mode`: `client` default / `pre-render` = SVG-rendered at build time)
 - Images (`![alt](path)`) → the actual file under the input is embedded as a data URI
-- **Math** (v0.15): the four forms GitHub renders, read by GitHub's rules ([roadmap.md](roadmap.md) 6.4):
-  `$...$` and ``$`...`$`` inline, a paragraph that is only `$$...$$` displayed (`$$...$$` within
-  other text is inline), and a fenced code block whose language is `math` displayed. A `$` opens a
-  formula only after a space, `(`, or the start of the text, and before a character that is not a
-  space, so money and shell variables (`$5 and $10`, `$HOME`) stay text, and `値は$x$です` is text
-  while `値は $x$ です` is math. Backslash escapes are resolved before a formula is read, as
-  CommonMark resolves them anywhere: in `$...$` and `$$...$$`, `\,` is `,` and `\\` is `\`. Write
-  TeX that needs them as ``$`...`$`` or a ```` ```math ```` block, which keep every backslash. `\$` is
-  the exception: it never opens or closes a formula, prints `$` outside one, and stays TeX's `\$`
-  inside one. No formula is found in italics, a link's text, an image's alt text, or a code span
+- **Math** (v0.15): the four forms GitHub renders, read by GitHub's rules ([roadmap.md](roadmap.md) 6.4)
+  - `$...$`, inline. A `$` opens one after an ASCII space, `(`, or the start of a paragraph or an
+    element, before a character that is neither a space nor `$`; it closes at the next `$` on the same
+    line, unless that `$` comes before an ASCII letter, digit, or `_`, in which case there is no formula.
+    So `It costs $5 and $10 today.` and `$HOME/$USER` stay text, but `Between $5 and 10$` is a formula:
+    write `\$` for a dollar sign there. A full-width space does not open one: `値は$x$です` is text, and
+    `値は $x$ です` is math
+  - ``$`...`$``, inline, whatever is around it (`値は$`x`$です` is math)
+  - `$$...$$`: a paragraph that starts and ends with `$$` and holds nothing but text displays every
+    `$$...$$` in it, which may cross lines, the text between them staying text. In a list item, a
+    heading, or a table cell, or among other text, `$$...$$` is inline
+  - a fenced code block whose language is exactly `math` (`Math` is code), displayed
+
+  Backslash escapes are resolved before a formula is read, as CommonMark resolves them anywhere: in
+  `$...$` and `$$...$$`, `\,` is `,` and `\\` is `\`. Write TeX that needs them as ``$`...`$`` or a
+  `math` block, which keep every backslash. `\$` is the exception: it never opens or closes a formula,
+  prints `$` outside one, and stays TeX's `\$` inside one. Character references (`&lt;`) in `$...$` and
+  `$$...$$` are decoded. No formula is found in italics, a link's text, an image's alt text, a code
+  span, a footnote definition (a `math` block there included), or raw `<em>`, `<b>`, `<a>`, or `<code>`
 
 ## Supported AsciiDoc Syntax
 
@@ -68,9 +77,11 @@ Because conversion is delegated to Asciidoctor.js's standard conversion, most As
 - `xref:` within the same document / internal anchors (IDs are prefixed to keep them working)
 - Footnotes (`footnote:[]`). IDs are prefixed with the page id
 - **Math** (v0.15): `latexmath:[...]` and the `[latexmath]` block, and `stem:[...]` and the `[stem]`
-  block when they mean latexmath (`:stem: latexmath`, or `[stem,latexmath]`). asciimath — `stem` with
-  `:stem:` unset or set to `asciimath`, and `asciimath:[...]` — is not rendered: it stays as
-  Asciidoctor writes it, and a warning (`math/asciimath-not-rendered`) names the file and the formula
+  block when they mean latexmath: `:stem:` set to `latexmath`, `latex`, or `tex` (unless a block's
+  style says otherwise, as `[stem,asciimath]`), or a block's style `latexmath`. Every other `stem`, and
+  `asciimath:[...]`, is asciimath, which is not rendered: it stays as Asciidoctor writes it, and a
+  warning (`math/asciimath-not-rendered`) names the file and the formula, which fails `monodocs validate
+  --strict` and is not given under `math.enabled: false`
 
 ## Common Specification for Single-HTML Bundling (Cross-Format)
 
@@ -83,17 +94,7 @@ To bundle multiple files into a single file, the following normalization is appl
 - **Line breaks inside a paragraph**: in both formats a newline inside a paragraph joins the lines rather than breaking them — CommonMark's rule and Asciidoctor's alike — and the browser renders that newline as a space. Between two East Asian characters the result depends on the engine: Firefox removes the space, and Chromium and WebKit keep it, so a Japanese paragraph written one sentence per line shows a space between the sentences in the PDF, which Chromium produces. Each format's own hard-break spellings are listed above. `sources.lineBreak` makes the choice explicit for both formats at once: `break` turns every such newline into a `<br>`, and `join` removes it between two East Asian characters (East_Asian_Width F, W, or H, neither of them Hangul), so that there the result no longer depends on the engine. A newline next to anything else — a Latin letter, an ambiguous-width character, inline code, an image — stays; `pre` and `code` are left as written. [roadmap.md](roadmap.md) 12.6 records the measurement and the reasoning.
 - **Unifying admonitions / alerts**: Markdown GFM alerts (`> [!NOTE]`, etc.) and AsciiDoc admonitions (the `.admonitionblock` in Asciidoctor output) are normalized in postprocess into a common `<div class="admonition admonition-TYPE">` structure. Since the 5 types (NOTE / TIP / IMPORTANT / WARNING / CAUTION) match across both formats, a single set of CSS and colors is shared ([postprocess.ts](../app/packages/core/src/pipeline/postprocess.ts)).
 - **Section numbering** (v0.14): `numbering.sections` numbers headings continuously across all files in sidebar order, the same way for Markdown and AsciiDoc. The number is an element inside the heading (`<span class="section-number">`), never part of an ID or a route. While it is on, AsciiDoc's `:sectnums:` is refused, because it numbers each file on its own and a heading would carry two numbers ([roadmap.md](roadmap.md) 19.1).
-- **Math** (v0.15): a formula is rendered at build time by KaTeX to MathML only, with no script or
-  stylesheet in the output, and drawn by the browser with an OpenType MATH font. That font is needed
-  on the machine that prints the PDF and in the reader's browser: Cambria Math ships with Windows, and
-  on Linux a package such as `fonts-lmodern` supplies Latin Modern Math. For a PDF, `fontCheck`
-  reports a formula's letters no font draws and a formula font with no MATH table. `\mathbb`,
-  `\mathbf`, `\mathcal` and the other styles become Unicode's mathematical letters, since the browser
-  ignores `mathvariant`. Copying a selection with a formula gives the formula's source as written, and
-  search reads its TeX. A heading's ID comes from its TeX in Markdown and from Asciidoctor in AsciiDoc,
-  as before math, and the lists of headings show a formula as `$TeX$`. `math.enabled: false` turns math
-  off and gives the previous output. `examples/math` holds the formulas v0.14 measured, in both
-  formats, to check a machine's fonts with
+- **Math** (v0.15): KaTeX renders each formula at build time to MathML only, adding none of its scripts or stylesheets, and the browser draws it with an OpenType MATH font. That font is needed on the machine that prints the PDF and in the reader's browser: Cambria Math ships with Windows, and on Linux `fonts-lmodern` supplies Latin Modern Math. For a PDF, `fontCheck` reports a formula's letters no font draws and a formula font with no MATH table. `\mathbb`, `\mathbf`, `\mathcal`, and the other styles become Unicode's mathematical letters, since Chromium (MathML Core) ignores every `mathvariant` but `normal`. Copying a selection with a formula from the HTML gives the formula's source — as written in Markdown, and in AsciiDoc as `latexmath`, Asciidoctor having resolved `stem` — and search reads its TeX; copying from a PDF is the viewer's. A heading's ID comes from its TeX in Markdown and from Asciidoctor in AsciiDoc, as before math, and wherever a heading or a page title is shown as text (the sidebar, the table of contents, search results, PDF bookmarks) a formula is shown as `$TeX$`. `math.enabled: false` turns math off and gives the previous output. `examples/math` holds the formulas v0.14 measured, in both formats, for checking a machine's fonts.
 
 ## Limitations / Unsupported (with Reasons)
 
@@ -105,7 +106,7 @@ Due to the need to unify multiple formats into a single HTML, or for dependency 
 | Page break (`<div class="page-break"></div>` in Markdown, `<<<` in AsciiDoc)                                                  | **Supported** (v0.11)             | Starts a new sheet in the PDF, and when the HTML is printed from a browser. In Markdown, `<div style="page-break-after: always"></div>` is accepted as the same marker; both are replaced with an element monodocs builds, so no attribute of the input survives. In Markdown the marker must be a block of its own: one inside a blockquote, a list item, a table cell, or a heading is not recognised, because the print stylesheet keeps those blocks together. In AsciiDoc the element lands wherever Asciidoctor puts `<<<`, so keep it at the top level there as well. The accepted quoting and whitespace variants are enumerated in the configuration reference on the site |
 | Heading anchors in inter-file links (`other.md#sec` / `xref:other.adoc#sec`)                                                  | **Supported**                     | Resolved to the prefixed element ID (`{page-id}-{anchor}`) of the target page, so footnotes and explicit anchors work too. The anchor is matched against the ID the target file generates, so pointing from Markdown at an AsciiDoc heading needs the ID Asciidoctor produces (e.g. `_details`). An anchor that does not exist falls back to the top of that page with a warning    |
 | Code highlighting (shiki)                                                                                                     | **Supported**                     | Can be disabled with `highlight.enabled: false`. Blocks with no language specified and unsupported languages are shown as plain text                                                                                                                                                                                                                                                |
-| Math (Markdown `$...$` / `$$...$$` / ```` ```math ````, AsciiDoc latexmath / `stem`) | **Supported** (v0.15), with limits | Rendered at build time to MathML (see the cross-format specification above). Not rendered, and reported: asciimath (`math/asciimath-not-rendered`), since KaTeX does not read it; automatic equation numbers (`equation`, `align`, unstarred; `math/numbering-unsupported`), drawn by KaTeX's stylesheet, which the output does not carry; a style Unicode has no letters for (`\mathit{123}`; `math/style-unsupported`); an enclosure CSS cannot draw (`\phase`; `math/notation-unsupported`); a construct the browser cannot draw as written (`\vcenter`; `math/construct-unsupported`); and the commands KaTeX gates behind `trust` (`\href`, `\includegraphics`; `math/command-not-allowed`). A formula KaTeX cannot parse is shown as written (`math/parse-failed`). A display formula wider than the column scrolls on screen and is printed at its full width. Accents follow the font: with Latin Modern Math the `\vec` arrow sits left of its letter, and `\overline` and the wide accents do not stretch over a long term ([roadmap.md](roadmap.md) 6.4) |
+| Math (Markdown `$...$` / `$$...$$` / ```` ```math ````, AsciiDoc latexmath / `stem`) | **Supported** (v0.15), with limits | Rendered at build time to MathML (see the cross-format specification above). Rendered without the part that cannot be drawn, and reported: automatic equation numbers (unstarred `equation`, `align`, `gather`; `math/numbering-unsupported`), which KaTeX's stylesheet draws and the output does not carry — a `\tag{}` in a starred environment is drawn; a style Unicode has no letters for (`\mathit{123}`; `math/style-unsupported`); an enclosure CSS cannot draw (`\phase`; `math/notation-unsupported`); and a construct the browser cannot draw as written (`\vcenter`; `math/construct-unsupported`). Shown as written, and reported: a formula using a command KaTeX gates behind `trust` (`\href`, `\includegraphics`; `math/command-not-allowed`), and one KaTeX cannot parse (`math/parse-failed`). Not rendered: asciimath (above). A display formula wider than the column scrolls on screen; on paper it is printed at its full width and cut at the page's edge if wider than the page. Accents: with Latin Modern Math the `\vec` arrow sits left of its letter (the combining arrow KaTeX writes, as that font draws it), Chromium centres the other accents on the letter's box rather than its slanted stroke, and `\overline`, `\underline`, and the wide accents do not stretch over a long term, which is not yet settled ([roadmap.md](roadmap.md) 6.4) |
 | Markdown extended syntax (definition lists / emoji shortcodes `:smile:` / `==marker==` / superscript `^x^` / subscript `~x~`) | **Unsupported**                   | Outside the scope of CommonMark / GFM. If equivalent expression is needed, use the AsciiDoc side                                                                                                                                                                                                                                                                                    |
 | AsciiDoc per-document table of contents (`:toc:`)                                                                             | **Disabled**                      | Since the single HTML uses a common "in-page table of contents (right column)," per-document TOCs are not output                                                                                                                                                                                                                                                                    |
 | AsciiDoc icons (`:icons: font`)                                                                                               | **Restricted** (text display)     | To avoid an external dependency on Font Awesome, admonitions are displayed with label text + color coding (prioritizing self-containment)                                                                                                                                                                                                                                           |
