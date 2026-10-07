@@ -1884,7 +1884,8 @@
         var start = node === range.startContainer ? range.startOffset : 0;
         return document.createTextNode(value.slice(start, end));
       }
-      if (node.nodeType !== 1 || /^(SCRIPT|STYLE|TEMPLATE|NOSCRIPT)$/.test(node.tagName)) {
+      // By local name, which an SVG script has in lower case too.
+      if (node.nodeType !== 1 || /^(script|style|template|noscript)$/i.test(node.localName)) {
         return null;
       }
       var style = getComputedStyle(node);
@@ -1899,7 +1900,7 @@
     }
     function within(node, into, visible) {
       var only = null;
-      if (node.tagName === "DETAILS" && !node.open) {
+      if (folded(node)) {
         only = node.querySelector(":scope > summary");
         if (!only) return;
       }
@@ -1909,9 +1910,21 @@
         if (copy) into.appendChild(copy);
       }
     }
+    function folded(node) {
+      return node.localName === "details" && !node.open;
+    }
     var holder = document.createElement("div");
     var root = range.commonAncestorContainer;
     if (root.nodeType !== 1) root = root.parentNode;
+    // Nothing is shown of a selection inside an element not displayed, or inside a closed
+    // details' body, both above where the walk starts.
+    for (var el = root; el && el !== page; el = el.parentNode) {
+      var parent = el.parentNode;
+      if (getComputedStyle(el).display === "none") return holder;
+      if (parent && folded(parent) && el !== parent.querySelector(":scope > summary")) {
+        return holder;
+      }
+    }
     // The common ancestor is kept, as the browser keeps it: a selection inside a paragraph is
     // still a paragraph.
     if (root === page) {
@@ -1968,6 +1981,9 @@
         c.styled.forEach(function (s) {
           s.copy.style.display = s.display;
           s.copy.style.whiteSpace = s.whiteSpace;
+          // What is not visible is already left out; an element's own style must not hide the
+          // visible text kept inside it.
+          s.copy.style.visibility = "visible";
         });
         Array.prototype.forEach.call(
           holder.querySelectorAll("[" + FORMULA_SOURCE + "]"),

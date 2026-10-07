@@ -340,7 +340,7 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
         style.textContent = [
           "#content .omitted { display: none; }",
           "#content .veiled { visibility: hidden; }",
-          "#content .veiled .shown { visibility: visible; }",
+          "#content .shown { visibility: visible; }",
           "#content .spaced { white-space: pre-wrap; }",
         ].join("\n");
         document.head.appendChild(style);
@@ -354,6 +354,17 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
         veiled.className = "veiled";
         veiled.innerHTML = 'VEILED<span class="shown">SHOWN</span>';
         p.appendChild(veiled);
+        // Hidden by its own style, with a child the page's styles show again.
+        const inline = document.createElement("span");
+        inline.style.visibility = "hidden";
+        inline.innerHTML = 'INLINE<span class="shown">AGAIN</span>';
+        p.appendChild(inline);
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        const svgScript = document.createElementNS("http://www.w3.org/2000/svg", "script");
+        svgScript.setAttribute("style", "display:block");
+        svgScript.textContent = "SVGSCRIPT";
+        svg.appendChild(svgScript);
+        p.appendChild(svg);
         const details = document.createElement("details");
         details.innerHTML = "<summary>SUMMARY</summary><p>FOLDED</p>";
         quote.appendChild(details);
@@ -393,7 +404,27 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
         inner.setStart(spaced.firstChild!, 0);
         inner.setEnd(spaced.lastChild!, 2);
         const kept = copy(inner);
-        return { ...all, mutations: mutations.length, kept };
+        // Inside a details closed after the selection was made: nothing shown, nothing written.
+        const closed = document.createElement("details");
+        closed.open = true;
+        closed.innerHTML = "<summary>S</summary><p>BODY </p>";
+        closed
+          .querySelector("p")!
+          .appendChild(quote.querySelector(".math-inline")!.cloneNode(true));
+        quote.appendChild(closed);
+        const body = document.createRange();
+        body.selectNodeContents(closed.querySelector("p")!);
+        const selection = window.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(body);
+        closed.open = false;
+        const event = new ClipboardEvent("copy", {
+          clipboardData: new DataTransfer(),
+          bubbles: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(event);
+        return { ...all, mutations: mutations.length, kept, closedHandled: event.defaultPrevented };
       });
       expect(hidden.text).not.toContain("OMITTED");
       expect(hidden.html).not.toContain("OMITTED");
@@ -401,6 +432,10 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(hidden.html).not.toContain("VEILED");
       expect(hidden.text).toContain("SHOWN");
       expect(hidden.html).toContain("SHOWN");
+      expect(hidden.text).not.toContain("INLINE");
+      expect(hidden.text).toContain("AGAIN");
+      expect(hidden.html).not.toContain("SVGSCRIPT");
+      expect(hidden.text).not.toContain("SVGSCRIPT");
       expect(hidden.text).toContain("SUMMARY");
       expect(hidden.html).toContain("SUMMARY");
       expect(hidden.text).not.toContain("FOLDED");
@@ -409,6 +444,7 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(hidden.mutations).toBe(0);
       expect(hidden.kept.text).toBe("a  b\nc $a &lt; b$ d");
       expect(hidden.kept.html).toMatch(/^<p class="spaced">/);
+      expect(hidden.closedHandled).toBe(false);
     } finally {
       await browser.close();
     }
