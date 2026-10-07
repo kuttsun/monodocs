@@ -5,3 +5,6 @@ pnpm-lock.yaml
 
 # プレースホルダ（{{appJs}} 等）を Prettier が JS/CSS と誤解釈して壊すため除外
 packages/core/src/themes/default/template.html
+
+# 第三者のフォント配布物（lm-math）。改変せずそのまま置く
+packages/core/test-fixtures/fonts/lm-math/

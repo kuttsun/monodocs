@@ -592,7 +592,7 @@ numbering:
 
 数式は KaTeX が MathML だけに描き、出力にスクリプトもスタイルシートも加えない。AsciiDoc の asciimath は Asciidoctor が書くとおりに残して報告する（`math/asciimath-not-rendered`）。KaTeX が解析できない数式（`math/parse-failed`）や、`\href` などのリンクや HTML のコマンドを使う数式（`math/command-not-allowed`）は、報告して書かれたとおりに示す。Unicode に文字の無い書体（`math/style-unsupported`、例：`\mathit{123}`）、自動の数式番号（`math/numbering-unsupported`、例：星の無い `equation`）、CSS で描けない囲み（`math/notation-unsupported`、例：`\phase`）、ブラウザが書かれたとおりに描けない構文（`math/construct-unsupported`、例：`\vcenter`）は報告し、それらなしで数式を描く。
 
-数式はブラウザが OpenType MATH フォントで描くので、PDF を印刷するマシンにも、HTML を読む読者のブラウザにも、そのフォントが要る。Windows には Cambria Math が付属し、Linux では Latin Modern Math などを入れる（Debian と Ubuntu では `fonts-lmodern`）。無いと変数が tofu になり、括弧が伸びない。PDF では [`fontCheck`](#font-check) がその両方を報告する。
+数式はブラウザが OpenType MATH フォントで描くので、PDF を印刷するマシンにも、HTML を読む読者のブラウザにも、そのフォントが要る。Windows には Cambria Math が付属し、Linux では Latin Modern Math などを入れる（Debian と Ubuntu では `fonts-lmodern`）。無いと括弧が伸びず、数学用の文字を持つフォントがほかに無ければ変数が tofu になる。PDF では [`fontCheck`](#font-check) がその両方を報告する。
 
 ### `html`
 

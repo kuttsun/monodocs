@@ -645,7 +645,7 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 
 A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. AsciiDoc's asciimath is left as Asciidoctor writes it and reported (`math/asciimath-not-rendered`). A formula KaTeX cannot parse (`math/parse-failed`) or that uses a link or HTML command such as `\href` (`math/command-not-allowed`) is reported and shown as written. A style Unicode has no characters for (`math/style-unsupported`, e.g. `\mathit{123}`) an automatic equation number (`math/numbering-unsupported`, e.g. an unstarred `equation`), an enclosure CSS cannot draw (`math/notation-unsupported`, e.g. `\phase`), and a construct the browser cannot draw as written (`math/construct-unsupported`, e.g. `\vcenter`) are reported, and the formula is rendered without them.
 
-The browser draws a formula with an OpenType MATH font, which math needs on the machine that prints the PDF and in the reader's browser for the HTML. Cambria Math ships with Windows; on Linux, install one such as Latin Modern Math (`fonts-lmodern` on Debian and Ubuntu). Without one, variables come out as tofu and brackets do not stretch. For the PDF, [`fontCheck`](#font-check) reports both.
+The browser draws a formula with an OpenType MATH font, which math needs on the machine that prints the PDF and in the reader's browser for the HTML. Cambria Math ships with Windows; on Linux, install one such as Latin Modern Math (`fonts-lmodern` on Debian and Ubuntu). Without one, brackets do not stretch, and variables come out as tofu unless another font has the mathematical letters. For the PDF, [`fontCheck`](#font-check) reports both.
 
 ### `html`
 

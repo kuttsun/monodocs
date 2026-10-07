@@ -100,9 +100,42 @@ const MAX_MATH_FONTS = 8;
  * radicals come from: without one every glyph can be present and a matrix's parentheses still do
  * not stretch. Whether the table is there cannot be read from the page, so it is measured: for each
  * font stack a drawn `<math>` computes, a `(` around a tall space is set in that stack, and a `(`
- * no taller than one set alone means no table. Measured in the development image, with no MATH
- * font: 16px both; with Latin Modern Math: 88px against 16px.
+ * no taller than one set alone means no table. Measured in the development image at 32px, with
+ * no MATH font: 30px both; with Latin Modern Math: 176px against 32px. The stacks are gathered from
+ * every drawn `<math>` apart from the walk, so a walk cut short still has its formulas' fonts
+ * measured, and the measurement does not rest on the reference, so an unsound one still has it.
  */
+/**
+ * MathML Core's italic mapping, which `text-transform: math-auto` applies to a text of one
+ * character: each entry maps `count` code points from `from` on to `to` on.
+ */
+const MATH_ITALIC: ReadonlyArray<readonly [from: number, to: number, count: number]> = [
+  [0x41, 0x1d434, 26], // A-Z
+  [0x61, 0x1d44e, 7], // a-g
+  [0x68, 0x210e, 1], // h, which the alphanumerics leave to Letterlike Symbols
+  [0x69, 0x1d456, 18], // i-z
+  [0x131, 0x1d6a4, 1], // dotless i
+  [0x237, 0x1d6a5, 1], // dotless j
+  [0x391, 0x1d6e2, 17], // Alpha-Rho
+  [0x3f4, 0x1d6f3, 1], // capital theta symbol, where U+03A2 has none
+  [0x3a3, 0x1d6f4, 7], // Sigma-Omega
+  [0x2207, 0x1d6fb, 1], // nabla
+  [0x3b1, 0x1d6fc, 25], // alpha-omega
+  [0x2202, 0x1d715, 1], // partial
+  [0x3f5, 0x1d716, 1], // epsilon symbol
+  [0x3d1, 0x1d717, 1], // theta symbol
+  [0x3f0, 0x1d718, 1], // kappa symbol
+  [0x3d5, 0x1d719, 1], // phi symbol
+  [0x3f1, 0x1d71a, 1], // rho symbol
+  [0x3d6, 0x1d71b, 1], // pi symbol
+];
+
+/** The code point Chromium draws for a one-character `math-auto` text, for the tests. */
+export function mathItalicOf(code: number): number {
+  const entry = MATH_ITALIC.find(([from, , count]) => code >= from && code < from + count);
+  return entry === undefined ? code : entry[1] + code - entry[0];
+}
+
 function fontCheckScript(probes: string[]): string {
   return `(async function(){
 var SIZE = ${MEASURE_SIZE};
@@ -110,6 +143,8 @@ var MAX_PAIRS = ${MAX_PAIRS};
 var MAX_FINDINGS = ${MAX_FINDINGS};
 var PROBES = ${JSON.stringify(probes)};
 var MAX_MATH_FONTS = ${MAX_MATH_FONTS};
+var MATH_ITALIC = ${JSON.stringify(MATH_ITALIC)};
+var MATHML = 'http://www.w3.org/1998/Math/MathML';
 
 // A data-URI webfont a theme ships is part of the answer, so wait for it to be loaded.
 try { if (document.fonts && document.fonts.ready) { await document.fonts.ready; } } catch (e) {}
@@ -186,30 +221,21 @@ function undrawable(text, info) {
   return signatureOf(text) === info.signature;
 }
 
-// MathML Core's italic mapping, which text-transform: math-auto applies to a text of one character.
 function italicOf(code) {
-  if (code === 0x68) return 0x210E;
-  if (code >= 0x41 && code <= 0x5A) return 0x1D434 + code - 0x41;
-  if (code >= 0x61 && code <= 0x7A) return 0x1D44E + code - 0x61;
-  if (code === 0x131) return 0x1D6A4;
-  if (code === 0x237) return 0x1D6A5;
-  if (code >= 0x391 && code <= 0x3A1) return 0x1D6E2 + code - 0x391;
-  if (code === 0x3F4) return 0x1D6F3;
-  if (code >= 0x3A3 && code <= 0x3A9) return 0x1D6F4 + code - 0x3A3;
-  if (code === 0x2207) return 0x1D6FB;
-  if (code >= 0x3B1 && code <= 0x3C9) return 0x1D6FC + code - 0x3B1;
-  var rest = { 0x2202: 0x1D715, 0x3F5: 0x1D716, 0x3D1: 0x1D717, 0x3F0: 0x1D718, 0x3D5: 0x1D719,
-    0x3F1: 0x1D71A, 0x3D6: 0x1D71B };
-  return rest[code] || code;
+  for (var i = 0; i < MATH_ITALIC.length; i++) {
+    var entry = MATH_ITALIC[i];
+    if (code >= entry[0] && code < entry[0] + entry[2]) return entry[1] + code - entry[0];
+  }
+  return code;
 }
+// Measured: Chromium maps only a text that is one character as it stands, white space included
+// ('<mi> x </mi>' is drawn as x), so nothing is trimmed here.
 function drawnText(element, style) {
   if (style.textTransform !== 'math-auto') return null;
-  var chars = Array.from(element.textContent.trim());
+  var chars = Array.from(element.textContent);
   if (chars.length !== 1) return null;
   return String.fromCodePoint(italicOf(chars[0].codePointAt(0)));
 }
-
-var mathFonts = [];
 
 var segmenter = null;
 try { segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' }); } catch (e) {}
@@ -276,10 +302,6 @@ function walk(root) {
     var style = getComputedStyle(element);
     // visibility inherits and a descendant can turn it back on, so skip this element's own text
     // rather than its subtree.
-    if (element.namespaceURI === 'http://www.w3.org/1998/Math/MathML' && element.localName === 'math' &&
-        mathFonts.indexOf(style.fontFamily) < 0 && mathFonts.length < MAX_MATH_FONTS) {
-      mathFonts.push(style.fontFamily);
-    }
     var info = style.visibility === 'hidden' ? null : fontFor(style);
     var drawn = info ? drawnText(element, style) : null;
     if (drawn !== null) {
@@ -297,8 +319,24 @@ function walk(root) {
   return true;
 }
 
+// The font stacks of the formulas under a root that are drawn, the way the walk prunes: not under
+// display: none or content-visibility: hidden, and not visibility: hidden themselves.
+var mathFonts = [];
+function gatherMathFonts(root) {
+  var formulas = root.querySelectorAll('math');
+  for (var i = 0; i < formulas.length && mathFonts.length < MAX_MATH_FONTS; i++) {
+    var formula = formulas[i];
+    if (formula.namespaceURI !== MATHML) continue;
+    var drawn = formula.checkVisibility
+      ? formula.checkVisibility({ visibilityProperty: true })
+      : formula.getClientRects().length > 0;
+    if (!drawn) continue;
+    var family = getComputedStyle(formula).fontFamily;
+    if (mathFonts.indexOf(family) < 0) mathFonts.push(family);
+  }
+}
+
 // Whether a font stack stretches a bracket, which it does only from an OpenType MATH table.
-var MATHML = 'http://www.w3.org/1998/Math/MathML';
 function stretches(family, into) {
   function math(children) {
     var element = document.createElementNS(MATHML, 'math');
@@ -335,16 +373,7 @@ var host = null;
 var mathHost = null;
 try {
   walk(document.documentElement);
-  if (sound && mathFonts.length > 0 && document.body) {
-    mathHost = document.createElement('div');
-    [['position','absolute'],['left','-99999px'],['top','0'],['display','block'],
-     ['visibility','visible']]
-      .forEach(function (d) { mathHost.style.setProperty(d[0], d[1], 'important'); });
-    document.body.appendChild(mathHost);
-    for (var m = 0; m < mathFonts.length; m++) {
-      if (!stretches(mathFonts[m], mathHost)) noMathTable.push(mathFonts[m]);
-    }
-  }
+  if (document.documentElement) gatherMathFonts(document.documentElement);
   if (PROBES.length > 0 && document.body) {
     host = document.createElement('div');
     [['position','absolute'],['left','-99999px'],['top','0'],['display','block'],
@@ -365,6 +394,17 @@ try {
         wrap.appendChild(box);
       }
       walk(wrap);
+      gatherMathFonts(wrap);
+    }
+  }
+  if (mathFonts.length > 0 && document.body) {
+    mathHost = document.createElement('div');
+    [['position','absolute'],['left','-99999px'],['top','0'],['display','block'],
+     ['visibility','visible']]
+      .forEach(function (d) { mathHost.style.setProperty(d[0], d[1], 'important'); });
+    document.body.appendChild(mathHost);
+    for (var m = 0; m < mathFonts.length; m++) {
+      if (!stretches(mathFonts[m], mathHost)) noMathTable.push(mathFonts[m]);
     }
   }
 } finally {
@@ -417,11 +457,11 @@ export async function inspectFonts(
   } catch {
     return { status: "unmeasurable" };
   }
-  if (parsed.status === "unusable") return { status: "unusable" };
   const fonts = Array.isArray(parsed.noMathTable)
     ? parsed.noMathTable.filter((f): f is string => typeof f === "string" && f !== "")
     : [];
   const math = fonts.length > 0 ? { noMathTable: fonts } : {};
+  if (parsed.status === "unusable") return { status: "unusable", ...math };
   if (parsed.status === "ok")
     return { status: "ok", truncated: parsed.truncated === true, ...math };
   if (parsed.status === "missing" && Array.isArray(parsed.clusters)) {
@@ -512,7 +552,7 @@ export function describeFontCheck(
 
 /** The line for formulas drawn in a font without a MATH table, or undefined when there is none. */
 export function describeMathTable(outcome: FontCheckOutcome): string | undefined {
-  if (outcome.status === "unusable" || outcome.status === "unmeasurable") return undefined;
+  if (outcome.status === "unmeasurable") return undefined;
   const fonts = outcome.noMathTable;
   if (fonts === undefined || fonts.length === 0) return undefined;
   return t("fontCheck.noMathTable", { fonts: fonts.join("; ") });
@@ -552,7 +592,11 @@ export async function runFontCheck(
   const message = describeFontCheck(outcome, options.context);
   const mathMessage = describeMathTable(outcome);
   if (options.mode === "error") {
-    if (outcome.status === "missing" && message !== undefined) throw new FontCheckError(message);
+    if (outcome.status === "missing" && message !== undefined) {
+      // One error stops the build, so the other finding is still told, as a warning.
+      if (mathMessage !== undefined) options.onWarning(warn("font/no-math-table", mathMessage));
+      throw new FontCheckError(message);
+    }
     if (mathMessage !== undefined) throw new FontCheckError(mathMessage, "font/no-math-table");
   }
   if (mathMessage !== undefined) options.onWarning(warn("font/no-math-table", mathMessage));
