@@ -43,9 +43,9 @@ inline の Mermaid ランタイムの表記、mermaid 12、Markdown と AsciiDoc
 mermaid 12 が描くことと、GitHub が描く Markdown の 4 つの数式の形、AsciiDoc の latexmath と latexmath を意味する
 `stem` が数式として描かれることである。AsciiDoc の asciimath は文字のままだが警告が出るようになり、
 `validate --strict` を失敗させる。`math.enabled: false` でどちらも止められる。そのため、まずプレリリース
-（`0.15.0-beta.1`）を `next` に出す。プレリリースで確かめることは下にまだ残っている。`verify-published.yml` に
+（`0.15.0-beta.1`）を `next` に出した。プレリリースで確かめたのは、`verify-published.yml` に
 よる Linux と Windows での公開パッケージの検証、mermaid 12 でのすべての図の目視、Cambria Math を使う Windows
-での数式のフィクスチャの確認である。
+での数式のフィクスチャの確認で、どれも済んだ。次は `latest` への 0.15.0 である。
 
 ## 完了条件の達成状況
 
@@ -494,7 +494,7 @@ mermaid 12 が描くことと、GitHub が描く Markdown の 4 つの数式の�
 - [x] 数式には MATH フォントが要ることを、印刷するマシンと読者のブラウザの両方について、CI ガイドが CJK と絵文字のフォントを書いている場所に、英語と日本語で書く——CI ガイドは CJK と絵文字のフォントと並べて `fonts-lmodern` を入れ、その理由を書いた。設定のページは、`math` の下にこの要件を、`fontCheck` の下にフォント検査が数式の何を測るかを書いた
 - [x] 読者が数式から何をコピーし、検索が何を索引するかを設計し、[roadmap.md](roadmap.md) 6.4 に記録し、テストする——設計を [roadmap.md](roadmap.md) 6.4 に記録した。コピーは各数式の書いたとおりのソースを運び（AsciiDoc は、Asciidoctor がその時点で `stem` を解決しているので `latexmath` として）、検索はその TeX を索引し、見出しの ID は Markdown なら TeX から、AsciiDoc なら Asciidoctor が作り、どちらも従来のままになる。実装してテストした：ページのスクリプトが、Markdown でも AsciiDoc でも、数式を含むコピーを自ら書き（選択が途中で始まる・終わる数式は全体を取り、コピーは表示中のページに限り、テキストは各数式のソース、別行立ての数式は独立した行、HTML は MathML を含む）、ページのデータは各数式の TeX とその節を挙げ、数式に一致した検索はその節を開く（`build.math.test.ts`、`build.math-chromium.test.ts`、`app.search.test.ts`）
 - [x] KaTeX が解釈できない数式は、KaTeX のエラー表示ではなく、ファイルと数式を名指す診断になる——Markdown は完了（`math/parse-failed`、行を含む。KaTeX が `trust` の後ろに置くコマンドには `math/command-not-allowed`）。AsciiDoc でも完了（Asciidoctor の HTML は行を示せないので、行は付かない）
-- [ ] 数式のフィクスチャを、MATH フォントを入れた Linux と Windows で HTML と PDF に組み、どちらでも、変数とギリシャ文字に豆腐が無く、`\mathbb` と `\mathbf` が通常の変数と区別でき、伸びる括弧と根号が伸びる。v0.14 が測ったアクセントのずれと `aligned` の隙間は、直すか、受け入れたものとして [roadmap.md](roadmap.md) 6.4 に記録する——Latin Modern Math を入れた Linux では、[roadmap.md](roadmap.md) 6.4 に記録したとおり、豆腐は無く、書体の付いた文字は見分けられ、括弧と根号は伸び、`aligned` の隙間は無くなり、アクセントのずれは受け入れた（`\vec` は KaTeX が書く結合文字の矢印を Latin Modern Math が描く位置、ほかは Chromium がアクセントを文字の箱の中央に置くため）。Windows での確認はまだ
+- [x] 数式のフィクスチャを、MATH フォントを入れた Linux と Windows で HTML と PDF に組み、どちらでも、変数とギリシャ文字に豆腐が無く、`\mathbb` と `\mathbf` が通常の変数と区別でき、伸びる括弧と根号が伸びる。v0.14 が測ったアクセントのずれと `aligned` の隙間は、直すか、受け入れたものとして [roadmap.md](roadmap.md) 6.4 に記録する——Latin Modern Math を入れた Linux では、[roadmap.md](roadmap.md) 6.4 に記録したとおり、豆腐は無く、書体の付いた文字は見分けられ、括弧と根号は伸び、`aligned` の隙間は無くなり、アクセントのずれは受け入れた（`\vec` は KaTeX が書く結合文字の矢印を Latin Modern Math が描く位置、ほかは Chromium がアクセントを文字の箱の中央に置くため）。Cambria Math の Windows で npm の `0.15.0-beta.1` でビルドしたもの：PDF は Cambria Math を埋め込み、文字に豆腐は無く、書体の付いた文字は見分けられ、括弧と根号は伸び、フィクスチャのアクセントはどれも文字の上に来て（`\vec` の矢印は中央、`\bar` は Latin-1 のアクセント）、`aligned` に隙間は無く、`、` で始まる行も無い。HTML は Edge で見た
 - [x] [syntax.md](syntax.md) が、英語と日本語で記法を説明する——Markdown と AsciiDoc の形とその規則、出力が何で、何を要するか（MATH フォント）、描かないものを書いた
 
 **リリース**
@@ -503,8 +503,8 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 
 - [ ] ドキュメントサイトの CI ガイド（英語・日本語とも）は、サイトがリリースからデプロイされるので、`v0.15.0` タグを作る前に、版の変更そのものの中で `monodocs@0.15.0` に固定する
 - [x] `verify-published.yml` に 0.15 のゲートと、ランタイムの表記と数式の段を加え、以下のどれよりも先にマージする——インラインのランタイムの script の中に表記が 1 回あり mermaid 12 を名指すこと、CDN のランタイム・pre-render・図の無いページには無いこと。Markdown と AsciiDoc の 5 つの数式が KaTeX のマークアップもスタイルシートも無い MathML になり、`mathvariant` は `normal` だけ、`\mathbb` はその文字になり、それぞれソースを持ち、`math.enabled: false` では無いこと、PDF が組めること、asciimath が `validate` を失敗させずに `math/asciimath-not-rendered` として報告されること。どちらもマージ前にここでビルドした CLI で走らせた
-- [ ] `0.15.0-beta.1` を npm の `next` タグに公開し、`verify-published.yml` を `dist_tag: next` で実行して Linux x64 と Windows x64 で検証する。ログが `verifying monodocs 0.15.0-beta.1` と出し、0.15 の段が飛ばされずに実行されたことを確かめる
-- [ ] ベータの間に、このリポジトリが公開している文書——`examples/en`、`examples/ja`、サイトの見本——をベータでビルドし、mermaid 12 でのすべての図を見る。読めなくなった図は、`0.15.0` を出す前に直すか記録する
+- [x] `0.15.0-beta.1` を npm の `next` タグに公開し、`verify-published.yml` を `dist_tag: next` で実行して Linux x64 と Windows x64 で検証する。ログが `verifying monodocs 0.15.0-beta.1` と出し、0.15 の段が飛ばされずに実行されたことを確かめる——`npm` 環境を承認したあと `v0.15.0-beta.1` タグで CI から provenance 付きで公開し、`next` を付けた（`latest` は 0.14.0 のまま）。`dist_tag: next` の実行は Linux x64 と Windows x64 で `verifying monodocs 0.15.0-beta.1` を出力し、0.15 の 2 つの段は両方で実行されて通った。PDF のフォント検査は、Linux では MATH テーブルの不在を警告し、MATH テーブルを持つ Cambria Math のある Windows では何も言わなかった。`verify-release-binaries.yml` は両プラットフォームで通った
+- [x] ベータの間に、このリポジトリが公開している文書——`examples/en`、`examples/ja`、サイトの見本——をベータでビルドし、mermaid 12 でのすべての図を見る。読めなくなった図は、`0.15.0` を出す前に直すか記録する——ベータで `examples/en` と `examples/ja` をビルドし、それぞれ 3 つの図を Chromium で描いて 0.14.0 と比べた。どれも読める。mermaid 12 は、0.14.0 の薄紫の箱と曲線の代わりに、白地に濃い枠線の箱と直角に曲がる線を描き、横長の処理の流れの図ではラベルの一部を折り返し、SVG の幅が狭くなる（0.14.0 の 2,055px に対して 1,704px）ので、段の幅に縮めると文字が少し大きくなる。図が枠の左に寄ることと、横長の図が段の幅に縮むことは以前と同じ。直すものは無く、見た目の変化はリリースノートに書く。単一ファイルのサイトの見本は同じ examples から作る
 - [ ] 図の変化とライセンスの変化を書いたリリースノートとともに `0.15.0` を `latest` タグに公開し、`dist_tag: 0.15.0` で同じように検証する
 - [ ] `verify-release-binaries.yml` で `v0.15.0` のリリースバイナリを両プラットフォームで検証する
 - [ ] 公開した `v0.15.0` のアセットに対して、Windows 11 のホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する

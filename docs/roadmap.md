@@ -686,9 +686,15 @@ what is kept, and a footnote reference right after a formula goes with it; nothi
 is kept from wrapping, so after strong text that also holds words (`(**$a$ and more**)`) the line
 may still break before the `)`. The formula's own element is as it was, so the text copied and
 searched is unchanged; the HTML a copy carries has the span. Punctuation after a space (`$x$ 、`) is
-not kept either: the line may break at the space. The Windows check is still to be made, and is
-to include where Cambria Math sets `\bar`, `\acute`, and `\grave` now that they are written as the
-Latin-1 accents.
+not kept either: the line may break at the space.
+
+On Windows with Cambria Math, built by `0.15.0-beta.1` from npm, the fixture's PDF embeds Cambria
+Math, and the same holds: no tofu, the styled letters told apart, the brackets and radicals
+stretching, and `aligned` without a gap, and no line starting with `、`; its HTML was looked at in Edge. The
+fixture's accents (`\hat`, `\bar` in its Latin-1 form, `\vec`, `\dot`) all sit over their letters
+there, `\vec`'s combining arrow centred, as v0.14 saw the accents in Edge. The fixture has no
+`\acute` or `\grave`, nor a wide accent, so how Cambria Math sets those, and `\widehat` and the
+others, is not yet seen.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
