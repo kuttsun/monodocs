@@ -1854,30 +1854,73 @@
     return range;
   }
 
-  var HIDDEN_MARK = "data-monodocs-copy-hidden";
+  /** Whether a range takes a formula, looked for only under the range's common ancestor. */
+  function rangeHasFormula(range) {
+    var root = range.commonAncestorContainer;
+    if (root.nodeType !== 1) root = root.parentNode;
+    if (!root || closestFormula(root)) return Boolean(root);
+    return Array.prototype.some.call(
+      root.querySelectorAll("[" + FORMULA_SOURCE + "]"),
+      function (formula) {
+        return range.intersectsNode(formula);
+      },
+    );
+  }
 
   /**
-   * Mark the elements the ranges reach that the page's styles do not show (display: none, or
-   * visibility: hidden), outside formulas, whose own hidden parts (the TeX annotation) belong to them.
+   * Copy what a range takes that the page shows, as the browser's own copy leaves out what the
+   * page's styles hide: an element not displayed, text not visible (an element made visible again
+   * inside it is kept), and the body of a closed details. Only the nodes the range takes are read,
+   * and the page is not touched. Each copied element is listed in `styled` with its computed
+   * display and white space, for the plain text to be laid out as on the page. A formula is copied
+   * whole, with the hidden parts (the TeX annotation) that belong to it.
    */
-  function markHidden(page, ranges) {
-    var marked = [];
-    Array.prototype.forEach.call(page.querySelectorAll("*"), function (el) {
-      if (closestFormula(el.parentNode)) return;
-      if (
-        !ranges.some(function (r) {
-          return r.intersectsNode(el);
-        })
-      ) {
-        return;
+  function cloneShown(range, page, styled) {
+    function shown(node, visible) {
+      if (node.nodeType === 3) {
+        if (!visible) return null;
+        var value = node.nodeValue;
+        var end = node === range.endContainer ? range.endOffset : value.length;
+        var start = node === range.startContainer ? range.startOffset : 0;
+        return document.createTextNode(value.slice(start, end));
       }
-      var style = getComputedStyle(el);
-      if (style.display === "none" || style.visibility === "hidden") {
-        el.setAttribute(HIDDEN_MARK, "");
-        marked.push(el);
+      if (node.nodeType !== 1 || /^(SCRIPT|STYLE|TEMPLATE|NOSCRIPT)$/.test(node.tagName)) {
+        return null;
       }
-    });
-    return marked;
+      var style = getComputedStyle(node);
+      if (style.display === "none") return null;
+      if (node.hasAttribute(FORMULA_SOURCE)) {
+        return style.visibility === "visible" ? node.cloneNode(true) : null;
+      }
+      var copy = node.cloneNode(false);
+      styled.push({ copy: copy, display: style.display, whiteSpace: style.whiteSpace });
+      within(node, copy, style.visibility === "visible");
+      return copy;
+    }
+    function within(node, into, visible) {
+      var only = null;
+      if (node.tagName === "DETAILS" && !node.open) {
+        only = node.querySelector(":scope > summary");
+        if (!only) return;
+      }
+      for (var child = node.firstChild; child; child = child.nextSibling) {
+        if ((only && child !== only) || !range.intersectsNode(child)) continue;
+        var copy = shown(child, visible);
+        if (copy) into.appendChild(copy);
+      }
+    }
+    var holder = document.createElement("div");
+    var root = range.commonAncestorContainer;
+    if (root.nodeType !== 1) root = root.parentNode;
+    // The common ancestor is kept, as the browser keeps it: a selection inside a paragraph is
+    // still a paragraph.
+    if (root === page) {
+      within(page, holder, getComputedStyle(page).visibility === "visible");
+    } else {
+      var copy = shown(root, true);
+      if (copy) holder.appendChild(copy);
+    }
+    return holder;
   }
 
   function setupFormulaCopy() {
@@ -1901,41 +1944,31 @@
         var range = copyRange(selection.getRangeAt(i), page);
         if (range) ranges.push(range);
       }
-      // What the page's styles hide is not copied, as the browser's own copy leaves it out: such
-      // elements are marked for the copies to drop, the marks taken off again at once.
-      var marked = markHidden(page, ranges);
-      var holders = [];
-      var anyFormula = false;
-      try {
-        ranges.forEach(function (r) {
-          var holder = document.createElement("div");
-          holder.appendChild(r.cloneContents());
-          Array.prototype.forEach.call(
-            holder.querySelectorAll("[" + HIDDEN_MARK + "]"),
-            function (el) {
-              el.parentNode.removeChild(el);
-            },
-          );
-          if (holder.querySelector("[" + FORMULA_SOURCE + "]")) anyFormula = true;
-          holders.push(holder);
-        });
-      } finally {
-        marked.forEach(function (el) {
-          el.removeAttribute(HIDDEN_MARK);
-        });
+      // A copy that takes no formula is left to the browser, before anything else is done.
+      if (!ranges.some(rangeHasFormula)) return;
+      var copies = ranges.map(function (r) {
+        var styled = [];
+        return { holder: cloneShown(r, page, styled), styled: styled };
+      });
+      // A formula the page hides is not copied either.
+      if (
+        !copies.some(function (c) {
+          return c.holder.querySelector("[" + FORMULA_SOURCE + "]");
+        })
+      ) {
+        return;
       }
-      if (!anyFormula) return;
       var htmls = [];
       var texts = [];
-      holders.forEach(function (holder) {
-        // Nothing that is not shown, nor a script, goes into the HTML.
-        Array.prototype.forEach.call(
-          holder.querySelectorAll("script, style, template, [hidden]"),
-          function (el) {
-            el.parentNode.removeChild(el);
-          },
-        );
+      copies.forEach(function (c) {
+        var holder = c.holder;
         htmls.push(holder.innerHTML);
+        // The plain text is laid out with the page's display and white space, which the page's
+        // selectors no longer give to the copy.
+        c.styled.forEach(function (s) {
+          s.copy.style.display = s.display;
+          s.copy.style.whiteSpace = s.whiteSpace;
+        });
         Array.prototype.forEach.call(
           holder.querySelectorAll("[" + FORMULA_SOURCE + "]"),
           function (formula) {
@@ -1954,12 +1987,11 @@
             el.parentNode.removeChild(el);
           },
         );
-        // innerText gives the selection's line structure only to an element that is rendered, and
-        // the page's own styles (white space in code, say) only to one inside the page.
+        // innerText gives the selection's line structure only to an element that is rendered.
         holder.style.cssText = "position:fixed;left:-99999px;top:0;";
-        page.appendChild(holder);
+        document.body.appendChild(holder);
         texts.push(holder.innerText);
-        page.removeChild(holder);
+        document.body.removeChild(holder);
       });
       var text = texts.join("\n");
       var html = htmls.join("\n");

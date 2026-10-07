@@ -333,37 +333,82 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(copied.all).not.toContain("<script");
       expect(copied.all).not.toMatch(/<[^>]* hidden[\s=>]/);
       expect(copied.fieldHandled).toBe(false);
-      // An element the page's styles hide is left out of both formats, as the browser leaves it out.
+      // What the page's styles hide is left out of both formats, as the browser leaves it out, and
+      // the page is not touched by the copy.
       const hidden = await page.evaluate(() => {
         const style = document.createElement("style");
-        style.textContent = "#content .omitted { display: none; }";
+        style.textContent = [
+          "#content .omitted { display: none; }",
+          "#content .veiled { visibility: hidden; }",
+          "#content .veiled .shown { visibility: visible; }",
+          "#content .spaced { white-space: pre-wrap; }",
+        ].join("\n");
         document.head.appendChild(style);
         const quote = document.querySelector("#content blockquote")!;
-        const span = document.createElement("span");
-        span.className = "omitted";
-        span.textContent = "OMITTED";
-        quote.querySelector("p")!.appendChild(span);
+        const p = quote.querySelector("p")!;
+        const omitted = document.createElement("span");
+        omitted.className = "omitted";
+        omitted.textContent = "OMITTED";
+        p.appendChild(omitted);
+        const veiled = document.createElement("span");
+        veiled.className = "veiled";
+        veiled.innerHTML = 'VEILED<span class="shown">SHOWN</span>';
+        p.appendChild(veiled);
+        const details = document.createElement("details");
+        details.innerHTML = "<summary>SUMMARY</summary><p>FOLDED</p>";
+        quote.appendChild(details);
+        const copy = (range: Range) => {
+          const selection = window.getSelection()!;
+          selection.removeAllRanges();
+          selection.addRange(range);
+          const event = new ClipboardEvent("copy", {
+            clipboardData: new DataTransfer(),
+            bubbles: true,
+            cancelable: true,
+          });
+          document.dispatchEvent(event);
+          return {
+            text: event.clipboardData!.getData("text/plain"),
+            html: event.clipboardData!.getData("text/html"),
+          };
+        };
+        const mutations: MutationRecord[] = [];
+        const observer = new MutationObserver((records) => mutations.push(...records));
+        observer.observe(document.querySelector("#content")!, {
+          subtree: true,
+          childList: true,
+          attributes: true,
+        });
         const range = document.createRange();
         range.selectNodeContents(quote);
-        const selection = window.getSelection()!;
-        selection.removeAllRanges();
-        selection.addRange(range);
-        const event = new ClipboardEvent("copy", {
-          clipboardData: new DataTransfer(),
-          bubbles: true,
-          cancelable: true,
-        });
-        document.dispatchEvent(event);
-        return {
-          text: event.clipboardData!.getData("text/plain"),
-          html: event.clipboardData!.getData("text/html"),
-          marksLeft: document.querySelectorAll("[data-monodocs-copy-hidden]").length,
-        };
+        const all = copy(range);
+        mutations.push(...observer.takeRecords());
+        observer.disconnect();
+        // Inside one paragraph whose white space the page keeps: kept in the copy.
+        const spaced = document.createElement("p");
+        spaced.className = "spaced";
+        spaced.append("a  b\nc ", quote.querySelector(".math-inline")!.cloneNode(true), " d");
+        quote.appendChild(spaced);
+        const inner = document.createRange();
+        inner.setStart(spaced.firstChild!, 0);
+        inner.setEnd(spaced.lastChild!, 2);
+        const kept = copy(inner);
+        return { ...all, mutations: mutations.length, kept };
       });
       expect(hidden.text).not.toContain("OMITTED");
       expect(hidden.html).not.toContain("OMITTED");
+      expect(hidden.text).not.toContain("VEILED");
+      expect(hidden.html).not.toContain("VEILED");
+      expect(hidden.text).toContain("SHOWN");
+      expect(hidden.html).toContain("SHOWN");
+      expect(hidden.text).toContain("SUMMARY");
+      expect(hidden.html).toContain("SUMMARY");
+      expect(hidden.text).not.toContain("FOLDED");
+      expect(hidden.html).not.toContain("FOLDED");
       expect(hidden.html).toContain("<annotation");
-      expect(hidden.marksLeft).toBe(0);
+      expect(hidden.mutations).toBe(0);
+      expect(hidden.kept.text).toBe("a  b\nc $a &lt; b$ d");
+      expect(hidden.kept.html).toMatch(/^<p class="spaced">/);
     } finally {
       await browser.close();
     }
