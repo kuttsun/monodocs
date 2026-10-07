@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-10-06
+Last updated: 2026-10-07
 
 ## Support Status
 
@@ -24,7 +24,7 @@ Last updated: 2026-10-06
 | Input root, route aliases, AsciiDoc attributes    | ✅ Done   | v0.12          |
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
-| Mermaid runtime notices, Mermaid 12, math         | 🚧 Planned| v0.15          |
+| Mermaid runtime notices, Mermaid 12, math         | 🚧 In progress| v0.15      |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -38,8 +38,16 @@ builds, so, like 0.13.0, it went out without a prerelease, and the published pac
 binaries, and the HTML they produce were verified after `latest` moved. The Windows host script and
 the Windows checks a person has to make are still open, for 0.14.0 as for 0.13.0.
 
-v0.15 comes next, before 1.0: notices for the inline Mermaid runtime, mermaid 12, and math. The
-reasons it precedes 1.0 rather than following it are in [roadmap.md](roadmap.md).
+0.15.0 has not been released yet; it comes before 1.0, for the reasons in [roadmap.md](roadmap.md).
+Its implementation has landed: notices for the inline Mermaid runtime, mermaid 12, and math in
+Markdown and AsciiDoc, rendered at build time to MathML, with copying, search, and a font check that
+covers formulas. Two things change what existing documents build: every diagram is drawn by mermaid
+12, and the four math forms GitHub renders in Markdown, with AsciiDoc's latexmath and `stem` where it
+means latexmath, now render as formulas. AsciiDoc's asciimath still prints as text, but now raises a
+warning, which fails `validate --strict`. `math.enabled: false` turns both off. So `0.15.0-beta.1`
+goes out under `next` first, and what the beta is for is still open below: verifying the published
+package on Linux and Windows through `verify-published.yml`, looking at every diagram under mermaid
+12, and checking the math fixture on Windows with Cambria Math.
 
 ## Completion Criteria Status
 
