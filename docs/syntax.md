@@ -45,7 +45,8 @@ In addition to CommonMark, GitHub Flavored Markdown is enabled via `remark-gfm`.
   - ``$`...`$``, inline, whatever is around it (``値は$`x`$です`` is math)
   - `$$...$$`: a paragraph that starts and ends with `$$` and holds nothing but text displays every
     `$$...$$` in it, which may cross lines, the text between them staying text. In a list item, a
-    heading, or a table cell, or among other text, `$$...$$` is inline, by the same rules as `$...$` but the last
+    heading, or a table cell, or among other text, `$$...$$` is inline, by the same rules as `$...$`, except that the closing `$$` may come before the
+    character just before it
   - a fenced code block whose language is exactly `math` (`Math` is code), displayed
 
   Backslash escapes are resolved before a formula is read, as CommonMark resolves them anywhere: in
