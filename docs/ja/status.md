@@ -488,7 +488,7 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 - [x] 読者が数式から何をコピーし、検索が何を索引するかを設計し、[roadmap.md](roadmap.md) 6.4 に記録し、テストする——設計を [roadmap.md](roadmap.md) 6.4 に記録した。コピーは各数式の書いたとおりのソースを運び（AsciiDoc は、Asciidoctor がその時点で `stem` を解決しているので `latexmath` として）、検索はその TeX を索引し、見出しの ID は Markdown なら TeX から、AsciiDoc なら Asciidoctor が作り、どちらも従来のままになる。実装してテストした：ページのスクリプトが、Markdown でも AsciiDoc でも、数式を含むコピーを自ら書き（選択が途中で始まる・終わる数式は全体を取り、コピーは表示中のページに限り、テキストは各数式のソース、別行立ての数式は独立した行、HTML は MathML を含む）、ページのデータは各数式の TeX とその節を挙げ、数式に一致した検索はその節を開く（`build.math.test.ts`、`build.math-chromium.test.ts`、`app.search.test.ts`）
 - [x] KaTeX が解釈できない数式は、KaTeX のエラー表示ではなく、ファイルと数式を名指す診断になる——Markdown は完了（`math/parse-failed`、行を含む。KaTeX が `trust` の後ろに置くコマンドには `math/command-not-allowed`）。AsciiDoc でも完了（Asciidoctor の HTML は行を示せないので、行は付かない）
 - [ ] 数式のフィクスチャを、MATH フォントを入れた Linux と Windows で HTML と PDF に組み、どちらでも、変数とギリシャ文字に豆腐が無く、`\mathbb` と `\mathbf` が通常の変数と区別でき、伸びる括弧と根号が伸びる。v0.14 が測ったアクセントのずれと `aligned` の隙間は、直すか、受け入れたものとして [roadmap.md](roadmap.md) 6.4 に記録する——Latin Modern Math を入れた Linux では、[roadmap.md](roadmap.md) 6.4 に記録したとおり、豆腐は無く、書体の付いた文字は見分けられ、括弧と根号は伸び、`aligned` の隙間は無くなり、アクセントのずれは受け入れた（`\vec` は KaTeX が書く結合文字の矢印を Latin Modern Math が描く位置、ほかは Chromium がアクセントを文字の箱の中央に置くため）。Windows での確認はまだ
-- [ ] [syntax.md](syntax.md) が、英語と日本語で記法を説明する
+- [x] [syntax.md](syntax.md) が、英語と日本語で記法を説明する——Markdown と AsciiDoc の形とその規則、出力が何でありなにを要するか（MATH フォント）、描かないものを書いた
 
 **リリース**
 
