@@ -34,6 +34,24 @@ CommonMark に加え、`remark-gfm` により GitHub Flavored Markdown を有効
 - YAML frontmatter（`---`）。`title` / `order` / `hidden` / `description` を読む（[roadmap.md](roadmap.md) 13章）。加えて `aliases`（このページが今も応答する古い hash route）を読む（[roadmap.md](roadmap.md) 15.5）
 - ` ```mermaid ` コードブロック → Mermaid 図（`mermaid.mode`: `client` 既定 / `pre-render` = ビルド時 SVG 化）
 - 画像（`![alt](path)`）→ 入力配下の実体を data URI 化して埋め込み
+- **数式**（v0.15）: GitHub が描く 4 つの形を、GitHub の規則で読む（[roadmap.md](roadmap.md) 6.4）
+  - `$...$` は文中の数式。`$` が数式を始めるのは、ASCII の空白・`(` の後、段落の先頭、または要素の中や直後で、
+    空白でも `$` でもない文字の前にあるとき。同じ行の次の `$` で閉じるが、その `$` が ASCII の英字・
+    数字・`_` の前、またはその `$` の直前と同じ文字の前（`$a.$.` は文字）にあるときは数式にならない。そのため `It costs $5 and $10 today.` や `$HOME/$USER` は
+    文字のまま残るが、`Between $5 and 10$` は数式になる。そこでドル記号を書くには `\$` と書く。全角
+    スペースの後でも始まらない（`値は　$x$　です` は文字）。`値は$x$です` は文字、`値は $x$ です` は数式である
+  - ``$`...`$`` は、前後の文字を問わず文中の数式になる（``値は$`x`$です`` は数式）
+  - `$$...$$`: `$$` で始まり `$$` で終わり、文字だけを含む段落では、その中の `$$...$$` がすべて別行立てに
+    なる。行をまたいでもよく、間の文は文字のまま残る。リスト項目・見出し・表のセルの中や、ほかの文と
+    並ぶ `$$...$$` は、`$...$` と同じ規則で文中の数式になる。ただし、閉じる `$$` は、その直前と同じ文字の前にあってもよい
+  - 言語がちょうど `math` のフェンスのコードブロックは別行立ての数式（`Math` はコード）
+
+  バックスラッシュのエスケープは、CommonMark がどこでもそうするように、数式を読む前に解決される。
+  `$...$` と `$$...$$` の中では `\,` は `,`、`\\` は `\` になる。それらが要る TeX は、バックスラッシュを
+  すべて保つ ``$`...`$`` か `math` のブロックで書く。`\$` は例外で、数式を始めも終えもせず、数式の外では
+  `$` を、中では TeX の `\$` のまま残る。`$...$` と `$$...$$` の中の文字参照（`&lt;`）はデコードされる。
+  斜体、リンクの文字、画像の代替テキスト、コードスパン、脚注の定義（そこの `math` ブロックも含む）、生の
+  `<em>`・`<b>`・`<a>`・`<code>` の中では数式を探さない
 
 ## AsciiDoc 対応記法
 
@@ -55,6 +73,12 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 - `[source,mermaid]` ブロック → Mermaid 図（`mermaid.mode`: `client` 既定 / `pre-render` = ビルド時 SVG 化）
 - 同一文書内の `xref:` / 内部アンカー（ID を prefix して追従）
 - 脚注（`footnote:[]`）。ID は page id を prefix する
+- **数式**（v0.15）: `latexmath:[...]` と `[latexmath]` ブロック、および latexmath を意味するときの
+  `stem:[...]` と `[stem]` ブロック。latexmath を意味するのは、`:stem:` が `latexmath`・`latex`・`tex` の
+  とき（ブロックのスタイルが `[stem,asciimath]` のように別の指定をしない限り）か、ブロックのスタイルが
+  `latexmath` のとき。それ以外の `stem` と `asciimath:[...]` は asciimath で、描かない。Asciidoctor が
+  書くとおりに残し、ファイルと数式を名指す警告（`math/asciimath-not-rendered`）を出す。この警告は
+  `monodocs validate --strict` を失敗させ、`math.enabled: false` のときは出ない
 
 ## 単一 HTML 化のための共通仕様（形式横断）
 
@@ -86,6 +110,7 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
   （Asciidoctor 出力の `.admonitionblock`）を、postprocess で共通の `<div class="admonition admonition-TYPE">`
   構造へ正規化する。5 種（NOTE / TIP / IMPORTANT / WARNING / CAUTION）は両形式で一致するため、
   CSS・配色を 1 セットで共有する（[postprocess.ts](../../app/packages/core/src/pipeline/postprocess.ts)）。
+- **数式**（v0.15）: 数式はビルド時に KaTeX が MathML だけに描き、KaTeX のスクリプトもスタイルシートも出力に加えない。描くのはブラウザで、OpenType MATH フォントを使う。そのフォントは、PDF を印刷するマシンにも、読者のブラウザにも要る。Windows には Cambria Math が付属し、Debian と Ubuntu では `fonts-lmodern` が Latin Modern Math を提供する。PDF では `fontCheck` が、どのフォントも描かない数式の文字と、MATH テーブルの無い数式フォントを報告する。Chromium（MathML Core）は `normal` 以外の `mathvariant` を無視するので、`\mathbb`・`\mathbf`・`\mathcal` などの書体は Unicode の数学用の文字にする。HTML で数式を含む選択をコピーすると、数式はソースになる。Markdown では書いたとおり、AsciiDoc では Asciidoctor が `stem` を解決した後なので `latexmath` としてである。検索は数式の TeX を読む。PDF からのコピーはビューアのものである。見出しの ID は、数式が入る前と同じく、Markdown では TeX から、AsciiDoc では Asciidoctor が作る。見出しやページタイトルを文字で示す場所（サイドバー、目次、検索結果、PDF のしおりなど）では、数式を `$TeX$` で示す。`math.enabled: false` で数式を止めると、以前の出力になる。`examples/math` は v0.14 が測った数式を両形式で持ち、マシンのフォントを確かめるのに使える。
 
 ## 制限・非対応（理由つき）
 
@@ -97,7 +122,7 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 | 改ページ（Markdown は `<div class="page-break"></div>`、AsciiDoc は `<<<`）                                  | **対応**（v0.11）            | PDF で新しい紙を始める。ブラウザから HTML を印刷したときも同じ。Markdown では `<div style="page-break-after: always"></div>` も同じマーカーとして受け付ける。どちらも monodocs が組み立てた要素に置き換わるので、入力の属性は 1 つも残らない。Markdown ではマーカーはそれ自体が 1 つのブロックであること。引用・リスト項目・表のセル・見出しの中のものは認識しない（印刷用スタイルシートがそれらのブロックを分割しないため）。AsciiDoc では `<<<` を Asciidoctor が置いた場所に要素が出るので、そちらでもトップレベルに置くこと。受理する引用符と空白の揺れは公式サイトの設定リファレンスに列挙している |
 | ファイル間リンクの見出しアンカー（`other.md#sec` / `xref:other.adoc#sec`）                                    | **対応**                     | リンク先ページの prefix 済み要素 ID（`{page-id}-{アンカー}`）へ解決する。見出しに限らず脚注・明示アンカーも対象。アンカーはリンク先ファイルが生成する ID と照合するため、Markdown から AsciiDoc の見出しを指すには Asciidoctor が生成する ID（例: `_details`）を書く。存在しないアンカーはページ先頭へフォールバックし警告する            |
 | コードハイライト（shiki）                                                                                     | **対応**                     | `highlight.enabled: false` で無効化可。言語指定の無いブロック・未対応言語は素のテキスト表示                                                                                                                                                                                                                                               |
-| 数式（Markdown `$$...$$` / AsciiDoc `stem` / asciimath / latexmath） | **非対応**（v0.15 で対応予定） | 依存のためではない。KaTeX は MathML だけを出力でき、出力にスクリプトもスタイルシートも入らない。v0.14 の実測では、Chromium は変数を数学用イタリックの文字で描き、フォントがそれを持たないマシンでは変数がすべて豆腐になり、フォント検査はまだそれを検出できない。印刷するマシンにも読者のブラウザにも MATH フォントが要る。また Chromium は、`\mathbb` / `\mathbf` / `\mathcal` が変換される `mathvariant` を無視する。フォント検査が数式を対象にし、それらの書体をビルド時に解決し、コピーと検索を設計したうえで v0.15 で対応し、記法は公開の場で決める（[roadmap.md](roadmap.md) 6.4） |
+| 数式（Markdown `$...$` / `$$...$$` / ```` ```math ````、AsciiDoc latexmath / `stem`） | **対応**（v0.15、制限あり） | ビルド時に MathML に描く（上の形式横断の共通仕様）。描けない部分を落として数式を描き、報告するもの: 自動の式番号（星の無い `equation`・`align`・`gather`。`math/numbering-unsupported`。KaTeX のスタイルシートが描くもので、出力はそれを持たない。星付きの環境の `\tag{}` は描く）、Unicode に文字の無い書体（`\mathit{123}`。`math/style-unsupported`）、CSS で描けない囲み（`\phase`。`math/notation-unsupported`）、ブラウザが書かれたとおりに描けない構文（`\vcenter`。`math/construct-unsupported`）。数式を書いたとおりに示し、報告するもの: KaTeX が `trust` の後ろに置くコマンドを使う数式（`\href`、`\includegraphics`。`math/command-not-allowed`）と、KaTeX が解釈できない数式（`math/parse-failed`）。描かないもの: asciimath（上記）。段の幅より広い別行立ての数式は、画面ではスクロールする。紙では全幅で印刷し、紙より広ければ紙の端で切れる。アクセント: Latin Modern Math では `\vec` の矢印が文字の左に寄る（KaTeX が書く結合文字の矢印を、そのフォントがそう描く）。ほかのアクセントは、Chromium が斜めの線ではなく文字の箱の中央に置く。`\overline`・`\underline` と幅の広いアクセントは長い項の上で伸びず、まだ決着していない（[roadmap.md](roadmap.md) 6.4） |
 | Markdown 拡張記法（定義リスト / 絵文字ショートコード `:smile:` / `==marker==` / 上付き `^x^` / 下付き `~x~`） | **非対応**                   | CommonMark / GFM の範囲外。同等の表現が必要なら AsciiDoc 側を使う                                                                                                                                                                                                                                                                         |
 | AsciiDoc 文書単位の目次（`:toc:`）                                                                            | **無効化**                   | 単一 HTML 共通の「ページ内目次（右カラム）」を使うため、文書ごとの TOC は出力しない                                                                                                                                                                                                                                                       |
 | AsciiDoc アイコン（`:icons: font`）                                                                           | **制限**（テキスト表示）     | Font Awesome への外部依存を避け、admonition はラベルテキスト + 色分けで表示する（自己完結を優先）                                                                                                                                                                                                                                         |
