@@ -238,10 +238,11 @@ describe("Markdown math", () => {
   });
 
   it("builds a fixture without formulas byte for byte as with math off", async () => {
-    // examples/ja has `$` in code and shell lines but no formula.
+    // examples/ja has `$` in code and shell lines, and no formula outside its math page.
     const fixture = fileURLToPath(new URL("../../../../examples/ja", import.meta.url));
+    const noMathPage = "sources:\n  exclude:\n    - markdown/math.md\n";
     const outputs: string[] = [];
-    for (const body of ["", "math:\n  enabled: false\n"]) {
+    for (const body of [noMathPage, `${noMathPage}math:\n  enabled: false\n`]) {
       const configFile = join(dir, "monodocs.config.yml");
       await writeFile(configFile, body);
       const out = join(dir, "fixture.html");
