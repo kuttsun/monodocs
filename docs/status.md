@@ -24,7 +24,7 @@ Last updated: 2026-10-07
 | Input root, route aliases, AsciiDoc attributes    | ✅ Done   | v0.12          |
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
-| Mermaid runtime notices, Mermaid 12, math         | 🚧 In progress| v0.15      |
+| Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
 | Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -47,7 +47,8 @@ means latexmath, now render as formulas. AsciiDoc's asciimath still prints as te
 warning, which fails `validate --strict`. `math.enabled: false` turns both off. So `0.15.0-beta.1`
 went out under `next` first, and what it was for is done: the published package verified on Linux
 and Windows, every diagram looked at under mermaid 12, and the math fixture checked on Windows with
-Cambria Math. 0.15.0 under `latest` comes next.
+Cambria Math. 0.15.0 goes out under `latest` with the CI guide pinned to it, and the published
+package and the release binaries are verified after `latest` moves.
 
 ## Completion Criteria Status
 
@@ -503,7 +504,7 @@ Cambria Math. 0.15.0 under `latest` comes next.
 
 Every existing document with a diagram builds differently under mermaid 12, so unlike 0.13.0 and 0.14.0 this release goes through a beta.
 
-- [ ] The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.15.0` in the version change itself, before the `v0.15.0` tag is created, since the site is deployed from the release
+- [x] The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.15.0` in the version change itself, before the `v0.15.0` tag is created, since the site is deployed from the release — `site/docs/ci.md` and `site/ja/docs/ci.md`, four pins each, in the change that bumps the CLI to 0.15.0
 - [x] `verify-published.yml` gains a 0.15 gate and steps for the runtime notices and for math, merged before anything below runs — the notices once inside the inline runtime's script and naming mermaid 12, and none for the CDN runtime, pre-render, or a page without a diagram; five formulas across Markdown and AsciiDoc as MathML with no KaTeX markup or stylesheet, `mathvariant` only `normal`, `\mathbb` as its own letter, each with its source, none under `math.enabled: false`, a PDF built, and asciimath reported as `math/asciimath-not-rendered` without failing `validate`; both run against the CLI built here before merging
 - [x] Publish `0.15.0-beta.1` to npm under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the log says `verifying monodocs 0.15.0-beta.1` and that the 0.15 steps ran rather than being skipped — published from CI on the `v0.15.0-beta.1` tag with provenance after the `npm` environment was approved, carrying `next` while `latest` stays on 0.14.0. The run with `dist_tag: next` logs `verifying monodocs 0.15.0-beta.1` on Linux x64 and Windows x64, and both 0.15 steps ran and passed on both; the PDF's font check warned of no MATH table on Linux and said nothing on Windows, where Cambria Math has one. `verify-release-binaries.yml` passed on both platforms
 - [x] During the beta, build the documents this repository publishes — `examples/en`, `examples/ja`, and the site samples — with the beta and look at every diagram under mermaid 12; a diagram that no longer reads is fixed or recorded before `0.15.0` is cut — `examples/en` and `examples/ja` built by the beta, their three diagrams each drawn in Chromium and compared with 0.14.0's: every one reads. Mermaid 12 draws boxes white with dark borders and edges at right angles where 0.14.0 drew light purple boxes and curves, and wraps some labels of the wide pipeline diagram, whose SVG is then narrower (1,704px against 0.14.0's 2,055px), so that shrunk to the column its text is slightly larger; diagrams sitting left in their frame and a wide one shrunk to the column are as they were. Nothing to fix; the change of look goes into the release notes. The single-file site samples are built from the same examples
