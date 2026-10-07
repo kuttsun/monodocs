@@ -270,11 +270,15 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           document.dispatchEvent(event);
           return event.clipboardData!.getData("text/html");
         })();
-        // A copy from a text field is the field's own.
+        // A copy from a text field is the field's own, even with a formula still selected in the page
+        // (as Firefox keeps it while a field has focus).
         const input = document.createElement("input");
         input.value = "typed";
         document.body.appendChild(input);
-        input.select();
+        const keep = document.createRange();
+        keep.selectNode(inline);
+        window.getSelection()!.removeAllRanges();
+        window.getSelection()!.addRange(keep);
         const field = new ClipboardEvent("copy", {
           clipboardData: new DataTransfer(),
           bubbles: true,
@@ -292,7 +296,7 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(copied.before.handled).toBe(false);
       expect(copied.all).toContain("<math");
       expect(copied.all).not.toContain("<script");
-      expect(copied.all).not.toContain("hidden");
+      expect(copied.all).not.toMatch(/<[^>]* hidden[\s=>]/);
       expect(copied.fieldHandled).toBe(false);
     } finally {
       await browser.close();

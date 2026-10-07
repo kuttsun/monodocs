@@ -712,6 +712,13 @@ describe("v0.15 search of formulas (app.js)", () => {
         "data-heading",
       ),
     ).toBeNull();
+    // A pasted formula with a command inside it is TeX, not a word.
+    typeQuery("x \\right)");
+    expect(
+      (document.querySelector("#search-results a") as HTMLAnchorElement).getAttribute(
+        "data-heading",
+      ),
+    ).toBe("m-two");
     typeQuery("\\left");
     expect(
       (document.querySelector("#search-results a") as HTMLAnchorElement).getAttribute(

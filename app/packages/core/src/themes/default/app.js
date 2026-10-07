@@ -585,7 +585,8 @@
       // Each term counts once per section, however many of the section's formulas it is in.
       var termSections = Object.create(null);
       entry.formulas.forEach(function (f) {
-        var tex = term.charAt(0) === "\\" ? f.folded : f.foldedWords;
+        // A term with a backslash in it is TeX (`\\frac`, a pasted `e^{i\\pi}`); one without is a word.
+        var tex = term.indexOf("\\") !== -1 ? f.folded : f.foldedWords;
         if (tex.indexOf(term) === -1) return;
         var key = f.section || "";
         if (termSections[key]) return;
@@ -1811,7 +1812,13 @@
       part.setStartBefore(formula);
       part.setEnd(range.endContainer, range.endOffset);
     }
-    return part.toString() !== "";
+    // The formula's TeX annotation is not shown, so its text does not count.
+    var taken = document.createElement("div");
+    taken.appendChild(part.cloneContents());
+    Array.prototype.forEach.call(taken.querySelectorAll("annotation"), function (a) {
+      a.parentNode.removeChild(a);
+    });
+    return taken.textContent !== "";
   }
 
   /**
