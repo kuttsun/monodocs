@@ -651,15 +651,23 @@ Linux with Latin Modern Math installed (`fonts-lmodern`, Chromium 151), nothing 
   brackets, and the radicals stretch to what they hold;
 - `aligned` sets `=` at the ordinary distance: the wide gap v0.14 measured is gone, its columns now
   laid out with cell CSS;
-- the `\vec` arrow still sits left of its italic letter, as v0.14 measured with Latin Modern Math and
-  not with Cambria Math: the accent's placement is the font's, and it is accepted;
+- the `\vec` arrow still sits left of its letter, as v0.14 measured with Latin Modern Math and not
+  with Cambria Math. KaTeX writes it as the combining U+20D7, which Latin Modern Math draws with no
+  advance and its ink left of its origin, so the browser centres an empty box and the arrow falls to
+  its left. The arrow U+2192, as MathJax writes `\vec`, was tried and draws a full-size arrow wider
+  than the letter, which is worse; with Cambria Math the combining arrow is centred. It is left as
+  KaTeX writes it, and accepted;
+- `\dot`, `\ddot`, `\hat`, `\tilde`, `\acute`, and `\bar` sit centred over the letter's box, so over an
+  italic letter they are a little left of its slanted stroke: Chromium does not move an accent by
+  the font's top accent attachment. That is the browser's, and accepted;
 - the `\bar` over a letter was full width and set off from it, which is now rewritten (above).
 
 Found on the way and not yet settled: with Latin Modern Math, `\overline`, `\underline`,
 `\widehat`, `\widetilde`, and `\widecheck` keep the size of a single letter over a longer term,
 since KaTeX writes them with characters that font has no wide variants for; and a line of Japanese can
 start with `、` or `。` right after an inline formula, which Chromium breaks before as it does not
-between two characters. The Windows check is still to be made.
+between two characters. The Windows check is still to be made, and is to include where Cambria
+Math sets `\bar`, `\acute`, and `\grave` now that they are written as the Latin-1 accents.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in

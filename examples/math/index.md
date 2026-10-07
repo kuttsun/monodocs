@@ -10,7 +10,7 @@ v0.14 が実測した数式です（[roadmap.md](https://github.com/kuttsun/mono
 同じ数式を AsciiDoc で書いたものが [数式（AsciiDoc）](asciidoc.adoc) にあります。
 
 ```bash
-monodocs build examples/math --format both -o dist/math.html
+monodocs build examples/math --format both -o dist/math   # dist/math/docs.html と docs.pdf
 ```
 
 数式は、ビルドするマシンと読者のブラウザにある OpenType MATH フォントで描かれます。

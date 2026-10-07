@@ -350,17 +350,29 @@ const noMathFont = fontconfigCovers("1D465") === false;
  * A theme that sets formulas in Latin Modern Math: the default theme's stylesheet, which a theme's
  * own replaces, with the font added as a web font.
  */
-async function writeMathTheme(theme: string, extra = ""): Promise<void> {
+async function writeMathTheme(theme: string, extra = "", withFont = true): Promise<void> {
   await mkdir(theme, { recursive: true });
   const font = readFileSync(MATH_FONT).toString("base64");
   await writeFile(
     join(theme, "style.css"),
     readFileSync(new URL("./themes/default/style.css", import.meta.url), "utf8") +
-      `\n@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }\n` +
-      'math { font-family: "Fixture Math"; }\n' +
+      (withFont
+        ? `\n@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }\n` +
+          'math { font-family: "Fixture Math"; }\n'
+        : "\n") +
       extra,
   );
 }
+
+/**
+ * The fixture's prose hidden, its formulas shown: the check measures the text of an element that is
+ * visible, and stops at 40 findings, which the fixture's Japanese would reach before its formulas
+ * on a machine with no CJK font (the GitHub Linux runner). Its formulas' own Japanese (`\text{速度}`)
+ * is still measured.
+ */
+const FORMULAS_ONLY =
+  "#content article * { visibility: hidden; }\n" +
+  "#content article math, #content article math * { visibility: visible; }\n";
 
 /** Latin Modern Math, a font with an OpenType MATH table, kept for these tests (GUST Font License). */
 const MATH_FONT = new URL(
@@ -543,10 +555,14 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
   it.runIf(noMathFont)(
     "reports the math fixture built where no math font is installed",
     async () => {
+      const root = join(dir, "real-math-fixture");
+      await writeMathTheme(join(root, "my-theme"), FORMULAS_ONLY, false);
+      const configFile = join(root, "monodocs.config.yml");
+      await writeFile(configFile, 'lang: "ja"\nhtml:\n  theme: "./my-theme"\n');
       const result = await buildSite({
         inputDir: MATH_FIXTURE,
-        configFile: join(MATH_FIXTURE, "monodocs.config.yml"),
-        outputFile: join(dir, "real-math-fixture", "math.pdf"),
+        configFile,
+        outputFile: join(root, "math.pdf"),
         format: "pdf",
       });
       const warnings = fontWarnings(result);
@@ -561,7 +577,7 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
 
   it("reports nothing of the math fixture's formulas set in a math font", async () => {
     const root = join(dir, "real-math-fixture-ok");
-    await writeMathTheme(join(root, "my-theme"));
+    await writeMathTheme(join(root, "my-theme"), FORMULAS_ONLY);
     const configFile = join(root, "monodocs.config.yml");
     await writeFile(configFile, 'lang: "ja"\nhtml:\n  theme: "./my-theme"\n');
     const result = await buildSite({
@@ -572,9 +588,13 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     });
     const warnings = fontWarnings(result);
     expect(warnings.filter((w) => w.code === "font/no-math-table")).toEqual([]);
-    // The fixture's Japanese is a finding where there is no CJK font (the GitHub Linux runner), so
-    // only the formulas' letters, all in the Mathematical Alphanumeric block, are looked for.
-    for (const w of warnings) expect(w.message).not.toMatch(/U\+1D[4-7][0-9A-F]{2}|U\+210E/);
+    // `\text{速度}` is a finding where there is no CJK font, so only what a math font draws is looked
+    // for: nothing named with it as the example, and the walk not cut short before the end.
+    for (const w of warnings) {
+      expect(w.message).not.toContain("e.g. Latin Modern Math");
+      expect(w.message).not.toMatch(/\d\+/);
+      expect(w.code).not.toBe("font/unchecked");
+    }
   }, 180_000);
 
   it("catches a diagram that mermaid pre-render would bake the tofu into", async () => {
