@@ -589,6 +589,10 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
     a math font need not have, become the Latin-1 characters MathML lists as the same accents
     (U+00AF, U+00B4, U+0060): Latin Modern Math has none of the first three, and on a Japanese page
     the browser took the bar from a CJK font, full width and set off from its letter;
+  - `\overline` and `\underline`, which KaTeX writes as a stretchy `‾` (U+203E) over or under the
+    term, become a border on an `mrow` around it, as an enclosure does: whether `‾` stretches is the
+    font's, and Latin Modern Math, having none, left a fallback font's one letter wide over a longer
+    term;
   - a `\tag` outside an environment is set at the right margin, its table and the boxes above it
     spanning the line.
 
@@ -662,11 +666,15 @@ Linux with Latin Modern Math installed (`fonts-lmodern`, Chromium 151), nothing 
   the font's top accent attachment. That is the browser's, and accepted;
 - the `\bar` over a letter was full width and set off from it, which is now rewritten (above).
 
-Found on the way and not yet settled: with Latin Modern Math, `\overline`, `\underline`,
-`\widehat`, `\widetilde`, and `\widecheck` keep the size of a single letter over a longer term,
-since KaTeX writes them with characters that font has no wide variants for; and a line of Japanese can
-start with `、` or `。` right after an inline formula, which Chromium breaks before as it does not
-between two characters. The Windows check is still to be made, and is to include where Cambria
+Found on the way. `\overline` and `\underline` kept the size of a single letter over a longer term
+with Latin Modern Math, and are now drawn as borders (above). `\widehat`, `\widetilde`, `\widecheck`,
+and `\utilde` still keep about the size of a letter with that font: KaTeX writes them as `^`, `~`, and
+`ˇ`, and Latin Modern Math gives wide variants only to the combining marks (U+0302, U+0303, U+030C,
+U+0330). Written with those instead, Chromium stretched U+0302 over part of a long term and set the
+others unstretched and left of their letter, so the result is the font's and the browser's, and no
+character serves every font; this is accepted until the Windows check shows how Cambria Math sets
+them. And a line of Japanese can start with `、` or `。` right after an inline formula, which Chromium
+breaks before as it does not between two characters. The Windows check is still to be made, and is to include where Cambria
 Math sets `\bar`, `\acute`, and `\grave` now that they are written as the Latin-1 accents.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already

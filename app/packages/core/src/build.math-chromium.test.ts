@@ -196,6 +196,46 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
     }
   }, 60_000);
 
+  it("draws \\overline and \\underline as wide as their term, whatever the font", async () => {
+    const lines = join(dir, "lines");
+    await mkdir(lines, { recursive: true });
+    await writeFile(
+      join(lines, "l.md"),
+      "# L\n\n$$\\overline{a+b+c} \\quad \\underline{a+b+c}$$\n",
+    );
+    const configFile = join(lines, "monodocs.config.yml");
+    await writeFile(configFile, "");
+    const built = join(lines, "out.html");
+    await buildSite({ configFile, inputDir: lines, outputFile: built, format: "html" });
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.goto(pathToFileURL(built).href);
+      const drawn = await page.evaluate(() =>
+        [...document.querySelectorAll("#content .math-display math > semantics > mrow > mrow")]
+          .filter((m) => /border-(top|bottom)/.test(m.getAttribute("style") ?? ""))
+          .map((line) => {
+            const style = getComputedStyle(line);
+            const term = line.firstElementChild!.getBoundingClientRect();
+            const box = line.getBoundingClientRect();
+            return {
+              thick: parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth),
+              spans: box.left <= term.left + 0.5 && box.right >= term.right - 0.5,
+              wide: term.width > 40,
+            };
+          }),
+      );
+      expect(drawn).toEqual([
+        { thick: expect.any(Number), spans: true, wide: true },
+        { thick: expect.any(Number), spans: true, wide: true },
+      ]);
+      for (const line of drawn) expect(line.thick).toBeGreaterThan(0);
+    } finally {
+      await browser.close();
+    }
+  }, 60_000);
+
   it("copies a formula as its source, and its MathML as HTML", async () => {
     const page3 = join(dir, "c");
     await mkdir(page3, { recursive: true });

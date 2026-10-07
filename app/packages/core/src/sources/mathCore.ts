@@ -282,6 +282,7 @@ export function rewriteForCore(math: Element): CoreGaps {
   negativeSpaces(math);
   braceAccents(math);
   spacingAccents(math);
+  drawLines(math);
   normalizeLengths(math);
   const notations = drawEnclosures(math);
   return { notations, constructs: [...constructs] };
@@ -572,6 +573,31 @@ function spacingAccents(math: Element): void {
     if (script?.tagName !== "mo") return;
     const replacement = SPACING_ACCENTS[textOf(script)];
     if (replacement !== undefined) script.children = [{ type: "text", value: replacement }];
+  });
+}
+
+/**
+ * `\\overline` and `\\underline` are a rule as wide as the term, which KaTeX writes as a stretchy
+ * `‾` (U+203E) over or under it. Whether that stretches is the font's: Latin Modern Math has no
+ * `‾`, and the browser drew a fallback font's, one letter wide over a longer term. The line becomes
+ * a border on an `mrow` around the term, as an enclosure's does, which is as wide as the term
+ * whatever the font.
+ */
+function drawLines(math: Element): void {
+  visit(math, "element", (node: Element) => {
+    const over = node.tagName === "mover";
+    if (!over && node.tagName !== "munder") return;
+    const [base, script, ...rest] = node.children.filter((c): c is Element => c.type === "element");
+    if (!base || script?.tagName !== "mo" || rest.length > 0 || textOf(script) !== "\u203E") return;
+    node.tagName = "mrow";
+    node.properties = {};
+    node.children = [base];
+    addStyle(
+      node,
+      over
+        ? `border-top: ${LINE} solid; padding-top: 0.1em`
+        : `border-bottom: ${LINE} solid; padding-bottom: 0.1em`,
+    );
   });
 }
 
