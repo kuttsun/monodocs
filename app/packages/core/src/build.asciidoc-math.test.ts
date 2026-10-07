@@ -104,6 +104,15 @@ describe("AsciiDoc math", () => {
     expect(wrapped).toEqual(["F、", "F。", "（F）", "（F）。"]);
   });
 
+  it("takes a footnote reference along with a formula, and no other superscript", async () => {
+    const { html } = await build(
+      "= A\n\n値は latexmath:[x]footnote:[注]。また latexmath:[y]^上付きの文^、\n",
+    );
+    expect(html).toMatch(/<\/math><\/span><sup class="footnote"[^>]*>.*?<\/sup>。<\/span>/);
+    // A superscript is not a reference, and stays outside: the 、 follows it, not the formula.
+    expect(html).toMatch(/<\/math><\/span><sup>上付きの文<\/sup>、/);
+  });
+
   it("records each formula's TeX, and a source rebuilt as latexmath", async () => {
     const { html } = await build(DOC);
     expect(attributes(html, "data-math-tex")).toEqual([

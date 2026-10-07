@@ -278,6 +278,13 @@ describe("Markdown math", () => {
     expect(html).toMatch(/<\/math><\/span>%。<\/span>/);
   });
 
+  it("keeps no more than a formula from wrapping, strong text with words in it included", async () => {
+    const { html } = await build("# A\n\n値は (**$a$ と $b$ が正のときに成り立つ長い文**) の。\n");
+    // The strong text wraps as it did; only the formulas are what they always were, unbreakable.
+    expect(html).not.toContain('<span style="white-space: nowrap">(<strong>');
+    expect(html).toMatch(/<strong>.*と.*<\/strong>\) の/);
+  });
+
   it("builds the math fixture, its Markdown and AsciiDoc pages giving the same formulas", async () => {
     // examples/math: the formulas v0.14 measured, 7 inline and 14 display, on each page.
     const fixture = fileURLToPath(new URL("../../../../examples/math", import.meta.url));
