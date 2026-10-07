@@ -594,13 +594,19 @@ function drawLines(math: Element): void {
     if (!over && node.tagName !== "munder") return;
     const [base, script, ...rest] = node.children.filter((c): c is Element => c.type === "element");
     if (!base || script?.tagName !== "mo" || rest.length > 0 || textOf(script) !== "\u203E") return;
+    // Only the accent KaTeX writes for a line; `\\overset` of a `‾` character is a symbol set over
+    // the term, and stays one.
+    const accent = over ? node.properties.accent : node.properties.accentunder;
+    if (String(accent) !== "true" || String(script.properties.stretchy) !== "true") return;
     node.tagName = "mrow";
     node.properties = {};
     node.children = [base];
     addStyle(
       node,
       over
-        ? `border-top: ${RULE} solid; padding-top: 0.12em; margin-top: ${RULE}`
+        ? // The term under an overline is set cramped, as TeX sets it and as MathML Core sets an
+          // accent's base, so that its superscripts stay as low as they were.
+          `border-top: ${RULE} solid; padding-top: 0.12em; margin-top: ${RULE}; math-shift: compact`
         : `border-bottom: ${RULE} solid; padding-bottom: 0.12em; margin-bottom: ${RULE}`,
     );
   });
