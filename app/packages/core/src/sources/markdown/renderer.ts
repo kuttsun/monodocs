@@ -19,6 +19,7 @@ import type {
 } from "mdast";
 import type {
   Heading,
+  PageFormula,
   LinkRef,
   PageMeta,
   RenderContext,
@@ -145,7 +146,12 @@ export function createMarkdownRenderer(
     },
 
     async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
-      const out = { headings: [] as Heading[], text: "", anchors: [] as string[] };
+      const out = {
+        headings: [] as Heading[],
+        formulas: [] as PageFormula[],
+        text: "",
+        anchors: [] as string[],
+      };
       let links: LinkRef[] = [];
       const problems: MathProblem[] = [];
 
@@ -172,6 +178,7 @@ export function createMarkdownRenderer(
           out.headings = result.headings;
           out.text = result.text;
           out.anchors = result.anchors;
+          out.formulas = result.formulas;
         })
         .use(rehypeStringify)
         .process(source.raw);
@@ -181,6 +188,7 @@ export function createMarkdownRenderer(
         text: out.text,
         headings: out.headings,
         anchors: out.anchors,
+        formulas: out.formulas,
         links,
         assets: [],
         math: problems,

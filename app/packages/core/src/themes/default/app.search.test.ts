@@ -10,6 +10,7 @@ type ClientPage = {
   hidden: boolean;
   headings: ClientHeading[];
   text: string;
+  formulas?: { tex: string; section?: string }[];
   /** Body HTML placed in the article after the headings (for the in-body highlight; not client data). */
   html?: string;
 };
@@ -64,6 +65,7 @@ async function mountClient(
       hidden: p.hidden,
       headings: p.headings,
       text: p.text,
+      ...(p.formulas ? { formulas: p.formulas } : {}),
     })),
   };
 
@@ -645,5 +647,48 @@ describe("v0.9 in-body highlight (app.js)", () => {
     typeQuery("さーばー");
     openResult("/ja");
     expect(highlighted("/ja")).toEqual(["サーバー"]);
+  });
+});
+
+describe("v0.15 search of formulas (app.js)", () => {
+  const mathPage = (formulas: { tex: string; section?: string }[]): ClientPage => ({
+    route: "/m",
+    title: "Math",
+    hidden: false,
+    headings: [
+      { id: "m-a", text: "Alpha", level: 2 },
+      { id: "m-b", text: "Beta", level: 2 },
+    ],
+    text: "z Alpha x Beta \\frac{a}{b} y",
+    formulas,
+  });
+
+  it("opens the section of a formula the query matches, when no heading does", async () => {
+    await mountClient([
+      mathPage([
+        { tex: "x", section: "m-a" },
+        { tex: "\\frac{a}{b}", section: "m-b" },
+      ]),
+    ]);
+    typeQuery("\\frac");
+    const link = document.querySelector("#search-results a") as HTMLAnchorElement;
+    expect(link.getAttribute("data-heading")).toBe("m-b");
+  });
+
+  it("keeps a heading match over a formula's section, and the page top before any heading", async () => {
+    await mountClient([mathPage([{ tex: "Alpha \\frac{a}{b}", section: "m-b" }, { tex: "z" }])]);
+    typeQuery("alpha");
+    expect(
+      (document.querySelector("#search-results a") as HTMLAnchorElement).getAttribute(
+        "data-heading",
+      ),
+    ).toBe("m-a");
+    typeQuery("z");
+    // "z" is in no heading and its formula comes before the first: the page's top.
+    expect(
+      (document.querySelector("#search-results a") as HTMLAnchorElement).getAttribute(
+        "data-heading",
+      ),
+    ).toBeNull();
   });
 });

@@ -195,4 +195,66 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       await browser.close();
     }
   }, 60_000);
+
+  it("copies a formula as its source, and its MathML as HTML", async () => {
+    const page3 = join(dir, "c");
+    await mkdir(page3, { recursive: true });
+    await writeFile(
+      join(page3, "c.md"),
+      "# C\n\n> Before $a &lt; b$ after.\n>\n> $$\n> x^2\n> $$\n\nPlain text only.\n",
+    );
+    const configFile = join(page3, "monodocs.config.yml");
+    await writeFile(configFile, "");
+    const out3 = join(page3, "out.html");
+    await buildSite({ configFile, inputDir: page3, outputFile: out3, format: "html" });
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.goto(pathToFileURL(out3).href);
+      const copied = await page.evaluate(() => {
+        const copy = (start: Node, startOffset: number, end: Node, endOffset: number) => {
+          const range = document.createRange();
+          range.setStart(start, startOffset);
+          range.setEnd(end, endOffset);
+          const selection = window.getSelection()!;
+          selection.removeAllRanges();
+          selection.addRange(range);
+          const event = new ClipboardEvent("copy", {
+            clipboardData: new DataTransfer(),
+            bubbles: true,
+            cancelable: true,
+          });
+          document.dispatchEvent(event);
+          return {
+            text: event.clipboardData!.getData("text/plain"),
+            html: event.clipboardData!.getData("text/html"),
+            handled: event.defaultPrevented,
+          };
+        };
+        const quote = document.querySelector("#content blockquote")!;
+        const inline = quote.querySelector(".math-inline")!;
+        // From inside the inline formula to the end of the quote: the formula is taken whole.
+        const fromInside = copy(
+          inline.querySelector("mi")!.firstChild!,
+          0,
+          quote,
+          quote.childNodes.length,
+        );
+        // Text with no formula is left to the browser.
+        const plain = Array.from(document.querySelectorAll("#content p")).find((p) =>
+          p.textContent!.includes("Plain text only"),
+        )!;
+        const none = copy(plain.firstChild!, 0, plain.firstChild!, 5);
+        return { fromInside, none };
+      });
+      expect(copied.fromInside.handled).toBe(true);
+      expect(copied.fromInside.text).toMatch(/^\$a &lt; b\$ after\.\n+\$\$\nx\^2\n\$\$\s*$/);
+      expect(copied.fromInside.html).toContain("<math");
+      expect(copied.fromInside.html).not.toContain("style=");
+      expect(copied.none.handled).toBe(false);
+    } finally {
+      await browser.close();
+    }
+  }, 60_000);
 });

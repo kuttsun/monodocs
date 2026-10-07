@@ -268,6 +268,7 @@ function pageData(page: Page): {
   hidden: boolean;
   headings: { id: string; text: string; level: number; number?: string }[];
   text: string;
+  formulas?: { tex: string; section?: string }[];
 } {
   return {
     route: page.route,
@@ -284,6 +285,9 @@ function pageData(page: Page): {
       .filter((h) => h.level >= 2)
       .map((h) => ({ id: h.id, text: h.text, level: h.level, number: h.number })),
     text: page.text,
+    // Each formula's TeX and its section, so that a query matching a formula opens that section
+    // (roadmap 6.4). Absent on a page without formulas, so the payload is what it was.
+    ...(page.formulas && page.formulas.length > 0 ? { formulas: page.formulas } : {}),
   };
 }
 

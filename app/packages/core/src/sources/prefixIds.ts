@@ -1,13 +1,15 @@
 import { toText } from "hast-util-to-text";
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot, RootContent } from "hast";
 import { isMath } from "./mathRender.js";
-import type { Heading } from "../types.js";
+import type { Heading, PageFormula } from "../types.js";
 
 const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
 
 export type PrefixResult = {
   headings: Heading[];
+  /** Each formula's TeX with the section it falls in, in document order. */
+  formulas: PageFormula[];
   text: string;
   /** prefix 後の全要素 ID（文書順）。他ページからのアンカーリンク解決に使う。 */
   anchors: string[];
@@ -73,7 +75,29 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
     }
   });
 
-  return { headings, text: toText(withFormulasAsText(tree, "search")), anchors: [...anchors] };
+  // 3) Each formula with the section it falls in: the last h2-or-deeper heading before it.
+  const formulas: PageFormula[] = [];
+  let section: string | undefined;
+  visit(tree, (node) => {
+    if (node.type !== "element") return;
+    const element = node as Element;
+    if (HEADING_TAGS.has(element.tagName) && element.tagName !== "h1") {
+      section = typeof element.properties.id === "string" ? element.properties.id : section;
+      return;
+    }
+    if (isMath(element)) {
+      const tex = String(element.properties.dataMathTex).replace(/\s+/g, " ").trim();
+      formulas.push(section === undefined ? { tex } : { tex, section });
+      return SKIP;
+    }
+  });
+
+  return {
+    headings,
+    formulas,
+    text: toText(withFormulasAsText(tree, "search")),
+    anchors: [...anchors],
+  };
 }
 
 /**

@@ -6,6 +6,7 @@ import rehypeStringify from "rehype-stringify";
 import type { Root as HastRoot } from "hast";
 import type {
   Heading,
+  PageFormula,
   PageMeta,
   RenderContext,
   RenderedContent,
@@ -129,7 +130,12 @@ export function createAsciidocRenderer(
       )) as string;
       const problems: MathProblem[] = [];
 
-      const out = { headings: [] as Heading[], text: "", anchors: [] as string[] };
+      const out = {
+        headings: [] as Heading[],
+        formulas: [] as PageFormula[],
+        text: "",
+        anchors: [] as string[],
+      };
 
       // 全要素 ID を page id で prefix し、同一文書内アンカーを追従させる
       // （見出し・xref・脚注などの単一 HTML 内 ID 衝突を回避）。Markdown と共通処理。
@@ -143,6 +149,7 @@ export function createAsciidocRenderer(
           out.headings = result.headings;
           out.text = result.text;
           out.anchors = result.anchors;
+          out.formulas = result.formulas;
         })
         .use(rehypeStringify)
         .process(rawHtml);
@@ -152,6 +159,7 @@ export function createAsciidocRenderer(
         text: out.text,
         headings: out.headings,
         anchors: out.anchors,
+        formulas: out.formulas,
         links: [],
         assets: [],
         // A formula in a section title is converted again for each copy (a TOC entry, an xref's

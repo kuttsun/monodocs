@@ -130,6 +130,8 @@ export type Page = {
    * 他ページからのアンカー付きリンク（`other.md#sec`）の解決先が実在するかの検証に使う。
    */
   anchors: string[];
+  /** Each formula's TeX and the section it falls in, for search to open (roadmap 6.4). */
+  formulas?: PageFormula[];
   links: LinkRef[];
   assets: AssetRef[];
 };
@@ -164,6 +166,13 @@ export type SidebarItem = {
   children?: SidebarItem[];
 };
 
+/** A formula on a page: its TeX, whitespace runs collapsed, and the ID of the section it falls in. */
+export type PageFormula = {
+  tex: string;
+  /** The heading (h2 and below) the formula comes after; absent before the first one. */
+  section?: string;
+};
+
 /** renderer に渡すレンダリングコンテキスト。 */
 export type RenderContext = {
   /** レンダリング対象ページの識別情報。 */
@@ -177,6 +186,7 @@ export type RenderedContent = {
   headings: Heading[];
   /** prefix 済みの全要素 ID（{@link Page.anchors} の元）。 */
   anchors: string[];
+  formulas?: PageFormula[];
   links: LinkRef[];
   assets: AssetRef[];
   /** Formulas the renderer could not render as written, reported by the build with the file. */

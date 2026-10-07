@@ -220,6 +220,7 @@ export async function buildPages(
       text: rendered.text,
       headings: rendered.headings,
       anchors: rendered.anchors,
+      ...(rendered.formulas && rendered.formulas.length > 0 ? { formulas: rendered.formulas } : {}),
       links: rendered.links,
       assets: rendered.assets,
     });

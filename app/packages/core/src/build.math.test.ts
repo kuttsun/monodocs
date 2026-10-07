@@ -117,6 +117,22 @@ describe("Markdown math", () => {
     expect(page.text.split("\\frac{a}{b}")).toHaveLength(2);
   });
 
+  it("lists each formula's TeX with its section for search, and nothing on a page without one", async () => {
+    const { html } = await build(DOC);
+    const formulas = (pageData(html) as PageData & { formulas?: unknown }).formulas;
+    expect(formulas).toEqual([
+      { tex: "E=mc^2" },
+      { tex: "x", section: "a-let-x-be-real" },
+      { tex: "\\frac{a}{b}", section: "a-cost-fracab" },
+      { tex: "a < b", section: "a-cost-fracab" },
+      { tex: "\\sqrt{2}", section: "a-cost-fracab" },
+      { tex: "\\sum_{k=1}^{n} k", section: "a-cost-fracab" },
+      { tex: "\\mathbb{R}", section: "a-cost-fracab" },
+    ]);
+    const plain = await build("# T\n\nNo formula here.\n");
+    expect(pageData(plain.html)).not.toHaveProperty("formulas");
+  });
+
   it("reports a formula KaTeX cannot parse, with the file and line, and shows it as written", async () => {
     const { html, result } = await build("# T\n\nBroken $x^{$ here.\n");
     const found = result.warnings.filter((w) => w.code === "math/parse-failed");
@@ -198,7 +214,8 @@ describe("Markdown math", () => {
   it("with math.enabled: false, prints the formulas as text, as the release before did", async () => {
     const off = await build(DOC, "math:\n  enabled: false\n");
     expect(off.html).not.toContain("<math");
-    expect(off.html).not.toContain("data-math");
+    // No formula element (the theme's script names the attribute, which is not one).
+    expect(off.html).not.toMatch(/data-math-(?:source|tex)="/);
     expect(pageData(off.html).title).toBe("Energy $E=mc^2$");
     expect(pageData(off.html).headings.map((h) => h.text)).toEqual([
       "Let $x$ be real",

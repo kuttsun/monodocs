@@ -510,6 +510,11 @@
             folded: fold(htext),
           };
         }),
+        // Each formula's TeX with the section it falls in: a query that matches a formula, and no
+        // heading, opens the formula's section rather than the page's top.
+        formulas: (p.formulas || []).map(function (f) {
+          return { folded: fold(f.tex || ""), section: f.section || null };
+        }),
       };
     });
     return searchIndex;
@@ -543,6 +548,8 @@
     // 見出しの本文が語を含むだけの見出しより優先する。
     var numberHits = Object.create(null);
     var pageNumberHit = false;
+    // Section ID → the number of terms a formula in it matched ("" for before the first heading).
+    var formulaHits = Object.create(null);
 
     for (var i = 0; i < terms.length; i++) {
       var term = terms[i];
@@ -567,6 +574,12 @@
         score += SCORE_HEADING;
         matched = true;
       }
+
+      entry.formulas.forEach(function (f) {
+        if (f.folded.indexOf(term) === -1) return;
+        var key = f.section || "";
+        formulaHits[key] = (formulaHits[key] || 0) + 1;
+      });
 
       var positions = occurrences(entry.textFolded, term);
       if (positions.length > 0) {
@@ -595,6 +608,7 @@
       headingHits: headingHits,
       numberHits: numberHits,
       pageNumberHit: pageNumberHit,
+      formulaHits: formulaHits,
     };
   }
 
@@ -620,7 +634,24 @@
         bestCount = count;
       }
     });
-    return best;
+    if (best || anyNumberHit) return best;
+    // No heading matched: a formula that did opens its section (the one most terms matched in, the
+    // first in document order on a tie); one before the first heading leaves the page's top.
+    var formulaBest = null;
+    var formulaCount = 0;
+    entry.formulas.forEach(function (f) {
+      var count = scored.formulaHits[f.section || ""] || 0;
+      if (count > formulaCount) {
+        formulaBest = f.section;
+        formulaCount = count;
+      }
+    });
+    if (!formulaBest) return null;
+    var section = null;
+    entry.headings.forEach(function (h) {
+      if (!section && h.id === formulaBest) section = h;
+    });
+    return section;
   }
 
   /**
@@ -1743,6 +1774,61 @@
     });
   }
 
+  // ---- copying formulas ----
+  // A browser copies a formula's MathML as its tokens one per line, the radical and the fraction bar
+  // gone (roadmap 6.4). When a selection holds a formula, the copy is written here instead: the plain
+  // text with each formula as its source as written (a display formula on lines of its own), and the
+  // HTML as the selection's own markup, MathML included. A selection that starts or ends inside a
+  // formula takes the whole formula. A selection without one is left to the browser.
+  var FORMULA_SOURCE = "data-math-source";
+
+  function closestFormula(node) {
+    for (var n = node; n; n = n.parentNode) {
+      if (n.nodeType === 1 && n.hasAttribute(FORMULA_SOURCE)) return n;
+    }
+    return null;
+  }
+
+  function setupFormulaCopy() {
+    document.addEventListener("copy", function (event) {
+      var selection = window.getSelection();
+      if (
+        !selection ||
+        selection.rangeCount === 0 ||
+        selection.isCollapsed ||
+        !event.clipboardData
+      ) {
+        return;
+      }
+      var range = selection.getRangeAt(0).cloneRange();
+      var first = closestFormula(range.startContainer);
+      var last = closestFormula(range.endContainer);
+      if (first) range.setStartBefore(first);
+      if (last) range.setEndAfter(last);
+      var holder = document.createElement("div");
+      holder.appendChild(range.cloneContents());
+      var formulas = holder.querySelectorAll("[" + FORMULA_SOURCE + "]");
+      if (formulas.length === 0) return;
+      var html = holder.innerHTML;
+      Array.prototype.forEach.call(formulas, function (formula) {
+        var display = formula.classList.contains("math-display");
+        var source = document.createElement(display ? "div" : "span");
+        source.textContent = formula.getAttribute(FORMULA_SOURCE) || "";
+        // A display formula's source can span lines, which are kept.
+        source.style.whiteSpace = "pre";
+        formula.parentNode.replaceChild(source, formula);
+      });
+      // innerText gives the selection's line structure only to an element that is rendered.
+      holder.style.cssText = "position:fixed;left:-99999px;top:0;";
+      document.body.appendChild(holder);
+      var text = holder.innerText;
+      document.body.removeChild(holder);
+      event.clipboardData.setData("text/plain", text);
+      event.clipboardData.setData("text/html", html);
+      event.preventDefault();
+    });
+  }
+
   // ---- init ----
   function init() {
     // ルート確定済みの目印。これ以降に読み込まれた Mermaid ランタイムは
@@ -1758,6 +1844,7 @@
     setupSidebarDirs();
     setupCodeBlocks();
     setupImageLightbox();
+    setupFormulaCopy();
 
     if (window.location.hash) {
       onRouteChange();
