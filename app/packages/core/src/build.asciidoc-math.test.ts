@@ -109,6 +109,11 @@ describe("AsciiDoc math", () => {
       "= A\n\n値は latexmath:[x]footnote:[注]。また latexmath:[y]^上付きの文^、\n",
     );
     expect(html).toMatch(/<\/math><\/span><sup class="footnote"[^>]*>.*?<\/sup>。<\/span>/);
+    // A named footnote referred to again, which Asciidoctor marks as `footnoteref`, goes along too.
+    const again = (
+      await build("= A\n\nlatexmath:[x]footnote:n[注]。再び latexmath:[y]footnote:n[]。\n")
+    ).html;
+    expect(again).toMatch(/<\/math><\/span><sup class="footnoteref"[^>]*>.*?<\/sup>。<\/span>/);
     // A superscript is not a reference, and stays outside: the 、 follows it, not the formula.
     expect(html).toMatch(/<\/math><\/span><sup>上付きの文<\/sup>、/);
   });

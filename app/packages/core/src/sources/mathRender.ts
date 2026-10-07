@@ -180,11 +180,16 @@ function keepPunctuationWithFormulas(tree: HastRoot): void {
   }
 }
 
-/** A footnote reference: GFM's, which links with `data-footnote-ref`, or Asciidoctor's `sup.footnote`. */
+/**
+ * A footnote reference: GFM's, which links with `data-footnote-ref`, or Asciidoctor's `sup.footnote`
+ * (`sup.footnoteref` where a named footnote is referred to again).
+ */
 function isFootnoteRef(node: ElementContent | undefined): boolean {
   if (node?.type !== "element" || node.tagName !== "sup") return false;
   const classes = node.properties.className;
-  if (Array.isArray(classes) && classes.includes("footnote")) return true;
+  if (Array.isArray(classes) && (classes.includes("footnote") || classes.includes("footnoteref"))) {
+    return true;
+  }
   return node.children.some(
     (c) => c.type === "element" && c.properties.dataFootnoteRef !== undefined,
   );
