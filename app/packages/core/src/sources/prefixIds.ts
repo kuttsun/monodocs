@@ -81,6 +81,8 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
   visit(tree, (node) => {
     if (node.type !== "element") return;
     const element = node as Element;
+    // Asciidoctor's table of contents repeats the headings' formulas; they are counted where they are.
+    if (element.properties.id === `${prefix}-toc`) return SKIP;
     if (HEADING_TAGS.has(element.tagName) && element.tagName !== "h1") {
       section = typeof element.properties.id === "string" ? element.properties.id : section;
       return;

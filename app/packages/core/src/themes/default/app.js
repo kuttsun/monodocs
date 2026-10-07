@@ -513,7 +513,14 @@
         // Each formula's TeX with the section it falls in: a query that matches a formula, and no
         // heading, opens the formula's section rather than the page's top.
         formulas: (p.formulas || []).map(function (f) {
-          return { folded: fold(f.tex || ""), section: f.section || null };
+          var tex = f.tex || "";
+          return {
+            folded: fold(tex),
+            // Without its control words, for a term that is not one: "left" is prose, and should
+            // not find every \left.
+            foldedWords: fold(tex.replace(/\\[A-Za-z]+/g, " ")),
+            section: f.section || null,
+          };
         }),
       };
     });
@@ -575,9 +582,14 @@
         matched = true;
       }
 
+      // Each term counts once per section, however many of the section's formulas it is in.
+      var termSections = Object.create(null);
       entry.formulas.forEach(function (f) {
-        if (f.folded.indexOf(term) === -1) return;
+        var tex = term.charAt(0) === "\\" ? f.folded : f.foldedWords;
+        if (tex.indexOf(term) === -1) return;
         var key = f.section || "";
+        if (termSections[key]) return;
+        termSections[key] = true;
         formulaHits[key] = (formulaHits[key] || 0) + 1;
       });
 
@@ -1789,35 +1801,95 @@
     return null;
   }
 
+  /** Whether the start (or the end) of a range takes in any of a formula's text. */
+  function takesFormula(range, formula, atStart) {
+    var part = document.createRange();
+    if (atStart) {
+      part.setStart(range.startContainer, range.startOffset);
+      part.setEndAfter(formula);
+    } else {
+      part.setStartBefore(formula);
+      part.setEnd(range.endContainer, range.endOffset);
+    }
+    return part.toString() !== "";
+  }
+
+  /**
+   * A selection range as copied: within the page shown (a select-all reaches the hidden pages and
+   * the page's scripts), and with a formula it starts or ends inside taken whole, or left out when
+   * none of its text was selected. Null when nothing of the page shown is in it.
+   */
+  function copyRange(selected, page) {
+    var range = selected.cloneRange();
+    if (!range.intersectsNode(page)) return null;
+    var pageRange = document.createRange();
+    pageRange.selectNodeContents(page);
+    if (range.compareBoundaryPoints(Range.START_TO_START, pageRange) < 0) {
+      range.setStart(pageRange.startContainer, pageRange.startOffset);
+    }
+    if (range.compareBoundaryPoints(Range.END_TO_END, pageRange) > 0) {
+      range.setEnd(pageRange.endContainer, pageRange.endOffset);
+    }
+    var first = closestFormula(range.startContainer);
+    if (first) {
+      if (takesFormula(range, first, true)) range.setStartBefore(first);
+      else range.setStartAfter(first);
+    }
+    var last = closestFormula(range.endContainer);
+    if (last) {
+      if (takesFormula(range, last, false)) range.setEndAfter(last);
+      else range.setEndBefore(last);
+    }
+    return range;
+  }
+
   function setupFormulaCopy() {
     document.addEventListener("copy", function (event) {
-      var selection = window.getSelection();
+      // A copy from a text field (the search box, a code block's fallback) is the field's own.
+      var target = event.target;
       if (
-        !selection ||
-        selection.rangeCount === 0 ||
-        selection.isCollapsed ||
-        !event.clipboardData
+        target &&
+        target.nodeType === 1 &&
+        (/^(INPUT|TEXTAREA)$/.test(target.tagName) || target.isContentEditable)
       ) {
         return;
       }
-      var range = selection.getRangeAt(0).cloneRange();
-      var first = closestFormula(range.startContainer);
-      var last = closestFormula(range.endContainer);
-      if (first) range.setStartBefore(first);
-      if (last) range.setEndAfter(last);
+      var selection = window.getSelection();
+      var page = document.querySelector("#content article.page:not([hidden])");
+      if (!selection || selection.isCollapsed || !event.clipboardData || !page) return;
       var holder = document.createElement("div");
-      holder.appendChild(range.cloneContents());
+      for (var i = 0; i < selection.rangeCount; i++) {
+        var range = copyRange(selection.getRangeAt(i), page);
+        if (range) holder.appendChild(range.cloneContents());
+      }
       var formulas = holder.querySelectorAll("[" + FORMULA_SOURCE + "]");
       if (formulas.length === 0) return;
+      // Nothing that is not shown, nor a script, goes into the HTML.
+      Array.prototype.forEach.call(
+        holder.querySelectorAll("script, style, template, [hidden]"),
+        function (el) {
+          el.parentNode.removeChild(el);
+        },
+      );
       var html = holder.innerHTML;
-      Array.prototype.forEach.call(formulas, function (formula) {
-        var display = formula.classList.contains("math-display");
-        var source = document.createElement(display ? "div" : "span");
-        source.textContent = formula.getAttribute(FORMULA_SOURCE) || "";
-        // A display formula's source can span lines, which are kept.
-        source.style.whiteSpace = "pre";
-        formula.parentNode.replaceChild(source, formula);
-      });
+      Array.prototype.forEach.call(
+        holder.querySelectorAll("[" + FORMULA_SOURCE + "]"),
+        function (formula) {
+          var display = formula.classList.contains("math-display");
+          var source = document.createElement(display ? "div" : "span");
+          source.textContent = formula.getAttribute(FORMULA_SOURCE) || "";
+          // A display formula's source can span lines, which are kept.
+          source.style.whiteSpace = "pre";
+          formula.parentNode.replaceChild(source, formula);
+        },
+      );
+      // Nothing that loads while the copy is laid out below.
+      Array.prototype.forEach.call(
+        holder.querySelectorAll("iframe, video, audio, object, embed, img"),
+        function (el) {
+          el.parentNode.removeChild(el);
+        },
+      );
       // innerText gives the selection's line structure only to an element that is rendered.
       holder.style.cssText = "position:fixed;left:-99999px;top:0;";
       document.body.appendChild(holder);

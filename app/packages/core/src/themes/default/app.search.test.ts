@@ -691,4 +691,59 @@ describe("v0.15 search of formulas (app.js)", () => {
       ),
     ).toBeNull();
   });
+
+  it("does not take a word inside a TeX command for the word", async () => {
+    await mountClient([
+      {
+        route: "/m",
+        title: "Math",
+        hidden: false,
+        headings: [
+          { id: "m-one", text: "One", level: 2 },
+          { id: "m-two", text: "Two", level: 2 },
+        ],
+        text: "turn left here One Two \\left( x \\right)",
+        formulas: [{ tex: "\\left( x \\right)", section: "m-two" }],
+      },
+    ]);
+    typeQuery("left");
+    expect(
+      (document.querySelector("#search-results a") as HTMLAnchorElement).getAttribute(
+        "data-heading",
+      ),
+    ).toBeNull();
+    typeQuery("\\left");
+    expect(
+      (document.querySelector("#search-results a") as HTMLAnchorElement).getAttribute(
+        "data-heading",
+      ),
+    ).toBe("m-two");
+  });
+
+  it("counts each term once per section, so the section matching the most terms is opened", async () => {
+    await mountClient([
+      {
+        route: "/m",
+        title: "Math",
+        hidden: false,
+        headings: [
+          { id: "m-a", text: "One", level: 2 },
+          { id: "m-b", text: "Two", level: 2 },
+        ],
+        text: "a a a a+b",
+        formulas: [
+          { tex: "a", section: "m-a" },
+          { tex: "a", section: "m-a" },
+          { tex: "a", section: "m-a" },
+          { tex: "a+b", section: "m-b" },
+        ],
+      },
+    ]);
+    typeQuery("a b");
+    expect(
+      (document.querySelector("#search-results a") as HTMLAnchorElement).getAttribute(
+        "data-heading",
+      ),
+    ).toBe("m-b");
+  });
 });

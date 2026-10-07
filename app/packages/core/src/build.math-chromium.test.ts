@@ -246,13 +246,54 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           p.textContent!.includes("Plain text only"),
         )!;
         const none = copy(plain.firstChild!, 0, plain.firstChild!, 5);
-        return { fromInside, none };
+        // Entirely inside the formula: the formula.
+        const within = copy(
+          inline.querySelector("mi")!.firstChild!,
+          0,
+          inline.querySelector("mi")!.firstChild!,
+          1,
+        );
+        // Up to the formula's very start, which takes none of it: no formula.
+        const before = copy(quote.querySelector("p")!.firstChild!, 0, inline, 0);
+        // Select all: only the page shown, and no script, in the HTML.
+        const range = document.createRange();
+        range.selectNodeContents(document.body);
+        const all = (() => {
+          const selection = window.getSelection()!;
+          selection.removeAllRanges();
+          selection.addRange(range);
+          const event = new ClipboardEvent("copy", {
+            clipboardData: new DataTransfer(),
+            bubbles: true,
+            cancelable: true,
+          });
+          document.dispatchEvent(event);
+          return event.clipboardData!.getData("text/html");
+        })();
+        // A copy from a text field is the field's own.
+        const input = document.createElement("input");
+        input.value = "typed";
+        document.body.appendChild(input);
+        input.select();
+        const field = new ClipboardEvent("copy", {
+          clipboardData: new DataTransfer(),
+          bubbles: true,
+          cancelable: true,
+        });
+        input.dispatchEvent(field);
+        return { fromInside, none, within, before, all, fieldHandled: field.defaultPrevented };
       });
       expect(copied.fromInside.handled).toBe(true);
-      expect(copied.fromInside.text).toMatch(/^\$a &lt; b\$ after\.\n+\$\$\nx\^2\n\$\$\s*$/);
+      expect(copied.fromInside.text).toMatch(/^\$a &lt; b\$ after\.\n+\$\$\nx\^2\n\$\$\n?$/);
       expect(copied.fromInside.html).toContain("<math");
       expect(copied.fromInside.html).not.toContain("style=");
       expect(copied.none.handled).toBe(false);
+      expect(copied.within.text).toBe("$a &lt; b$");
+      expect(copied.before.handled).toBe(false);
+      expect(copied.all).toContain("<math");
+      expect(copied.all).not.toContain("<script");
+      expect(copied.all).not.toContain("hidden");
+      expect(copied.fieldHandled).toBe(false);
     } finally {
       await browser.close();
     }

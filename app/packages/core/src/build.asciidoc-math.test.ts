@@ -124,6 +124,18 @@ describe("AsciiDoc math", () => {
     expect(page.text).not.toContain("𝑥");
   });
 
+  it("lists each formula with its section once, not again for the table of contents", async () => {
+    const { html } = await build(
+      "= T\n:toc:\n:stem: latexmath\n\nstem:[a]\n\n== Sec stem:[z]\n\nstem:[b]\n",
+    );
+    const formulas = (pageData(html) as PageData & { formulas?: unknown }).formulas;
+    expect(formulas).toEqual([
+      { tex: "a" },
+      { tex: "z", section: "a-_sec_z" },
+      { tex: "b", section: "a-_sec_z" },
+    ]);
+  });
+
   it("leaves asciimath as Asciidoctor writes it, and warns", async () => {
     const { html, result } = await build(
       "= T\n\nstem:[x^2] and asciimath:[y]\n\n[stem]\n++++\nsqrt(2)\n++++\n",
