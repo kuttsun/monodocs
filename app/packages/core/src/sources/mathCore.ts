@@ -256,7 +256,8 @@ export function rewriteForCore(math: Element): CoreGaps {
     if (Array.isArray(className) && className.includes("vcenter")) constructs.add("\\vcenter");
     if (node.tagName === "mo" && textOf(node) === "undefined") {
       // \overlinesegment and \underlinesegment have no MathML character in KaTeX, which writes
-      // "undefined"; an overline is the nearest, without the segment's end ticks.
+      // "undefined"; a line over or under the term is the nearest (drawn by drawLines), without
+      // the segment's end ticks.
       node.children = [{ type: "text", value: "\u203E" }];
       constructs.add("\\overlinesegment, \\underlinesegment");
     }
@@ -576,12 +577,16 @@ function spacingAccents(math: Element): void {
   });
 }
 
+/** TeX's default rule thickness, which `\\overline` and `\\underline` are drawn at. */
+const RULE = "0.04em";
+
 /**
- * `\\overline` and `\\underline` are a rule as wide as the term, which KaTeX writes as a stretchy
- * `‾` (U+203E) over or under it. Whether that stretches is the font's: Latin Modern Math has no
- * `‾`, and the browser drew a fallback font's, one letter wide over a longer term. The line becomes
- * a border on an `mrow` around the term, as an enclosure's does, which is as wide as the term
- * whatever the font.
+ * `\\overline` and `\\underline` (and the segments KaTeX writes as "undefined", above) are a rule
+ * as wide as the term, which KaTeX writes as a stretchy `‾` (U+203E) over or under it. Whether that
+ * stretches is the font's: Latin Modern Math has no `‾`, and the browser drew a fallback font's, one
+ * letter wide over a longer term. The line becomes a border on an `mrow` around the term, which is
+ * as wide as the term whatever the font, set as TeX sets it: the default rule thickness, a gap of
+ * three times that between it and the term, and once more beyond it.
  */
 function drawLines(math: Element): void {
   visit(math, "element", (node: Element) => {
@@ -595,8 +600,8 @@ function drawLines(math: Element): void {
     addStyle(
       node,
       over
-        ? `border-top: ${LINE} solid; padding-top: 0.1em`
-        : `border-bottom: ${LINE} solid; padding-bottom: 0.1em`,
+        ? `border-top: ${RULE} solid; padding-top: 0.12em; margin-top: ${RULE}`
+        : `border-bottom: ${RULE} solid; padding-bottom: 0.12em; margin-bottom: ${RULE}`,
     );
   });
 }

@@ -162,10 +162,10 @@ describe("renderFormula", () => {
     expect(render("\\bar{x}").html).not.toMatch(/[\u02C9-\u02CB]/);
     // \\overline and \\underline are a border as wide as the term, whatever the font.
     expect(render("\\overline{a+b}").html).toMatch(
-      /<mrow style="border-top: 0\.06em solid; padding-top: 0\.1em"><mrow><mi>a<\/mi>/,
+      /<mrow style="border-top: 0\.04em solid; padding-top: 0\.12em; margin-top: 0\.04em"><mrow><mi>a<\/mi>/,
     );
     expect(render("\\underline{x}").html).toContain(
-      '<mrow style="border-bottom: 0.06em solid; padding-bottom: 0.1em"><mi>x</mi></mrow>',
+      '<mrow style="border-bottom: 0.04em solid; padding-bottom: 0.12em; margin-bottom: 0.04em"><mi>x</mi></mrow>',
     );
     expect(render("\\overline{x}\\underline{x}").html).not.toContain("\u203E");
     // An arrow's label is padded in em, so the padding follows the label's size.

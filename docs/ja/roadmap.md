@@ -553,13 +553,16 @@ TeX を文字として持っており、見出しの ID はそのため TeX か�
     U+0060）にする。Latin Modern Math は前の 3 つをどれも持たず、日本語のページではブラウザが棒を
     CJK フォントから取り、全角の幅で文字から離れて置かれた
   - KaTeX が項の上か下に伸びる `‾`（U+203E）として書く `\overline` と `\underline` は、囲みと同じく、
-    項を包む `mrow` の罫線にする。`‾` が伸びるかはフォント次第で、それを持たない Latin Modern Math では、
-    代わりのフォントの 1 文字分の線が長い項の上に残った
+    項を包む `mrow` の罫線にし、TeX と同じく置く（既定の罫線の太さ 0.04em、項との間にその 3 倍、外側に
+    もう 1 倍）。`‾` が伸びるかはフォント次第で、それを持たない Latin Modern Math では、代わりのフォントの
+    1 文字分の線が長い項の上に残った。囲みの線や打ち消し線と同じく、線は CSS になるので、コピーで
+    クリップボードに入る MathML ではインラインスタイルであり、CSS を読まずに MathML を取り込むアプリでは
+    消える。プレーンテキストには TeX が入る
   - 環境の外の `\tag` は、その表と上の箱を行の幅にして、右端に置く
 
   書き換えられないものは `math/construct-unsupported` として報告する。中央寄せを KaTeX がスタイルシートに
   任せる `\vcenter`、添字や分数に伝えないスタイルで KaTeX が枝を選ぶ、添字や分数の中の `\mathchoice`（直接書いたものも、`\bmod` を通したものも）、KaTeX が "undefined" と
-  いう文字として書き、monodocs が上線として描く `\overlinesegment` と `\underlinesegment`、数式の一部の中の
+  いう文字として書き、monodocs が項の上か下の線として描く `\overlinesegment` と `\underlinesegment`、数式の一部の中の
   改行、そして関係記号、括弧、句読点に付けた `\boldsymbol`（`\boldsymbol{\rightarrow}`）である。KaTeX は
   `\boldsymbol` を、文字、数字、二項演算子にしか MathML に書かない。環境の行の間の `\\[2em]`
   も報告する。KaTeX の MathML はその場所を書かない。この 2 つは MathML からはもう分からないので、KaTeX の

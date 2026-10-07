@@ -217,20 +217,29 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           .filter((m) => /border-(top|bottom)/.test(m.getAttribute("style") ?? ""))
           .map((line) => {
             const style = getComputedStyle(line);
+            const top = parseFloat(style.borderTopWidth) > 0;
+            const side = top ? "Top" : "Bottom";
             const term = line.firstElementChild!.getBoundingClientRect();
             const box = line.getBoundingClientRect();
+            const scroll = line.closest(".math-display")!.getBoundingClientRect();
+            // The line's edge of the box, which the border draws along the whole of it.
+            const edge = top ? box.top : box.bottom;
             return {
-              thick: parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth),
-              spans: box.left <= term.left + 0.5 && box.right >= term.right - 0.5,
-              wide: term.width > 40,
+              side: side.toLowerCase(),
+              solid: style[`border${side}Style`] === "solid",
+              visible: !/rgba\(\d+, \d+, \d+, 0\)|transparent/.test(style[`border${side}Color`]),
+              // Set apart from the term, on its side, and not cut off by the scroll box.
+              apart: top ? edge < term.top : edge > term.bottom,
+              inside: edge >= scroll.top && edge <= scroll.bottom,
+              // The term is several letters wide, and the line, the box's edge, as wide as it.
+              wide: term.width > 40 && box.width >= term.width,
             };
           }),
       );
       expect(drawn).toEqual([
-        { thick: expect.any(Number), spans: true, wide: true },
-        { thick: expect.any(Number), spans: true, wide: true },
+        { side: "top", solid: true, visible: true, apart: true, inside: true, wide: true },
+        { side: "bottom", solid: true, visible: true, apart: true, inside: true, wide: true },
       ]);
-      for (const line of drawn) expect(line.thick).toBeGreaterThan(0);
     } finally {
       await browser.close();
     }
