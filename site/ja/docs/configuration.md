@@ -300,6 +300,7 @@ Noto Sans CJK); ✅ (U+2705, e.g. Noto Color Emoji). Install a font that covers 
 - **ヒューリスティックです。** どのフォントも描かないはずの私用領域のコードポイントと各クラスタを比べ、当たりはラスタライズして確認します。既定が `warn` なのはこのためで、誤検出が本来通るビルドを止められる形にはしません。`error` を選ぶことは、誤検出でも CI が止まるのを受け入れることです。
 - **基準そのものを検証します。** 別の私用領域コードポイントと非文字を対照に使い、グリフを持たないはずの文字をこのマシンが描くと分かった場合は、そのことだけを述べ、確信を持てない所見は出しません。非常に大きな文書で最後まで測りきれなかった場合も、「問題なし」ではなくそのことを述べます。
 - **既定のページ番号フッタも一緒に測ります。** 置き換えた `pdf.header` / `pdf.footer` のフラグメントは対象外です（任意の HTML であり、フォントも自分で持ち込むため）。
+- **数式は描かれるとおりに測ります。** 1 文字の変数は数学用イタリックの文字（`x` なら `𝑥`、U+1D465）で描かれるので、測るのもその文字です。数式用のフォントが無いマシンでは、`x` 自体は描けても報告されます。また、数式を描くフォントは OpenType MATH テーブルを持つ必要があり、無いと括弧・波括弧・根号が中身に合わせて伸びません。そのようなフォントは `font/no-math-table` として報告し、`warn` / `error` / `off` の扱いも同じです。Windows には Cambria Math が付属し、Debian と Ubuntu では `fonts-lmodern` が Latin Modern Math を提供します。
 
 ### `output`
 
@@ -590,6 +591,8 @@ numbering:
 | `math.enabled` | boolean | `true` | 数式（Markdown の `$...$`、`$$...$$`、言語が `math` のフェンスのブロック。AsciiDoc の latexmath と、latexmath を意味する `stem`）をビルド時に MathML に描く。`false` では以前と同じく、数式を文字として、`math` のフェンスのブロックをコードとして出力する。 |
 
 数式は KaTeX が MathML だけに描き、出力にスクリプトもスタイルシートも加えない。AsciiDoc の asciimath は Asciidoctor が書くとおりに残して報告する（`math/asciimath-not-rendered`）。KaTeX が解析できない数式（`math/parse-failed`）や、`\href` などのリンクや HTML のコマンドを使う数式（`math/command-not-allowed`）は、報告して書かれたとおりに示す。Unicode に文字の無い書体（`math/style-unsupported`、例：`\mathit{123}`）、自動の数式番号（`math/numbering-unsupported`、例：星の無い `equation`）、CSS で描けない囲み（`math/notation-unsupported`、例：`\phase`）、ブラウザが書かれたとおりに描けない構文（`math/construct-unsupported`、例：`\vcenter`）は報告し、それらなしで数式を描く。
+
+数式はブラウザが OpenType MATH フォントで描くので、PDF を印刷するマシンにも、HTML を読む読者のブラウザにも、そのフォントが要る。Windows には Cambria Math が付属し、Linux では Latin Modern Math などを入れる（Debian と Ubuntu では `fonts-lmodern`）。無いと変数が tofu になり、括弧が伸びない。PDF では [`fontCheck`](#font-check) がその両方を報告する。
 
 ### `html`
 

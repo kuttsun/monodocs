@@ -240,6 +240,11 @@ const EN = {
   "fontCheck.sample": "{cluster} ({codepoints})",
   "fontCheck.sampleWithExample": "{cluster} ({codepoints}, e.g. {font})",
   "fontCheck.more": "and {count} more",
+  "fontCheck.noMathTable":
+    "The font this build draws formulas in (font-family: {fonts}) has no OpenType MATH table, so " +
+    "in the PDF brackets, braces and radicals do not stretch to what they enclose. Install a math " +
+    "font — Cambria Math ships with Windows; on Debian and Ubuntu, fonts-lmodern supplies Latin " +
+    "Modern Math — or set fontCheck: off to accept it.",
   "fontCheck.unusable":
     "The font check did not run: this machine draws private-use characters, which the check uses " +
     "as its reference for a missing glyph, so it cannot tell a drawn character from an undrawn " +
@@ -552,6 +557,11 @@ const JA: Record<MessageKey, string> = {
   "fontCheck.sample": "{cluster}（{codepoints}）",
   "fontCheck.sampleWithExample": "{cluster}（{codepoints}、例: {font}）",
   "fontCheck.more": "ほか {count} 件",
+  "fontCheck.noMathTable":
+    "このビルドが数式を描くフォント（font-family: {fonts}）には OpenType MATH テーブルがありません。" +
+    "PDF では、括弧・波括弧・根号が中身に合わせて伸びません。数式用のフォントを入れる（Windows には " +
+    "Cambria Math が付属し、Debian と Ubuntu では fonts-lmodern が Latin Modern Math を提供します）か、" +
+    "fontCheck: off で許容してください。",
   "fontCheck.unusable":
     "フォント検査は実行しませんでした: このマシンは私用領域の文字を描画します。検査はそれを" +
     "「グリフが無い」ことの基準に使うため、描けた文字と描けなかった文字を区別できません。" +
