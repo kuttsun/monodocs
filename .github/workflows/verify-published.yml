@@ -61,9 +61,9 @@ jobs:
       # version as input, and `init`, the message language, and PDF page numbers all arrive in 0.10,
       # the diagnostics JSON and `document` in 0.11, and `root` / `sources.include`, route aliases,
       # `sources.asciidoc.attributes`, and the include boundary in 0.12, `sources.lineBreak`, the
-      # size report and `assets.budget`, and `pdf.watermark` in 0.13, and `numbering.sections` and
-      # `pdf.toc` in 0.14. Verifying an older release must stay possible, so those steps ask rather
-      # than assume.
+      # size report and `assets.budget`, and `pdf.watermark` in 0.13, `numbering.sections` and
+      # `pdf.toc` in 0.14, and the inline Mermaid runtime's notices and math in 0.15. Verifying an
+      # older release must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
           version="$(monodocs --version | tr -d '\r')"
@@ -76,7 +76,7 @@ jobs:
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
             const major = Number(m[1]), minor = Number(m[2]);
             const atLeast = (n) => major > 0 || minor >= n;
-            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14)].map(String).join(' '));
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
@@ -84,6 +84,7 @@ jobs:
           echo "SUPPORTS_V012=$(echo "$gate" | cut -d' ' -f3)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V013=$(echo "$gate" | cut -d' ' -f4)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V014=$(echo "$gate" | cut -d' ' -f5)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V015=$(echo "$gate" | cut -d' ' -f6)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -640,3 +641,122 @@ jobs:
             echo "a pdf.toc depth of 7 was accepted"; exit 1
           fi
           grep -q "pdf.toc.depth" toc/bad.log || { echo "the failure was not about pdf.toc.depth"; cat toc/bad.log; exit 1; }
+
+      # v0.15. The inline Mermaid runtime carries the third-party notices of what its bundle holds,
+      # once, in a comment inside its script, and only where that runtime is emitted: not for the CDN
+      # runtime, not for pre-render, and not for a page without a diagram (21.3). They name mermaid 12.
+      - name: Mermaid runtime notices
+        if: env.SUPPORTS_V015 == 'true'
+        run: |
+          mkdir -p notices/docs notices/plain
+          cat > notices/docs/index.md <<'EOF'
+          # Diagram
+
+          ```mermaid
+          graph TD
+            A --> B
+          ```
+          EOF
+          printf '# Plain\n\nNo diagram.\n' > notices/plain/index.md
+          printf 'mermaid:\n  runtime: inline\n' > notices/inline.yml
+          printf 'mermaid:\n  runtime: cdn\n' > notices/cdn.yml
+          printf 'mermaid:\n  mode: pre-render\n' > notices/prerender.yml
+          monodocs build notices/docs -c notices/inline.yml -o notices/inline.html
+          monodocs build notices/docs -c notices/cdn.yml -o notices/cdn.html
+          monodocs build notices/docs -c notices/prerender.yml -o notices/prerender.html
+          monodocs build notices/plain -c notices/inline.yml -o notices/plain.html
+          node -e "
+            const fs = require('node:fs');
+            const header = 'Third-party notices for the Mermaid runtime';
+            const read = (f) => fs.readFileSync('notices/' + f, 'utf8');
+            const count = (h) => h.split(header).length - 1;
+            const fail = (m) => { throw new Error(m); };
+            const inline = read('inline.html');
+            if (count(inline) !== 1) fail('the inline runtime carries the notices ' + count(inline) + ' times, not once');
+            const at = inline.indexOf(header);
+            const open = inline.lastIndexOf('<script>/*!', at);
+            const close = inline.indexOf('*/', at);
+            // Inside the script and inside the comment: nothing closes either before the header,
+            // and the comment closes after it, before the script does.
+            if (open < 0 || inline.lastIndexOf('</script>', at) > open || inline.lastIndexOf('*/', at) > open
+                || close < 0 || close > inline.indexOf('</script>', at)) {
+              fail('the notices are not in a comment inside the runtime script');
+            }
+            // The version the notices are for is the one on their first line, not one a component names.
+            if (!inline.startsWith(header + ' (mermaid@12.', at)) fail('the notices are not for mermaid 12');
+            for (const f of ['cdn.html', 'prerender.html', 'plain.html']) {
+              if (count(read(f)) !== 0) fail(f + ' carries the notices');
+            }
+            // The builds without notices are what they are meant to be, so that their silence counts.
+            if (!read('cdn.html').includes('cdn.jsdelivr.net/npm/mermaid@12.')) fail('the CDN build loads no mermaid 12');
+            if (!read('prerender.html').includes('<figure class=\"mermaid\"><svg')) fail('pre-render drew no SVG');
+          "
+
+      # v0.15. Formulas render at build time to MathML only: Markdown's $...$ and fenced math block,
+      # AsciiDoc's latexmath and stem when it means latexmath (6.4). No KaTeX class or stylesheet
+      # reaches the output, \mathbb becomes its own letter, math.enabled: false gives no MathML, and
+      # asciimath is reported and left as written. The PDF is built, not checked for fonts: whether
+      # this runner has a math font is the runner's (the font check is the CI guide's to set up).
+      - name: Math
+        if: env.SUPPORTS_V015 == 'true'
+        run: |
+          mkdir -p math/docs math/ascii
+          cat > math/docs/index.md <<'EOF'
+          # Math
+
+          Let $x$ be real and $\mathbb{R}$ the reals, with `$5 and $10` as text.
+
+          ```math
+          \int_0^1 x\,dx = \frac{1}{2}
+          ```
+          EOF
+          cat > math/docs/page.adoc <<'EOF'
+          = Page
+          :stem: latexmath
+
+          The angle latexmath:[\alpha] and stem:[y^2].
+          EOF
+          cat > math/ascii/index.adoc <<'EOF'
+          = Ascii
+
+          The value stem:[x/y] in asciimath.
+          EOF
+          printf 'math:\n  enabled: false\n' > math/off.yml
+          monodocs build math/docs -o math/on.html
+          monodocs build math/docs -c math/off.yml -o math/off.html
+          monodocs build math/docs --format pdf -o math/on.pdf
+          monodocs build math/ascii -o math/ascii.html
+          node -e "
+            const fs = require('node:fs');
+            const on = fs.readFileSync('math/on.html', 'utf8');
+            const off = fs.readFileSync('math/off.html', 'utf8');
+            const fail = (m) => { throw new Error(m); };
+            const count = (s) => on.split(s).length - 1;
+            // Five formulas, and the dollar signs in the code span none of them.
+            if (count('<math') !== 5) fail('expected five formulas, found ' + count('<math'));
+            if (!on.includes('<code>\$5 and \$10</code>')) fail('the code span did not keep its dollar signs');
+            // Each formula's own element carries its source for copying, as written: the TeX in it,
+            // in document order (Markdown, then the AsciiDoc page rebuilt as latexmath).
+            const sources = [...on.matchAll(/class=\"math math-(?:inline|display)\"[^>]*data-math-source=\"([^\"]*)\"[^>]*>\s*<math/g)].map((m) => m[1]);
+            const expected = ['x', '\\\\mathbb{R}', '\\\\int_0^1', 'latexmath:[\\\\alpha]', 'latexmath:[y^2]'];
+            if (sources.length !== 5 || expected.some((tex, i) => !sources[i].includes(tex))) {
+              fail('the formulas do not carry their sources: ' + JSON.stringify(sources));
+            }
+            if (/katex/i.test(on)) fail('KaTeX markup or a stylesheet reached the output');
+            if (/mathvariant=\"(?!normal\")/.test(on)) fail('a mathvariant other than normal reached the output');
+            // Non-ASCII written as escapes, as in the message-language step: U+211D is \\mathbb{R}.
+            if (!on.includes('\u211D')) fail('\\\\mathbb{R} did not become its own letter');
+            if (off.includes('<math')) fail('math.enabled: false still rendered MathML');
+            if (fs.readFileSync('math/on.pdf').subarray(0, 5).toString() !== '%PDF-') fail('the PDF is not a PDF');
+            if (fs.readFileSync('math/ascii.html', 'utf8').includes('<math')) fail('asciimath was rendered');
+          "
+          status=0
+          monodocs validate math/ascii --format json > math/ascii.json || status=$?
+          cat math/ascii.json
+          if [ "$status" -ne 0 ]; then echo "validate exited $status for a warning"; exit 1; fi
+          node -e "
+            const r = JSON.parse(require('node:fs').readFileSync('math/ascii.json', 'utf8'));
+            if (!r.diagnostics.some((d) => d.code === 'math/asciimath-not-rendered' && d.severity === 'warning')) {
+              throw new Error('asciimath was not reported as math/asciimath-not-rendered');
+            }
+          "
