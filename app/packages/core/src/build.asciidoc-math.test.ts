@@ -339,6 +339,7 @@ describe("AsciiDoc math", () => {
       "= T\n\n+++<div x=y +++\n\n[latexmath]\n++++\nx\n++++\n\ntail and more\n",
     );
     expect(swallowed.html).toContain("tail and more");
+    expect(swallowed.html).not.toMatch(/[\uE000-\uE01F]/);
   });
 
   it("does not take raw HTML that spells a marker for a formula", async () => {

@@ -74,6 +74,7 @@ const RAW_TEXT = new Set([
 /** The key's digits: sixteen private-use characters, one per hexadecimal digit. */
 const KEY_BASE = 0xe010;
 const INLINE = /\uE000([\uE010-\uE01F]+)\uE001([^\uE000-\uE003]*)\uE002\1\uE003/g;
+const BLOCK_KEY = /data-monodocs-math="([\uE010-\uE01F]+)"/g;
 const END = /\uE000([\uE010-\uE01F]+)\uE001|\uE002([\uE010-\uE01F]+)\uE003/g;
 
 interface Formula {
@@ -81,7 +82,7 @@ interface Formula {
   source: string;
   display: boolean;
   /** A display formula's block, as this converter wrote it and as Asciidoctor writes it. */
-  block?: { ours: string; asciidoctor: string };
+  block?: { ours: string; asciidoctor: string; oursDecoded: string; asciidoctorDecoded: string };
 }
 
 /**
@@ -145,7 +146,13 @@ export async function createMathConverter(
       const ours =
         `<div${id} class="stemblock${role}">\n${title}` +
         `<div data-monodocs-math="${key}">${text(tex)}</div>\n</div>`;
-      formula.block = { ours, asciidoctor: await base.convert(node, transform, opts) };
+      const asciidoctor = await base.convert(node, transform, opts);
+      formula.block = {
+        ours,
+        asciidoctor,
+        oursDecoded: decode(ours),
+        asciidoctorDecoded: decode(asciidoctor),
+      };
       return ours;
     }
     if (name === "stem" && node.style === "asciimath") {
@@ -208,11 +215,16 @@ export async function createMathConverter(
       return value;
     }
     // A display formula's block in text (a textarea, a script): as Asciidoctor writes it, as it stands
-    // in a script or a style, or with its references decoded as a textarea or a title reads them.
-    for (const formula of formulas.values()) {
-      if (!formula.block) continue;
-      const { ours, asciidoctor } = formula.block;
-      value = value.split(ours).join(asciidoctor).split(decode(ours)).join(decode(asciidoctor));
+    // in a script or a style, or with its references decoded as a textarea or a title reads them. Only
+    // the blocks whose keys the text holds are looked at.
+    for (const m of value.matchAll(BLOCK_KEY)) {
+      const block = formulas.get(m[1]!)?.block;
+      if (!block) continue;
+      value = value
+        .split(block.ours)
+        .join(block.asciidoctor)
+        .split(block.oursDecoded)
+        .join(block.asciidoctorDecoded);
     }
     return value
       .replace(INLINE, (whole, key: string, converted: string) =>
@@ -262,6 +274,11 @@ export async function createMathConverter(
   const restoreProperties = (element: Element) => {
     const restored: Element["properties"] = {};
     for (const [name, value] of Object.entries(element.properties)) {
+      // A block marker's own key is read where the block is made a formula, not written back.
+      if (name === "dataMonodocsMath") {
+        restored[name] = value;
+        continue;
+      }
       restored[restore(name)] = Array.isArray(value)
         ? value.map((v) => (typeof v === "string" ? restore(v) : v))
         : typeof value === "string"
@@ -306,7 +323,10 @@ export async function createMathConverter(
         if (!formula) return;
         // Only a block marker as the converter wrote it: a div holding the formula's text alone. One a
         // passthrough's malformed tag swallowed is left as it is.
-        if (element.tagName !== "div" || textOf(element) !== formula.tex) return;
+        if (element.tagName !== "div" || textOf(element) !== formula.tex) {
+          delete element.properties.dataMonodocsMath;
+          return;
+        }
         Object.assign(element, placeholder(formula));
         // Asciidoctor's HTML has no lines of the source to point at.
         delete element.position;
