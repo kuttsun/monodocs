@@ -250,4 +250,37 @@ describe("Markdown math", () => {
     }
     expect(outputs[0]).toBe(outputs[1]);
   }, 120_000);
+
+  it("builds the math fixture, its Markdown and AsciiDoc pages giving the same formulas", async () => {
+    // examples/math: the formulas v0.14 measured, 7 inline and 14 display, on each page.
+    const fixture = fileURLToPath(new URL("../../../../examples/math", import.meta.url));
+    const out = join(dir, "math.html");
+    const result = await buildSite({
+      configFile: join(fixture, "monodocs.config.yml"),
+      inputDir: fixture,
+      outputFile: out,
+      format: "html",
+    });
+    expect(result.warnings).toEqual([]);
+    const html = await readFile(out, "utf8");
+    const json = /window\.__MONODOCS_DATA__ = (\{.*\});/.exec(html)![1]!;
+    const pages = (JSON.parse(json) as { pages: { title: string; formulas?: { tex: string }[] }[] })
+      .pages;
+    const formulas = (title: string) =>
+      pages.find((p) => p.title.includes(title))!.formulas!.map((f) => f.tex);
+    expect(formulas("Markdown")).toHaveLength(21);
+    expect(formulas("AsciiDoc")).toEqual(formulas("Markdown"));
+    const article = (title: string) =>
+      html.split(/<article /).find((a) => a.includes(`>数式（${title}）</h1>`))!;
+    for (const title of ["Markdown", "AsciiDoc"]) {
+      const page = article(title);
+      expect(page.match(/class="math math-inline"/g)).toHaveLength(7);
+      expect(page.match(/class="math math-display"/g)).toHaveLength(14);
+      // \mathbf and \mathbb come out as their own letters, which a plain variable is not.
+      for (const letter of ["\u{1D404}", "\u{1D401}", "\u{1D433}", "\u211D", "\u2115"]) {
+        expect([title, page.includes(letter)]).toEqual([title, true]);
+      }
+    }
+    expect(new Set(html.match(/mathvariant="[^"]*"/g))).toEqual(new Set(['mathvariant="normal"']));
+  }, 120_000);
 });

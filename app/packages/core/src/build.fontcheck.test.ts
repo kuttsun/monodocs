@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildSite } from "./build";
 import type { Diagnostic } from "./diagnostics";
@@ -114,6 +115,14 @@ describe("font check reporting", () => {
     )!;
     expect(message).toContain("U+1D465, e.g. Latin Modern Math");
     expect(message).toContain("U+210E, e.g. Latin Modern Math");
+    const letterlike = describeFontCheck(
+      { status: "missing", clusters: ["\u211D", "\u2115", "\u2103"], truncated: false },
+      "pdf",
+    )!;
+    expect(letterlike).toContain("U+211D, e.g. Latin Modern Math");
+    expect(letterlike).toContain("U+2115, e.g. Latin Modern Math");
+    // ℃ is a letterlike symbol no math alphabet holds.
+    expect(letterlike).not.toContain("U+2103, e.g. Latin Modern Math");
     const table = describeMathTable({ status: "ok", noMathTable: ["math"] })!;
     expect(table).toContain("font-family: math");
     expect(table).toMatch(/MATH table/);
@@ -337,6 +346,22 @@ const hasCjkAndEmoji = fontconfigCovers("65E5") === true && fontconfigCovers("27
  */
 const noMathFont = fontconfigCovers("1D465") === false;
 
+/**
+ * A theme that sets formulas in Latin Modern Math: the default theme's stylesheet, which a theme's
+ * own replaces, with the font added as a web font.
+ */
+async function writeMathTheme(theme: string, extra = ""): Promise<void> {
+  await mkdir(theme, { recursive: true });
+  const font = readFileSync(MATH_FONT).toString("base64");
+  await writeFile(
+    join(theme, "style.css"),
+    readFileSync(new URL("./themes/default/style.css", import.meta.url), "utf8") +
+      `\n@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }\n` +
+      'math { font-family: "Fixture Math"; }\n' +
+      extra,
+  );
+}
+
 /** Latin Modern Math, a font with an OpenType MATH table, kept for these tests (GUST Font License). */
 const MATH_FONT = new URL(
   "../test-fixtures/fonts/lm-math/opentype/latinmodern-math.otf",
@@ -499,17 +524,10 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
   );
 
   it("stays silent for formulas set in a math font", async () => {
-    const theme = join(dir, "real-math-ok", "my-theme");
-    await mkdir(theme, { recursive: true });
-    const font = readFileSync(MATH_FONT).toString("base64");
-    await writeFile(
-      join(theme, "style.css"),
-      // The default theme's stylesheet, which a theme's own replaces, with the math font added.
-      readFileSync(new URL("./themes/default/style.css", import.meta.url), "utf8") +
-        `\n@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }\n` +
-        'math { font-family: "Fixture Math"; }\n' +
-        // What the page's styles do to its formulas does not reach the measurement.
-        "mspace { display: none; } mo { font-size: 1px !important; }\n",
+    await writeMathTheme(
+      join(dir, "real-math-ok", "my-theme"),
+      // What the page's styles do to its formulas does not reach the measurement.
+      "mspace { display: none; } mo { font-size: 1px !important; }\n",
     );
     const result = await buildPdf(
       "real-math-ok",
@@ -518,6 +536,46 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     );
     expect(fontWarnings(result).map((w) => w.message)).toEqual([]);
   }, 120_000);
+
+  // examples/math: the formulas v0.14 measured, which it printed with every variable as tofu.
+  const MATH_FIXTURE = fileURLToPath(new URL("../../../../examples/math", import.meta.url));
+
+  it.runIf(noMathFont)(
+    "reports the math fixture built where no math font is installed",
+    async () => {
+      const result = await buildSite({
+        inputDir: MATH_FIXTURE,
+        configFile: join(MATH_FIXTURE, "monodocs.config.yml"),
+        outputFile: join(dir, "real-math-fixture", "math.pdf"),
+        format: "pdf",
+      });
+      const warnings = fontWarnings(result);
+      // The letters as drawn, from the Mathematical Alphanumeric block, with a math font to install.
+      // Which of them are named first follows the document, so none is singled out.
+      const missing = warnings.find((w) => w.code === "font/missing")?.message;
+      expect(missing).toMatch(/U\+1D[4-7][0-9A-F]{2}, e\.g\. Latin Modern Math/);
+      expect(warnings.some((w) => w.code === "font/no-math-table")).toBe(true);
+    },
+    180_000,
+  );
+
+  it("reports nothing of the math fixture's formulas set in a math font", async () => {
+    const root = join(dir, "real-math-fixture-ok");
+    await writeMathTheme(join(root, "my-theme"));
+    const configFile = join(root, "monodocs.config.yml");
+    await writeFile(configFile, 'lang: "ja"\nhtml:\n  theme: "./my-theme"\n');
+    const result = await buildSite({
+      inputDir: MATH_FIXTURE,
+      configFile,
+      outputFile: join(root, "math.pdf"),
+      format: "pdf",
+    });
+    const warnings = fontWarnings(result);
+    expect(warnings.filter((w) => w.code === "font/no-math-table")).toEqual([]);
+    // The fixture's Japanese is a finding where there is no CJK font (the GitHub Linux runner), so
+    // only the formulas' letters, all in the Mathematical Alphanumeric block, are looked for.
+    for (const w of warnings) expect(w.message).not.toMatch(/U\+1D[4-7][0-9A-F]{2}|U\+210E/);
+  }, 180_000);
 
   it("catches a diagram that mermaid pre-render would bake the tofu into", async () => {
     const root = join(dir, "real-mermaid");
