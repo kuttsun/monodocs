@@ -80,6 +80,8 @@ interface Formula {
   tex: string;
   source: string;
   display: boolean;
+  /** A display formula's block, as this converter wrote it and as Asciidoctor writes it. */
+  block?: { ours: string; asciidoctor: string };
 }
 
 /**
@@ -133,15 +135,18 @@ export async function createMathConverter(
       let tex = decode((await node.content?.()) ?? "");
       const delimited = /^\s*\\\[([\s\S]*)\\\]\s*$/.exec(tex);
       if (delimited && !/\\[[\]]/.test(delimited[1]!)) tex = delimited[1]!;
-      const key = newKey({ tex, source: `[latexmath]\n++++\n${tex}\n++++`, display: true });
+      const formula: Formula = { tex, source: `[latexmath]\n++++\n${tex}\n++++`, display: true };
+      const key = newKey(formula);
       const id = node.id ? ` id="${attribute(node.id)}"` : "";
       const role = node.role ? ` ${attribute(node.role)}` : "";
       const title = node.hasTitle?.() ? `<div class="title">${node.title}</div>\n` : "";
       // A block is not in a title, so a tag marks it; its content is checked when it is read back.
-      return (
+      // Asciidoctor's own block is kept, to write back wherever the marker cannot become a formula.
+      const ours =
         `<div${id} class="stemblock${role}">\n${title}` +
-        `<div data-monodocs-math="${key}">${text(tex)}</div>\n</div>`
-      );
+        `<div data-monodocs-math="${key}">${text(tex)}</div>\n</div>`;
+      formula.block = { ours, asciidoctor: await base.convert(node, transform, opts) };
+      return ours;
     }
     if (name === "stem" && node.style === "asciimath") {
       asciimath.push(`[asciimath]\n++++\n${decode((await node.content?.()) ?? "")}\n++++`);
@@ -199,7 +204,16 @@ export async function createMathConverter(
    * `\)`, and the formula reported. Anything else is left as written.
    */
   const restore = (value: string): string => {
-    if (!value.includes(OPEN) && !value.includes("\uE002")) return value;
+    if (!value.includes(OPEN) && !value.includes("\uE002") && !/[\uE010-\uE01F]/.test(value)) {
+      return value;
+    }
+    // A display formula's block in text (a textarea, a script): as Asciidoctor writes it, as it stands
+    // in a script or a style, or with its references decoded as a textarea or a title reads them.
+    for (const formula of formulas.values()) {
+      if (!formula.block) continue;
+      const { ours, asciidoctor } = formula.block;
+      value = value.split(ours).join(asciidoctor).split(decode(ours)).join(decode(asciidoctor));
+    }
     return value
       .replace(INLINE, (whole, key: string, converted: string) =>
         formulas.has(key) ? `\\(${converted}\\)` : whole,
@@ -221,9 +235,19 @@ export async function createMathConverter(
         // A display formula's marker, written back as Asciidoctor writes the block's content.
         const key = element.properties.dataMonodocsMath;
         const formula = typeof key === "string" ? formulas.get(key) : undefined;
-        if (formula?.display) {
-          element.properties = { className: ["content"] };
-          element.children = [{ type: "text", value: `\n\\[${formula.tex}\\]\n` }];
+        if (formula?.block) {
+          // The content Asciidoctor writes in the block, taken from its own output.
+          const own = fromHtml(formula.block.asciidoctor, { fragment: true });
+          let content: Element | undefined;
+          visit(own, "element", (candidate: Element) => {
+            const className = candidate.properties.className;
+            if (Array.isArray(className) && className.includes("content")) {
+              content = candidate;
+              return SKIP;
+            }
+          });
+          if (content)
+            Object.assign(element, { properties: content.properties, children: content.children });
           return SKIP;
         }
         restoreProperties(node as Element);

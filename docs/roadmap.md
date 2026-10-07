@@ -617,7 +617,8 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
     `</strong>` through) is written back with `\(` and `\)`, as Asciidoctor writes it, and reported as
     `math/construct-unsupported`. A marker, whole or one end of it, wherever the HTML put it — a text,
     an attribute's value or name, a list of classes, a comment, a script or style or other element
-    whose content is text only, a template's content — is written back the same way, with its text as
+    whose content is text only, a template's content — is written back the same way (a display
+    formula as the block Asciidoctor wrote for it, which the converter keeps), with its text as
     the HTML parser left it; a private-use character an author wrote is left as written.
   - Character references are decoded once, by the same HTML parser the formulas are read with, so
     the two always agree (`&#128;` is `€`, as HTML has it). A block's content is decoded whatever its

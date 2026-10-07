@@ -304,14 +304,22 @@ describe("AsciiDoc math", () => {
     expect(block(on.html)).toBe(block(off.html));
   });
 
-  it("writes a display formula in a template back as Asciidoctor writes it", async () => {
-    const adoc =
-      "= T\n\n++++\n<template>\n++++\n\n[latexmath]\n++++\nx\n++++\n\n++++\n</template>\n++++\n";
-    const on = await build(adoc);
-    const off = await build(adoc, "math:\n  enabled: false\n");
-    expect(on.html).not.toMatch(/[\uE000-\uE01F]/);
-    const template = (html: string) => /<template>[\s\S]*?<\/template>/.exec(html)![0];
-    expect(template(on.html)).toBe(template(off.html));
+  it("writes a display formula back as Asciidoctor writes it, in a template or as text", async () => {
+    for (const [open, close] of [
+      ["<template>", "</template>"],
+      ["<textarea>", "</textarea>"],
+      ["<script>let s = `", "`;</script>"],
+    ]) {
+      for (const tex of ["x", "a < b", "\\[a\\] + \\[b\\]"]) {
+        const adoc = `= T\n\n++++\n${open}\n++++\n\n[latexmath]\n++++\n${tex}\n++++\n\n++++\n${close}\n++++\n`;
+        const on = await build(adoc);
+        const off = await build(adoc, "math:\n  enabled: false\n");
+        expect(on.html, `${open} ${tex}`).not.toMatch(/[\uE000-\uE01F]/);
+        const tag = open.slice(1, open.search(/[ >]/));
+        const part = (html: string) => new RegExp(`<${tag}>[\\s\\S]*?<\\/${tag}>`).exec(html)![0];
+        expect(part(on.html), `${open} ${tex}`).toBe(part(off.html));
+      }
+    }
   });
 
   it("does not point a block formula's diagnostic at a line of Asciidoctor's HTML", async () => {
