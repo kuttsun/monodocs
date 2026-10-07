@@ -29,7 +29,7 @@
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
 メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
-[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9・v0.10・v0.11・v0.12・v0.13・v0.14 は
+[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9・v0.10・v0.11・v0.12・v0.13・v0.14・v0.15 は
 いずれもリリース済みである。
 
 0.14.0 はリリース済みである——見出し番号（`numbering.sections`）、紙の目次（`pdf.toc`）、数式の実測。
@@ -47,7 +47,7 @@ mermaid 12 が描くことと、GitHub が描く Markdown の 4 つの数式の�
 よる Linux と Windows での公開パッケージの検証、mermaid 12 でのすべての図の目視、Cambria Math を使う Windows
 での数式のフィクスチャの確認で、どれも済んだ。0.15.0 は、CI ガイドをそれに固定して `latest` に出し、公開
 パッケージ、リリースバイナリ、それらが生成する HTML は `latest` を動かしたあとに検証した。Windows ホストでの
-スクリプト実行と、Windows で人が行う確認は、0.14.0 と同じく未了である。
+スクリプト実行と、Windows で人が行う確認の一部は、0.14.0 と同じく未了である。
 
 ## 完了条件の達成状況
 
@@ -511,7 +511,7 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 - [x] `verify-release-binaries.yml` で `v0.15.0` のリリースバイナリを両プラットフォームで検証する——公開時に走り、Linux x64 と Windows x64 で通った
 - [ ] 公開した `v0.15.0` のアセットに対して、Windows 11 のホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
 - [x] 公開した `v0.15.0` のアセットに対して、Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）——Node.js の無い `debian:stable-slim` のコンテナで、公開した `v0.15.0` のアセットに対して実行し、16 項目すべて通った
-- [x] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新しいもの——mermaid 12 で図が描かれ、ソースに表記があること、MATH フォントで数式が描かれること——を含む——公開したアセットを `.sha256` で確かめ、最小の環境と Node.js 無しで `examples/en` と `examples/math` をビルドし、`fonts-lmodern` を入れた Chromium で出力を操作して 11 項目を確かめた。サイドバーの描画、リンクでの移動と現在のページの印、次へ、検索の結果と開いたページでのハイライト、`Escape` による検索欄のクリア、再読み込み後のダークモード、375px でのドロワーの開閉、フッターの `monodocs v0.15.0`、スクリプトのエラーが無いこと、そして新しい 2 つ——mermaid 12 で描かれた図とソース中に 1 回の `mermaid@12.1.0` の表記、Latin Modern Math で描かれた 21 の数式（行列の括弧は 3.2em に伸びた）
+- [x] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新しいもの——mermaid 12 で図が描かれ、ソースに表記があること、MATH フォントで数式が描かれること——を含む——公開したアセットを `.sha256` で確かめ、最小の環境と Node.js 無しで `examples/en` と `examples/math` をビルドし、`fonts-lmodern` を入れた Chromium で出力を操作して 11 項目を確かめた。サイドバーの描画（20 のリンク）、リンクでの移動と現在のページの印、次へ、`mermaid` の検索（結果 4 件、開いたページでのハイライト 4 つ）、`Escape` による検索欄のクリア、再読み込み後のダークモード、375px でのドロワーの開閉、フッターの `monodocs v0.15.0`、スクリプトのエラーが無いこと、そして新しい 2 つ——mermaid 12 で描かれた図とソース中に 1 回の `mermaid@12.1.0` の表記、Latin Modern Math で描かれた 21 の数式（CDP の `getPlatformFontsForNode` で確認。行列の括弧は 3.2em に伸びた）
 - [ ] Windows で人にしか答えられないこと。Edge で生成 HTML がどう見えるか（とりわけ日本語と数式）、数式を含む PDF を開いて印刷すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットの Mark of the Web と SmartScreen——一部は済んだ。ベータの間に、数式のフィクスチャの HTML を Edge で見て、数式を含む PDF を開いた（上記）。その印刷、`serve --open`、Mark of the Web と SmartScreen はまだである
 - [x] `next` の dist-tag を `0.15.0` へ動かし、デプロイされた CI ガイドが英語・日本語とも `monodocs@0.15.0` に固定されていることを確かめる——`next` と `latest` はどちらも `0.15.0` を指し、デプロイされた CI ガイドは両言語とも 4 か所で `monodocs@0.15.0` に固定されている
 
