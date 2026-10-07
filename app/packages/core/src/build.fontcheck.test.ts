@@ -591,9 +591,13 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     // `\text{速度}` is a finding where there is no CJK font, so only what a math font draws is looked
     // for: nothing named with it as the example, and the walk not cut short before the end.
     for (const w of warnings) {
-      expect(w.message).not.toContain("e.g. Latin Modern Math");
-      expect(w.message).not.toMatch(/\d\+/);
-      expect(w.code).not.toBe("font/unchecked");
+      expect(w.code).toBe("font/missing");
+      // Every character named is the Japanese of `\text{速度}`, all of them named.
+      expect(w.message).not.toMatch(/\d\+|and \d+ more/);
+      const named = [...w.message.matchAll(/U\+([0-9A-F]{4,6})/g)].map((m) =>
+        String.fromCodePoint(parseInt(m[1]!, 16)),
+      );
+      expect(named.filter((c) => !/\p{Script=Han}/u.test(c))).toEqual([]);
     }
   }, 180_000);
 

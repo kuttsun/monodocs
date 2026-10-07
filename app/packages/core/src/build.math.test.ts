@@ -268,7 +268,32 @@ describe("Markdown math", () => {
       .pages;
     const formulas = (title: string) =>
       pages.find((p) => p.title.includes(title))!.formulas!.map((f) => f.tex);
-    expect(formulas("Markdown")).toHaveLength(21);
+    // The 21 formulas v0.14 measured (roadmap 6.4), kept apart from the fixture so that a change to
+    // both of its pages alike is still caught.
+    const measured = [
+      String.raw`E = mc^2`,
+      String.raw`\alpha + \beta = \gamma`,
+      String.raw`x_{i,j}^{2}`,
+      String.raw`\sqrt[3]{x}`,
+      String.raw`\frac{a}{b}`,
+      String.raw`\hat{\theta},\ \bar{x},\ \vec{v},\ \dot{x}`,
+      String.raw`\forall x \in \mathbb{R},\ \exists n \in \mathbb{N}`,
+      String.raw`x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`,
+      String.raw`e^{i\pi} + 1 = 0`,
+      String.raw`\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}`,
+      String.raw`\sum_{k=1}^{n} k = \frac{n(n+1)}{2}`,
+      String.raw`A = \begin{pmatrix} a_{11} & a_{12} & \cdots & a_{1n} \\ a_{21} & a_{22} & \cdots & a_{2n} \\ \vdots & \vdots & \ddots & \vdots \\ a_{m1} & a_{m2} & \cdots & a_{mn} \end{pmatrix}`,
+      String.raw`f(x) = \begin{cases} x^2 & (x \ge 0) \\ -x & (x < 0) \end{cases}`,
+      String.raw`\begin{aligned} (a+b)^2 &= (a+b)(a+b) \\ &= a^2 + 2ab + b^2 \end{aligned}`,
+      String.raw`\lim_{n \to \infty} \left( 1 + \frac{1}{n} \right)^n = e`,
+      String.raw`\nabla \times \mathbf{E} = -\frac{\partial \mathbf{B}}{\partial t}`,
+      String.raw`P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}`,
+      String.raw`\left[ \frac{1}{1 + \frac{1}{1 + \frac{1}{x}}} \right]`,
+      String.raw`\operatorname{softmax}(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^{K} e^{z_j}}`,
+      String.raw`\text{速度}\ v = \frac{\Delta x}{\Delta t} \quad [\mathrm{m/s}]`,
+      String.raw`e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} + \frac{x^5}{5!} + \frac{x^6}{6!} + \frac{x^7}{7!} + \frac{x^8}{8!} + \frac{x^9}{9!} + \frac{x^{10}}{10!} + \cdots`,
+    ];
+    expect(formulas("Markdown")).toEqual(measured);
     expect(formulas("AsciiDoc")).toEqual(formulas("Markdown"));
     const article = (title: string) =>
       html.split(/<article /).find((a) => a.includes(`>数式（${title}）</h1>`))!;
