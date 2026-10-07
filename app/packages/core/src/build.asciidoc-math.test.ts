@@ -287,6 +287,10 @@ describe("AsciiDoc math", () => {
     const titles = (html: string) => [...html.matchAll(/title="([^"]*)"/g)].map((m) => m[1]);
     expect(titles(on.html)).toEqual(titles(off.html));
     expect(on.html).toContain("<!-- \\(x\\) -->");
+    const own = await build(
+      '= T\n\n[subs=macros]\n++++\n<span data-monodocs-math="latexmath:[x]">Visible</span>\n++++\n',
+    );
+    expect(own.html).not.toMatch(/[\uE000-\uE01F]/);
   });
 
   it("writes markers back where no element can go, and in a template", async () => {

@@ -217,14 +217,20 @@ export async function createMathConverter(
     // A display formula's block in text (a textarea, a script): as Asciidoctor writes it, as it stands
     // in a script or a style, or with its references decoded as a textarea or a title reads them. Only
     // the blocks whose keys the text holds are looked at.
+    const replacements = new Map<string, string>();
     for (const m of value.matchAll(BLOCK_KEY)) {
       const block = formulas.get(m[1]!)?.block;
       if (!block) continue;
-      value = value
-        .split(block.ours)
-        .join(block.asciidoctor)
-        .split(block.oursDecoded)
-        .join(block.asciidoctorDecoded);
+      replacements.set(block.ours, block.asciidoctor);
+      replacements.set(block.oursDecoded, block.asciidoctorDecoded);
+    }
+    if (replacements.size > 0) {
+      // One pass over the text, however many blocks it holds.
+      const pattern = new RegExp(
+        [...replacements.keys()].map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+        "g",
+      );
+      value = value.replace(pattern, (found) => replacements.get(found) ?? found);
     }
     return value
       .replace(INLINE, (whole, key: string, converted: string) =>
@@ -275,7 +281,7 @@ export async function createMathConverter(
     const restored: Element["properties"] = {};
     for (const [name, value] of Object.entries(element.properties)) {
       // A block marker's own key is read where the block is made a formula, not written back.
-      if (name === "dataMonodocsMath") {
+      if (name === "dataMonodocsMath" && typeof value === "string" && formulas.get(value)?.block) {
         restored[name] = value;
         continue;
       }
