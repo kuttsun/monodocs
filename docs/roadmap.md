@@ -616,8 +616,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
     is. A formula the HTML around it broke apart (inside strong text, its own substitutions let a
     `</strong>` through) is written back with `\(` and `\)`, as Asciidoctor writes it, and reported as
     `math/construct-unsupported`. A marker, whole or one end of it, wherever the HTML put it — a text,
-    an attribute's value or name, a list of classes, a comment — is written back the same way, with its
-    text as the HTML parser left it; a private-use character an author wrote is left as written.
+    an attribute's value or name, a list of classes, a comment, a script or style or other element
+    whose content is text only, a template's content — is written back the same way, with its text as
+    the HTML parser left it; a private-use character an author wrote is left as written.
   - Character references are decoded once, by the same HTML parser the formulas are read with, so
     the two always agree (`&#128;` is `€`, as HTML has it). A block's content is decoded whatever its
     substitutions, as the browser decoded it for MathJax, and `\[...\]` an author wrote around it is

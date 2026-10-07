@@ -59,6 +59,18 @@ interface Converter {
  * converter wrote, and a private-use character an author wrote is left alone.
  */
 const OPEN = "\uE000";
+/** Elements whose content is text only, where a formula's element cannot go. */
+const RAW_TEXT = new Set([
+  "script",
+  "style",
+  "textarea",
+  "title",
+  "noscript",
+  "xmp",
+  "iframe",
+  "noembed",
+  "noframes",
+]);
 /** The key's digits: sixteen private-use characters, one per hexadecimal digit. */
 const KEY_BASE = 0xe010;
 const INLINE = /\uE000([\uE010-\uE01F]+)\uE001([^\uE000-\uE003]*)\uE002\1\uE003/g;
@@ -200,6 +212,19 @@ export async function createMathConverter(
       });
   };
 
+  /** Every marker in a tree written back: its texts, comments, and properties, templates included. */
+  const restoreAll = (tree: HastRoot | Element) => {
+    visit(tree, (node) => {
+      if (node.type === "text" || node.type === "comment") node.value = restore(node.value);
+      else if (node.type === "element") {
+        restoreProperties(node as Element);
+        if ((node as Element).tagName === "template" && (node as Element).content) {
+          restoreAll((node as Element).content!);
+        }
+      }
+    });
+  };
+
   /** Every string an element carries, in its properties' names and values, written back. */
   const restoreProperties = (element: Element) => {
     const restored: Element["properties"] = {};
@@ -220,6 +245,12 @@ export async function createMathConverter(
     markFormulas(tree) {
       visit(tree, (node, index, parent) => {
         if (node.type === "text" && parent && index !== undefined) {
+          // Where no element can go (a script, a style, a textarea, a title), the marker is written
+          // back instead, as Asciidoctor writes the formula there.
+          if (parent.type === "element" && RAW_TEXT.has((parent as Element).tagName)) {
+            (node as Text).value = restore((node as Text).value);
+            return;
+          }
           const split = splitText((node as Text).value);
           if (!split) return;
           parent.children.splice(index, 1, ...(split as typeof parent.children));
@@ -231,6 +262,9 @@ export async function createMathConverter(
         }
         if (node.type !== "element") return;
         const element = node as Element;
+        // A template's content is not part of the page as it is shown, nor walked by what renders a
+        // formula: its markers are written back.
+        if (element.tagName === "template" && element.content) restoreAll(element.content);
         // A marker can sit in an attribute too (an image's alt text, a link's title, or anywhere a
         // passthrough put one): written back as Asciidoctor writes the formula there.
         restoreProperties(element);

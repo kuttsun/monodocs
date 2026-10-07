@@ -289,6 +289,21 @@ describe("AsciiDoc math", () => {
     expect(on.html).toContain("<!-- \\(x\\) -->");
   });
 
+  it("writes markers back where no element can go, and in a template", async () => {
+    const adoc =
+      "= T\n\n[subs=macros]\n++++\n" +
+      '<script>window.label = "latexmath:[x]";</script>\n' +
+      "<style>/* latexmath:[y] */</style>\n" +
+      '<template><span title="latexmath:[x]">latexmath:[y]</span><template>latexmath:[z]</template></template>\n' +
+      "++++\n";
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(on.html).not.toMatch(/[\uE000-\uE01F]/);
+    const block = (html: string) =>
+      /<script>window\.label[\s\S]*?<\/template><\/template>/.exec(html)![0];
+    expect(block(on.html)).toBe(block(off.html));
+  });
+
   it("does not point a block formula's diagnostic at a line of Asciidoctor's HTML", async () => {
     const { result } = await build("= T\n\n[latexmath]\n++++\nx^{\n++++\n");
     const found = result.warnings.find((w) => w.code === "math/parse-failed");
