@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-10-06
+最終更新: 2026-10-07
 
 ## 対応状況
 
@@ -24,7 +24,7 @@
 | 入力ルート / route の別名 / AsciiDoc 属性 | ✅ 完了   | v0.12          |
 | 出力サイズと予算 / 透かし / 表紙 / 改行 | ✅ 完了   | v0.13          |
 | 見出し番号 / 紙の目次               | ✅ 完了   | v0.14          |
-| Mermaid ランタイムの表記 / Mermaid 12 / 数式 | 🚧 予定   | v0.15          |
+| Mermaid ランタイムの表記 / Mermaid 12 / 数式 | 🚧 進行中 | v0.15          |
 | 表面の凍結 / JSON スキーマ v1       | 🚧 予定   | 1.0            |
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
@@ -37,8 +37,15 @@ VS Code 拡張は凍結しており、着手予定はない。需要が分から
 パッケージ、リリースバイナリ、それらが生成する HTML は `latest` を動かしたあとに検証した。Windows ホストでの
 スクリプト実行と、Windows で人が行う確認は、0.13.0 と同じく 0.14.0 でも未了である。
 
-次は 1.0 の前の v0.15 である——inline の Mermaid ランタイムの表記、mermaid 12、数式。1.0 の後ではなく前に
-置く理由は [roadmap.md](roadmap.md) にある。
+0.15.0 はまだリリースしていない。1.0 の前に置く理由は [roadmap.md](roadmap.md) にある。実装は揃った——
+inline の Mermaid ランタイムの表記、mermaid 12、Markdown と AsciiDoc の数式（ビルド時に MathML に描き、
+コピー、検索、数式を見るフォント検査を含む）。既存の文書がビルドするものを変えるものが 2 つある。すべての図を
+mermaid 12 が描くことと、GitHub が描く Markdown の 4 つの数式の形、AsciiDoc の latexmath と latexmath を意味する
+`stem` が数式として描かれることである。AsciiDoc の asciimath は文字のままだが警告が出るようになり、
+`validate --strict` を失敗させる。`math.enabled: false` でどちらも止められる。そのため、まずプレリリース
+（`0.15.0-beta.1`）を `next` に出す。プレリリースで確かめることは下にまだ残っている。`verify-published.yml` に
+よる Linux と Windows での公開パッケージの検証、mermaid 12 でのすべての図の目視、Cambria Math を使う Windows
+での数式のフィクスチャの確認である。
 
 ## 完了条件の達成状況
 
