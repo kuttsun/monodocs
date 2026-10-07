@@ -201,7 +201,7 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
     await mkdir(page3, { recursive: true });
     await writeFile(
       join(page3, "c.md"),
-      "# C\n\n> Before $a &lt; b$ after.\n>\n> $$\n> x^2\n> $$\n\nPlain text only.\n",
+      "# C\n\n> Before $a &lt; b$ after.\n>\n> $$\n> x^2\n> $$\n\nPlain text only. $`x\\quad y`$\n",
     );
     const configFile = join(page3, "monodocs.config.yml");
     await writeFile(configFile, "");
@@ -246,6 +246,29 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           p.textContent!.includes("Plain text only"),
         )!;
         const none = copy(plain.firstChild!, 0, plain.firstChild!, 5);
+        // Between two tokens of one formula, taking none of its shown text: no formula.
+        const gapFormula = document.querySelectorAll("#content .math-inline")[1]!;
+        const tokens = gapFormula.querySelectorAll("mi");
+        const gap = copy(tokens[0]!.firstChild!, 1, tokens[1]!.firstChild!, 0);
+        // Two ranges, as Firefox makes them: copied apart, joined by a line break.
+        const two = (() => {
+          const selection = window.getSelection()!;
+          selection.removeAllRanges();
+          const r1 = document.createRange();
+          r1.selectNodeContents(inline.querySelector("mi")!);
+          const r2 = document.createRange();
+          r2.setStart(plain.firstChild!, 0);
+          r2.setEnd(plain.firstChild!, 5);
+          selection.addRange(r1);
+          selection.addRange(r2);
+          const event = new ClipboardEvent("copy", {
+            clipboardData: new DataTransfer(),
+            bubbles: true,
+            cancelable: true,
+          });
+          document.dispatchEvent(event);
+          return { text: event.clipboardData!.getData("text/plain"), ranges: selection.rangeCount };
+        })();
         // Entirely inside the formula: the formula.
         const within = copy(
           inline.querySelector("mi")!.firstChild!,
@@ -285,7 +308,16 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           cancelable: true,
         });
         input.dispatchEvent(field);
-        return { fromInside, none, within, before, all, fieldHandled: field.defaultPrevented };
+        return {
+          fromInside,
+          none,
+          within,
+          before,
+          all,
+          gap,
+          two,
+          fieldHandled: field.defaultPrevented,
+        };
       });
       expect(copied.fromInside.handled).toBe(true);
       expect(copied.fromInside.text).toMatch(/^\$a &lt; b\$ after\.\n+\$\$\nx\^2\n\$\$\n?$/);
@@ -293,6 +325,9 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(copied.fromInside.html).not.toContain("style=");
       expect(copied.none.handled).toBe(false);
       expect(copied.within.text).toBe("$a &lt; b$");
+      expect(copied.gap.handled).toBe(false);
+      // Chromium keeps one range; where a browser keeps both, they are copied apart.
+      if (copied.two.ranges > 1) expect(copied.two.text).toBe("$a &lt; b$\nPlain");
       expect(copied.before.handled).toBe(false);
       expect(copied.all).toContain("<math");
       expect(copied.all).not.toContain("<script");

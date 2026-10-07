@@ -1802,17 +1802,17 @@
     return null;
   }
 
-  /** Whether the start (or the end) of a range takes in any of a formula's text. */
-  function takesFormula(range, formula, atStart) {
+  /** Whether a range takes in any of a formula's shown text (its TeX annotation is not shown). */
+  function takesFormula(range, formula) {
     var part = document.createRange();
-    if (atStart) {
+    part.selectNodeContents(formula);
+    // The part of the formula inside the range, and nothing outside it.
+    if (range.compareBoundaryPoints(Range.START_TO_START, part) > 0) {
       part.setStart(range.startContainer, range.startOffset);
-      part.setEndAfter(formula);
-    } else {
-      part.setStartBefore(formula);
+    }
+    if (range.compareBoundaryPoints(Range.END_TO_END, part) < 0) {
       part.setEnd(range.endContainer, range.endOffset);
     }
-    // The formula's TeX annotation is not shown, so its text does not count.
     var taken = document.createElement("div");
     taken.appendChild(part.cloneContents());
     Array.prototype.forEach.call(taken.querySelectorAll("annotation"), function (a) {
@@ -1838,15 +1838,19 @@
       range.setEnd(pageRange.endContainer, pageRange.endOffset);
     }
     var first = closestFormula(range.startContainer);
+    var last = closestFormula(range.endContainer);
+    var takeFirst = first ? takesFormula(range, first) : false;
+    var takeLast = last ? (last === first ? takeFirst : takesFormula(range, last)) : false;
     if (first) {
-      if (takesFormula(range, first, true)) range.setStartBefore(first);
+      if (takeFirst) range.setStartBefore(first);
       else range.setStartAfter(first);
     }
-    var last = closestFormula(range.endContainer);
     if (last) {
-      if (takesFormula(range, last, false)) range.setEndAfter(last);
+      if (takeLast) range.setEndAfter(last);
       else range.setEndBefore(last);
     }
+    // A range inside one formula that took none of it is empty now.
+    if (range.collapsed) return null;
     return range;
   }
 
@@ -1864,44 +1868,56 @@
       var selection = window.getSelection();
       var page = document.querySelector("#content article.page:not([hidden])");
       if (!selection || selection.isCollapsed || !event.clipboardData || !page) return;
-      var holder = document.createElement("div");
+      // Each range is copied on its own and the copies joined by a line break, as the ranges of a
+      // selection are apart on the page.
+      var holders = [];
+      var anyFormula = false;
       for (var i = 0; i < selection.rangeCount; i++) {
         var range = copyRange(selection.getRangeAt(i), page);
-        if (range) holder.appendChild(range.cloneContents());
+        if (!range) continue;
+        var holder = document.createElement("div");
+        holder.appendChild(range.cloneContents());
+        if (holder.querySelector("[" + FORMULA_SOURCE + "]")) anyFormula = true;
+        holders.push(holder);
       }
-      var formulas = holder.querySelectorAll("[" + FORMULA_SOURCE + "]");
-      if (formulas.length === 0) return;
-      // Nothing that is not shown, nor a script, goes into the HTML.
-      Array.prototype.forEach.call(
-        holder.querySelectorAll("script, style, template, [hidden]"),
-        function (el) {
-          el.parentNode.removeChild(el);
-        },
-      );
-      var html = holder.innerHTML;
-      Array.prototype.forEach.call(
-        holder.querySelectorAll("[" + FORMULA_SOURCE + "]"),
-        function (formula) {
-          var display = formula.classList.contains("math-display");
-          var source = document.createElement(display ? "div" : "span");
-          source.textContent = formula.getAttribute(FORMULA_SOURCE) || "";
-          // A display formula's source can span lines, which are kept.
-          source.style.whiteSpace = "pre";
-          formula.parentNode.replaceChild(source, formula);
-        },
-      );
-      // Nothing that loads while the copy is laid out below.
-      Array.prototype.forEach.call(
-        holder.querySelectorAll("iframe, video, audio, object, embed, img"),
-        function (el) {
-          el.parentNode.removeChild(el);
-        },
-      );
-      // innerText gives the selection's line structure only to an element that is rendered.
-      holder.style.cssText = "position:fixed;left:-99999px;top:0;";
-      document.body.appendChild(holder);
-      var text = holder.innerText;
-      document.body.removeChild(holder);
+      if (!anyFormula) return;
+      var htmls = [];
+      var texts = [];
+      holders.forEach(function (holder) {
+        // Nothing that is not shown, nor a script, goes into the HTML.
+        Array.prototype.forEach.call(
+          holder.querySelectorAll("script, style, template, [hidden]"),
+          function (el) {
+            el.parentNode.removeChild(el);
+          },
+        );
+        htmls.push(holder.innerHTML);
+        Array.prototype.forEach.call(
+          holder.querySelectorAll("[" + FORMULA_SOURCE + "]"),
+          function (formula) {
+            var display = formula.classList.contains("math-display");
+            var source = document.createElement(display ? "div" : "span");
+            source.textContent = formula.getAttribute(FORMULA_SOURCE) || "";
+            // A display formula's source can span lines, which are kept.
+            source.style.whiteSpace = "pre";
+            formula.parentNode.replaceChild(source, formula);
+          },
+        );
+        // Nothing that loads while the copy is laid out below.
+        Array.prototype.forEach.call(
+          holder.querySelectorAll("iframe, video, audio, object, embed, img"),
+          function (el) {
+            el.parentNode.removeChild(el);
+          },
+        );
+        // innerText gives the selection's line structure only to an element that is rendered.
+        holder.style.cssText = "position:fixed;left:-99999px;top:0;";
+        document.body.appendChild(holder);
+        texts.push(holder.innerText);
+        document.body.removeChild(holder);
+      });
+      var text = texts.join("\n");
+      var html = htmls.join("\n");
       event.clipboardData.setData("text/plain", text);
       event.clipboardData.setData("text/html", html);
       event.preventDefault();

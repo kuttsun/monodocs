@@ -502,7 +502,10 @@ are the same text.
   as it skips diagrams, because an HTML `<mark>` cannot sit inside MathML; `math` joins the elements the
   highlighter skips. A result has to open the section that holds the formula, and today a result opens
   the section whose heading matched, or the page's top; so the search data lists each formula's TeX with
-  the ID of the section it falls in, and a query that matches a formula opens that section.
+  the ID of the section it falls in, and a query that matches a formula opens that section. Which
+  pages a query finds, and their order, are decided by the page's text as before (a formula's TeX in
+  it); the formulas decide only which section a result opens, where a word is not matched inside a
+  TeX command (`left` does not open the section of a `\left`) and a term with a backslash is.
 - **Headings and titles shown as text.** Wherever a heading or a page title appears as text — the
   sidebar, the in-page table of contents, previous/next, search results, the tab's `<title>`, the
   PDF's bookmarks and printed table of contents — a formula in it is shown as its TeX between single
