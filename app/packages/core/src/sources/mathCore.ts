@@ -281,6 +281,7 @@ export function rewriteForCore(math: Element): CoreGaps {
   breakLines(math, constructs);
   negativeSpaces(math);
   braceAccents(math);
+  spacingAccents(math);
   normalizeLengths(math);
   const notations = drawEnclosures(math);
   return { notations, constructs: [...constructs] };
@@ -544,6 +545,33 @@ function negativeSpaces(math: Element): void {
     if (!width || width.size >= 0) return;
     node.properties.width = "0em";
     addStyle(node, `margin-left: ${cssLength({ ...width, relative: false })}`);
+  });
+}
+
+// --- Accents ------------------------------------------------------------------------------------
+
+/**
+ * KaTeX writes `\\bar`, `\\acute` and `\\grave` as spacing modifier letters (U+02C9, U+02CA,
+ * U+02CB), which a math font need not have: Latin Modern Math has none of them, so the browser takes
+ * them from another font, and on a Japanese page that is a CJK font's full-width glyph, wider than
+ * the letter and set off from it. Each becomes the Latin-1 character MathML's operator dictionary
+ * lists as the same accent (U+00AF, U+00B4, U+0060), which every Latin font has. Measured in
+ * Chromium with Latin Modern Math under `lang="ja"`: the bar over x 28px wide and 9px left of it
+ * before, 14px and centred after.
+ */
+const SPACING_ACCENTS: Record<string, string> = {
+  "\u02C9": "\u00AF",
+  "\u02CA": "\u00B4",
+  "\u02CB": "\u0060",
+};
+
+function spacingAccents(math: Element): void {
+  visit(math, "element", (node: Element) => {
+    if (node.tagName !== "mover") return;
+    const script = node.children.filter((c): c is Element => c.type === "element")[1];
+    if (script?.tagName !== "mo") return;
+    const replacement = SPACING_ACCENTS[textOf(script)];
+    if (replacement !== undefined) script.children = [{ type: "text", value: replacement }];
   });
 }
 

@@ -493,8 +493,14 @@ export async function inspectFonts(
 const SCRIPT_EXAMPLES: ReadonlyArray<{ match: RegExp; font: string }> = [
   // Emoji first: an emoji is Common script, so a script test would never reach it.
   { match: /\p{Extended_Pictographic}/u, font: "Noto Color Emoji" },
-  // The mathematical alphanumerics a formula's letters are drawn as, Common script too.
-  { match: /[\u{1D400}-\u{1D7FF}\u210E]/u, font: "Latin Modern Math" },
+  // The mathematical alphanumerics a formula's letters are drawn as, Common script too, with the
+  // Letterlike Symbols that fill the block's holes (ℎ, ℝ, ℕ, ℂ, ℬ, …); ℏ and ℓ, between them, are
+  // drawn by a math font too.
+  {
+    match:
+      /[\u{1D400}-\u{1D7FF}\u2102\u210A-\u2113\u2115\u2119-\u211D\u2124\u2128\u212C\u212D\u212F-\u2131\u2133\u2134]/u,
+    font: "Latin Modern Math",
+  },
   {
     match: /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Bopomofo}]/u,
     font: "Noto Sans CJK",

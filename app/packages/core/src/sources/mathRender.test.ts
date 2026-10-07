@@ -155,6 +155,11 @@ describe("renderFormula", () => {
     // A brace is an accent, as in TeX.
     expect(render("\\overbrace{abc}^{n}").html).toMatch(/<mover accent="true">/);
     expect(render("\\underbrace{abc}_{n}").html).toMatch(/<munder accentunder="true">/);
+    // An accent a math font need not have becomes the Latin-1 character for the same accent.
+    expect(render("\\bar{x}\\acute{x}\\grave{x}").html).toMatch(
+      /<mo>\u00AF<\/mo>.*<mo>\u00B4<\/mo>.*<mo>`<\/mo>/,
+    );
+    expect(render("\\bar{x}").html).not.toMatch(/[\u02C9-\u02CB]/);
     // An arrow's label is padded in em, so the padding follows the label's size.
     expect(render("\\xrightarrow{abc}").html).toMatch(/padding: [^"]*em/);
     // A symbol takes bold or italic from CSS, having no styled character.

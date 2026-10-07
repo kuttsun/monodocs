@@ -585,6 +585,10 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
     one-column table at the top of a formula, with the room `\\[2em]` asks for below its line;
   - a negative space (`\!`, a negative `\kern`), which Core cannot draw, becomes a negative margin;
   - `\overbrace` and `\underbrace` are set as accents, as in TeX, rather than as small scripts;
+  - `\bar`, `\acute`, and `\grave`, which KaTeX writes as spacing modifier letters (U+02C9–U+02CB)
+    a math font need not have, become the Latin-1 characters MathML lists as the same accents
+    (U+00AF, U+00B4, U+0060): Latin Modern Math has none of the first three, and on a Japanese page
+    the browser took the bar from a CJK font, full width and set off from its letter;
   - a `\tag` outside an environment is set at the right margin, its table and the boxes above it
     spanning the line.
 
@@ -634,6 +638,36 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
 - **Line breaks next to a formula.** Under `sources.lineBreak: join` (12.6), a formula is a boundary: a
   line break before or after it is not between two East Asian characters and stays a space, as at
   any other element that is not text.
+
+**The fixture (v0.15).** `examples/math` holds the formulas v0.14 measured, in Markdown and in
+AsciiDoc, so that what follows can be checked on any machine (`monodocs build examples/math --format
+both`). Built in the development image as it is, with no math font, its PDF is reported: the letters
+as Chromium draws them (`font/missing`) and the missing MATH table (`font/no-math-table`). Built on
+Linux with Latin Modern Math installed (`fonts-lmodern`, Chromium 151), nothing is reported, and:
+
+- no variable or Greek letter is tofu, and `\mathbb` and `\mathbf` (ℝ, ℕ, 𝐄, 𝐁) are told apart from a
+  plain variable;
+- the matrix's parentheses, the `cases` brace, the limit's `\left( \right)`, the continued fraction's
+  brackets, and the radicals stretch to what they hold;
+- `aligned` sets `=` at the ordinary distance: the wide gap v0.14 measured is gone, its columns now
+  laid out with cell CSS;
+- the `\vec` arrow still sits left of its letter, as v0.14 measured with Latin Modern Math and not
+  with Cambria Math. KaTeX writes it as the combining U+20D7, which Latin Modern Math draws with no
+  advance and its ink left of its origin, so the browser centres an empty box and the arrow falls to
+  its left. The arrow U+2192, as MathJax writes `\vec`, was tried and draws a full-size arrow wider
+  than the letter, which is worse; with Cambria Math the combining arrow is centred. It is left as
+  KaTeX writes it, and accepted;
+- `\dot`, `\ddot`, `\hat`, `\tilde`, `\acute`, and `\bar` sit centred over the letter's box, so over an
+  italic letter they are a little left of its slanted stroke: Chromium does not move an accent by
+  the font's top accent attachment. That is the browser's, and accepted;
+- the `\bar` over a letter was full width and set off from it, which is now rewritten (above).
+
+Found on the way and not yet settled: with Latin Modern Math, `\overline`, `\underline`,
+`\widehat`, `\widetilde`, and `\widecheck` keep the size of a single letter over a longer term,
+since KaTeX writes them with characters that font has no wide variants for; and a line of Japanese can
+start with `、` or `。` right after an inline formula, which Chromium breaks before as it does not
+between two characters. The Windows check is still to be made, and is to include where Cambria
+Math sets `\bar`, `\acute`, and `\grave` now that they are written as the Latin-1 accents.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
