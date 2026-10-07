@@ -60,9 +60,9 @@ jobs:
         with:
           node-version: 22
 
-      # 日本語や絵文字を含む PDF を出力する場合だけ必要。
+      # 日本語・絵文字・数式を含む PDF を出力する場合だけ必要。
       - name: Install fonts
-        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk fonts-noto-color-emoji
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk fonts-noto-color-emoji fonts-lmodern
 
       - name: Build HTML and PDF
         run: npx --yes monodocs@0.14.0 build ./docs --format both -o ./dist
@@ -105,7 +105,7 @@ docs:
 ```yaml
   before_script:
     - apt-get update
-    - apt-get install -y chromium fonts-noto-cjk fonts-noto-color-emoji
+    - apt-get install -y chromium fonts-noto-cjk fonts-noto-color-emoji fonts-lmodern
   variables:
     PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
 ```
@@ -113,7 +113,7 @@ docs:
 ## 注意点
 
 - **Chromium の検出**：`PUPPETEER_EXECUTABLE_PATH` が常に最優先です。未指定の場合、Linux と Windows では標準のインストール先を探索します（Windows では Chromium ベースの Microsoft Edge にフォールバックします）。コンテナイメージと macOS では明示的に指定してください。
-- **PDF のフォントはランナー側のもの**：フォントが無い文字は PDF で tofu（□）になります。日本語には `fonts-noto-cjk`、絵文字には `fonts-noto-color-emoji` が必要です。HTML は閲覧側のフォントを使うため影響を受けません。ランナーが描けない文字があるとビルドが警告し、[`fontCheck: error`](/ja/docs/configuration#font-check) にすればその警告でジョブを落とせます。
+- **PDF のフォントはランナー側のもの**：フォントが無い文字は PDF で tofu（□）になります。日本語には `fonts-noto-cjk`、絵文字には `fonts-noto-color-emoji` が必要です。数式には OpenType MATH テーブルを持つフォント（`fonts-lmodern` の Latin Modern Math など）が必要で、無いと括弧が伸びず、文字が tofu になることがあります。HTML は閲覧側のフォントを使うため影響を受けません。ランナーが描けない文字や、MATH テーブルの無い数式フォント（`font/no-math-table`）があるとビルドが警告し、[`fontCheck: error`](/ja/docs/configuration#font-check) にすればその警告でジョブを落とせます。
 - **オフラインビルド**：`mermaid.mode: client` は既定で CDN からランタイムを読み込みます。ランナーが外部ネットワークに出られない場合は `inline` か `pre-render` を使ってください。
 - **警告では `build` も `validate` も失敗しない**：リンク切れやタイトルの欠落は報告され、出力も生成されます。`validate` がジョブを失敗させるのは **エラー** のときです。警告もゲートにしたい場合は [`--strict`](/ja/docs/commands#validate) を付けてください。
 

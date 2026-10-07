@@ -331,10 +331,19 @@ What it does and does not see:
   otherwise have been fine. Choosing `error` accepts that one stops CI too.
 - **It checks its own reference**, against a second private-use codepoint and a noncharacter. If
   this machine turns out to draw something that should have no glyph, the check says so and reports
-  nothing else, rather than producing findings it cannot stand behind. If it runs out of patience
+  no missing characters, rather than producing findings it cannot stand behind. Whether a formula
+  font has a MATH table does not rest on that reference, so it is still reported, and still stops
+  the build under `error`. If it runs out of patience
   before the end of a very large document, it says that too rather than reporting a clean bill.
 - **The default page-number footer is measured too.** A replacement `pdf.header` / `pdf.footer`
   fragment is not: it is arbitrary HTML that brings a font of its own.
+- **Formulas are measured as they are drawn.** A single-letter variable is drawn as a mathematical
+  italic letter (`x` as `𝑥`, U+1D465), so that is the character measured: a machine with no math
+  font reports it, although `x` itself draws. The font formulas are drawn in must also have an
+  OpenType MATH table, without which brackets, braces and radicals do not stretch to what they
+  enclose; a formula font without one is reported as `font/no-math-table`, under the same `warn`,
+  `error` and `off`. Cambria Math ships with Windows; on Debian and Ubuntu, `fonts-lmodern` supplies
+  Latin Modern Math.
 
 ### `output`
 
@@ -637,6 +646,8 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | `math.enabled` | boolean | `true`  | Render formulas (Markdown's `$...$`, `$$...$$`, and fenced `math` block; AsciiDoc's latexmath, and `stem` when it means latexmath) to MathML at build time. `false` prints them as text, and a fenced `math` block as code, as before. |
 
 A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. AsciiDoc's asciimath is left as Asciidoctor writes it and reported (`math/asciimath-not-rendered`). A formula KaTeX cannot parse (`math/parse-failed`) or that uses a link or HTML command such as `\href` (`math/command-not-allowed`) is reported and shown as written. A style Unicode has no characters for (`math/style-unsupported`, e.g. `\mathit{123}`) an automatic equation number (`math/numbering-unsupported`, e.g. an unstarred `equation`), an enclosure CSS cannot draw (`math/notation-unsupported`, e.g. `\phase`), and a construct the browser cannot draw as written (`math/construct-unsupported`, e.g. `\vcenter`) are reported, and the formula is rendered without them.
+
+The browser draws a formula with an OpenType MATH font, which math needs on the machine that prints the PDF and in the reader's browser for the HTML. Cambria Math ships with Windows; on Linux, install one such as Latin Modern Math (`fonts-lmodern` on Debian and Ubuntu). Without one, brackets do not stretch, and variables come out as tofu unless another font has the mathematical letters. For the PDF, [`fontCheck`](#font-check) reports both.
 
 ### `html`
 

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,8 +10,10 @@ import { loadConfig } from "./config";
 import type { PageLike } from "./pipeline/browser";
 import {
   describeFontCheck,
+  describeMathTable,
   FontCheckError,
   inspectFonts,
+  mathItalicOf,
   runFontCheck,
   type FontCheckOutcome,
 } from "./pipeline/fontCheck";
@@ -103,6 +105,64 @@ describe("font check reporting", () => {
   it("reports itself unusable rather than producing findings it cannot stand behind", () => {
     expect(describeFontCheck({ status: "unusable" }, "pdf")).toMatch(/private-use/);
   });
+
+  it("names a math font for a formula's letters, and the font stack without a MATH table", () => {
+    // Chromium が描く数学用イタリックは Common の文字で、用字系の表では例が出ない。
+    const message = describeFontCheck(
+      { status: "missing", clusters: ["\u{1D465}", "\u210E"], truncated: false },
+      "pdf",
+    )!;
+    expect(message).toContain("U+1D465, e.g. Latin Modern Math");
+    expect(message).toContain("U+210E, e.g. Latin Modern Math");
+    const table = describeMathTable({ status: "ok", noMathTable: ["math"] })!;
+    expect(table).toContain("font-family: math");
+    expect(table).toMatch(/MATH table/);
+    expect(describeMathTable({ status: "ok" })).toBeUndefined();
+    // 括弧が伸びるかの測定は私用領域の基準に依らないので、基準が不成立でも所見は出す。
+    expect(describeMathTable({ status: "unusable", noMathTable: ["math"] })).toBeDefined();
+    expect(describeMathTable({ status: "unmeasurable" })).toBeUndefined();
+    // pre-render の図の数式は読者のブラウザが描き直し、PDF では本文の検査が同じ図を測る。
+    expect(describeMathTable({ status: "ok", noMathTable: ["math"] }, "prerender")).toBeUndefined();
+  });
+
+  it("maps a formula's one-character token as MathML Core's italic mapping does", () => {
+    const cases: Array<[string, number]> = [
+      ["A", 0x1d434],
+      ["Z", 0x1d44d],
+      ["a", 0x1d44e],
+      ["g", 0x1d454],
+      ["h", 0x210e],
+      ["i", 0x1d456],
+      ["z", 0x1d467],
+      ["\u0131", 0x1d6a4],
+      ["\u0237", 0x1d6a5],
+      ["\u0391", 0x1d6e2],
+      ["\u03a1", 0x1d6f2],
+      ["\u03f4", 0x1d6f3],
+      ["\u03a3", 0x1d6f4],
+      ["\u03a9", 0x1d6fa],
+      ["\u2207", 0x1d6fb],
+      ["\u03b1", 0x1d6fc],
+      ["\u03c9", 0x1d714],
+      ["\u2202", 0x1d715],
+      ["\u03f5", 0x1d716],
+      ["\u03d1", 0x1d717],
+      ["\u03f0", 0x1d718],
+      ["\u03d5", 0x1d719],
+      ["\u03f1", 0x1d71a],
+      ["\u03d6", 0x1d71b],
+      // What the mapping leaves alone: a digit, an operator, U+03A2 (no capital final sigma).
+      ["1", 0x31],
+      ["+", 0x2b],
+      ["\u03a2", 0x3a2],
+    ];
+    for (const [char, drawn] of cases) {
+      expect([char, mathItalicOf(char.codePointAt(0)!).toString(16)]).toEqual([
+        char,
+        drawn.toString(16),
+      ]);
+    }
+  });
 });
 
 describe("runFontCheck", () => {
@@ -122,6 +182,48 @@ describe("runFontCheck", () => {
     await expect(
       runFontCheck(failing.page, { mode: "error", context: "pdf", onWarning: () => {} }),
     ).rejects.toBeInstanceOf(FontCheckError);
+  });
+
+  it("reports a formula font without a MATH table under its own code, and stops for error", async () => {
+    const answer = { status: "ok", truncated: false, noMathTable: ["math"] };
+    const warned: Diagnostic[] = [];
+    await runFontCheck(fakePage(answer).page, {
+      mode: "warn",
+      context: "pdf",
+      onWarning: (d) => warned.push(d),
+    });
+    expect(warned.map((d) => d.code)).toEqual(["font/no-math-table"]);
+    const failing = runFontCheck(fakePage(answer).page, {
+      mode: "error",
+      context: "pdf",
+      onWarning: () => {},
+    });
+    await expect(failing).rejects.toMatchObject({ code: "font/no-math-table" });
+    // 豆腐もあるときは、両方を警告として出す。
+    const both: Diagnostic[] = [];
+    await runFontCheck(
+      fakePage({
+        status: "missing",
+        clusters: ["\u{1D465}"],
+        truncated: false,
+        noMathTable: ["math"],
+      }).page,
+      { mode: "warn", context: "pdf", onWarning: (d) => both.push(d) },
+    );
+    expect(both.map((d) => d.code).sort()).toEqual(["font/missing", "font/no-math-table"]);
+    // error で豆腐が止めるときも、MATH テーブルの所見は警告として伝える。
+    const told: Diagnostic[] = [];
+    const stopped = runFontCheck(
+      fakePage({
+        status: "missing",
+        clusters: ["\u{1D465}"],
+        truncated: false,
+        noMathTable: ["math"],
+      }).page,
+      { mode: "error", context: "pdf", onWarning: (d) => told.push(d) },
+    );
+    await expect(stopped).rejects.toMatchObject({ code: "font/missing" });
+    expect(told.map((d) => d.code)).toEqual(["font/no-math-table"]);
   });
 
   it("does not even measure when off", async () => {
@@ -216,17 +318,30 @@ const UNASSIGNED = "\u{50000}";
  * fontconfig に訊く（検査そのものとは独立した尺度であることが要点。Windows には無いので
  * その場合はスキップする）。
  */
-function fontconfigCovers(codepoint: string): boolean {
+function fontconfigCovers(codepoint: string): boolean | undefined {
   try {
     return (
       execFileSync("fc-list", [`:charset=${codepoint}`, "family"], { encoding: "utf8" }).trim()
         .length > 0
     );
   } catch {
-    return false;
+    // fontconfig が無い（Windows）なら、あるとも無いとも言えない。
+    return undefined;
   }
 }
-const hasCjkAndEmoji = fontconfigCovers("65E5") && fontconfigCovers("2705");
+const hasCjkAndEmoji = fontconfigCovers("65E5") === true && fontconfigCovers("2705") === true;
+/**
+ * 数式用のフォントが無いと確かめられたときだけ、その不在を前提にする試験を走らせる。数式の
+ * イタリックの文字を描くフォントが一つも無ければ、MATH テーブルを持つフォントも無い（その逆は
+ * 言えないので、在ることの判定には使わない）。開発用イメージがこれに当たる。
+ */
+const noMathFont = fontconfigCovers("1D465") === false;
+
+/** Latin Modern Math, a font with an OpenType MATH table, kept for these tests (GUST Font License). */
+const MATH_FONT = new URL(
+  "../test-fixtures/fonts/lm-math/opentype/latinmodern-math.otf",
+  import.meta.url,
+);
 
 async function buildPdf(
   name: string,
@@ -262,7 +377,8 @@ async function buildPdf(
 function fontWarnings(result: { warnings: Diagnostic[] } | Error): Diagnostic[] {
   expect(result).not.toBeInstanceOf(Error);
   return (result as { warnings: Diagnostic[] }).warnings.filter(
-    (w) => w.code === "font/missing" || w.code === "font/unchecked",
+    (w) =>
+      w.code === "font/missing" || w.code === "font/unchecked" || w.code === "font/no-math-table",
   );
 }
 
@@ -346,6 +462,61 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
       `html:\n  labels:\n    tocTitle: "${UNASSIGNED}"\n    searchResults: "${UNASSIGNED}"\n`,
     );
     expect(fontWarnings(result)).toEqual([]);
+  }, 120_000);
+
+  // 開発イメージには数式用のフォントが無い（v0.14 の実測）。それがある機械ではこの所見は出ない。
+  it.runIf(noMathFont)(
+    "reports a formula's letters as Chromium draws them, and a font with no MATH table",
+    async () => {
+      const result = await buildPdf("real-math-missing", "# Home\n\n$x + \\alpha$ and $\\sin$\n");
+      const warnings = fontWarnings(result);
+      const missing = warnings.find((w) => w.code === "font/missing");
+      // x is drawn as 𝑥 (U+1D465), α as 𝛼 (U+1D6FC); the letters as written are drawn.
+      expect(missing?.message).toContain("U+1D465");
+      expect(missing?.message).toContain("U+1D6FC");
+      expect(missing?.message).not.toContain("U+0078");
+      // sin is one token of three letters, which math-auto leaves as they are.
+      expect(missing?.message).not.toContain("U+1D460");
+      const table = warnings.find((w) => w.code === "font/no-math-table");
+      expect(table?.message).toContain("font-family: math");
+    },
+    120_000,
+  );
+
+  it.runIf(noMathFont)(
+    "measures the formulas' font even where the walk was cut short before them",
+    async () => {
+      // 40 件の所見で走査は止まる。数式のフォントは走査とは別に集めるので、その後ろでも測られる。
+      const tofu = Array.from({ length: 45 }, (_, n) => String.fromCodePoint(0x50000 + n)).join(
+        " ",
+      );
+      const result = await buildPdf("real-math-cut", `# Home\n\n${tofu}\n\n$x$\n`);
+      const warnings = fontWarnings(result);
+      expect(warnings.find((w) => w.code === "font/missing")?.message).toMatch(/\d\+/);
+      expect(warnings.some((w) => w.code === "font/no-math-table")).toBe(true);
+    },
+    120_000,
+  );
+
+  it("stays silent for formulas set in a math font", async () => {
+    const theme = join(dir, "real-math-ok", "my-theme");
+    await mkdir(theme, { recursive: true });
+    const font = readFileSync(MATH_FONT).toString("base64");
+    await writeFile(
+      join(theme, "style.css"),
+      // The default theme's stylesheet, which a theme's own replaces, with the math font added.
+      readFileSync(new URL("./themes/default/style.css", import.meta.url), "utf8") +
+        `\n@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }\n` +
+        'math { font-family: "Fixture Math"; }\n' +
+        // What the page's styles do to its formulas does not reach the measurement.
+        "mspace { display: none; } mo { font-size: 1px !important; }\n",
+    );
+    const result = await buildPdf(
+      "real-math-ok",
+      "# Home\n\n$x + \\alpha$\n\n$$\n\\left( \\frac{a}{b} \\right)\n$$\n",
+      'html:\n  theme: "./my-theme"\n',
+    );
+    expect(fontWarnings(result).map((w) => w.message)).toEqual([]);
   }, 120_000);
 
   it("catches a diagram that mermaid pre-render would bake the tofu into", async () => {

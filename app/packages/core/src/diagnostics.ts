@@ -27,6 +27,7 @@ export const DIAGNOSTIC_CODES = [
   "config/invalid",
   "config/not-found",
   "font/missing",
+  "font/no-math-table",
   "font/unchecked",
   "heading/level-skipped",
   "image/embedded-for-pdf",
