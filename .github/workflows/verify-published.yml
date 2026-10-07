@@ -674,19 +674,27 @@ jobs:
             const inline = read('inline.html');
             if (count(inline) !== 1) fail('the inline runtime carries the notices ' + count(inline) + ' times, not once');
             const at = inline.indexOf(header);
-            if (inline.lastIndexOf('<script>/*!', at) < 0 || inline.lastIndexOf('</script>', at) > inline.lastIndexOf('<script>/*!', at)) {
+            const open = inline.lastIndexOf('<script>/*!', at);
+            const close = inline.indexOf('*/', at);
+            // Inside the script and inside the comment: nothing closes either before the header,
+            // and the comment closes after it, before the script does.
+            if (open < 0 || inline.lastIndexOf('</script>', at) > open || inline.lastIndexOf('*/', at) > open
+                || close < 0 || close > inline.indexOf('</script>', at)) {
               fail('the notices are not in a comment inside the runtime script');
             }
             if (!/mermaid@12\./.test(inline.slice(at, at + 200))) fail('the notices do not name mermaid 12');
             for (const f of ['cdn.html', 'prerender.html', 'plain.html']) {
               if (count(read(f)) !== 0) fail(f + ' carries the notices');
             }
+            // The builds without notices are what they are meant to be, so that their silence counts.
+            if (!read('cdn.html').includes('cdn.jsdelivr.net/npm/mermaid@12.')) fail('the CDN build loads no mermaid 12');
+            if (!read('prerender.html').includes('<figure class=\"mermaid\"><svg')) fail('pre-render drew no SVG');
           "
 
       # v0.15. Formulas render at build time to MathML only: Markdown's $...$ and fenced math block,
       # AsciiDoc's latexmath and stem when it means latexmath (6.4). No KaTeX class or stylesheet
       # reaches the output, \mathbb becomes its own letter, math.enabled: false gives no MathML, and
-      # asciimath is reported rather than rendered. The PDF is built, not checked for fonts: whether
+      # asciimath is reported and left as written. The PDF is built, not checked for fonts: whether
       # this runner has a math font is the runner's (the font check is the CI guide's to set up).
       - name: Math
         if: env.SUPPORTS_V015 == 'true'
@@ -716,19 +724,24 @@ jobs:
           monodocs build math/docs -o math/on.html
           monodocs build math/docs -c math/off.yml -o math/off.html
           monodocs build math/docs --format pdf -o math/on.pdf
+          monodocs build math/ascii -o math/ascii.html
           node -e "
             const fs = require('node:fs');
             const on = fs.readFileSync('math/on.html', 'utf8');
             const off = fs.readFileSync('math/off.html', 'utf8');
             const fail = (m) => { throw new Error(m); };
-            const formulas = on.split('<math').length - 1;
-            if (formulas < 5) fail('expected five formulas, found ' + formulas);
-            if (/class=\"katex|katex\.min\.css|katex\.css/.test(on)) fail('KaTeX markup or a stylesheet reached the output');
+            const count = (s) => on.split(s).length - 1;
+            // Five formulas, and the dollar signs in the code span none of them.
+            if (count('<math') !== 5) fail('expected five formulas, found ' + count('<math'));
+            if (!on.includes('<code>\$5 and \$10</code>')) fail('the code span did not keep its dollar signs');
+            if (count('data-math-source=') !== 5) fail('not every formula carries its source for copying');
+            if (/katex/i.test(on)) fail('KaTeX markup or a stylesheet reached the output');
             if (/mathvariant=\"(?!normal\")/.test(on)) fail('a mathvariant other than normal reached the output');
-            if (!on.includes('ℝ')) fail('\\\\mathbb{R} did not become its own letter');
-            if (!on.includes('data-math-source=')) fail('a formula carries no source for copying');
+            // Non-ASCII written as escapes, as in the message-language step: U+211D is \\mathbb{R}.
+            if (!on.includes('\u211D')) fail('\\\\mathbb{R} did not become its own letter');
             if (off.includes('<math')) fail('math.enabled: false still rendered MathML');
-            if (fs.statSync('math/on.pdf').size === 0) fail('the PDF is empty');
+            if (fs.readFileSync('math/on.pdf').subarray(0, 5).toString() !== '%PDF-') fail('the PDF is not a PDF');
+            if (fs.readFileSync('math/ascii.html', 'utf8').includes('<math')) fail('asciimath was rendered');
           "
           status=0
           monodocs validate math/ascii --format json > math/ascii.json || status=$?
