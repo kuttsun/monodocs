@@ -37,14 +37,15 @@ In addition to CommonMark, GitHub Flavored Markdown is enabled via `remark-gfm`.
 - **Math** (v0.15): the four forms GitHub renders, read by GitHub's rules ([roadmap.md](roadmap.md) 6.4)
   - `$...$`, inline. A `$` opens one after an ASCII space, `(`, or the start of a paragraph, or right
     after or inside an element, before a character that is neither a space nor `$`; it closes at the next `$` on the same
-    line, unless that `$` comes before an ASCII letter, digit, or `_`, in which case there is no formula.
+    line, unless that `$` comes before an ASCII letter, digit, or `_`, or before the same character as
+    the one just before it (`$a.$.` is text), in which case there is no formula.
     So `It costs $5 and $10 today.` and `$HOME/$USER` stay text, but `Between $5 and 10$` is a formula:
     write `\$` for a dollar sign there. `値は$x$です` is text and `値は $x$ です` is math; a full-width
     space does not open one either (`値は　$x$　です` is text)
-  - ``$`...`$``, inline, whatever is around it (`値は$`x`$です` is math)
+  - ``$`...`$``, inline, whatever is around it (``値は$`x`$です`` is math)
   - `$$...$$`: a paragraph that starts and ends with `$$` and holds nothing but text displays every
     `$$...$$` in it, which may cross lines, the text between them staying text. In a list item, a
-    heading, or a table cell, or among other text, `$$...$$` is inline, by the same rules as `$...$`
+    heading, or a table cell, or among other text, `$$...$$` is inline, by the same rules as `$...$` but the last
   - a fenced code block whose language is exactly `math` (`Math` is code), displayed
 
   Backslash escapes are resolved before a formula is read, as CommonMark resolves them anywhere: in
