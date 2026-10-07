@@ -434,6 +434,8 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       expect(hidden.html).toContain("SHOWN");
       expect(hidden.text).not.toContain("INLINE");
       expect(hidden.text).toContain("AGAIN");
+      expect(hidden.html).toContain("AGAIN");
+      expect(hidden.html).not.toMatch(/visibility:\s*(?:hidden|collapse)/);
       expect(hidden.html).not.toContain("SVGSCRIPT");
       expect(hidden.text).not.toContain("SVGSCRIPT");
       expect(hidden.text).toContain("SUMMARY");

@@ -1894,6 +1894,12 @@
         return style.visibility === "visible" ? node.cloneNode(true) : null;
       }
       var copy = node.cloneNode(false);
+      // What is not visible is left out below, so an element's own style must not hide, where the
+      // HTML is pasted, the visible content kept inside it.
+      if (copy.style && /^(hidden|collapse)$/.test(copy.style.visibility)) {
+        copy.style.removeProperty("visibility");
+        if (!copy.getAttribute("style")) copy.removeAttribute("style");
+      }
       styled.push({ copy: copy, display: style.display, whiteSpace: style.whiteSpace });
       within(node, copy, style.visibility === "visible");
       return copy;
