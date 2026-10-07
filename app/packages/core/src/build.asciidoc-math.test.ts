@@ -83,6 +83,47 @@ describe("AsciiDoc math", () => {
     expect(html).not.toMatch(/katex/i);
   });
 
+  it("keeps the punctuation after an inline formula on its line, as in Markdown", async () => {
+    const { html } = await build("= A\n\n値は latexmath:[x]、次に latexmath:[y]。\n");
+    expect(
+      html.match(/<span style="white-space: nowrap"><span class="math math-inline"/g),
+    ).toHaveLength(2);
+    expect(html).toMatch(/<\/math><\/span>、<\/span>/);
+    expect(html).toMatch(/<\/math><\/span>。<\/span>/);
+  });
+
+  it("keeps punctuation between two formulas, and brackets around them, with them", async () => {
+    const { html } = await build(
+      "= A\n\n値は latexmath:[x]、latexmath:[y]。また（latexmath:[a]）（latexmath:[b]）。\n",
+    );
+    const wrapped = [
+      ...html.matchAll(
+        /<span style="white-space: nowrap">((?:(?!<span style=).)*?<\/math><\/span>[^<]*)<\/span>/g,
+      ),
+    ].map((m) => m[1]!.replace(/<span class="math.*?<\/math><\/span>/g, "F"));
+    expect(wrapped).toEqual(["F、", "F。", "（F）", "（F）。"]);
+  });
+
+  it("takes a footnote reference along with a formula, and no other superscript", async () => {
+    const { html } = await build(
+      "= A\n\n値は latexmath:[x]footnote:[注]。また latexmath:[y]^上付きの文^、\n",
+    );
+    expect(html).toMatch(/<\/math><\/span><sup class="footnote"[^>]*>.*?<\/sup>。<\/span>/);
+    // Half-width forms, as a Japanese text may use them.
+    const half = (await build("= A\n\n値は latexmath:[x]､次に｢latexmath:[y]｣｡\n")).html;
+    expect(half).toMatch(/<\/math><\/span>､<\/span>/);
+    expect(half).toMatch(
+      /white-space: nowrap">｢<span class="math[\s\S]*?<\/math><\/span>｣｡<\/span>/,
+    );
+    // A named footnote referred to again, which Asciidoctor marks as `footnoteref`, goes along too.
+    const again = (
+      await build("= A\n\nlatexmath:[x]footnote:n[注]。再び latexmath:[y]footnote:n[]。\n")
+    ).html;
+    expect(again).toMatch(/<\/math><\/span><sup class="footnoteref"[^>]*>.*?<\/sup>。<\/span>/);
+    // A superscript is not a reference, and stays outside: the 、 follows it, not the formula.
+    expect(html).toMatch(/<\/math><\/span><sup>上付きの文<\/sup>、/);
+  });
+
   it("records each formula's TeX, and a source rebuilt as latexmath", async () => {
     const { html } = await build(DOC);
     expect(attributes(html, "data-math-tex")).toEqual([

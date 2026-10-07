@@ -251,6 +251,40 @@ describe("Markdown math", () => {
     expect(outputs[0]).toBe(outputs[1]);
   }, 120_000);
 
+  it("keeps the punctuation next to an inline formula on its line", async () => {
+    const { html } = await build("# A\n\n値は ($x$) と $y$、 $z$。そして $w$ です。\n");
+    const kept = [
+      ...html.matchAll(/<span style="white-space: nowrap">(.*?<\/math><\/span>)(.*?)<\/span>/g),
+    ].map((m) => m[1]!.match(/^[^<]*/)![0] + "F" + m[2]!);
+    // `(` before x and `)` after it, `、` after y, `。` after z; nothing around w, which a space follows.
+    expect(kept).toEqual(["(F)", "F、", "F。"]);
+    // The formulas themselves are as they were: their source and TeX, and nothing else inside.
+    expect(html).toContain('data-math-source="$y$"');
+    expect(html).not.toMatch(/<span class="math math-inline"[^>]*>[^<]*[、。]/);
+  });
+
+  it("keeps the punctuation after strong text or a footnote reference ending in a formula", async () => {
+    const { html } = await build(
+      "# A\n\n値は **$x$**、次に $y$[^1]。そして $n$-dimensional と $p$%。\n\n[^1]: 注。\n",
+    );
+    const nowrap = '<span style="white-space: nowrap">';
+    // Strong text ending in a formula, and the 、 after it.
+    expect(html).toContain(`${nowrap}<strong><span class="math math-inline"`);
+    expect(html).toMatch(/<\/math><\/span><\/strong>、<\/span>/);
+    // A footnote reference after a formula, and the 。 after both.
+    expect(html).toMatch(/<\/math><\/span><sup>.*?<\/sup>。<\/span>/);
+    // A hyphen and a percent sign, which do not start a line in text.
+    expect(html).toMatch(/<\/math><\/span>-<\/span>dimensional/);
+    expect(html).toMatch(/<\/math><\/span>%。<\/span>/);
+  });
+
+  it("keeps no more than a formula from wrapping, strong text with words in it included", async () => {
+    const { html } = await build("# A\n\n値は (**$a$ と $b$ が正のときに成り立つ長い文**) の。\n");
+    // The strong text wraps as it did; only the formulas are what they always were, unbreakable.
+    expect(html).not.toContain('<span style="white-space: nowrap">(<strong>');
+    expect(html).toMatch(/<strong>.*と.*<\/strong>\) の/);
+  });
+
   it("builds the math fixture, its Markdown and AsciiDoc pages giving the same formulas", async () => {
     // examples/math: the formulas v0.14 measured, 7 inline and 14 display, on each page.
     const fixture = fileURLToPath(new URL("../../../../examples/math", import.meta.url));

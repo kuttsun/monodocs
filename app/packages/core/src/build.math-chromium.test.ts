@@ -275,6 +275,76 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
     }
   }, 60_000);
 
+  it("starts no line with the punctuation after an inline formula, nor ends one with a bracket", async () => {
+    const root = join(dir, "breaks");
+    await mkdir(root, { recursive: true });
+    await writeFile(
+      join(root, "b.md"),
+      "# B\n\n" +
+        "値は $x$、次に $y^2$。また ($z$) とする。**$w$**、その $n$-dimensional の。".repeat(6) +
+        "\n",
+    );
+    const configFile = join(root, "monodocs.config.yml");
+    await writeFile(configFile, 'lang: "ja"\n');
+    const built = join(root, "out.html");
+    await buildSite({ configFile, inputDir: root, outputFile: built, format: "html" });
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.goto(pathToFileURL(built).href);
+      const measure = () =>
+        page.evaluate(() => {
+          const p = document.querySelector("#content article:not([hidden]) p") as HTMLElement;
+          const starts = new Set<string>();
+          const ends = new Set<string>();
+          // Every width the paragraph can take, each giving its own line breaks.
+          for (let width = 80; width <= 400; width += 1) {
+            p.style.width = `${width}px`;
+            let lastTop: number | undefined;
+            let lastChar: string | undefined;
+            const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              // A formula's own text follows the lines too, so that a line it starts or ends is
+              // not read as one its neighbour starts or ends; only what is outside is recorded.
+              const inFormula = node.parentElement!.closest("math") !== null;
+              const text = node as Text;
+              for (let i = 0; i < text.data.length; i++) {
+                const range = document.createRange();
+                range.setStart(text, i);
+                range.setEnd(text, i + 1);
+                const top = range.getClientRects()[0]?.top;
+                if (top === undefined) continue;
+                if (lastTop !== undefined && top > lastTop + 5) {
+                  if (!inFormula) starts.add(text.data[i]!);
+                  if (lastChar !== undefined) ends.add(lastChar);
+                }
+                lastTop = top;
+                lastChar = inFormula ? undefined : text.data[i]!;
+              }
+            }
+          }
+          return { starts: [...starts].join(""), ends: [...ends].join("") };
+        });
+      const kept = await measure();
+      // Lines do break, at other characters, and never before the punctuation or after the bracket.
+      expect(kept.starts.length).toBeGreaterThan(3);
+      expect(kept.starts).not.toMatch(/[、。)\-]/);
+      expect(kept.ends).not.toMatch(/\(/);
+      // Without the spans, the same paragraph breaks there: what the spans prevent does happen.
+      await page.evaluate(() => {
+        for (const span of document.querySelectorAll('span[style="white-space: nowrap"]')) {
+          span.replaceWith(...span.childNodes);
+        }
+      });
+      const loose = await measure();
+      expect(loose.starts).toMatch(/[、。)]/);
+      expect(loose.ends).toMatch(/\(/);
+    } finally {
+      await browser.close();
+    }
+  }, 60_000);
+
   it("copies a formula as its source, and its MathML as HTML", async () => {
     const page3 = join(dir, "c");
     await mkdir(page3, { recursive: true });

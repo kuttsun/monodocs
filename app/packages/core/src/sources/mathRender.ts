@@ -93,7 +93,140 @@ export function rehypeRenderMath(report: (problem: MathProblem) => void) {
       node.children = [result.math];
       return SKIP;
     });
+    keepPunctuationWithFormulas(tree);
   };
+}
+
+/**
+ * Punctuation that may not start a line, and brackets that may not end one, as Chromium's line
+ * breaker treats them between two characters: measured, each of these stayed off the start (or
+ * the end) of a line in text, and did not after an inline formula. `ー`, small kana, and `—` start a
+ * line in text too, and are left out.
+ */
+const NO_LINE_START =
+  /^[,.;:!?)\]}'"\-‐–%％‰°′″℃、。，．：；！？）］｝」』】〕〉》〙〗〛”’…‥・〜々゠〟‼⁉｡､｣･]+/;
+const NO_LINE_END = /[(\[{（［｛「『【〔〈《〘〖〚“‘｢]+$/;
+
+/**
+ * Inline elements that may hold a formula and nothing else, and then stand for it at a line break.
+ * It is not lineBreak.ts's set, which lists what a line break may run through; this lists the text
+ * formatting a formula is written in (`**$x$**`, a link whose text is a formula).
+ */
+const INLINE = new Set([
+  "a",
+  "abbr",
+  "b",
+  "bdi",
+  "bdo",
+  "cite",
+  "del",
+  "dfn",
+  "em",
+  "i",
+  "ins",
+  "kbd",
+  "mark",
+  "q",
+  "s",
+  "small",
+  "span",
+  "strong",
+  "sub",
+  "sup",
+  "u",
+  "var",
+]);
+
+type Parent = HastRoot | Element;
+
+/**
+ * Chromium breaks a line on either side of an inline box, a formula included, even where it never
+ * breaks between two characters: measured, a line could start with `、`, `。`, `,`, or `）` right
+ * after an inline formula, and an inline-block did the same, while text alone never did. The
+ * punctuation that may not start a line after a formula, and the brackets that may not end one
+ * before it, are kept with it in a span that does not wrap. Where strong text, emphasis, or a link
+ * holds the formula and nothing else, that element is what is kept, and a footnote reference right
+ * after the formula goes with it; nothing longer than that is kept from wrapping. The
+ * formula's own element is left as it is, so the text copied and searched is unchanged; the style is
+ * inline, so a theme cannot lose it.
+ */
+function keepPunctuationWithFormulas(tree: HastRoot): void {
+  const found: { formula: Element; ancestors: Parent[] }[] = [];
+  const walk = (node: Parent, ancestors: Parent[]): void => {
+    for (const child of node.children) {
+      if (child.type !== "element") continue;
+      if (isMath(child)) {
+        const classes = child.properties.className as string[];
+        if (classes.includes("math-inline"))
+          found.push({ formula: child, ancestors: [...ancestors, node] });
+        continue;
+      }
+      walk(child, [...ancestors, node]);
+    }
+  };
+  walk(tree, []);
+  for (const { formula, ancestors } of found) {
+    // The element the formula stands for: an inline element holding nothing else (`**$x$**`), so
+    // that what is kept from wrapping is never more than the formula, which cannot wrap anyway.
+    let unit: Element = formula;
+    let k = ancestors.length - 1;
+    for (; k > 0; k--) {
+      const parent = ancestors[k]!;
+      if (parent.type !== "element" || !INLINE.has(parent.tagName)) break;
+      if (parent.children.length !== 1 || parent.children[0] !== unit) break;
+      unit = parent;
+    }
+    keep(ancestors[k]!, unit);
+  }
+}
+
+/**
+ * A footnote reference: GFM's, which links with `data-footnote-ref`, or Asciidoctor's `sup.footnote`
+ * (`sup.footnoteref` where a named footnote is referred to again).
+ */
+function isFootnoteRef(node: ElementContent | undefined): boolean {
+  if (node?.type !== "element" || node.tagName !== "sup") return false;
+  const classes = node.properties.className;
+  if (Array.isArray(classes) && (classes.includes("footnote") || classes.includes("footnoteref"))) {
+    return true;
+  }
+  return node.children.some(
+    (c) => c.type === "element" && c.properties.dataFootnoteRef !== undefined,
+  );
+}
+
+/** Wrap `unit` in `parent` with the bracket before it and the punctuation after it, if any. */
+function keep(parent: Parent, unit: Element): void {
+  const children = parent.children as ElementContent[];
+  // The parent is the one the formula had when the tree was walked; a span made for an earlier
+  // formula holds only formulas and punctuation, never an element a later formula is in.
+  let first = children.indexOf(unit);
+  if (first < 0) return;
+  let last = first;
+  const kept: ElementContent[] = [unit];
+  // A footnote reference set right after the formula goes with it.
+  while (isFootnoteRef(children[last + 1])) kept.push(children[++last]!);
+  const prev = children[first - 1];
+  const next = children[last + 1];
+  const opening = prev?.type === "text" ? NO_LINE_END.exec(prev.value)?.[0] : undefined;
+  const closing = next?.type === "text" ? NO_LINE_START.exec(next.value)?.[0] : undefined;
+  if (opening === undefined && closing === undefined && kept.length === 1) return;
+  if (opening !== undefined && prev?.type === "text") {
+    kept.unshift({ type: "text", value: opening });
+    prev.value = prev.value.slice(0, -opening.length);
+    if (prev.value === "") first--;
+  }
+  if (closing !== undefined && next?.type === "text") {
+    kept.push({ type: "text", value: closing });
+    next.value = next.value.slice(closing.length);
+    if (next.value === "") last++;
+  }
+  children.splice(first, last - first + 1, {
+    type: "element",
+    tagName: "span",
+    properties: { style: "white-space: nowrap" },
+    children: kept,
+  });
 }
 
 /**
