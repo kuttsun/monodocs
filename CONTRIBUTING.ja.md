@@ -6,16 +6,18 @@ Issue、文書改善、バグ修正、機能提案を歓迎します。公式の
 
 ## 始める前に
 
-- セキュリティ脆弱性は公開 Issue ではなく [SECURITY.ja.md](SECURITY.ja.md) の手順で報告してください。
+> [!CAUTION]
+> セキュリティ脆弱性は公開 Issue ではなく [SECURITY.ja.md](SECURITY.ja.md) の手順で報告してください。
+
 - 大きな変更は、実装前に Issue で目的と設計を相談してください。
 - 小さなバグ修正や文書修正は、直接 Pull Request として提出できます。
-- メンテナンスはベストエフォートです。Issue や Pull Request の応答時間は保証されません。
+- メンテナンスはベストエフォートで、Issue や Pull Request の応答時間は保証されません。
 - コントリビューションに特定のエディタ、AI アシスタント、自動レビュー製品は必要ありません。
 
 ## リポジトリの言語方針
 
-- 人が読むリポジトリ文書は英語を既定言語とします。`README.md` や `docs/development.md` など、通常のパスには英語版を配置します。
-- 各文書の日本語版も維持します。リポジトリやパッケージのルートでは `*.ja.md`、文書ツリーでは `docs/ja/` と `site/ja/` を使用します。
+- 人が読む文書は英語を既定とし、通常のパス（`README.md`、`docs/development.md`）に置きます。
+- 各文書に日本語版を置きます。リポジトリやパッケージのルートでは `*.ja.md`、文書ツリーでは `docs/ja/` と `site/ja/` に対応するファイルを置きます。
 - 文書フレームワークが言語切替を提供する場合を除き、日英の各文書の冒頭付近に相互リンクを置きます。
 - 共通の事実、手順、動作を変更する場合は、同じ変更で両言語版を更新します。
 - コードコメントは英語で記述します。
@@ -24,7 +26,10 @@ Issue、文書改善、バグ修正、機能提案を歓迎します。公式の
 
 ## 開発環境
 
-開発、ビルド、テストは Docker 内で実行します。ホストへ Node.js や pnpm をグローバルインストールしないでください。
+開発、ビルド、テストは Docker 内で実行します。
+
+> [!IMPORTANT]
+> ホストへ Node.js や pnpm をグローバルインストールしないでください。
 
 ```bash
 scripts/app.sh pnpm install
@@ -32,7 +37,10 @@ scripts/app.sh pnpm build
 scripts/app.sh pnpm test
 ```
 
-VS Code Dev Containers または既存のコンテナシェルでは `app/` へ移動し、`pnpm` コマンドを直接実行します。詳しくは[開発ガイド](docs/ja/development.md)を参照してください。
+> [!TIP]
+> VS Code Dev Containers や既存のコンテナシェルでは、`app/` で `pnpm` コマンドを直接実行できます。
+
+セットアップの詳細とコマンドの変種は[開発ガイド](docs/ja/development.md)を参照してください。
 
 ## 必須チェック
 
@@ -48,7 +56,7 @@ scripts/app.sh pnpm ci:check
 scripts/app.sh pnpm package:verify
 ```
 
-個別の Vitest ファイルやテスト名は次のように指定できます。
+個別の Vitest ファイルやテスト名を指定する場合:
 
 ```bash
 scripts/app.sh pnpm exec vitest run packages/core/src/route.test.ts
@@ -59,8 +67,7 @@ scripts/app.sh pnpm exec vitest run -t "rewrites links"
 
 ## 変更ガイドライン
 
-- ソース形式ごとのレンダラーで処理し、共通の `Page` モデルへ正規化するアーキテクチャを維持してください。
-- グローバルに一意な要素 ID、安定したルート、全ページの到達可能性など、単一ファイル出力の不変条件を維持してください。詳しくは [docs/ja/architecture.md](docs/ja/architecture.md) を参照してください。
+- [docs/ja/architecture.md](docs/ja/architecture.md) に記載のアーキテクチャを維持してください。ソース形式ごとに専用のレンダラーで処理して共通の `Page` モデルへ正規化する構成と、単一ファイル出力の不変条件（グローバルに一意な要素 ID、安定したルート、全ページの到達可能性）を守ります。
 - 動作を変更する場合はテストを追加または更新してください。
 - 利用者向けの動作、設定、対応記法、制限を変更する場合は README と関連する `docs/` 文書を日英ともに更新してください。
 - 依存関係を追加する前に、目的、バンドルサイズ、ライセンス互換性、単一ファイル配布への影響を確認してください。

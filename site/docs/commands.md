@@ -1,13 +1,14 @@
 # Command Options
 
-monodocs is a single CLI with five subcommands: `init`, `build`, `watch`, `serve`, and `validate`. The four that read documents take the same optional input argument and share the config-file option, each adding a few of its own; `init` takes neither, because it creates what the others read.
+monodocs is a single CLI with five subcommands: `init`, `build`, `watch`, `serve`, and `validate`. The four that read documents share the optional input argument and the config-file option, plus a few options of their own; `init` takes neither.
 
 ```bash
 monodocs <command> [input] [options]
 ```
 
-The `[input]` argument is the directory to scan, or a single source file (default: `./docs`). When omitted, monodocs uses `./docs`. Given a file, monodocs bundles that one page and treats the directory holding it as the base for the links, images, and `monodocs.config.yml` it uses. CLI options always override the config file — see [Configuration](/docs/configuration) for the merge order and where `monodocs.config.yml` is looked up.
+`[input]` is the directory to scan, or a single source file (default: `./docs`). Given a file, monodocs bundles that one page and uses the directory holding it as the base for links, images, and `monodocs.config.yml`. CLI options always override the config file; see [Configuration](/docs/configuration) for the merge order and where `monodocs.config.yml` is looked up.
 
+> [!TIP]
 > When running from source, replace `monodocs` with `node packages/cli/dist/index.js` (optionally via `scripts/app.sh`). See [Getting Started](/docs/getting-started).
 
 ## Global options
@@ -25,36 +26,31 @@ monodocs build --help    # help for a single command
 
 ### Message language {#message-language}
 
-Everything monodocs prints — `--help`, every error, every warning — is English by default. Japanese
-is an explicit choice, either per command or for a whole shell or CI job:
+Everything monodocs prints (`--help`, errors, warnings) is English by default. Choose Japanese per
+command or for a whole shell or CI job:
 
 ```bash
 monodocs --lang ja build ./docs
 MONODOCS_LANG=ja monodocs build ./docs
 ```
 
-The flag wins over the environment variable, which wins over the default. A value monodocs does not
-ship is rejected, naming the ones it does, rather than falling back quietly to English — a setting
-that is silently ignored is the hardest kind to notice.
+- The flag wins over the environment variable, which wins over the default.
+- An unsupported value is rejected with a list of the supported ones; it never falls back silently to
+  English.
+- `LANG` and `LC_ALL` are deliberately **not** consulted, so a build log does not depend on the machine
+  that produced it.
+- This is separate from [`lang`](configuration#lang) in the configuration file, which describes the
+  document being built, not the terminal building it.
 
-`LANG` and `LC_ALL` are deliberately **not** consulted. Detecting the locale would be convenient and
-would make a build log depend on which machine produced it, so a log pasted into an issue could not
-be reproduced from the command alone.
-
-This is separate from [`lang`](configuration#lang) in the configuration file, which describes the
-document being built rather than the terminal building it. A document is often written in one
-language by someone working in a terminal that reports another.
-
-One boundary is worth knowing: a message that reaches you unwrapped from a dependency — the body of
-a Zod schema error, a Puppeteer stack trace — stays in whatever language that dependency emits.
-Where monodocs wraps one, the wrapper is translated. The argument errors you are most likely to hit —
-an unknown option or command, a missing argument — are translated even though the argument parser
-raises them; a rarer one it phrases in a way monodocs cannot rebuild keeps the parser's wording
-rather than being paraphrased into something less precise.
+> [!NOTE]
+> A message passed through unwrapped from a dependency (the body of a Zod schema error, a Puppeteer
+> stack trace) stays in that dependency's language; where monodocs wraps one, the wrapper is
+> translated. Common argument-parser errors (unknown option or command, missing argument) are
+> translated; a rarer one monodocs cannot rebuild keeps the parser's wording.
 
 ## `init`
 
-Writes a configuration and a first page to start from. It is the one subcommand with no input argument and no config option: it creates what the others read.
+Writes a configuration and a first page to start from. It is the one subcommand with no input argument and no config option.
 
 ```bash
 monodocs init
@@ -72,9 +68,9 @@ monodocs init
 monodocs build      # -> dist/docs.html
 ```
 
-**It never overwrites.** When either file is already there it writes *neither*, names everything it found, and exits with code `1`, so running it in a directory that already holds work cannot cost you any of it. An existing `docs/` directory is not in its way — the page is added beside what is there.
+**It never overwrites.** When either file is already there it writes *neither*, names everything it found, and exits with code `1`. An existing `docs/` directory is fine; the page is added beside what is there.
 
-The scaffold follows the [message language](#message-language) throughout: its comments, the text of the first page, and the `lang` it sets. `monodocs --lang ja init` therefore writes a Japanese first page under `lang: "ja"`, rather than Japanese text in a document that declares English. The two settings are otherwise independent, and the generated file says so where `lang` sits; documenting in another language means changing that one line.
+The scaffold follows the [message language](#message-language): its comments, the first page's text, and the `lang` it sets. `monodocs --lang ja init` therefore writes a Japanese first page under `lang: "ja"`. Otherwise the two settings are independent, as the generated file notes next to `lang`; to document in another language, change that one line.
 
 ## `build`
 
@@ -105,11 +101,11 @@ monodocs build ./docs -c ./monodocs.config.yml
 monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 ```
 
-On success it prints the number of pages generated and the output path. Warnings (e.g. broken links, missing titles) are printed but do not fail the build — use [`validate`](#validate) to fail on an error, and `validate --strict` to fail on a warning as well. The one setting that changes this is [`fontCheck: error`](/docs/configuration#font-check), which stops a build whose output would carry characters this machine has no font for.
+On success it prints the number of pages generated and the output path. Warnings (e.g. broken links, missing titles) are printed but do not fail the build; use [`validate`](#validate) to fail on an error, and `validate --strict` to fail on a warning as well. The one exception is [`fontCheck: error`](/docs/configuration#font-check), which stops a build whose output would carry characters this machine has no font for.
 
 ## `watch`
 
-Rebuilds whenever an input or config file changes. It writes the output on every change but does not serve it — use `serve` if you also want a preview server.
+Rebuilds whenever an input or config file changes. It writes the output but does not serve it; use `serve` for a preview server.
 
 ```bash
 monodocs watch [input] [options]
@@ -152,7 +148,7 @@ Press `Ctrl+C` to stop.
 
 ## `validate`
 
-Checks for broken links, missing images, missing titles, skipped heading levels, and images with no `alt` attribute — **without writing any output**. Intended for CI: it exits non-zero when an error is found, and `--strict` makes a warning enough.
+Checks for broken links, missing images, missing titles, skipped heading levels, and images with no `alt` attribute, **without writing any output**. Intended for CI.
 
 ```bash
 monodocs validate [input] [options]
@@ -169,20 +165,23 @@ monodocs validate [input] [options]
 monodocs validate ./docs
 ```
 
-Errors and warnings are printed to stderr. The process exits with code `1` when an **error** is found; a warning alone leaves it at `0` and prints `⚠ 2 warning(s) in 20 page(s); no errors.`. `--strict` makes a warning fail the command too:
+Errors and warnings are printed to stderr. It exits with code `1` when an **error** is found; a warning alone leaves it at `0` and prints `⚠ 2 warning(s) in 20 page(s); no errors.`. `--strict` makes a warning fail the command too:
 
 ```bash
 monodocs validate ./docs           # errors fail, warnings are reported
 monodocs validate ./docs --strict  # a warning fails it as well
 ```
 
-The exit code follows the `severity` the report publishes, which is what lets a release add a check without turning a green job red for a finding nobody has read yet. If you want warnings to be a release gate, `--strict` says so once, in the workflow. Mermaid diagrams are validated without a browser, so pre-render rendering and diagram syntax errors are not checked here.
+The exit code follows the `severity` in the report, so a release that adds a check as a warning does not turn a passing job red. To make warnings a release gate, add `--strict` in the workflow.
 
-`validate` runs the same pipeline a build runs, so every check it reports is a check a build reports too — a build prints the same warnings and writes its output anyway. The other direction does not hold: a build that writes a PDF also reports what only that work can find, such as a bottom margin too small for the page-number band or a character no font on the machine can draw.
+`validate` runs the same pipeline as a build, so a build reports every check `validate` does (and still writes its output). The reverse does not hold: a build that writes a PDF also reports what only that work can find, such as a bottom margin too small for the page-number band or a character no font on the machine can draw.
+
+> [!NOTE]
+> Mermaid diagrams are validated without a browser, so pre-render rendering and diagram syntax errors are not checked by `validate`.
 
 ### A report a job can read {#json-report}
 
-`--format json` prints one JSON object on stdout and nothing else, so a workflow can parse the stream without skipping prose:
+`--format json` prints one JSON object on stdout and nothing else, so a workflow can parse it directly:
 
 ```bash
 monodocs validate ./docs --format json
@@ -203,9 +202,12 @@ monodocs validate ./docs --format json
 }
 ```
 
-Pin `schemaVersion`, not the monodocs version. The two move for different reasons: a release adds checks and codes without changing the shape a job parses, and `schemaVersion` moves only when that shape does.
+- `schemaVersion` changes only when the shape a job parses changes; a release can add checks and codes without changing it. Pin `schemaVersion`, not the monodocs version.
+- `code` is stable: `link/unresolved` keeps meaning exactly that, so a job can filter on it.
+- `path` is relative to the input directory; `line` is present where monodocs knows it.
 
-`code` is the stable part of a finding — `link/unresolved` keeps meaning exactly that, so a job filtering on it keeps filtering on it. `message` is the sentence a person reads: it is translated by [`--lang`](#message-language) and reworded between releases, so a job must not match on it. `path` is relative to the input directory, and `line` is present where monodocs knows it.
+> [!WARNING]
+> Do not match on `message`. It is the sentence a person reads: translated by [`--lang`](#message-language) and reworded between releases.
 
 ## See also
 

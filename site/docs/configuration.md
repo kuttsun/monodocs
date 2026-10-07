@@ -1,16 +1,16 @@
 # Configuration
 
-monodocs reads an optional `monodocs.config.yml` to control how your files are bundled into a single HTML. Without a config file the defaults below are used, so a config file is only needed when you want to override them.
+monodocs reads an optional `monodocs.config.yml` to control how your files are bundled into a single HTML. Without one, the defaults below apply.
 
 ## Where the config file lives
 
 monodocs resolves the config file in this order:
 
 1. The path passed to `-c, --config <file>`.
-2. `monodocs.config.yml` **inside the input directory** (when you pass an input argument, e.g. `monodocs build ./docs`). When that argument is a single file, the directory holding it is used, so `monodocs build ./docs/plan.md` reads the same file as `monodocs build ./docs`.
+2. `monodocs.config.yml` **inside the input directory** (when you pass an input argument, e.g. `monodocs build ./docs`). For a single-file argument, its directory is used, so `monodocs build ./docs/plan.md` reads the same file as `monodocs build ./docs`.
 3. `monodocs.config.yml` in the **current working directory** (when no input argument is given).
 
-If you pass `--config` explicitly and the file does not exist, the build fails. Relative paths inside the config (`input`, `output.path`) are resolved **relative to the config file's location**, not the current directory.
+An explicit `--config` file that does not exist fails the build. Relative paths inside the config (`input`, `output.path`) resolve **against the config file's location**, not the current directory.
 
 ```bash
 # Auto-detect ./docs/monodocs.config.yml
@@ -22,16 +22,15 @@ monodocs build -c ./monodocs.config.yml
 
 ## Unknown keys
 
-Every key is checked, at every depth, and an unrecognized one fails the build naming the key and the
-object that holds it:
+Every key is checked at every depth. An unrecognized one fails the build, naming the key and the
+object that holds it, so a typo cannot be silently ignored:
 
 ```text
 error: Invalid config file ./monodocs.config.yml: pdf: Unrecognized key: "footr"
 ```
 
-A key that is accepted and ignored is worse than one that is refused: the file looks right, and only
-the output says otherwise. This holds at the top level too, so a key written ahead of the release
-that introduces it has to come out until then.
+This holds at the top level too: a key introduced in a later release must be removed until you
+upgrade.
 
 ## Precedence
 
@@ -39,7 +38,7 @@ Settings are merged in this order, highest first:
 
 **CLI options** › **config file** › **defaults**
 
-So `-o`, `--config`, and `-f` on the command line always win over the config file. Only `output.path`/`-o`, `output.format`/`-f`, and `input`/`<input arg>` are also settable on the CLI; everything else is config-file only.
+`-o`, `--config`, and `-f` on the command line always win. Only `output.path`/`-o`, `output.format`/`-f`, and `input`/`<input arg>` are settable on the CLI; everything else is config-file only.
 
 ## Full example
 
@@ -180,13 +179,10 @@ pdf:
 
 #### `root` (building one document from more than one directory) {#root}
 
-A repository usually keeps its `README.md` at the top and its pages under `docs/`. `input` names one
-directory, so those two cannot be one document. Letting `input` take a list would be the obvious fix
-and the wrong one: one root answers four questions at once — where `monodocs.config.yml` is looked
-for, what a route is relative to, which directory an image may be read from, and how far an AsciiDoc
-`include::` may reach — and two roots leave every one of them with two answers.
-
-So the root stays single and the **selection** becomes configurable:
+To build a repository's top-level `README.md` and its `docs/` pages as one document, keep a single
+root and select what goes in. There is one root because it answers four questions at once: where
+`monodocs.config.yml` is looked for, what a route is relative to, which directory an image may be
+read from, and how far an AsciiDoc `include::` may reach.
 
 ```yaml
 root: "."
@@ -196,31 +192,27 @@ sources:
     - "docs/**"
 ```
 
-`root` defaults to `input`'s value, so a configuration that does not write it keeps its meaning
-exactly: `input: ./docs` is `root: ./docs` with everything under it included.
+- `root` defaults to `input`'s value, so `input: ./docs` alone means `root: ./docs` with everything
+  under it included.
+- Routes come from the path relative to `root`. Adding `README.md` to a `docs/` tree therefore
+  changes the route of every page in it: `docs/index.md` becomes `/docs` rather than `/`.
+- Write `input` and `root` together only when they name the same directory. Anything else is a
+  configuration error, including an `input` that points *inside* `root`. This covers the command
+  line too: `monodocs build ./docs` against a configuration that sets `root: "."` stops rather than
+  picking one.
+- Written without `input`, `root` is what the build is pointed at, rather than the default
+  `./docs`. `root` must name a directory, not a file.
 
-Routes come from the path relative to `root`. Adding `README.md` to a `docs/` tree therefore changes
-the routes of every page in it — `docs/index.md` becomes `/docs` rather than `/`. That is a real
-cost, and the honest one: the document now holds two trees.
-
-Write `input` and `root` together only when they name the same directory. Anything else is a
-configuration error rather than a merge, including an `input` that points *inside* `root` — such an
-input is either the include list written out longhand or a second root in disguise. The rule covers
-the command line too, so `monodocs build ./docs` against a configuration that sets `root: "."` stops
-rather than silently picking one.
-
-Written without `input`, `root` is what the build is pointed at, rather than the default `./docs`. `root` has to name a directory: it is what routes, images, and `include::` resolve against, and a file cannot be that.
-
-One consequence worth knowing: the built-in exclude patterns are anchored at the root. `_partials/**`
-matches a directory at the top of the root, so under `root: "."` a `docs/_partials/` is not matched
-by it — name it in `sources.exclude` if you want it left out. A file whose own name starts with `_`
-is still matched at any depth by `**/_*`.
+> [!NOTE]
+> The built-in exclude patterns are anchored at the root. `_partials/**` matches only a directory at
+> the top of the root, so under `root: "."` a `docs/_partials/` is not matched; name it in
+> `sources.exclude` to leave it out. A file whose own name starts with `_` is still matched at any
+> depth by `**/_*`.
 
 #### `document` (what the document says about itself) {#document}
 
-A specification handed to someone carries a version and a date, and often the people responsible for
-it. A reader holding `docs.html` six months later otherwise has no way to tell what it is a version
-of, or when it was true.
+Records the document's version, date, and authors, so a reader can tell which version they hold and
+when it was true.
 
 ```yaml
 title: Internal Documentation
@@ -237,74 +229,72 @@ document:
 | `date`    | string   | Date as you write it. Not parsed into a calendar.   |
 | `authors` | string[] | The people responsible for the document.            |
 
-Every field is optional and every field is a string monodocs does not interpret — the one thing it
-does to the text is trim the space around it, so a value that is only whitespace counts as unset.
-What they do is reach four places:
+Every field is optional and is a string monodocs does not interpret. It only trims surrounding
+space, so a whitespace-only value counts as unset. The values appear in exactly three places:
 
 - The **footer** at the end of the HTML and the PDF, as one line: `Version 1.2 · 2026-08-22 ·
-  Documentation Team`. The word `Version` comes from the label table `lang` selects, so it follows
-  the document's language and can be replaced through [`html.labels`](#labels)
+  Documentation Team`. The word `Version` comes from the label table `lang` selects, and can be
+  replaced through [`html.labels`](#html-labels)
 - The **PDF's document properties**: the authors become `Author`, the version and date become
   `Subject`, and both values as you wrote them become `Keywords`
 - The **PDF cover**, under the `title`, when [`pdf.cover`](#pdf-cover) is enabled
-- Nothing else. `title` stays at the top level rather than moving in here
 
-**The build stamps no date of its own.** A date in the output is a date you wrote. Filling the footer
-with the moment the build ran would make the same input produce different bytes on every run, so a
-committed `docs.html` would show a diff whenever anyone rebuilt it. A workflow that wants the build
-date sets `document.date` from the workflow, and then the date is a decision rather than an accident.
+`title` stays at the top level rather than moving in here.
+
+> [!NOTE]
+> The build stamps no date of its own: a date in the output is a date you wrote. To show the build
+> date, set `document.date` from your workflow.
 
 #### `lang` (document language and UI labels) {#lang}
 
-A generated document carries two languages that have no reason to agree: the language its pages are
-written in, and the language of the chrome monodocs wraps around them — the search box, `On this
-page`, `No results`, `Copy`, the lightbox controls, prev/next. `lang` settles both: it fills
-`<html lang>` and selects the label table.
+`lang` sets the document's language: it fills `<html lang>` and selects the label table for the UI
+monodocs wraps around the pages (the search box, `On this page`, `No results`, `Copy`, the lightbox
+controls, prev/next).
 
 ```yaml
 lang: ja
 ```
 
-Any syntactically valid BCP 47 tag is accepted, because it is your document's language and
-`<html lang>` has to be able to say so. A string that is not one is rejected rather than written into
-the attribute.
+- Any syntactically valid BCP 47 tag is accepted. A string that is not one is rejected rather than
+  written into the attribute.
+- Label tables ship for `en` (the default) and `ja` only, matched case-insensitively on the primary
+  language subtag, so `en-GB`, `ja-JP`, and `JA` all find one. Any other tag still reaches
+  `<html lang>`, falls back to the English labels, and warns once naming the tag. Use
+  [`html.labels`](#html-labels) to supply the wording.
 
-Label tables ship for `en` (the default) and `ja` only. Tags are matched case-insensitively on the
-primary language subtag, so `en-GB`, `ja-JP`, and `JA` all find one. Any other tag still reaches
-`<html lang>`, falls back to the English labels, and warns once naming the tag — a French document
-should not have to misdeclare itself as English just to build. Use [`html.labels`](#html-labels) to
-supply the wording.
-
-`lang` describes the document. It is deliberately not the language of the CLI's own messages: a
-document is often written in one language by someone working in a terminal that reports another, and
-a build log should not change language because the document did.
+> [!NOTE]
+> `lang` is not the language of the CLI's own messages. The build log does not change language with
+> the document.
 
 #### `fontCheck` (missing fonts) {#font-check}
 
-An artifact is composed once, on the machine that runs the build, with the fonts that machine
-happens to have — and a character with no font becomes tofu (□ / ☒) permanently, in every copy that
-is then handed out. Japanese text needs a CJK font and emoji need an emoji font, and a CI runner
-cannot be assumed to carry either.
+The output is composed with the build machine's fonts, and a character with no font becomes tofu
+(□ / ☒) permanently, in every copy. Japanese text needs a CJK font and emoji need an emoji font; a
+CI runner may have neither.
 
 ```yaml
 fontCheck: warn # warn (default) | error | off
 ```
 
-`warn` names the characters at risk and keeps building. `error` exits non-zero, for a pipeline that
-would rather stop than publish tofu, and no PDF is written. With `--format both` the HTML is written
-before the PDF is printed, so `error` leaves that HTML in place, and a PDF from an earlier build
-where it is — clean the output directory if a pipeline reads it. `off` does not measure at all.
+- `warn` names the characters at risk and keeps building.
+- `error` exits non-zero, and no PDF is written.
+- `off` does not measure at all.
 
-The check runs where the fonts are actually decided:
+> [!WARNING]
+> With `--format both` the HTML is written before the PDF is printed, so `error` leaves that HTML in
+> place, and a PDF from an earlier build where it is. Clean the output directory if a pipeline reads
+> it.
 
-- **PDF output**, in the browser that is already open to print it, so it costs no extra startup.
-- **`mermaid.mode: pre-render`**, which measures and positions diagram text with the build machine's
-  fonts and bakes the result into the SVG — a missing font is baked in there too, in the HTML as
-  much as in the PDF. That is why this key is top level rather than under `pdf`.
+The check runs where the fonts are decided:
 
-Plain HTML output is not measured, and needs no measuring: it is drawn with the reader's fonts.
+- **PDF output**, in the browser already open to print it, so it costs no extra startup.
+- **`mermaid.mode: pre-render`**, which bakes diagram text measured with the build machine's fonts
+  into the SVG, so a missing font affects the HTML as much as the PDF. That is why this key is top
+  level rather than under `pdf`.
 
-What it reports is the characters themselves, with an example of a font that covers them:
+Plain HTML output is not measured: it is drawn with the reader's fonts.
+
+The report names the characters, with an example of a font that covers them:
 
 ```text
 warning: No font on the machine running this build draws 2 character(s) this document uses, so they
@@ -312,38 +302,34 @@ come out as tofu (□ / ☒) in the PDF — permanently, in every copy of it. At
 Noto Sans CJK); ✅ (U+2705, e.g. Noto Color Emoji). Install a font that covers them …
 ```
 
-The example is a **font face, not a package**: what supplies a face differs across Debian, Windows,
-and every other platform, and naming the wrong package is worse than naming none. On Debian and
-Ubuntu the usual answer is `fonts-noto-cjk` and `fonts-noto-color-emoji` — the [CI guide](/docs/ci)
+The example is a **font face, not a package**, since packages differ across platforms. On Debian and
+Ubuntu the usual answer is `fonts-noto-cjk` and `fonts-noto-color-emoji`; the [CI guide](/docs/ci)
 installs both.
 
 What it does and does not see:
 
 - **Only what will be drawn is measured.** The sidebar, the table of contents, and the search
-  results are hidden when printing, so a character that appears only there is not reported. What
-  counts as hidden is `display: none`, `content-visibility: hidden`, and `visibility: hidden`.
-- **The unit is the grapheme cluster**, together with the font of the element it appears in, so a
-  variation sequence or an emoji ZWJ sequence is judged as the unit it is drawn as, not as separate
-  codepoints. A long list is cut short with a count of the rest rather than silently truncated.
+  results are hidden when printing, so a character that appears only there is not reported. Hidden
+  means `display: none`, `content-visibility: hidden`, or `visibility: hidden`.
+- **The unit is the grapheme cluster**, with the font of its element, so a variation sequence or an
+  emoji ZWJ sequence is judged as drawn, not as separate codepoints. A long list is cut short with a
+  count of the rest.
 - **It is a heuristic** over the browser's font fallback: each cluster is compared against a
-  private-use codepoint no font is expected to draw, and a hit is confirmed by rasterising it. That
-  is why `warn` is the default — a false positive must not be able to break a build that would
-  otherwise have been fine. Choosing `error` accepts that one stops CI too.
-- **It checks its own reference**, against a second private-use codepoint and a noncharacter. If
-  this machine turns out to draw something that should have no glyph, the check says so and reports
-  no missing characters, rather than producing findings it cannot stand behind. Whether a formula
-  font has a MATH table does not rest on that reference, so it is still reported, and still stops
-  the build under `error`. If it runs out of patience
-  before the end of a very large document, it says that too rather than reporting a clean bill.
+  private-use codepoint no font is expected to draw, and a hit is confirmed by rasterising it. So
+  `warn` is the default, and choosing `error` accepts that a false positive stops CI too.
+- **It checks its own reference** against a second private-use codepoint and a noncharacter. If this
+  machine draws something that should have no glyph, the check says so and reports no missing
+  characters. The MATH table check does not rest on that reference, so it is still reported, and
+  still stops the build under `error`. If the check reaches its inspection limit on a very large
+  document before the end, it says so rather than reporting a clean result.
 - **The default page-number footer is measured too.** A replacement `pdf.header` / `pdf.footer`
   fragment is not: it is arbitrary HTML that brings a font of its own.
-- **Formulas are measured as they are drawn.** A single-letter variable is drawn as a mathematical
-  italic letter (`x` as `𝑥`, U+1D465), so that is the character measured: a machine with no math
-  font reports it, although `x` itself draws. The font formulas are drawn in must also have an
-  OpenType MATH table, without which brackets, braces and radicals do not stretch to what they
-  enclose; a formula font without one is reported as `font/no-math-table`, under the same `warn`,
-  `error` and `off`. Cambria Math ships with Windows; on Debian and Ubuntu, `fonts-lmodern` supplies
-  Latin Modern Math.
+- **Formulas are measured as drawn.** A single-letter variable is drawn as a mathematical italic
+  letter (`x` as `𝑥`, U+1D465), so a machine with no math font reports it although `x` itself draws.
+  The formula font must also have an OpenType MATH table, without which brackets, braces and radicals
+  do not stretch; a formula font without one is reported as `font/no-math-table`, under the same
+  `warn`, `error` and `off`. Cambria Math ships with Windows; on Debian and Ubuntu, `fonts-lmodern`
+  supplies Latin Modern Math.
 
 ### `output`
 
@@ -367,21 +353,27 @@ the bundle entirely.
 | `sources.excludeDefaults`      | boolean    | `true`                        | Whether the built-in list applies. Set `false` for a tree that really does bundle its `_`-prefixed files. |
 | `sources.lineBreak`            | string     | `space`                       | What a newline inside a paragraph becomes, in Markdown and AsciiDoc alike. `space` leaves it as CommonMark and Asciidoctor do (the browser shows a space). `break` turns it into a `<br>`; in AsciiDoc this sets `hardbreaks-option` as a default, so a document that writes `:hardbreaks-option!:` keeps its own lines joined. `join` removes it between two East Asian characters (East_Asian_Width F, W, or H, neither Hangul), so in any browser and in the PDF there is no space where a Japanese sentence ends on such a character and the next begins with one. Elsewhere the newline stays — next to a Latin letter or digit (a footnote reference such as `[^1]` included), next to an ambiguous-width character such as `…` or `→`, and next to inline code or an image. `break` leaves headings alone, and neither value changes the contents of `pre` and `code`. The search index follows the same value. |
 
-The built-in list is `['_partials/**', 'partials/**', 'includes/**', '**/_*']` — the paths that hold
-include fragments rather than pages. `sources.exclude` adds to it, because a list written to keep one
-draft out of the bundle should not also hand back every fragment: that failure is silent, and it
-surfaces far from its cause.
+The built-in list is `['_partials/**', 'partials/**', 'includes/**', '**/_*']`, the paths that hold
+include fragments rather than pages. `sources.exclude` adds to it, so excluding one draft does not
+bring every fragment back:
 
 ```yaml
 sources:
   exclude: [drafts/**] # kept out, and so are _partials/** and the rest
 ```
 
+A file named directly on the command line (`monodocs build ./docs/_draft.md`) is bundled whatever the
+patterns say. The patterns only decide what a directory scan picks up.
+
+> [!NOTE]
+> `sidebar.exclude` was the earlier home for `sources.exclude`. It still works and behaves the same
+> way (merged rather than replacing), but warns: a match is left out of the bundle, not just out of
+> the navigation.
+
 #### `sources.asciidoc.attributes` (values a document set shares) {#asciidoc-attributes}
 
-Asciidoctor is configured by attributes. `:sectnums:` in one document works, but a document set that
-wants numbering has to repeat it in every file, and a value shared across files — a product name, a
-release, a customer — has nowhere to live at all.
+Sets Asciidoctor attributes for every AsciiDoc file, such as `:sectnums:` without repeating it in
+each file, or a value shared across files (a product name, a release, a customer).
 
 ```yaml
 sources:
@@ -392,7 +384,8 @@ sources:
       release: "7.2"
 ```
 
-An attribute set here is a **default, not a lock**, so a document that sets its own wins:
+An attribute set here is a **default, not a lock** (the opposite of Asciidoctor's API default), so a
+document that sets its own wins:
 
 ```asciidoc
 = Release notes
@@ -401,9 +394,7 @@ An attribute set here is a **default, not a lock**, so a document that sets its 
 Shipping {product}.   // Gadget, not Widget
 ```
 
-That is the opposite of what Asciidoctor's API does by default, and it is what an author expects from
-a configuration file: the file states what every document gets *unless it says otherwise*. A document
-turns one off for itself the same way, with `:sectnums!:`.
+A document turns one off for itself the same way, with `:sectnums!:`.
 
 `sectnums` numbers each file on its own and restarts in the next. To number the whole document as one,
 use [`numbering.sections`](#numbering) instead; while it is on, `sectnums` is refused.
@@ -413,38 +404,29 @@ monodocs relies on:
 
 - **Allowed**, and settable per build: presentational and structural attributes such as `sectnums`,
   `sectnumlevels`, `experimental`, `idprefix`, `idseparator`, `tabsize`, `toclevels`.
-- **Author-defined**: any name that is not one monodocs holds back. These are recognised by shape
-  rather than enumerated — an attribute name monodocs does not claim is yours.
+- **Author-defined**: any name monodocs does not hold back, recognised by shape rather than
+  enumerated.
 - **Refused**, naming the attribute and why: `allow-uri-read`, `docinfo`, `backend`, `data-uri`,
   `imagesdir`, `source-highlighter`, and the `sd-*` namespace, which belongs to monodocs.
-  `allow-uri-read` is the sharpest of these: it lets `include::` fetch a URL, turning a build into an
-  HTTP client, and safe mode does not stop it — it is exactly the attribute safe mode consults.
+  `allow-uri-read` lets `include::` fetch a URL, turning a build into an HTTP client, and safe mode
+  does not stop it, since it is the very attribute safe mode consults.
 - **Not accepted at all**: `safe` and `base_dir`, which are the sandbox; `docdir`, `docfile`,
   `docname`, `docfilesuffix`, and `outdir`, which decide where a path resolves; `outfilesuffix` and
   `relfilesuffix`, which decide what a cross-reference looks like and so whether it can be turned
   into a hash route; and `showtitle`, which the page title, the heading list, and every element ID
   are built from.
 
-An attribute name must be written bare — lower-case letters, digits, underscores, and hyphens. A
-name carrying `@` or `!` is refused, because Asciidoctor reads those as a soft set or an unset and
-the attribute would reach it under its bare name, past the classification above.
+An attribute name must be written bare: lower-case letters, digits, underscores, and hyphens. A
+name carrying `@` or `!` is refused, because Asciidoctor would read it as a soft set or an unset and
+the attribute would bypass the classification above.
 
-Unsetting is not offered — a value of `false`, or a name ending in `!`, is refused — because a
-document unsets an attribute for itself. A value ending in `@` is refused too: that is Asciidoctor's
-marker for an attribute the document may override, and monodocs adds it to every value here.
+Unsetting is not offered (a value of `false`, or a name ending in `!`, is refused); a document
+unsets an attribute for itself. A value ending in `@` is refused too: that is Asciidoctor's marker
+for an attribute the document may override, and monodocs already adds it to every value here.
 
-**Markdown gets no equivalent.** A `vars:` map substituted into Markdown text is a template language:
-it needs an escape for the literal spelling, a rule for an undefined name, a rule for code blocks,
-and a decision about recursion. AsciiDoc has attributes because AsciiDoc has attributes. A document
-set that needs shared values can write the pages that use them in AsciiDoc, which is what mixing
-formats is for.
-
-A file named directly on the command line (`monodocs build ./docs/_draft.md`) is bundled whatever the
-patterns say. Naming it is a choice; the patterns only decide what a directory scan picks up.
-
-> `sidebar.exclude` was the earlier home for this key. It still works and now behaves the same way —
-> merged rather than replacing — but it warns, because it never was a sidebar setting: a match is
-> left out of the bundle, not just out of the navigation.
+> [!NOTE]
+> Markdown has no equivalent: substituting a `vars:` map into Markdown text would be a template
+> language. Write the pages that need shared values in AsciiDoc.
 
 ### `sidebar`
 
@@ -482,14 +464,17 @@ Each entry has either `path` (a page) or `children` (a group), never both:
 - `title` is optional for a page — the page's own title is used when omitted — and required for a group.
 
 The custom sidebar also defines the **reading order**: previous/next navigation, the order of pages in a
-PDF, and the initially shown page all follow it. Pages you do not list stay reachable by their hash route
-and are reported as a warning by `monodocs validate`; they are placed after the listed pages in reading
-order. A `hidden` page listed here is skipped with a warning, and a group whose pages all disappear is
-dropped. A path that does not exist is an error.
+PDF, and the initially shown page all follow it.
 
-Because the structure and titles are explicit, `sidebar.titleTransform.directory` and
-`sidebar.flattenSingleChild` do not apply in this mode. `sidebar.collapseDepth`, `sources.exclude`,
-`sidebar.titleFrom`, and `sidebar.titleTransform.page` still work as usual.
+- Pages you do not list stay reachable by their hash route, come after the listed pages in reading
+  order, and are reported as a warning by `monodocs validate`.
+- A `hidden` page listed here is skipped with a warning, and a group whose pages all disappear is
+  dropped.
+- A path that does not exist is an error.
+
+`sidebar.titleTransform.directory` and `sidebar.flattenSingleChild` do not apply in this mode.
+`sidebar.collapseDepth`, `sources.exclude`, `sidebar.titleFrom`, and `sidebar.titleTransform.page`
+still work as usual.
 
 #### `sidebar.titleTransform`
 
@@ -522,9 +507,8 @@ sidebar:
 | -------------------- | ----------------- | ------- | ----------- |
 | `numbering.sections` | `false` / integer | `false` | Number headings continuously across the whole document, down to this level (2–6). See below. |
 
-A specification refers to itself by number — "see 3.2" — and a document made of many files cannot
-number itself from inside any one of them: AsciiDoc's `:sectnums:` restarts in every file, and
-Markdown has no numbering at all. `numbering.sections` numbers the bundled document as one:
+AsciiDoc's `:sectnums:` restarts in every file, and Markdown has no numbering at all.
+`numbering.sections` numbers the bundled document as one, so it can refer to itself ("see 3.2"):
 
 ```yaml
 numbering:
@@ -542,23 +526,21 @@ numbering:
   still carry it (`2.1`, `2.2`).
 - **Where it appears.** In the heading itself, as `<span class="section-number">2.3</span>` followed
   by a space, so a stylesheet can hide it and copying the heading copies the number. In the sidebar,
-  the in-page table of contents, and the PDF bookmarks, so no list disagrees with the body. In
-  search: typing `3.2` finds section 3.2, matched as a whole number and listed first, ahead of pages
-  that only mention "13.2", while the digits are kept out of the text words are matched against, so
-  they never change how a word ranks.
+  the in-page table of contents, and the PDF bookmarks. In search: typing `3.2` finds section 3.2,
+  matched as a whole number and listed first, ahead of pages that only mention "13.2"; the digits are kept
+  out of the text words are matched against, so they never change how a word ranks.
 - **Never in an address.** Routes, page IDs, and heading IDs are exactly what they are without
-  numbering. A number is a label; an address that changed whenever a page moved would break every
-  link anyone had copied.
+  numbering, so a number changing never changes an address or breaks a copied link.
 - **Which headings count.** Every heading from `h2` down to `numbering.sections`, whatever
   [`toc.maxLevel`](#toc) is. An AsciiDoc `[discrete]` (or `[float]`) heading is not a section, so it
   is not numbered and the count passes over it. An `[appendix]` section is counted like any other, and keeps the
-  `Appendix A:` caption Asciidoctor gives it. A skipped level is counted as zero — an `h4` directly
-  under the first `h2` is `x.1.0.1` — and is already reported as `heading/level-skipped`.
+  `Appendix A:` caption Asciidoctor gives it. A skipped level is counted as zero (an `h4` directly
+  under the first `h2` is `x.1.0.1`) and is already reported as `heading/level-skipped`.
 - **`:sectnums:` is refused while this is on**, naming this key, whether a document sets it or
-  [`sources.asciidoc.attributes`](#asciidoc-attributes) does. Two numberings over one document give a
-  heading two numbers. The check asks Asciidoctor which sections it numbered, so a `:sectnums:`
-  turned on above one section and off again below it is caught too. With `numbering.sections: false`,
-  `:sectnums:` works as before.
+  [`sources.asciidoc.attributes`](#asciidoc-attributes) does, since a heading would get two numbers.
+  The check asks Asciidoctor which sections it numbered, so a `:sectnums:` turned on above one
+  section and off again below it is caught too. With `numbering.sections: false`, `:sectnums:` works
+  as before.
 
 ### `assets`
 
@@ -582,30 +564,23 @@ it also says where the bytes went, and the parts sum to the file:
     document   204.8 KB
 ```
 
-`images` counts every embedded copy, so an image referenced twice is counted twice; the file count is
-of distinct files, and the largest image is named, by its path relative to the root, with the size of
-one copy. `mermaid` appears
-only when `mermaid.runtime: inline` put the runtime in the file. Code highlighting has no line: it
-happens at build time and leaves only markup in the document.
+- `images` counts every embedded copy, so an image referenced twice is counted twice. The file count
+  is of distinct files, and the largest image is named by its path relative to the root, with the
+  size of one copy.
+- `mermaid` appears only when `mermaid.runtime: inline` put the runtime in the file.
+- Code highlighting has no line: it happens at build time and leaves only markup in the document.
 
-Under `onBudget: error` the build fails with this report in the error message, since a failed build
-prints no summary, and an HTML over budget fails before a PDF is rendered from it. `watch` and `serve`
+Under `onBudget: error` the build fails with this report in the error message (a failed build prints
+no summary), and an HTML over budget fails before a PDF is rendered from it. `watch` and `serve`
 treat an exceeded budget as a warning whatever `onBudget` says, so a budget kept for CI does not fail
 every save.
 
-**Images are not re-encoded.** Downscaling a screenshot is the largest saving available, and monodocs
-does not do it:
-
-- the libraries that do it well are native, which neither the single-file CLI bundle nor the
-  standalone binary can carry;
-- doing it in a browser would make an HTML-only build need Chromium;
-- an encoder's output varies with its version and platform, so the same input would stop producing
-  the same bytes;
-- and quality, colour space, EXIF orientation, animation, and SVG would each need a rule, a wrong one
-  silently degrading the picture.
-
-For a document whose images are genuinely too big, `onLargeImage: external` keeps them as files beside
-the HTML; to make them smaller, run an image tool as a step before the build.
+> [!NOTE]
+> **Images are not re-encoded.** Downscaling needs native libraries that neither the single-file CLI
+> bundle nor the standalone binary can carry (or Chromium, for an HTML-only build), makes the output
+> vary with the encoder's version and platform, and needs a rule for each of quality, colour space,
+> EXIF orientation, animation, and SVG. For images that are too big, `onLargeImage: external` keeps
+> them as files beside the HTML; to make them smaller, run an image tool as a step before the build.
 
 ### `mermaid`
 
@@ -629,9 +604,10 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | Interactivity (`click`) | Works                                    | Disabled (static SVG)                          |
 | Print / unvisited pages | May be missing                           | Always rendered                                |
 
-> **Fonts caveat**: `pre-render` measures and positions text using the fonts of **the machine running the build**, then bakes the result into the SVG. Diagrams with non-Latin labels (e.g. Japanese) render as boxes or wrap incorrectly if the build environment lacks the needed font (e.g. Noto CJK). `client` uses the reader's fonts, so it is not affected. Note that when installed via npm, what matters is **your build environment's fonts** — monodocs cannot supply them. [`fontCheck`](#font-check) warns when a diagram needs a font this machine does not have.
+`pre-render` needs Chromium at build time, so it is not the default. A missing Chromium fails the build (environment errors fail fast); only a per-diagram syntax error warns and falls back to the source. Point at a local Chromium with `PUPPETEER_EXECUTABLE_PATH` (bundled in the dev Docker image). `pre-render` is unavailable in the bundled CLI (single `.cjs` / single-executable), which ships without `node_modules`; use a package install instead.
 
-> **Default is `client`**: `pre-render` needs Chromium at build time and the build fails if it is missing (environment errors fail fast; only per-diagram syntax errors warn and fall back to source). To avoid forcing this dependency on everyone, the default is `client`. Point at a local Chromium with `PUPPETEER_EXECUTABLE_PATH` (bundled in the dev Docker image). `pre-render` is unavailable in the bundled CLI (single `.cjs` / single-executable), which ships without `node_modules`; use a package install instead.
+> [!WARNING]
+> `pre-render` measures and positions text with the fonts of **the machine running the build** and bakes the result into the SVG. Diagrams with non-Latin labels (e.g. Japanese) render as boxes or wrap incorrectly if that machine lacks the font (e.g. Noto CJK); when installed via npm, monodocs cannot supply it. `client` uses the reader's fonts and is not affected. [`fontCheck`](#font-check) warns when a diagram needs a font this machine does not have.
 
 ### `highlight`
 
@@ -645,9 +621,14 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | -------------- | ------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `math.enabled` | boolean | `true`  | Render formulas (Markdown's `$...$`, `$$...$$`, and fenced `math` block; AsciiDoc's latexmath, and `stem` when it means latexmath) to MathML at build time. `false` prints them as text, and a fenced `math` block as code, as before. |
 
-A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. AsciiDoc's asciimath is left as Asciidoctor writes it and reported (`math/asciimath-not-rendered`). A formula KaTeX cannot parse (`math/parse-failed`) or that uses a link or HTML command such as `\href` (`math/command-not-allowed`) is reported and shown as written. A style Unicode has no characters for (`math/style-unsupported`, e.g. `\mathit{123}`) an automatic equation number (`math/numbering-unsupported`, e.g. an unstarred `equation`), an enclosure CSS cannot draw (`math/notation-unsupported`, e.g. `\phase`), and a construct the browser cannot draw as written (`math/construct-unsupported`, e.g. `\vcenter`) are reported, and the formula is rendered without them.
+A formula is rendered by KaTeX to MathML only: no script or stylesheet is added to the output. What is reported:
 
-The browser draws a formula with an OpenType MATH font, which math needs on the machine that prints the PDF and in the reader's browser for the HTML. Cambria Math ships with Windows; on Linux, install one such as Latin Modern Math (`fonts-lmodern` on Debian and Ubuntu). Without one, brackets do not stretch, and variables come out as tofu unless another font has the mathematical letters. For the PDF, [`fontCheck`](#font-check) reports both.
+- AsciiDoc's asciimath is left as Asciidoctor writes it (`math/asciimath-not-rendered`).
+- A formula KaTeX cannot parse (`math/parse-failed`) or that uses a link or HTML command such as `\href` (`math/command-not-allowed`) is shown as written.
+- Each of these is reported, and the formula is rendered without it: a style Unicode has no characters for (`math/style-unsupported`, e.g. `\mathit{123}`), an automatic equation number (`math/numbering-unsupported`, e.g. an unstarred `equation`), an enclosure CSS cannot draw (`math/notation-unsupported`, e.g. `\phase`), and a construct the browser cannot draw as written (`math/construct-unsupported`, e.g. `\vcenter`).
+
+> [!IMPORTANT]
+> The browser draws formulas with an OpenType MATH font, needed on the machine that prints the PDF and in the reader's browser for the HTML. Cambria Math ships with Windows; on Linux, install one such as Latin Modern Math (`fonts-lmodern` on Debian and Ubuntu). Without one, brackets do not stretch, and variables come out as tofu unless another font has the mathematical letters. For the PDF, [`fontCheck`](#font-check) reports both.
 
 ### `html`
 
@@ -664,7 +645,7 @@ The browser draws a formula with an OpenType MATH font, which math needs on the 
 #### `html.labels` (UI labels) {#html-labels}
 
 Each entry replaces one label from the table `lang` selected; everything you leave out keeps the
-table's wording. This is also how you supply a language monodocs does not ship a table for.
+table's wording. This is also how you supply a language monodocs ships no table for.
 
 ```yaml
 lang: fr
@@ -674,9 +655,8 @@ html:
     noResults: Aucun résultat
 ```
 
-An unknown key is rejected rather than ignored, so a typo cannot silently keep the default. That
-makes the key set part of the configuration surface, which is why it is enumerated here in full
-rather than left to whatever the theme happens to read.
+An unknown key is rejected rather than ignored, so a typo cannot silently keep the default. The full
+key set:
 
 | Key                  | `en`                         | `ja`                       | Where it appears |
 | -------------------- | ---------------------------- | -------------------------- | ---------------- |
@@ -708,7 +688,7 @@ rather than left to whatever the theme happens to read.
 | `cover`              | Cover                        | 表紙                       | The cover's page label, shown in the PDF viewer's page number box |
 | `contents`           | Contents                     | 目次                       | The heading of the printed table of contents ([`pdf.toc`](#pdf-toc)) |
 
-What a custom theme gets is bounded by the theme contract, and the four cases differ:
+How a custom theme gets the labels:
 
 - **Every theme** gets the resolved labels as data in <span v-pre>`{{siteDataJson}}`</span>. This is the only
   unqualified guarantee.
@@ -717,8 +697,7 @@ What a custom theme gets is bounded by the theme contract, and the four cases di
   `template.html` gets them wherever it kept those hooks, through <span v-pre>`{{labelTocTitle}}`</span> and the other
   <span v-pre>`{{label…}}`</span> tokens, and nowhere else.
 - **A theme replacing `app.js`** receives the data and applies it itself.
-- **Static text a custom `template.html` spells out itself** stays as written. monodocs cannot know
-  which strings in someone else's markup were meant to be labels.
+- **Static text a custom `template.html` spells out itself** stays as written.
 
 <span v-pre>`{{lang}}`</span> is an optional token, so a custom template that hardcodes `<html lang="…">` keeps what it
 wrote.
@@ -743,17 +722,16 @@ default theme**:
 | `template.html` | The HTML skeleton, including where the sidebar, pages, and scripts go.    |
 | `app.js`        | The client script: hash routing, search, table of contents, prev/next, dark mode, code-block controls, and the image lightbox. |
 
-A style-only theme is therefore one file, and it keeps working when the client script gains features
-in a later release. Replacing `app.js` means taking over every interactive behavior listed above.
+A style-only theme is one file, and keeps working when the client script gains features in a later
+release. Replacing `app.js` means taking over every interactive behavior listed above.
 
-A custom `template.html` must keep these tokens, which the build refuses to run without because the
-document would be unusable:
+A custom `template.html` must keep these tokens; without them the build refuses to run:
 
 ```text
 {{style}}  {{sidebar}}  {{pages}}  {{siteDataJson}}  {{appJs}}  {{bodyScripts}}
 ```
 
-The rest are optional, and dropping one just drops the feature it carries:
+The rest are optional; dropping one drops the feature it carries:
 
 ```text
 {{title}}                                                    document title
@@ -763,17 +741,20 @@ The rest are optional, and dropping one just drops the feature it carries:
 {{#contentWidthToggle}} {{#imageLightbox}} {{#branding}} {{#generatorVersion}}   optional blocks
 ```
 
-Because the output is a single self-contained file, a theme cannot reference external assets. Inline
+A theme cannot reference external assets, because the output is a single self-contained file. Inline
 fonts and images as data URIs in `style.css`. `monodocs watch` and `monodocs serve` also watch the
-theme directory, so edits show up in the preview. A theme is executable code in your document — treat
-it with the same trust as your documentation sources.
+theme directory, so edits show up in the preview (the directory must exist when watching starts; one
+created later is picked up at the next source or config change).
+
+> [!CAUTION]
+> A theme is executable code in your document. Treat it with the same trust as your documentation
+> sources.
 
 ### `pdf`
 
-Applies when the output format is `pdf` or `both` — with two exceptions.
-[`pdf.density`](#pdf-density) and [`pdf.pageBreakLevel`](#pdf-page-break-level) are written into the
-HTML as well, because printing that HTML from a browser is the same act of putting the document on
-paper.
+Applies when the output format is `pdf` or `both`, except that [`pdf.density`](#pdf-density) and
+[`pdf.pageBreakLevel`](#pdf-page-break-level) are also written into the HTML, so printing it from a
+browser gets them too.
 
 | Key                   | Type              | Default   | Description |
 | --------------------- | ----------------- | --------- | ----------- |
@@ -792,9 +773,8 @@ paper.
 
 #### `pdf.density` (how tightly the page is set) {#pdf-density}
 
-`pdf.margin` decides where the text starts, not how much of it fits. What decides a page count is
-type size, leading, the space above headings, and the padding inside table cells. `pdf.density`
-moves those four together:
+`pdf.density` moves together the four things that decide a page count: type size, leading, the space
+above headings, and the padding inside table cells (`pdf.margin` only decides where the text starts):
 
 ```yaml
 pdf:
@@ -808,24 +788,19 @@ pdf:
 | `compact` | `14px` | `1.35` | `0.8em` | `0.3rem 0.5rem` |
 | `tight` | `12px` | `1.3` | `0.6em` | `0.2rem 0.35rem` |
 
-**The default is set for paper, not for a screen.** A stylesheet written for reading on a screen is
-generous with leading and with the air above headings, and on paper that generosity is what a page
-count pays for. Between `relaxed` and `normal` the type size does not change at all — both set the
-body at 16px — and the same document still comes out on fewer sheets. See the four of them
-[side by side](#pdf-density-sample) below.
-
-**`relaxed` is the screen setting under a name**, for a document that is read on a screen and printed
-only now and then.
-
-**Type size is the last lever, not the first.** The width of the text column is whatever `pdf.margin`
-leaves — a density does not narrow it — so each step down in type size is also a step up in the
-number of characters on a line. At the default A4 margins that is roughly 42 Japanese characters at
-16px and around 56 at 12px. If you want `compact` or `tight` without the longer line, widen
-`pdf.margin` in the same change.
+- **The default is set for paper, not for a screen.** `normal` keeps the 16px body of `relaxed` but
+  tightens leading, heading space, and table cell padding, so the same document comes out on fewer
+  sheets. See the four [side by side](#pdf-density-sample) below.
+- **`relaxed` is the screen setting under a name**, for a document read on a screen and printed only
+  now and then.
+- **Type size is the last lever, not the first.** A density does not narrow the text column (that is
+  whatever `pdf.margin` leaves), so a smaller type size means more characters per line: at the
+  default A4 margins, roughly 42 Japanese characters at 16px and around 56 at 12px. To use `compact`
+  or `tight` without the longer line, widen `pdf.margin` in the same change.
 
 To adjust a preset, give an object instead of a name. `base` says which preset to start from
-(default `normal`), and the object replaces only what it names — so changing one value does not mean
-copying the other three, and a preset retuned in a later release still reaches you:
+(default `normal`), and the object replaces only what it names, so a preset retuned in a later
+release still reaches the other values:
 
 ```yaml
 pdf:
@@ -837,23 +812,21 @@ pdf:
 
 `fontSize` and `headingSpacing` take a CSS length (a number and one of `px`, `pt`, `mm`, `cm`, `in`,
 `rem`, `em`, or plain `0`). `lineHeight` takes a positive number with no unit. `tableCellPadding`
-takes one or two lengths, as CSS padding does. Anything else — `calc(...)`, a value with something
-after it — is refused rather than written into the stylesheet.
+takes one or two lengths, as CSS padding does. Anything else (`calc(...)`, a value with something
+after it) is refused rather than written into the stylesheet.
 
-Two things follow from where the rules live:
+How the rules are written:
 
-- **Only what differs from the screen is written.** `relaxed` is a record of what the theme already
-  does, so asking for it produces no print rules at all. The default writes leading, heading spacing,
-  and cell padding — but no font size, because it does not change one, so printing this HTML from
-  your browser still uses your own base font size.
-- **The rules are `@media print`.** The same file stays as it was on screen and is set tighter on
-  paper. `--format pdf` goes through the print stylesheet and gets the density; so does printing the
-  HTML from a browser. The key sits under `pdf` because that is what it is for.
+- **Only what differs from the screen is written.** `relaxed` is what the theme already does, so it
+  produces no print rules at all. The default writes leading, heading spacing, and cell padding but
+  no font size, so printing the HTML from your browser still uses your own base font size.
+- **The rules are `@media print`.** The file is unchanged on screen and set tighter on paper, both
+  for `--format pdf` and for printing the HTML from a browser.
 
 ##### The four presets on the same document {#pdf-density-sample}
 
-One source, one paper size, one set of margins, built four times with nothing changed but
-`pdf.density`. Each thumbnail is the first page of the PDF beside it.
+One source, paper size, and set of margins, built four times changing only `pdf.density`. Each
+thumbnail is the first page of the linked PDF.
 
 <div class="density-samples">
   <figure>
@@ -882,8 +855,9 @@ One source, one paper size, one set of margins, built four times with nothing ch
   </figure>
 </div>
 
-The document itself says what to look at on each page. Read one on paper before choosing: a density
-that looks fine at 100% on a screen can be a page nobody wants to read at arm's length.
+> [!TIP]
+> The sample document says what to look at on each page. Read one on paper before choosing: a
+> density that looks fine at 100% on a screen can be hard to read at arm's length.
 
 #### `pdf.header` / `pdf.footer` (page bands) {#pdf-bands}
 
@@ -893,8 +867,8 @@ By default every page carries its number and the total, centred at the foot:
 3 / 12
 ```
 
-Digits and a separator, deliberately: this is the one piece of text monodocs adds to every page, and
-in this form it needs no translation and does not change with [`lang`](#lang).
+It is digits and a separator only, so it needs no translation and does not change with
+[`lang`](#lang).
 
 Both keys take `false` to remove the band, or an HTML fragment to replace it:
 
@@ -904,27 +878,21 @@ pdf:
   footer: false
 ```
 
-The fragment is handed to Chromium, which substitutes into elements carrying **its own classes** —
-`pageNumber`, `totalPages`, `title`, `date`, `url`. There is no <span v-pre>`{{token}}`</span> syntax: the fragment is
-already HTML, and putting monodocs tokens over Chromium's classes would add a substitution and
-escaping layer for no gain.
+The fragment is handed to Chromium, which substitutes into elements carrying **its own classes**:
+`pageNumber`, `totalPages`, `title`, `date`, `url`. There is no <span v-pre>`{{token}}`</span> syntax.
 
-Two things are easy to be caught by:
-
-- **A fragment inherits none of the document's styles.** Set the font and size yourself, as the
-  examples do, or you get Chromium's unstyled default rather than something matching your pages.
-- **The band lives in the margin.** Chromium sizes it to the top and bottom margins rather than
-  taking space from the content, so nothing reflows — but a margin smaller than the band leaves the
-  band against the paper edge. monodocs warns when the bottom margin is smaller than the default
-  footer needs, measuring that footer rather than comparing against a fixed number. **A replacement
-  fragment is not checked**: whether arbitrary HTML and CSS fit cannot be judged from the margin
-  value alone, and a check that pretended otherwise would either warn falsely or promise something
-  only measurement could keep.
+> [!WARNING]
+> - **A fragment inherits none of the document's styles.** Set the font and size yourself, as the
+>   examples do, or you get Chromium's unstyled default.
+> - **The band lives in the margin.** Chromium sizes it to the top and bottom margins, so nothing
+>   reflows, but a margin smaller than the band leaves the band against the paper edge. monodocs
+>   warns when the bottom margin is smaller than the default footer needs, measuring that footer
+>   rather than comparing against a fixed number. **A replacement fragment is not checked**, since
+>   whether arbitrary HTML and CSS fit cannot be judged from the margin value alone.
 
 #### `pdf.cover` (cover) {#pdf-cover}
 
-Starts the PDF you hand to someone with a cover that carries the title, the version, the date, and
-the authors.
+Starts the PDF with a cover carrying the title, version, date, and authors.
 
 ```yaml
 title: Internal Documentation
@@ -949,13 +917,12 @@ pdf:
   number box agrees with the print: the cover shows the [`cover`](#html-labels) label (`Cover` / `表紙`),
   the body 1, 2, 3, and so on.
 - **The bookmarks still point into the body.** The cover is not added to them.
-- **HTML gets no cover.** On screen, the same information belongs in the footer at the end, which
-  `document` already fills.
+- **HTML gets no cover.** On screen, the same information is in the footer at the end, which
+  `document` fills.
 
 #### `pdf.toc` (a table of contents on paper) {#pdf-toc}
 
-The bookmarks are a table of contents for a screen. Paper has no side panel, so a printed document
-opens with a list of its sections and the sheet each one starts on:
+Opens the printed document with a list of its sections and the sheet each one starts on:
 
 ```yaml
 pdf:
@@ -973,26 +940,24 @@ pdf:
   Its sheets are part of the body, so they are numbered in the footer and the first page starts on the
   sheet after them. The heading is the [`contents`](#html-labels) label (`Contents` / `目次`).
 - **The numbers are read from the PDF, and checked.** monodocs prints the document once with the
-  number column empty, reads which sheet each section landed on, and prints it again with the
-  numbers in. It then reads that PDF — the one that is written — once more and compares. The column
-  has a fixed width in tabular figures, so filling it in does not rewrap a line and the second print
-  settles. If it ever does not, monodocs prints again a bounded number of times, and a document that
-  still disagrees with itself **fails the build** (`pdf/toc-not-converged`) rather than shipping a
-  table that is usually right. A line whose section cannot be found in the page fails the build too
+  number column empty, reads which sheet each section landed on, prints it again with the numbers
+  in, then reads that final PDF once more and compares. The column has a fixed width in tabular
+  figures, so filling it in does not rewrap a line and the second print settles. If it ever does
+  not, monodocs prints again a bounded number of times, and a document that still disagrees **fails
+  the build** (`pdf/toc-not-converged`). A line whose section cannot be found in the page fails the build too
   (`pdf/toc-unresolved`).
-- **It costs a second print.** Measured with a document of about a hundred sheets in Japanese with
-  client-mode Mermaid diagrams, the PDF build took about 2.1 s without the table and 3.1 s with it
-  on a Linux workstation, and 3.9 s and 6.1 s on a GitHub-hosted Windows runner (different machines,
-  so compare each pair, not the two platforms). That is why it is off by default.
-- **PDF only.** The HTML has the sidebar, and no sheet to number; printing the HTML from a browser
-  does not add a table.
-- **No running headers.** "The current chapter at the top of every sheet" needs a different
-  mechanism: Chromium implements neither CSS `string-set` nor `string()`, and its header template
-  substitutes only its fixed classes.
+- **It costs a second print**, which is why it is off by default. For a document of about a hundred
+  sheets in Japanese with client-mode Mermaid diagrams, the PDF build took about 2.1 s without the
+  table and 3.1 s with it on a Linux workstation, and 3.9 s and 6.1 s on a GitHub-hosted Windows
+  runner (different machines, so compare each pair, not the two platforms).
+- **PDF only.** Printing the HTML from a browser does not add a table.
+- **No running headers** (the current chapter at the top of every sheet): Chromium implements
+  neither CSS `string-set` nor `string()`, and its header template substitutes only its fixed
+  classes.
 
 #### `pdf.watermark` (watermark) {#pdf-watermark}
 
-A draft, or a document that is not to leave the building, can say so on every sheet:
+Marks every sheet, for example as a draft or as confidential:
 
 ```yaml
 pdf:
@@ -1000,28 +965,26 @@ pdf:
 ```
 
 - **One line of text, and nothing else to set.** It is printed diagonally across the middle of every
-  sheet, in a light grey that survives a photocopier. It is blended into the page so that it reads as
-  behind the content — text and lines stay as dark as they were where they cross it — and nothing
-  covers it: not a code block's background, and not a background a theme paints. Its size follows the
-  length of the text so that the line fits. There is no image, angle, font, opacity, or per-page control.
+  sheet, in a light grey that survives a photocopier, and sized so the line fits. It is blended into
+  the page so it reads as behind the content (text and lines crossing it stay as dark as they were),
+  and nothing covers it, neither a code block's background nor one a theme paints. There is no
+  image, angle, font, opacity, or per-page control.
 - **Every printed sheet, and only printed ones.** The PDF carries it on every sheet, the
   [cover](#pdf-cover) included, and so does the HTML when it is printed from a browser. It never
   appears on screen. Blending can only darken, so a browser print of the dark color scheme with
   background graphics on shows it barely, if at all.
-- **A theme cannot remove it.** The rule is added to the stylesheet by monodocs itself, so a theme
-  that replaces `style.css` still prints it, and its declarations are `!important`, so a print rule
-  that hides generated content (`*::after { display: none }`) does not take it along.
-- **Its text is font-checked.** [`fontCheck`](#font-check) measures the watermark as well as the body,
-  on the body's sheets and on the cover, so a watermark in a script the build machine has no font for
-  is reported rather than printed as tofu on every sheet.
+- **A theme cannot remove it.** monodocs adds the rule to the stylesheet itself, so a theme that
+  replaces `style.css` still prints it, and its declarations are `!important`, so a print rule that
+  hides generated content (`*::after { display: none }`) does not take it along.
+- **Its text is font-checked.** [`fontCheck`](#font-check) measures the watermark on the body's
+  sheets and on the cover, so a script the build machine has no font for is reported.
 - **The text is text.** It is escaped into the stylesheet, so quotes, backslashes, or markup in the
   value appear as those characters. A line break or a blank value is refused.
 
 #### `pdf.pageBreakLevel` (a sheet per section) {#pdf-page-break-level}
 
-A source file already starts a new sheet. For a document whose sections each have to begin on one —
-a specification, a set of regulations, anything handed over on paper — this starts one before every
-heading down to the level you name:
+A source file already starts a new sheet. This also starts one before every heading down to the
+level you name, for documents whose sections must each begin on a new sheet:
 
 ```yaml
 pdf:
@@ -1029,29 +992,24 @@ pdf:
 ```
 
 `2` is h2 only, `3` is h2 and h3, `6` is h2 through h6. `false`, the default, breaks before no
-heading and leaves every existing document exactly as it is. h1 is not a level here: it is the page
-title, and the file it titles has already started a sheet.
+heading. h1 is not a level here: it is the page title, and its file has already started a sheet.
 
-**A heading breaks unless nothing renders before it, or the only thing that does is the page title.**
-So a page that opens with its title and goes straight into `## Section` keeps them together — the
-alternative is a sheet holding one line — while a page whose title is followed by an introduction
-does break before the section, because the introduction belongs on the title's sheet.
+A heading does **not** break when:
 
-Two more things this rule implies:
+- nothing renders before it, or only the page title does. A page that opens with its title and goes
+  straight into `## Section` keeps them together, while a title followed by an introduction does
+  break before the section;
+- it is inside a block that must not be split: a table, a figure, a code block, an admonition, a
+  blockquote;
+- it comes straight after a manual page-break marker, which has already broken there (two forced
+  breaks would leave a blank sheet).
 
-- **A heading inside a block that must not be split is left alone** — a table, a figure, a code
-  block, an admonition, a blockquote. Holding the block together and breaking inside it are not both
-  possible.
-- **A heading straight after a manual page-break marker is left alone**, since the marker has
-  already broken there. Two forced breaks in a row would leave a blank sheet between them.
-
-The space the density leaves above a heading goes with it: a heading that starts a sheet sits at the
-top margin rather than pushed down by the gap that separates sections in the middle of a page.
+A heading that starts a sheet sits at the top margin, without the space the density leaves above
+headings.
 
 #### Page breaks {#page-breaks}
 
-Where a sheet ends is a decision the document makes, not the configuration. A source file always
-starts a new sheet; inside a file, a marker of your own starts one:
+A source file always starts a new sheet; inside a file, a marker of your own starts one:
 
 ```markdown
 The last paragraph before the break.
@@ -1069,17 +1027,15 @@ The last paragraph before the break.
 The first paragraph of the new sheet.
 ```
 
-AsciiDoc's `<<<` is Asciidoctor's own page break. In Markdown the marker is the empty `<div>` that
-Markdown-to-PDF tools have settled on — `<div style="page-break-after: always"></div>` is accepted
-as the same thing — and it stays invisible where the source is read, because an empty `div` renders
-as nothing.
+AsciiDoc's `<<<` is Asciidoctor's own page break. In Markdown the marker is the empty `<div>`
+common among Markdown-to-PDF tools (`<div style="page-break-after: always"></div>` is accepted as
+the same thing); an empty `div` renders as nothing where the source is read.
 
-Markdown raw HTML is otherwise dropped, and that has not changed: monodocs matches the marker and
-replaces it with an element it builds itself, so no attribute of yours reaches the output. Anything
-else — a second attribute, an extra class, text between the tags — is dropped like any other raw
-HTML rather than repaired.
+Markdown raw HTML is otherwise dropped. monodocs replaces the marker with an element it builds
+itself, so no attribute of yours reaches the output. Anything else (a second attribute, an extra
+class, text between the tags) is dropped like any other raw HTML rather than repaired.
 
-**Exactly what counts as the marker** in Markdown, since 1.0 will freeze it:
+**Exactly what counts as the marker** in Markdown (1.0 will freeze this):
 
 - The element is a lowercase `div`, and it carries exactly one attribute: `class="page-break"` or
   `style="page-break-after: always"`.
@@ -1094,12 +1050,12 @@ HTML rather than repaired.
   `<div class="page-break"/>`, a newline between the colon and `always`, and any further declaration
   inside `style`.
 
-Two more things follow from a break being a break:
+Also:
 
 - **In Markdown, a marker must be a block of its own.** One inside a blockquote, a list item, a
   table cell, or a heading is not recognised and is dropped: those are the blocks the print layout
-  keeps together. (In AsciiDoc, where `<<<` is Asciidoctor's own construct, the element lands
-  wherever Asciidoctor puts it — so keep `<<<` at the top level there too.)
+  keeps together. In AsciiDoc the element lands wherever Asciidoctor puts `<<<`, so keep `<<<` at
+  the top level there too.
 - **A marker with nothing after it leaves a blank sheet**, and so do two markers in a row. That is
   how you ask for one.
 
@@ -1112,9 +1068,10 @@ The order of pages in the sidebar and in the prev/next navigation is **independe
 1. **`order` (explicit, ascending)** — the frontmatter `order` (`:sd-order:` in AsciiDoc). Lower comes first.
 2. **Filename (path) order** — pages without an `order` are sorted by their extension-stripped relative path (`localeCompare`). Pages that have an `order` always come first; pages without one fall to the end.
 
-So even if `01_intro.md` displays as “intro” via `titleTransform: stripNumberPrefix`, **its position is decided by the filename that still contains `01_`**, not by the H1 heading. This lets you pin the order with a numeric prefix while cleaning up only the displayed text.
+So even if `01_intro.md` displays as “intro” via `titleTransform: stripNumberPrefix`, **its position is decided by the filename that still contains `01_`**, not by the H1 heading. You can pin the order with a numeric prefix and clean up only the displayed text.
 
-> Directory (sidebar folder) order follows the position of the first page that appears inside it — i.e. filename order as well.
+> [!NOTE]
+> Directory (sidebar folder) order follows the position of the first page inside it, i.e. filename order as well.
 
 ### Page frontmatter
 
@@ -1146,10 +1103,9 @@ For AsciiDoc:
 
 #### `aliases` (keeping an old link working) {#aliases}
 
-A hash route is a link a reader copies. In a document that travels as a single file it is the only
-way one person tells another where to look, so it ends up in a chat log, a ticket, another document
-— and renaming the page behind it breaks every copy silently. The reader who follows one lands on a
-document that looks fine and shows the wrong page.
+Readers copy hash routes into chats, tickets, and other documents, and renaming a page silently
+breaks every copy: the reader who follows one lands on a document that looks fine and shows the
+wrong page. `aliases` keeps old routes working:
 
 ```yaml
 ---
@@ -1165,28 +1121,23 @@ aliases:
 :sd-aliases: /setup/install, /getting-started/install
 ```
 
-An alias is an old route that now resolves to this page. When a hash matches no page, the document
-consults the table, replaces the hash with the current route, and renders the page — so the address
-bar ends up holding the link that will still work next time. A route carrying an anchor
-(`#/setup/install#configuration`) keeps the anchor across the substitution, because the anchor names
-a heading rather than a path.
+When a hash matches no page, the document looks it up among the aliases, replaces the hash with the
+current route, and renders the page, so the address bar then holds the working link. A route
+carrying an anchor (`#/setup/install#configuration`) keeps the anchor.
 
-The rules are checked at build time rather than discovered by a reader:
+The rules are checked at build time:
 
-- An alias is matched **after** every real route, so it can never shadow a page. A page that arrives
-  at a route some other page claims as an alias wins, and the alias warns that it has been shadowed
-  rather than silently taking precedence.
-- **Two pages claiming the same alias is an error.** One of them would win by scan order, which is
-  not something you can reason about.
-- An alias is normalised the way a route is — leading slash, no extension, `index` meaning the
-  directory — so `setup/install.md`, `/setup/install`, and `setup/install` are one alias, not three.
-- An alias appears in neither the sidebar, the search index, nor the previous/next order. It is not
-  a page; it is a name a page answers to. A `hidden` page keeps its aliases, because a link someone
-  already holds is not navigation.
+- An alias is matched **after** every real route, so it can never shadow a page. If a page arrives
+  at a route another page claims as an alias, the page wins and the alias warns that it has been
+  shadowed.
+- **Two pages claiming the same alias is an error.**
+- An alias is normalised the way a route is (leading slash, no extension, `index` meaning the
+  directory), so `setup/install.md`, `/setup/install`, and `setup/install` are one alias, not three.
+- An alias appears in neither the sidebar, the search index, nor the previous/next order. A `hidden`
+  page keeps its aliases.
 
-No alias is generated automatically. monodocs could read every route a file has ever had out of the
-repository's history, and the document's link table would then depend on which clone built it — a
-shallow checkout in CI would produce a different file from a full one. An alias is a line you wrote.
+No alias is generated automatically (for example from the repository's history, which would make
+the output depend on the clone, such as a shallow CI checkout). An alias is a line you wrote.
 
 ## See also
 

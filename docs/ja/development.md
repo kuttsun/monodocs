@@ -37,41 +37,50 @@ monodocs/
 
 ## 開発環境（専用 Docker イメージ）
 
-ホストに Node / pnpm を入れず、専用イメージ **`monodocs-dev`** の中で開発・ビルド・
-テストする。イメージは Node 22 に pnpm（`app/package.json` の `packageManager` と同一の
-バージョン）を焼き込んであるため、corepack による pnpm の都度ダウンロードが発生しない。
+ホストに Node / pnpm を入れず、専用イメージ **`monodocs-dev`** の中で開発・ビルド・テストする。
+イメージは Node 22 に pnpm（`app/package.json` の `packageManager` と同じ版）を焼き込んであり、
+corepack による pnpm の都度ダウンロードが発生しない。
 
 ### 監査から除外しているアプリ依存関係の advisory
 
-`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` に GHSA-238p-pmpm-9mq7 を挙げ、`pnpm audit` がこれで失敗しないようにしています。0.18.2 で修正された低深刻度の KaTeX の advisory で、すでに汚染された `Object.prototype` から継承した `trust` などのオプションを、アプリケーションが設定したかのように扱うというものです。利用者に届くのは、monodocs が使う 1 つの版の mermaid の、2 つのバンドルにビルド済みで入っているものです。inline ランタイムと pre-render が埋め込む `mermaid.min.js` と、`mermaid.runtime: cdn` がその同じ版を指定して jsDelivr から読み込む ESM バンドルで、どちらも KaTeX 0.16.47 を持ちます。このリポジトリが解決する KaTeX の版を override しても、どちらにも反映されず、mermaid 11 も 12 も `katex ^0.16.47` を要求します。override では、出荷するものを変えずに監査だけを黙らせることになります。monodocs はビルド時にも KaTeX で数式を描きます（`@monodocs/core` が直接依存します）。版は同じ 0.16.47 で、告知が 1 つの KaTeX を名指し、MathML の書き換え（roadmap 6.4）がそれに対して測ったものであるよう、Mermaid ランタイムが同梱する版と揃えています。`trust` は、すべてのコマンドを拒む関数として明示的に設定しているので、継承された `trust` がそこで信頼が必要なコマンドを有効にすることはありません。ほかのオプションは継承されうるものの、それにもやはり `Object.prototype` をすでに汚染したコードが必要です。悪用には、すでに `Object.prototype` を汚染したコードと、攻撃者が制御する数式の両方が要り、mermaid は出力を DOMPurify に通すので、リスクは低いものとして受け入れます。monodocs が使う mermaid が修正済みの KaTeX を持つようになったら削除し、ビルド時の KaTeX もあわせてその版に上げ、その MathML を MathML Core に照らして調べ直します。2026-10-06 時点の再点検では、mermaid 12.1.0 も `katex ^0.16.47` を要求しています。
+`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` に GHSA-238p-pmpm-9mq7 を挙げ、`pnpm audit` がこれで失敗しないようにしています。0.18.2 で修正された低深刻度の KaTeX の advisory で、すでに汚染された `Object.prototype` から継承した `trust` などのオプションを、アプリケーションが設定したかのように扱うというものです。
+
+- **届く場所**: monodocs が使う 1 つの版の mermaid の 2 つのバンドルです。inline ランタイムと pre-render が埋め込む `mermaid.min.js` と、`mermaid.runtime: cdn` がその同じ版を指定して jsDelivr から読み込む ESM バンドルで、どちらも KaTeX 0.16.47 を持ちます。
+- **override しない理由**: このリポジトリの KaTeX を override してもどちらのバンドルにも届かず、mermaid 11 も 12 も `katex ^0.16.47` を要求します。出荷物を変えずに監査だけを黙らせることになります。
+- **ビルド時の KaTeX**: `@monodocs/core` が直接依存して数式を描きます。版は同じ 0.16.47 で、告知が 1 つの KaTeX を名指し、MathML の書き換え（roadmap 6.4）が測ったものと一致するよう、Mermaid が同梱する版と揃えています。`trust` はすべてのコマンドを拒む関数として明示的に設定しているので、継承された `trust` が信頼の必要なコマンドを有効にすることはありません。ほかのオプションは継承されえますが、それにもやはり `Object.prototype` をすでに汚染したコードが必要です。
+- **受け入れたリスク（低）**: 悪用には、すでに `Object.prototype` を汚染したコードと攻撃者が制御する数式の両方が要り、mermaid は出力を DOMPurify に通します。
+- **削除の条件**: monodocs が使う mermaid が修正済みの KaTeX を持つようになったら項目を削除し、ビルド時の KaTeX もその版に上げ、その MathML を MathML Core に照らして調べ直します。2026-10-06 時点の再点検では、mermaid 12.1.0 も `katex ^0.16.47` を要求しています。
 
 ### アプリ依存関係のセキュリティ override（削除済み）
 
-`app/` ワークスペースは以前、`postcss` を pnpm `overrides`（`pnpm-workspace.yaml`）で `^8.5.18` に固定していました。`postcss <= 8.5.17` は高深刻度の path traversal advisory（GHSA-r28c-9q8g-f849）を持ち、`vitest -> vite` 経由で dev/test 専用の依存ツリーに入っていたためです。2026-10-01、lockfile が `vite` 8.3.1 を解決するようになった時点で削除しました。`vite` 8.3.1 は自前で `postcss: ^8.5.28` を宣言しています。
+`app/` は以前、`postcss` を pnpm `overrides`（`pnpm-workspace.yaml`）で `^8.5.18` に固定していました。`postcss <= 8.5.17` は高深刻度の path traversal advisory（GHSA-r28c-9q8g-f849）を持ち、`vitest -> vite` 経由で dev/test 専用の依存ツリーに入っていたためです。2026-10-01、lockfile が自前で `postcss: ^8.5.28` を宣言する `vite` 8.3.1 を解決するようになった時点で削除しました。
 
-`vite` は `vitest` の peer dependency として依存ツリーに入ります。peer にとどまっていた間は、manifest を対象とする Dependabot の通常のバージョン更新が更新を提案せず、上流で修正が出てから 2 か月間、lockfile は `vite` 8.1.0 のままでした。そのため `vite` を `app/package.json` の直接の dev dependency として宣言し、ほかの開発ツールと同じく通常のバージョン更新で追跡されるようにしています。`vitest` がもともと要求していたものなのでインストール内容は増えず、公開バンドルにも含まれません。
+あわせて `vite` を `app/package.json` の直接の dev dependency として宣言し、ほかの開発ツールと同じく通常のバージョン更新で追跡されるようにしています。`vitest` の peer dependency にとどまっていた間は、manifest を対象とする Dependabot の通常のバージョン更新が更新を提案せず、上流の修正から 2 か月間、lockfile は `vite` 8.1.0 のままでした。`vitest` がもともと要求していたものなので、インストール内容も公開バンドルも増えません。
 
 ### 依存関係の公開後経過時間ポリシー
 
-pnpm 11 は、公開から `minimumReleaseAge` 分（既定 1440 分＝24 時間）が経っていないバージョンをインストールしません。`pnpm install --frozen-lockfile` も、コミット済み lockfile を同じポリシーで検証します。悪意あるリリースはたいてい 1 時間ほどでレジストリから削除されるため、1 日待ってから取り込めばその時間帯をほぼ回避できます。この設定はリポジトリで指定しておらず、pnpm の既定値に任せています。
+pnpm 11 は、公開から `minimumReleaseAge` 分（既定 1440 分＝24 時間）が経っていないバージョンをインストールせず、`pnpm install --frozen-lockfile` もコミット済み lockfile を同じポリシーで検証します。悪意あるリリースはたいてい 1 時間ほどでレジストリから削除されるため、1 日待てばその時間帯をほぼ回避できます。リポジトリでは設定せず、pnpm の既定値に任せています。
 
-したがって `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` で install が失敗する場合、そのバージョンが壊れているのではなく、lockfile が新しすぎるバージョンを指しているという意味です。ポリシーを迂回せず、カットオフを過ぎてから再実行してください。
+`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` で install が失敗するのは、lockfile が新しすぎるバージョンを指しているためで、そのバージョンが壊れているのではありません。ポリシーを迂回せず、カットオフを過ぎてから再実行してください。
 
-Dependabot は独自のスケジュールでバージョンを解決するため、`.github/dependabot.yml` では npm 系に 3 日の `cooldown` を設定し、CI が走る時点で pnpm のカットオフを過ぎているようにしています。ただし cooldown は Dependabot の security update には適用されません。緊急のセキュリティリリースは pnpm のカットオフより新しいことがあり、その場合は（一時的な `minimumReleaseAgeExclude` の追加など）意図的な判断が必要で、黙って迂回してはいけません。
+`.github/dependabot.yml` では npm 系に 3 日の `cooldown` を設定し、CI が走る時点で pnpm のカットオフを過ぎているようにしています。
+
+> [!WARNING]
+> cooldown は Dependabot の security update には適用されません。緊急のセキュリティリリースは pnpm のカットオフより新しいことがあり、その場合は（一時的な `minimumReleaseAgeExclude` の追加など）意図的な判断が必要で、黙って迂回してはいけません。
 
 ### サイト依存関係のセキュリティ override
 
-`site/` の standalone package は Vite を一時的に `~6.4.3` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を継続して通してください。安全な Vite の範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。2026-10-01 時点の再点検では、安定版は依然として VitePress 1.6.4（`vite ^5.4.14`）で、VitePress 2 は alpha（`next` タグの `2.0.0-alpha.20`）しかなく、Vite 6.4 系の最新 patch も `6.4.3` のままなので、override は現状のまま維持します。
+`site/` の standalone package は Vite を一時的に `~6.4.3` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は、Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を通し続けてください。安全な Vite を含む範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。2026-10-01 時点の再点検では、安定版は依然として VitePress 1.6.4（`vite ^5.4.14`）、VitePress 2 は alpha（`next` タグの `2.0.0-alpha.20`）のみ、Vite 6.4 系の最新 patch も `6.4.3` のままなので、override を維持します。
 
 ### サイトのテーマ
 
-`site/.vitepress/theme/` は VitePress 既定テーマの上に重ねたカスタムテーマです。次の 4 点は装飾ではなく、壊すと動作や意味が変わります。
+`site/.vitepress/theme/` は VitePress 既定テーマの上に重ねたカスタムテーマです。次の点は装飾ではなく、壊すと動作や意味が変わります。
 
-- `index.ts` は `vitepress/theme-without-fonts` を継承します（`vitepress/theme` ではありません）。これにより既定テーマが同梱する Inter を配信対象から外します。実際に使う書体は `fonts.css` で宣言し、npm（`@fontsource-variable/archivo`、`@fontsource/ibm-plex-mono`）から取得するので、フォント CDN へのリクエストは発生しません。日本語はシステムフォントにフォールバックし、ダウンロードは発生しません。
-- 等幅は「実在する機械文字列」＝パス・コマンド・パッケージ名にだけ使います。同じ理由で `style.css` はインラインコードからアクセント色を外しています。色付きのリンクと色付きのコードが同じ段落に並ぶと、読み手はどちらが押せるのか判断できません。
-- `BundleDiagram.vue` と `HeroCommand.vue` は入力ディレクトリと出力ファイル名を共有します。「このコマンドを実行するとこのファイルが得られる」という一つの主張として読ませるためです。出力名は文書の種類ではなく入力ディレクトリに由来させています（`docs.html`、および図がもう一方の出力として示す `docs.pdf`）。monodocs は渡されたページ群を何であれまとめるので、マニュアルとは限らないからです。どちらかを変えるときは両方を揃えてください。コマンドは HTML 側なので、揃える対象は `docs.html` です。なお出力カードのリンク先は公開サンプル（`site/public/sample.html`）で、これは別のファイルです。
-- 図のソース一覧をツリーにしているのは、ページの階層がそのまま出力のサイドバーになるからです。ツリー中の画像は出力カードのミニサイドバーには意図的に反映していません。`buildSidebar` はページから組み立てるため、アセットしか持たないフォルダはサイドバーに現れないからです。
-- `style.css` の上書きは、セレクタにクラスや要素をひとつ余分に含めています。既定テーマのコンポーネントは scoped style で属性セレクタ分の詳細度を持つため、同じ詳細度で書くと結果がスタイルシートの読み込み順に依存します。
+- `index.ts` は `vitepress/theme` ではなく `vitepress/theme-without-fonts` を継承し、既定テーマが同梱する Inter を配信しません。使う書体は `fonts.css` で宣言して npm（`@fontsource-variable/archivo`、`@fontsource/ibm-plex-mono`）から取得するので、フォント CDN へのリクエストはありません。日本語はシステムフォントにフォールバックし、何もダウンロードしません。
+- 等幅は実在する機械文字列（パス・コマンド・パッケージ名）にだけ使います。`style.css` はインラインコードからアクセント色を外し、色付きのリンクだけが押せるものと分かるようにしています。
+- `BundleDiagram.vue` と `HeroCommand.vue` は入力ディレクトリと出力ファイル名を共有し、hero を「このコマンドでこのファイルが得られる」と読ませます。出力名は文書の種類ではなく入力ディレクトリに由来します（`docs.html`、および図のもう一方の出力 `docs.pdf`）。monodocs は渡されたページ群を何であれまとめるからです。両方を揃えてください。コマンドは HTML 側なので、揃える対象は `docs.html` です。出力カードのリンク先は公開サンプル（`site/public/sample.html`）で、別のファイルです。
+- 図のソース一覧がツリーなのは、ページの階層が出力のサイドバーになるからです。ツリー中の画像はミニサイドバーに意図的に反映していません。`buildSidebar` はページから組み立てるため、アセットしか持たないフォルダは現れません。
+- `style.css` の上書きは、セレクタにクラスや要素をひとつ余分に含めています。既定テーマの scoped style は属性セレクタ分の詳細度を持ち、同じ詳細度で書くと結果がスタイルシートの読み込み順に依存するためです。
 
 ### 必要なもの
 
@@ -85,8 +94,9 @@ docker build -f Dockerfile.dev -t monodocs-dev .
 
 ### よく使うコマンド（ヘルパー `scripts/app.sh` 経由）
 
-`scripts/app.sh` は `monodocs-dev` が無ければ自動ビルドし、作業ツリーをマウントして
-`app/` 内でコマンドを実行する。**ホスト側で**実行する。
+`scripts/app.sh` は `monodocs-dev` が無ければ自動ビルドし、作業ツリーをマウントして `app/` 内でコマンドを
+実行する。**ホスト側でだけ**使う。devcontainer やコンテナシェルでは Docker-in-Docker を避けるため `pnpm` を
+直接実行する。
 
 ```bash
 scripts/app.sh pnpm install     # 依存をインストール
@@ -99,11 +109,11 @@ scripts/app.sh pnpm ci:check    # format、build、typecheck、test、CLI bundle
 scripts/app.sh pnpm package:verify # npm package artifact の build・install・smoke test
 ```
 
-`scripts/app.sh` はホスト側だけで使います。devcontainer やコンテナシェルでは Docker-in-Docker を避けるため `pnpm` を直接実行してください。`app/package.json` の `packageManager` と `Dockerfile.dev` の `PNPM_VERSION` は一致させます。
+> [!IMPORTANT]
+> `app/package.json` の `packageManager` と `Dockerfile.dev` の `PNPM_VERSION` は一致させる。
 
-ローカルプレビュー（ホストのブラウザで `http://localhost:4173/`）。
-依存インストール（初回のみ）・ビルド・`serve --host 0.0.0.0` をまとめて行う
-ショートカット `scripts/app-serve.sh` が手軽:
+ローカルプレビュー（ホストのブラウザで `http://localhost:4173/`）は、依存インストール（初回のみ）・ビルド・
+`serve --host 0.0.0.0` をまとめて行う `scripts/app-serve.sh` が手軽:
 
 ```bash
 scripts/app-serve.sh
@@ -117,9 +127,9 @@ scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0
 # 別ポート: MONODOCS_PORT=8080 scripts/app.sh node packages/cli/dist/index.js serve ../examples/ja --host 0.0.0.0 --port 8080
 ```
 
-> コンテナ内から配信をホストへ公開するため、`serve` は `--host 0.0.0.0` が必要
-> （`scripts/app-serve.sh` は自動で付与し、`scripts/app.sh` は `MONODOCS_PORT`（既定 4173）を公開する）。
-> `http://0.0.0.0:...` ではなく `http://localhost:...` を開く。
+> [!NOTE]
+> ホストから見るには `serve` に `--host 0.0.0.0` が必要（`scripts/app-serve.sh` は自動で付与し、
+> `scripts/app.sh` は `MONODOCS_PORT`（既定 4173）を公開する）。`http://0.0.0.0:...` ではなく `http://localhost:...` を開く。
 
 単一 HTML（配布物）をファイルに出力する:
 
@@ -137,13 +147,16 @@ scripts/app.sh pnpm build && scripts/readme-pdf-sample.sh
 ### `sources.lineBreak: join` の Unicode データ
 
 `join` には East_Asian_Width プロパティが要るが、JavaScript の正規表現はこれを扱えない。
-`app/packages/core/src/sources/eastAsianWidth.ts` の表は、同梱の
-`app/packages/core/scripts/data/EastAsianWidth-<version>.txt` から生成しており、両者が食い違うとテストが失敗する。
-データは Unicode License v3 で配布されており、その全文を `LICENSE-Unicode.txt` として隣に同梱している。
-どのパッケージにも含まれないので、`app/scripts/bundle.mjs` が `THIRD-PARTY-NOTICES.txt` へ手で加える。
-既定で "W" とする範囲はデータではなくヘッダーの文章で示されているため、生成スクリプトは、ヘッダーがその範囲を
-挙げなくなったデータファイルを拒否する。Unicode のバージョンを上げるときは、データファイルを差し替え、
-生成スクリプトの参照先を変えて再生成し、`sources/lineBreak.test.ts` のテストが期待するバージョンも更新する。
+
+- `app/packages/core/src/sources/eastAsianWidth.ts` の表は、同梱の
+  `app/packages/core/scripts/data/EastAsianWidth-<version>.txt` から生成する。両者が食い違うとテストが失敗する。
+- データは Unicode License v3 で、全文を `LICENSE-Unicode.txt` として隣に同梱している。どのパッケージにも
+  含まれないので、`app/scripts/bundle.mjs` が `THIRD-PARTY-NOTICES.txt` へ手で加える。
+- 既定で "W" とする範囲はデータではなくヘッダーの文章で示されるため、生成スクリプトはヘッダーがその範囲を
+  挙げなくなったデータファイルを拒否する。
+
+Unicode のバージョンを上げるときは、データファイルを差し替え、生成スクリプトの参照先を変えて再生成し、
+`sources/lineBreak.test.ts` のテストが期待するバージョンも更新する。
 
 ```bash
 scripts/app.sh sh -c 'cd packages/core && node scripts/generate-east-asian-width.mjs'
@@ -151,23 +164,31 @@ scripts/app.sh sh -c 'cd packages/core && node scripts/generate-east-asian-width
 
 ### inline の Mermaid ランタイムの表記
 
-`mermaid.runtime: inline` でビルドした HTML は、mermaid のビルド済み `mermaid.min.js` を埋め込み、
-あわせて `app/packages/core/src/themes/mermaid-notices.txt` の第三者表記を埋め込む。ランタイムは mermaid
-自身の lockfile でバンドルされているので、表記は `node_modules` からではなく、そのソースマップから生成する。
+`mermaid.runtime: inline` でビルドした HTML は、mermaid のビルド済み `mermaid.min.js` と
+`app/packages/core/src/themes/mermaid-notices.txt` の第三者表記を埋め込む。ランタイムは mermaid 自身の
+lockfile でバンドルされているので、表記は `node_modules` ではなくそのソースマップから生成する。対象は、
 ソースの出どころのパッケージと、事前バンドルされたパーサーの中で esbuild が名指すパッケージである。
 ライセンスは、その版が pnpm ストアにあればそこから、無ければ npm の tarball から読み、tarball はレジストリの
-integrity ハッシュと照合する。ソースマップは、自前のビルド済みファイルを同梱するパッケージの中を見られない。
-そのため、コンポーネントの実行時の依存のうち表記が挙げも説明もしないものがあるとき、また、大きなソースや
-ビルド済みのソースを持つコンポーネントがその版で `PREBUILT_AUDITED` に無いとき、さらにソースのコメントが
-挙げる URL が `REVIEWED_URLS` に記録されていないとき、生成は失敗する。ファイルを
-読み、取り込んでいるパッケージと、別のライセンスで持ち込まれたコード（あるいは何も含まないこと）を
-`PREBUILT_AUDITED` に記録し、ランタイムに無い依存は `NOT_IN_RUNTIME` に理由とともに書く。ライセンス文の無い
-コンポーネントでも失敗する。ソースは大きさ、minify、パス、バンドラーの痕跡で判定するので、痕跡を残さない小さな
-minify されていないバンドルは素通りしうる。また mermaid とパーサー自身のソースは判定の対象外である。これらは
-mermaid の版ごとに人が監査する。古くなった `mermaid@<version>` の項目がそれを強制し、生成時に表示される出典の
-一覧が手がかりになる。表記が挙げるコンポーネントがランタイムのものと食い違うとき（mermaid を上げると
-そうなる）、また監査を持つ生成スクリプトが表記の生成後に変わったとき、テストが失敗する。再生成して
-（ネットワークを使うことがある）結果をコミットする。
+integrity ハッシュと照合する。
+
+ソースマップは自前のビルド済みファイルを同梱するパッケージの中を見られないので、次の場合に生成は失敗する。
+
+- コンポーネントの実行時の依存のうち、表記が挙げも説明もしないものがある。ランタイムに無い依存は
+  `NOT_IN_RUNTIME` に理由とともに書く。
+- 大きなソースやビルド済みのソースを持つコンポーネントが、その版で `PREBUILT_AUDITED` に無い。ファイルを
+  読み、取り込んでいるパッケージと別のライセンスで持ち込まれたコード（あるいは何も含まないこと）を
+  `PREBUILT_AUDITED` に記録する。
+- ソースのコメントが挙げる URL が `REVIEWED_URLS` に記録されていない。
+
+ライセンス文の無いコンポーネントでも失敗する。
+
+ソースは大きさ、minify、パス、バンドラーの痕跡で判定するので、痕跡を残さない小さな minify されていない
+バンドルは素通りしうる。mermaid とパーサー自身のソースは判定の対象外で、mermaid の版ごとに人が監査する。
+古くなった `mermaid@<version>` の項目がそれを強制し、生成時に表示される出典の一覧が手がかりになる。
+
+表記が挙げるコンポーネントがランタイムのものと食い違うとき（mermaid を上げるとそうなる）、また監査を持つ
+生成スクリプトが表記の生成後に変わったとき、テストが失敗する。再生成して（ネットワークを使うことがある）
+結果をコミットする。
 
 ```bash
 scripts/app.sh sh -c 'cd packages/core && node scripts/generate-mermaid-notices.mjs'
@@ -175,16 +196,14 @@ scripts/app.sh sh -c 'cd packages/core && node scripts/generate-mermaid-notices.
 
 ### 単一実行ファイル（ネイティブバイナリ）をビルドする
 
-`scripts/app.sh` / `scripts/app-serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、
-作業ディレクトリも `/work/app` のため、**リポジトリ配下のパスしか配信できない**（リポジトリ外の
-任意ディレクトリを指せない。`app/` の外を指すには `../examples/ja` のように `../` を付ける）。これを
-避けて任意の場所のドキュメントを試すには、ホストで直接動く単一実行ファイルを使う。
+`scripts/app.sh` / `scripts/app-serve.sh` はコンテナにリポジトリ（`/work`）しかマウントせず、作業ディレクトリも
+`/work/app` のため、**リポジトリ配下のパスしか配信できない**（`app/` の外は `../examples/ja` のように `../` を
+付けて指す）。任意の場所のドキュメントを試すには、ホストで直接動く単一実行ファイルを使う。
 
 `scripts/app-build.sh` が依存込みの単一ネイティブバイナリ（Node 22 の
 [Single Executable Application](https://nodejs.org/api/single-executable-applications.html)）を
 `app/dist/monodocs` に出力する。esbuild で全依存とテーマアセットを 1 ファイルにバンドルし、
-SEA blob を `postject` で node バイナリへ注入する。**ホストに node は不要**（ビルド環境と
-同じ OS/arch 向け）。
+SEA blob を `postject` で node バイナリへ注入する。**ホストに node は不要**（ビルド環境と同じ OS/arch 向け）。
 
 ```bash
 scripts/app-build.sh                              # → app/dist/monodocs を生成
@@ -194,16 +213,16 @@ app/dist/monodocs serve ~/任意のドキュメント       # ローカルプレ
 app/dist/monodocs build ~/任意のドキュメント -o ~/docs.html
 ```
 
+> [!NOTE]
 > - 出力は約 130 MiB（node ランタイム同梱のため）。`app/dist/` は `.gitignore` 済み。
 > - Windows では `app/dist/monodocs.exe` を出力する（Windows は拡張子で実行可否を判断するため）。
 >   公開リリースには同じバイナリを `monodocs-linux-x64` / `monodocs-windows-x64.exe` として添付し、
 >   リリースワークフローで生成、Pull Request CI で毎回 smoke test している。
-> - `pnpm build:bin` は `app/dist/monodocs-NOTICES.txt`（monodocs・Node.js ランタイム・第三者
->   ライセンス）も出力する。バイナリ単体では通知を持ち歩けないため、リリースでは各バイナリの
->   隣に公開する。
+> - `pnpm build:bin` は `app/dist/monodocs-NOTICES.txt`（monodocs・Node.js ランタイム・第三者ライセンス）も
+>   出力する。バイナリ単体では通知を持ち歩けないため、リリースでは各バイナリの隣に公開する。
 > - テーマアセット（`template.html` / `style.css` / `app.js`）と mermaid inline ランタイムは
 >   バンドル時に `globalThis.__MONODOCS_ASSETS__` へ埋め込む（`scripts/bundle.mjs`）。
->   `loadTheme` / `mermaidRuntimeScript` はこの埋め込みを優先し、無ければ従来どおりファイルから読む。
+>   `loadTheme` / `mermaidRuntimeScript` はこれを優先し、無ければファイルから読む。
 > - バンドルだけ欲しいとき（ホストに node がある場合）は `scripts/app.sh pnpm bundle` で
 >   `app/dist/monodocs.cjs` を生成し `node app/dist/monodocs.cjs ...` で実行できる。
 
@@ -217,11 +236,10 @@ docker run --rm -it -p 4173:4173 -v "$PWD":/work -w /work/app monodocs-dev \
 
 ### VS Code Dev Containers（任意）
 
-必須ではない。使う場合、`.devcontainer` は同じ `Dockerfile.dev` からイメージを構築する。
+必須ではない。`.devcontainer` は同じ `Dockerfile.dev` からイメージを構築する。
 **Dev Containers: Reopen in Container** で起動すると `postCreate` で `pnpm install` が走り、
 コンテナ内では `pnpm build` / `pnpm test` を直接実行できる（`scripts/app.sh` は不要）。
-コンテナ内で `node packages/cli/dist/index.js serve examples/ja` を実行すると、
-VS Code がポート 4173 を自動フォワードする（`--host` は不要）。
+`node packages/cli/dist/index.js serve examples/ja` では VS Code がポート 4173 を自動フォワードする（`--host` は不要）。
 
 ## アーキテクチャ
 
@@ -252,38 +270,39 @@ Markdown / AsciiDoc files
 
 ### UI（chrome）の言語
 
-テーマの UI 文言（コピー/折り返し、前後ナビ、検索、目次など）は**文書の `lang` に従う**。
-既定は `en`（v0.10）。これは以前の書き方が将来に残しておいたビルド時の言語切り替えそのものである。
-読者に追従するランタイム i18n を行わない点は変わらない（単一ファイルの読者は一度に一種類である）。
-変わったのは、どの言語でビルドするかを書き手が選べるようになったことである。
+テーマの UI 文言（コピー/折り返し、前後ナビ、検索、目次など）は**文書の `lang` に従う**。既定は `en`（v0.10）。
+言語はビルド時に決まり、読者に追従するランタイム i18n は行わない（単一ファイルの読者は一度に一種類である）。
 
 core が `lang` に対応する表を解決し、`html.labels` を上から適用し、結果を `siteDataJson` に公開する。
 `themes/default/app.js` は自前の写しを持たずそれを消費し、静的文言は `template.html` のトークンから
 取る。同梱する表は `en` と `ja`。ラベルを追加するときは両方の表と、列挙されたキー集合の両方に足す。
 片方の表に無いキーは黙ってフォールバックせずビルドを失敗させる。
 
-v0.10 までは本文の言語から独立した英語に統一していた。それは日本語の文書が `lang="ja"` を宣言
-しながら `On this page` を表示する状態を残し、どちらの読者にも応えていなかった。しかもそのどちらも
-設定では直せなかった。[roadmap.md](roadmap.md) 23.4 を参照。
+> [!NOTE]
+> v0.10 までは UI 文言が常に英語で、`lang="ja"` の文書が `On this page` を表示し、設定でも直せなかった。
+> [roadmap.md](roadmap.md) 23.4 を参照。
 
 ### PDF のフォント
 
 PDF 出力（`--format pdf` / `both`）と Mermaid pre-render はヘッドレス Chromium で描画するため、
-**本文に出す文字種のフォントが実行環境に無いと PDF で豆腐（□ / ☒）になる**（HTML はブラウザ側の
+**実行環境にフォントの無い文字は PDF で豆腐（□ / ☒）になる**（HTML はブラウザ側の
 フォントで表示するため影響しない）。`Dockerfile.dev` には以下を同梱している:
 
 - `fonts-noto-cjk` … 日本語（CJK）
 - `fonts-noto-color-emoji` … 絵文字（`✅` / `⚠️` など）
 
-フォントを追加したら `docker build -f Dockerfile.dev -t monodocs-dev .` でイメージを再ビルドする
-（`scripts/app.sh` はイメージが**無いときだけ**自動ビルドするので、Dockerfile 変更後は手動再ビルドが必要）。
 自前環境で PDF を出す場合は、使う文字種に応じたフォントを別途インストールする。
 
-これを「成果物を開いて初めて気づく」ままにはしていない。ビルドは文書が実際に含む文字とそのマシンが
-描けるものを突き合わせ、該当する文字と例フォントを挙げて警告する（`fontCheck: warn | error | off`、
-既定 `warn`。[roadmap.md](roadmap.md) 24.3.3）。なお、同梱のサンプル文書は正当な理由でこれに引っかかる。
-`examples/*/pdf.md` は豆腐の説明のために `☒` を書いており、Asciidoctor は未チェックのリスト項目を
-`❏`（U+274F）で描くが、開発イメージのどのフォントもこの 2 文字を収録していない。
+> [!IMPORTANT]
+> フォントを追加したら `docker build -f Dockerfile.dev -t monodocs-dev .` でイメージを再ビルドする。
+> `scripts/app.sh` はイメージが**無いときだけ**自動ビルドするので、Dockerfile 変更後は手動再ビルドが必要。
+
+ビルドは文書が実際に含む文字とそのマシンが描けるものを突き合わせ、該当する文字と例フォントを挙げて警告する
+（`fontCheck: warn | error | off`、既定 `warn`。[roadmap.md](roadmap.md) 24.3.3）。
+
+> [!NOTE]
+> 同梱のサンプル文書は正当な理由でこの警告に引っかかる。`examples/*/pdf.md` は豆腐の説明のために `☒` を書き、
+> Asciidoctor は未チェックのリスト項目を `❏`（U+274F）で描くが、開発イメージのどのフォントもこの 2 文字を収録していない。
 
 ## 入力の前提（セキュリティ）
 
@@ -299,5 +318,6 @@ PDF 出力（`--format pdf` / `both`）と Mermaid pre-render はヘッドレス
 - 画像サイズ上限（`assets.maxInlineSize`）超過時の挙動は `assets.onLargeImage` で選ぶ:
   `warn`（警告して埋め込む。既定）/ `external`（埋め込まず元 src のまま）/ `error`（ビルド失敗）。
 
-信頼できない入力を扱う必要が出た場合は、`rehype-sanitize` 等によるサニタイズ層の追加を検討する
-（現状は未導入。導入すると著者が意図した HTML/passthrough も制限される点に注意）。
+> [!CAUTION]
+> 信頼できない入力を扱う場合は、`rehype-sanitize` 等によるサニタイズ層の追加を検討する（現状は未導入）。
+> 導入すると著者が意図した HTML/passthrough も制限される。

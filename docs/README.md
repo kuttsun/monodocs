@@ -2,11 +2,12 @@
 
 [日本語](ja/README.md)
 
-This is documentation about the development and design of `monodocs`.
-For an overview of the tool and how to use it, see the [README](../README.md) in the repository root.
+Development and design documentation for `monodocs`.
+For an overview of the tool and how to use it, see the root [README](../README.md).
 
-English is the default language for these documents. Japanese counterparts are maintained under [`docs/ja/`](ja/).
-Update both versions when shared facts, instructions, or behavior change.
+> [!NOTE]
+> English is the default; Japanese counterparts live under [`docs/ja/`](ja/).
+> Update both when shared facts, instructions, or behavior change.
 
 | Document                                 | Contents                                                                         |
 | ---------------------------------------- | -------------------------------------------------------------------------------- |
