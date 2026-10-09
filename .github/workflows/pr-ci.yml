@@ -112,6 +112,12 @@ jobs:
           node dist/monodocs.cjs build ../examples/en -o ../site/public/sample.html
           node dist/monodocs.cjs build ../examples/ja -o ../site/public/ja/sample.html
 
+      # The PDF samples the README links to (with a cover and a printed table of contents). They go
+      # through scripts/site-pdf-sample.sh, as the deploy does, so a PR shows they still build.
+      - name: Generate PDF samples
+        if: matrix.name == 'Linux'
+        run: MONODOCS_RUNNER= ../scripts/site-pdf-sample.sh
+
       # 版面密度の比較（設定リファレンスが 4 段を並べて見せる PDF とサムネイル）。サイトの
       # ビルドはこの成果物を参照するため、ここで作らないと Site CI が資産の欠けたページを組む。
       # 生成そのものは scripts/site-density.sh に持たせ、ローカルと同じ手順を通す。
@@ -130,6 +136,8 @@ jobs:
           path: |
             site/public/sample.html
             site/public/ja/sample.html
+            site/public/sample.pdf
+            site/public/ja/sample.pdf
             site/public/density
             site/public/ja/density
           if-no-files-found: error

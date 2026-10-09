@@ -10,7 +10,9 @@
 
 `monodocs` is a CLI that turns a directory of Markdown and AsciiDoc files into a **single self-contained HTML or PDF document**: write in many files, distribute one.
 
-**📖 Full documentation → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference. Try the [single-file sample](https://kuttsun.github.io/monodocs/sample.html).
+- 📖 **[Documentation](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference
+- 🌐 **[HTML sample](https://kuttsun.github.io/monodocs/sample.html)** — a single self-contained HTML file built from [`examples/en`](examples/en)
+- 📄 **[PDF sample](https://kuttsun.github.io/monodocs/sample.pdf)** — the same examples as a PDF with a cover, a table of contents, and formulas
 
 ## Features
 
@@ -24,22 +26,6 @@
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/bundle-dark.svg">
   <img alt="A docs directory of Markdown, AsciiDoc and image files, nested in folders, bundled by 'monodocs build ./docs' into a single docs.html whose sidebar follows the same hierarchy of pages, or a single docs.pdf. The image is embedded in the output." src="docs/assets/bundle-light.svg">
 </picture>
-
-## PDF output
-
-A PDF can open with a cover and a printed table of contents, and the body pages carry a page-number
-footer by default. Formulas are rendered at build time.
-
-<p>
-  <img src="docs/assets/pdf-sample-cover.png" width="32%" alt="PDF cover: the title Orbit Lab Handbook, version 1.0, the date, and the authors">
-  <img src="docs/assets/pdf-sample-toc.png" width="32%" alt="Printed table of contents listing each page and section with its page number">
-  <img src="docs/assets/pdf-sample-math.png" width="32%" alt="A body page with inline and display formulas, a matrix, and a table, with the page number 4 / 4 in the footer">
-</p>
-
-> [!NOTE]
-> The cover and the table of contents are off by default. Turn them on with `pdf.cover.enabled` and
-> `pdf.toc.enabled` in `monodocs.config.yml`. The pages above come from
-> [`site/samples/readme`](site/samples/readme).
 
 ## Installation
 

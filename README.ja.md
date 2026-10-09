@@ -10,7 +10,9 @@
 
 複数の Markdown / AsciiDoc ファイルから **自己完結した単一の HTML または PDF** を生成する CLI です。書くときは複数ファイル、配るときは 1 ファイルにできます。
 
-**📖 ドキュメント → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス。[単一ファイルのサンプル](https://kuttsun.github.io/monodocs/ja/sample.html)もあります。
+- 📖 **[ドキュメント](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス
+- 🌐 **[HTML のサンプル](https://kuttsun.github.io/monodocs/ja/sample.html)** — [`examples/ja`](examples/ja) から生成した自己完結の単一 HTML
+- 📄 **[PDF のサンプル](https://kuttsun.github.io/monodocs/ja/sample.pdf)** — 同じサンプルを表紙・目次・数式入りの PDF にしたもの
 
 ## 特徴
 
@@ -24,20 +26,6 @@
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/bundle-dark.svg">
   <img alt="フォルダ階層に置かれた Markdown / AsciiDoc / 画像ファイルを monodocs build ./docs でまとめ、ページの階層がそのままサイドバーになる単一の docs.html、または単一の docs.pdf を生成する図。画像は出力に埋め込まれる。" src="docs/assets/bundle-light.svg">
 </picture>
-
-## PDF 出力
-
-PDF には表紙と印刷用の目次を付けられ、本文の各ページには既定でフッターにページ番号が入ります。数式はビルド時に描画されます。
-
-<p>
-  <img src="docs/assets/pdf-sample-cover.png" width="32%" alt="PDF の表紙。タイトル Orbit Lab Handbook、版 1.0、日付、著者">
-  <img src="docs/assets/pdf-sample-toc.png" width="32%" alt="印刷用の目次。各ページと節をページ番号付きで並べる">
-  <img src="docs/assets/pdf-sample-math.png" width="32%" alt="文中と別行の数式、行列、表を含む本文のページ。フッターにページ番号 4 / 4">
-</p>
-
-> [!NOTE]
-> 表紙と目次は既定では付きません。`monodocs.config.yml` の `pdf.cover.enabled` と `pdf.toc.enabled` で有効にします。
-> 上の見本は [`site/samples/readme`](site/samples/readme) から生成しています。
 
 ## インストール
 
