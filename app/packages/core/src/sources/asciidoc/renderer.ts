@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { convert, load, type Document, type Section } from "@asciidoctor/core";
+import { load, type Document, type Section } from "@asciidoctor/core";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
@@ -20,6 +20,7 @@ import { joinSegmentBreaks, type LineBreak } from "../lineBreak.js";
 import { prefixIdsAndCollect } from "../prefixIds.js";
 import { rehypeRenderMath, type MathProblem } from "../mathRender.js";
 import { createMathConverter, type AsciidocMath } from "./math.js";
+import { markChecklists, normalizeChecklistBoxes } from "./checklist.js";
 import {
   createIncludeBoundary,
   rethrowIncludeViolation,
@@ -125,9 +126,14 @@ export function createAsciidocRenderer(
     async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
       const boundary = boundaryFor(source);
       const math = await mathFor();
-      const rawHtml = (await withBoundary(boundary, source, () =>
-        convert(source.raw, buildOptions(source, attributes, boundary?.registry, math)),
-      )) as string;
+      const rawHtml = await withBoundary(boundary, source, async () => {
+        const doc = await load(
+          source.raw,
+          buildOptions(source, attributes, boundary?.registry, math),
+        );
+        markChecklists(doc);
+        return doc.convert();
+      });
       const problems: MathProblem[] = [];
 
       const out = {
@@ -141,6 +147,7 @@ export function createAsciidocRenderer(
       // （見出し・xref・脚注などの単一 HTML 内 ID 衝突を回避）。Markdown と共通処理。
       const file = await unified()
         .use(rehypeParse, { fragment: true })
+        .use(() => normalizeChecklistBoxes)
         .use(math ? [() => (tree: HastRoot) => math.markFormulas(tree)] : [])
         .use(lineBreak === "join" ? [() => joinSegmentBreaks] : [])
         .use(math ? [() => rehypeRenderMath((problem) => problems.push(problem))] : [])

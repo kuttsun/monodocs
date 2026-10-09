@@ -349,8 +349,10 @@ The build checks the characters the document contains against what the machine c
 them and an example font (`fontCheck: warn | error | off`, default `warn`; see [roadmap.md](roadmap.md) 24.3.3).
 
 > [!NOTE]
-> The sample documents legitimately trip this check: `examples/*/pdf.md` writes `☒` to describe tofu, and
-> Asciidoctor renders an unchecked list item as `❏` (U+274F); no font in the development image covers either.
+> The sample documents trip this check in the development image only for their formulas: it has no math font
+> on purpose, so `examples/en`, `examples/ja`, and `examples/math` report the letters of their formulas and a
+> font without an OpenType MATH table. With a math font installed they report nothing, which
+> `build.fontcheck.test.ts` checks.
 
 ## Input Assumptions (Security)
 

@@ -374,6 +374,9 @@ const FORMULAS_ONLY =
   "#content article * { visibility: hidden; }\n" +
   "#content article math, #content article math * { visibility: visible; }\n";
 
+/** The inverse of `FORMULAS_ONLY`: the formulas hidden, everything else measured. */
+const FORMULAS_HIDDEN = "#content article math, #content article math * { visibility: hidden; }\n";
+
 /** Latin Modern Math, a font with an OpenType MATH table, kept for these tests (GUST Font License). */
 const MATH_FONT = new URL(
   "../test-fixtures/fonts/lm-math/opentype/latinmodern-math.otf",
@@ -600,6 +603,63 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
       expect(named.filter((c) => !/\p{Script=Han}/u.test(c))).toEqual([]);
     }
   }, 180_000);
+
+  // examples/en and examples/ja: the sample documents. Each has a page of formulas, so the only thing
+  // the development image may report of them is what a math font would draw (roadmap v0.16).
+  const SAMPLES = ["en", "ja"].map((lang) => ({
+    lang,
+    input: fileURLToPath(new URL(`../../../../examples/${lang}`, import.meta.url)),
+  }));
+
+  async function buildSample(sample: (typeof SAMPLES)[number], name: string, theme: string) {
+    const root = join(dir, name);
+    const configFile = join(root, "monodocs.config.yml");
+    await mkdir(root, { recursive: true });
+    await writeFile(configFile, `lang: "${sample.lang}"\nhtml:\n  theme: "${theme}"\n`);
+    return buildSite({
+      inputDir: sample.input,
+      configFile,
+      outputFile: join(root, "docs.pdf"),
+      format: "pdf",
+    });
+  }
+
+  for (const sample of SAMPLES) {
+    it.skipIf(!hasCjkAndEmoji)(
+      `reports nothing of examples/${sample.lang} with a math font`,
+      async () => {
+        const root = join(dir, `real-sample-${sample.lang}`);
+        await writeMathTheme(join(root, "my-theme"));
+        const result = await buildSample(sample, `real-sample-${sample.lang}`, "./my-theme");
+        expect(fontWarnings(result).map((w) => w.message)).toEqual([]);
+      },
+      240_000,
+    );
+
+    it.runIf(hasCjkAndEmoji && noMathFont)(
+      `reports only the formulas of examples/${sample.lang} where no math font is installed`,
+      async () => {
+        // As it is: the missing MATH table, and letters as a formula draws them. The message names
+        // only the first few letters, so a second build hides the formulas and has to be clean.
+        const name = `real-sample-${sample.lang}-nomath`;
+        const asIs = fontWarnings(await buildSample(sample, name, "default"));
+        expect(asIs.some((w) => w.code === "font/no-math-table")).toBe(true);
+        for (const w of asIs.filter((w) => w.code !== "font/no-math-table")) {
+          expect(w.code).toBe("font/missing");
+          const named = [...w.message.matchAll(/U\+([0-9A-F]{4,6})/g)].map((m) =>
+            parseInt(m[1]!, 16),
+          );
+          expect(named.filter((cp) => cp < 0x1d400 || cp > 0x1d7ff)).toEqual([]);
+        }
+
+        const root = join(dir, `${name}-hidden`);
+        await writeMathTheme(join(root, "my-theme"), FORMULAS_HIDDEN, false);
+        const hidden = fontWarnings(await buildSample(sample, `${name}-hidden`, "./my-theme"));
+        expect(hidden.map((w) => w.message)).toEqual([]);
+      },
+      240_000,
+    );
+  }
 
   it("catches a diagram that mermaid pre-render would bake the tofu into", async () => {
     const root = join(dir, "real-mermaid");

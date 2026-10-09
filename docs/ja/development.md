@@ -301,8 +301,10 @@ PDF 出力（`--format pdf` / `both`）と Mermaid pre-render はヘッドレス
 （`fontCheck: warn | error | off`、既定 `warn`。[roadmap.md](roadmap.md) 24.3.3）。
 
 > [!NOTE]
-> 同梱のサンプル文書は正当な理由でこの警告に引っかかる。`examples/*/pdf.md` は豆腐の説明のために `☒` を書き、
-> Asciidoctor は未チェックのリスト項目を `❏`（U+274F）で描くが、開発イメージのどのフォントもこの 2 文字を収録していない。
+> 同梱のサンプル文書が開発イメージでこの警告に引っかかるのは、数式についてだけである。開発イメージには意図して
+> 数式用のフォントを入れていないので、`examples/en`、`examples/ja`、`examples/math` は数式の文字と、OpenType の
+> MATH テーブルを持たないフォントを報告する。数式用のフォントを入れれば何も報告しない。これは
+> `build.fontcheck.test.ts` が確かめている。
 
 ## 入力の前提（セキュリティ）
 

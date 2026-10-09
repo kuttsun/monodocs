@@ -61,7 +61,8 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 - **改行**: 段落の中の改行は改行にならない（[形式横断の共通仕様](#単一-html-化のための共通仕様形式横断)）。
   明示的な改行は行末の ` +`、ブロック単位なら `[%hardbreaks]`、文書全体なら `:hardbreaks-option:`
   （別名 `:hardbreaks:`）
-- リスト（順序付き / 順序なし / **説明リスト** / チェックリスト）、ネスト、継続行
+- リスト（順序付き / 順序なし / **説明リスト** / **チェックリスト**）、ネスト、継続行。チェックリストの
+  チェックボックスは Markdown のタスクリストと同じように描く（[形式横断仕様](#単一-html-化のための共通仕様形式横断)）
 - 強調・モノスペース等のインライン書式、リンク、相互参照
 - 表、**admonition**（NOTE / TIP / IMPORTANT / WARNING / CAUTION）。Markdown の GFM alerts と
   共通の構造・配色に正規化する（[形式横断仕様](#単一-html-化のための共通仕様形式横断)）
@@ -91,6 +92,12 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 - **ファイル間リンク変換**: Markdown の `.md` / `.adoc` リンク、AsciiDoc の `xref:`、変換後 `.html` 相当の
   リンクを `#/route`（hash route）へ変換する。アンカー付きリンク（`other.md#sec`）は route ではなく
   リンク先ページの prefix 済み要素 ID（`#{page-id}-sec`）へ変換し、HTML でも PDF でもアンカー位置に着地する。
+- **タスクリストとチェックリスト**（v0.16）: Markdown のタスクリストの項目（`- [x]` / `- [ ]`）も AsciiDoc の
+  チェックリストの項目（`* [x]` / `* [ ]`）も、`<input type="checkbox" disabled>`（チェック済みなら `checked`
+  付き）を持つ。Asciidoctor はそのままだとチェックボックスを文字で描く。`✓` と `❏`（U+274F）で、`❏` を
+  持つフォントは少なく、印刷すると豆腐になる。そのため monodocs はチェックボックスを書かせる。
+  `[%interactive]` も同じく無効にしたチェックボックスで描く。単一の HTML ファイルには、読者が付けた
+  チェックを保存する場所が無いからである。`✓` で始まるように書いただけの項目は文字のまま残る。
 - **見出し番号**（v0.14）: `numbering.sections` は、サイドバー順に全ファイルを通して見出しに番号を付ける。
   Markdown と AsciiDoc で同じ扱いになる。番号は見出しの中の要素（`<span class="section-number">`）で、
   ID や route には入らない。有効な間は AsciiDoc の `:sectnums:` を拒否する。`:sectnums:` はファイルごと
