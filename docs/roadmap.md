@@ -715,8 +715,9 @@ Built on Linux with Latin Modern Math (Chromium 154), in HTML and in the PDF, on
   raster tile that misses that box skips its part (the cut moved with the 256-pixel tile grid, not
   with the formula). The default theme now gives `mo[stretchy="true"]` a transparent outline as wide
   as the viewport, which neither lays out nor scrolls, so that what the operator paints covers it;
-  a test moves both braces across a tile's width and measures their ink. A tall bracket's box has its
-  stretched height, and is not cut.
+  a test moves both braces and an arrow across a tile's width and measures their ink. A tall
+  bracket's box has its stretched height, and is not cut. The rule is the default theme's, like the
+  display formula's scroll, so a theme with its own `style.css` carries it too or loses it.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in

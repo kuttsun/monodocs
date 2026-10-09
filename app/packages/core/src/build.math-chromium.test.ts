@@ -284,7 +284,7 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
     const term = "a+b+c+d+e+f+g+h+i+j+k+l+m+n+o";
     await writeFile(
       join(braces, "b.md"),
-      `# B\n\n$$\\overbrace{${term}}^{n}$$\n\n$$\\underbrace{${term}}_{n}$$\n`,
+      `# B\n\n$$\\overbrace{${term}}^{n}$$\n\n$$\\underbrace{${term}}_{n}$$\n\n$$\\overrightarrow{${term}}$$\n`,
     );
     const configFile = join(braces, "monodocs.config.yml");
     await writeFile(configFile, "");
@@ -315,24 +315,32 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           return displays.some((d) => d.scrollWidth > d.clientWidth);
         }, shift);
         expect(scrolled).toBe(false);
-        for (const [tag, over] of [
-          ["mover", true],
-          ["munder", false],
+        // Each display's stretched operator: the brace's own mover or munder, the one around the term
+        // rather than the script's, and the arrow's.
+        for (const [index, tag, over, slack] of [
+          [0, "mover > mover", true, 4],
+          [1, "munder > munder", false, 4],
+          // The arrow's tail starts a few pixels inside its base, as Latin Modern Math draws it.
+          [2, "mover", true, 10],
         ] as const) {
-          // The brace's own mover or munder, the one around the term rather than the script's.
-          const box = await page.evaluate((t) => {
-            const inner = document.querySelector(`#content .math-display ${t} > ${t}`)!;
-            const base = inner.firstElementChild!.getBoundingClientRect();
-            const all = inner.getBoundingClientRect();
-            return {
-              x: base.left,
-              w: base.width,
-              top: all.top,
-              bottom: all.bottom,
-              baseTop: base.top,
-              baseBottom: base.bottom,
-            };
-          }, tag);
+          const box = await page.evaluate(
+            (i, t) => {
+              const display = document.querySelectorAll("#content .math-display")[i]!;
+              const inner = display.querySelector(t)!;
+              const base = inner.firstElementChild!.getBoundingClientRect();
+              const all = inner.getBoundingClientRect();
+              return {
+                x: base.left,
+                w: base.width,
+                top: all.top,
+                bottom: all.bottom,
+                baseTop: base.top,
+                baseBottom: base.bottom,
+              };
+            },
+            index,
+            tag,
+          );
           const band = over
             ? { y: box.top, height: box.baseTop - box.top }
             : { y: box.baseBottom, height: box.bottom - box.baseBottom };
@@ -358,7 +366,7 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
             return [min, max];
           }, png as string);
           // The brace reaches both ends of the term, within a few pixels of each.
-          if (left > 20 + 4 || right < 20 + box.w - 4)
+          if (left > 20 + slack || right < 20 + box.w - slack)
             cut.push(`${tag} at +${shift}px: ${left}–${right} of 20–${Math.round(20 + box.w)}`);
         }
       }
