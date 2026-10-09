@@ -130,12 +130,12 @@ const EN = {
   "pages.noTitle": 'No title found in "{path}"; using "{title}".',
   "pages.mathParseFailed":
     "{where}: the formula {source} cannot be rendered and is shown as written: {detail}",
+  "pages.mathAsciimathStyle": "KaTeX has no {style} style to draw it in",
+  "pages.mathAsciimathUnread": "part of it could not be read as asciimath",
   "pages.mathStyleUnsupported":
     'Unicode has no {variant} form of "{chars}" in the formula {source} ({where}); it is shown without the style.',
   "pages.mathNotAllowed":
     "{where}: the formula {source} uses {commands}, which monodocs does not render; it is shown as written.",
-  "pages.mathAsciimath":
-    "{path}: the asciimath formula {source} is not rendered and is shown as Asciidoctor writes it; write it as latexmath, with `:stem: latexmath` or `latexmath:[...]`, to render it.",
   "pages.mathBroken":
     "{where}: the formula {source} is broken apart by the HTML around it (its own substitutions let a tag through), so it is not rendered and is shown as Asciidoctor writes it.",
   "pages.mathConstruct":
@@ -456,12 +456,12 @@ const JA: Record<MessageKey, string> = {
   "pages.noTitle": '"{path}" にタイトルがありません。"{title}" を使います。',
   "pages.mathParseFailed":
     "{where}: 数式 {source} を描画できないため、書かれたとおりに表示します: {detail}",
+  "pages.mathAsciimathStyle": "KaTeX には描くための {style} の書体がありません",
+  "pages.mathAsciimathUnread": "一部を asciimath として読めませんでした",
   "pages.mathStyleUnsupported":
     'Unicode には "{chars}" の {variant} の形がありません（数式 {source}、{where}）。スタイルなしで表示します。',
   "pages.mathNotAllowed":
     "{where}: 数式 {source} は monodocs が描かない {commands} を使っているため、書かれたとおりに表示します。",
-  "pages.mathAsciimath":
-    "{path}: asciimath の数式 {source} は描かれず、Asciidoctor が書くとおりに示されます。描くには、`:stem: latexmath` か `latexmath:[...]` を使って latexmath で書いてください。",
   "pages.mathBroken":
     "{where}: 数式 {source} は周りの HTML に分断されている（数式の独自の置換がタグを通した）ため、描かずに Asciidoctor が書くとおりに示します。",
   "pages.mathConstruct":

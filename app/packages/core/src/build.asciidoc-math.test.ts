@@ -5,9 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildSite } from "./build";
 
 /**
- * AsciiDoc math (roadmap 6.4): latexmath, and stem when it means latexmath, rendered as Markdown's
- * formulas are, through markers the converter puts in place of Asciidoctor's output; asciimath left as
- * Asciidoctor writes it, with a warning; `math.enabled: false` giving back the output before.
+ * AsciiDoc math (roadmap 6.4): latexmath and asciimath, and stem whichever it means, rendered as
+ * Markdown's formulas are, through markers the converter puts in place of Asciidoctor's output,
+ * asciimath through the TeX asciimath2tex makes of it (v0.16); `math.enabled: false` giving back the
+ * output before.
  */
 let dir: string;
 
@@ -177,19 +178,37 @@ describe("AsciiDoc math", () => {
     ]);
   });
 
-  it("leaves asciimath as Asciidoctor writes it, and warns", async () => {
+  it("renders asciimath, which stem means by default, through the TeX it converts to", async () => {
     const { html, result } = await build(
       "= T\n\nstem:[x^2] and asciimath:[y]\n\n[stem]\n++++\nsqrt(2)\n++++\n",
     );
-    expect(html).toContain("\\$x^2\\$");
-    expect(html).not.toContain("<math");
-    const found = result.warnings.filter((w) => w.code === "math/asciimath-not-rendered");
-    expect(found.map((w) => w.message)).toEqual([
-      expect.stringContaining("asciimath:[x^2]"),
-      expect.stringContaining("asciimath:[y]"),
-      expect.stringContaining("[asciimath]"),
+    expect(html).not.toContain("\\$x^2\\$");
+    expect(html.match(/<math /g)).toHaveLength(3);
+    expect(attributes(html, "data-math-tex")).toEqual(["x^{2}", "y", "\\sqrt{2}"]);
+    // Copied as written, as asciimath, since stem has been resolved by then.
+    expect(attributes(html, "data-math-source")).toEqual([
+      "asciimath:[x^2]",
+      "asciimath:[y]",
+      "[asciimath]\n++++\nsqrt(2)\n++++",
     ]);
-    expect(found[0]).toMatchObject({ path: "a.adoc" });
+    expect(result.warnings).toEqual([]);
+    // Search indexes the TeX.
+    expect(pageData(html).text).toContain("\\sqrt{2}");
+  });
+
+  it("gives asciimath what latexmath has: styled letters, a title as $TeX$, and diagnostics", async () => {
+    const { html, result } = await build(
+      "= Set asciimath:[bb(A) sub RR]\n\nasciimath:[color(1 2)(x)] and asciimath:[hat x]\n",
+    );
+    expect(pageData(html).title).toBe("Set $\\mathbf{A} \\subset \\mathbb{R}$");
+    expect(html).toContain("\u{1D400}");
+    expect(html).toContain("\u211D");
+    expect(html).not.toMatch(/mathvariant="(?!normal)/);
+    const failed = result.warnings.filter((w) => w.code === "math/parse-failed");
+    expect(failed).toHaveLength(1);
+    // A color KaTeX does not know, which the converter passes on as it is.
+    expect(failed[0]!.message).toContain("asciimath:[color(1 2)(x)]");
+    expect(html).toContain('<span class="math-error">asciimath:[color(1 2)(x)]</span>');
   });
 
   it("resolves stem as Asciidoctor does", async () => {
@@ -197,10 +216,10 @@ describe("AsciiDoc math", () => {
     expect(await formulas("= T\n\n[stem,latexmath]\n++++\nx\n++++\n")).toEqual(["x"]);
     expect(await formulas("= T\n:stem: tex\n\nstem:[y]\n")).toEqual(["y"]);
     expect(await formulas("= T\n:stem: latex\n\nstem:[z]\n")).toEqual(["z"]);
-    expect(await formulas("= T\n:stem:\n\nstem:[w]\n")).toEqual([]);
-    expect(await formulas("= T\n:stem: latexmath\n\n[stem,asciimath]\n++++\nv\n++++\n")).toEqual(
-      [],
-    );
+    expect(await formulas("= T\n:stem:\n\nstem:[w_1]\n")).toEqual(["w_{1}"]);
+    expect(await formulas("= T\n:stem: latexmath\n\n[stem,asciimath]\n++++\nv_1\n++++\n")).toEqual([
+      "v_{1}",
+    ]);
   });
 
   it("renders a formula in an AsciiDoc table cell", async () => {
@@ -248,9 +267,10 @@ describe("AsciiDoc math", () => {
       "= T\n\n[latexmath,subs=none]\n++++\n\\text{&#x110000;} &alpha;\n++++\n\n" +
         "[asciimath,subs=none]\n++++\n&#38;lt; &#x110000;\n++++\n",
     );
-    expect(attributes(html, "data-math-tex")).toEqual(["\\text{\uFFFD} α"]);
-    const asciimath = result.warnings.find((w) => w.code === "math/asciimath-not-rendered");
-    expect(asciimath!.message).toContain("&lt; \uFFFD");
+    expect(attributes(html, "data-math-tex")[0]).toBe("\\text{\uFFFD} α");
+    // Decoded once: `&#38;lt;` is `&lt;`, not `<`: a character `&`, then asciimath's own `lt`.
+    expect(attributes(html, "data-math-tex")[1]).toBe("\\& \\lt ; \uFFFD");
+    expect(result.warnings).toEqual([]);
   });
 
   it("agrees with the HTML parser on every reference, so no formula is lost to one", async () => {
@@ -307,10 +327,64 @@ describe("AsciiDoc math", () => {
     expect(attributes(on.html, "data-math-tex")).toEqual(["α", "α"]);
   });
 
-  it("writes the source of an asciimath block as written", async () => {
-    const { result } = await build("= T\n\n[asciimath]\n++++\na < b\n++++\n");
-    const found = result.warnings.find((w) => w.code === "math/asciimath-not-rendered");
-    expect(found!.message).toContain("[asciimath]\n++++\na < b\n++++");
+  it("writes the source of an asciimath block as written, without \\$...\\$ around it", async () => {
+    const { html } = await build(
+      "= T\n\n[asciimath]\n++++\na < b\n++++\n\n[asciimath]\n++++\n\\$c/d\\$\n++++\n",
+    );
+    expect(attributes(html, "data-math-source")).toEqual([
+      "[asciimath]\n++++\na < b\n++++",
+      "[asciimath]\n++++\nc/d\n++++",
+    ]);
+    expect(attributes(html, "data-math-tex")).toEqual(["a < b", "\\frac{c}{d}"]);
+  });
+
+  it("splits an asciimath block where Asciidoctor does, one formula a line", async () => {
+    const { html, result } = await build(
+      "= T\n\n[asciimath]\n++++\nx = 1 \\\ny = 2\n\nz = 3\n++++\n",
+    );
+    expect(attributes(html, "data-math-tex")).toEqual([
+      "\\begin{gathered}x = 1 \\\\ y = 2 \\\\ z = 3\\end{gathered}",
+    ]);
+    // Copied whole, as written.
+    expect(attributes(html, "data-math-source")).toEqual([
+      "[asciimath]\n++++\nx = 1 \\\ny = 2\n\nz = 3\n++++",
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("leaves asciimath it cannot convert as Asciidoctor writes it, and reports it", async () => {
+    const long = Array(6000).fill("a").join("+");
+    const { html, result } = await build(
+      `= T\n\n[asciimath]\n++++\n${long}\n++++\n\n` +
+        "asciimath:[text(undefined)]\n\n" +
+        "asciimath:[undefined + color red x] and asciimath:[bbsf_1(A)] and asciimath:[y]\n",
+    );
+    const failed = result.warnings.filter((w) => w.code === "math/parse-failed");
+    expect(failed.map((w) => w.message)).toEqual([
+      expect.stringMatching(/\[asciimath\][\s\S]*a\+a/),
+      // Its own `undefined` does not hide the one the converter wrote.
+      expect.stringMatching(/color red x\].*could not be read as asciimath/),
+      // With a subscript between the style and its argument too.
+      expect.stringMatching(/asciimath:\[bbsf_1\(A\)\].*no bbsf style/),
+    ]);
+    expect(html).toContain("\\$bbsf_1(A)\\$");
+    // An author's own undefined, alone, is a formula like any other.
+    expect(attributes(html, "data-math-tex")).toEqual(["\\text{undefined}", "y"]);
+  });
+
+  it("reads words with id or class in them as letters, and a block's \\$...\\$ part by part", async () => {
+    const { html, result } = await build(
+      "= T\n\nasciimath:[t_(mid) + width + x_(side)]\n\n" +
+        "[asciimath]\n++++\n\\$a\\$ + \\$b\\$\n++++\n\n[asciimath]\n++++\n\\$c\\$\n\n\\$d\\$\n++++\n",
+    );
+    expect(result.warnings).toEqual([]);
+    expect(attributes(html, "data-math-tex")).toEqual([
+      // `dt` is AsciiMath's differential, here as in ASCIIMathML.
+      "t_{m i d} + w i dt h + x_{s i d e}",
+      // Two pairs in one part are not taken for one around it.
+      "\\$ a \\$ + \\$ b \\$",
+      "\\begin{gathered}c \\\\ d\\end{gathered}",
+    ]);
   });
 
   it("shows a formula with < or quotes in the title as $TeX$", async () => {
@@ -344,6 +418,23 @@ describe("AsciiDoc math", () => {
       '= T\n\n[subs=macros]\n++++\n<span data-monodocs-math="latexmath:[x]">Visible</span>\n++++\n',
     );
     expect(own.html).not.toMatch(/[\uE000-\uE01F]/);
+  });
+
+  it("writes an asciimath marker back in asciimath's own delimiters, as with math off", async () => {
+    const adoc =
+      "= T\n\n[subs=macros]\n++++\n" +
+      '<span title="asciimath:[x^2]">T</span>\n' +
+      "<!-- asciimath:[y] -->\n" +
+      '<script>window.label = "asciimath:[z]";</script>\n' +
+      "++++\n";
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(on.html).not.toMatch(/[\uE000-\uE01F]/);
+    const titles = (html: string) => [...html.matchAll(/title="([^"]*)"/g)].map((m) => m[1]);
+    expect(titles(on.html)).toEqual(titles(off.html));
+    expect(on.html).toContain("<!-- \\$y\\$ -->");
+    expect(on.html).toContain('window.label = "\\$z\\$"');
+    expect(on.html).not.toContain("\\(");
   });
 
   it("writes markers back where no element can go, and in a template", async () => {
@@ -407,12 +498,13 @@ describe("AsciiDoc math", () => {
     expect(pageData(html).text).toContain("Visible");
   });
 
-  it("with math.enabled: false, writes what Asciidoctor wrote before, and does not warn", async () => {
+  it("with math.enabled: false, writes what Asciidoctor wrote before, asciimath too", async () => {
     const { html, result } = await build(DOC + "\nasciimath:[y]\n", "math:\n  enabled: false\n");
+    expect(html).toContain("\\$y\\$");
     expect(html).not.toContain("<math");
     expect(html).toContain("\\(x\\)");
     expect(html).toContain("\\[\\sum_{k=1}^{n} k\\]");
     expect(pageData(html).title).toBe("Energy \\(E=mc^2\\)");
-    expect(result.warnings.map((w) => w.code)).not.toContain("math/asciimath-not-rendered");
+    expect(result.warnings.map((w) => w.code).filter((c) => c.startsWith("math/"))).toEqual([]);
   });
 });

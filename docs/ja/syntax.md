@@ -74,12 +74,17 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 - `[source,mermaid]` ブロック → Mermaid 図（`mermaid.mode`: `client` 既定 / `pre-render` = ビルド時 SVG 化）
 - 同一文書内の `xref:` / 内部アンカー（ID を prefix して追従）
 - 脚注（`footnote:[]`）。ID は page id を prefix する
-- **数式**（v0.15）: `latexmath:[...]` と `[latexmath]` ブロック、および latexmath を意味するときの
-  `stem:[...]` と `[stem]` ブロック。latexmath を意味するのは、`:stem:` が `latexmath`・`latex`・`tex` の
-  とき（ブロックのスタイルが `[stem,asciimath]` のように別の指定をしない限り）か、ブロックのスタイルが
-  `latexmath` のとき。それ以外の `stem` と `asciimath:[...]` は asciimath で、描かない。Asciidoctor が
-  書くとおりに残し、ファイルと数式を名指す警告（`math/asciimath-not-rendered`）を出す。この警告は
-  `monodocs validate --strict` を失敗させ、`math.enabled: false` のときは出ない
+- **数式**（v0.15。asciimath は v0.16）: `latexmath:[...]` と `asciimath:[...]`、それぞれのブロック、
+  `stem:[...]` と `[stem]` ブロック。`stem` が latexmath を意味するのは、`:stem:` が `latexmath`・`latex`・
+  `tex` のとき（ブロックのスタイルが `[stem,asciimath]` のように別の指定をしない限り）か、ブロックの
+  スタイルが `latexmath` のときで、それ以外は Asciidoctor と同じく asciimath を意味する。asciimath は
+  TeX に変換して（asciimath2tex）latexmath と同じく描く。コピーすると `asciimath:[...]` として戻り、
+  検索はその TeX で見つかる。空行や行末の ` \` で区切ったブロックは、Asciidoctor と同じく区切り、1 行に
+  1 つの式として積む。描かずに報告するもの: KaTeX にコマンドの無い太字のサンセリフ、太字のスクリプト、
+  太字のフラクトゥール（`bbsf`、`bbsfit`、`bbcc`、`bbfr`）と、変換器には長すぎる式。属性を設定する
+  `class` と `id` は文字のまま残る。`bbit` は `\boldsymbol` なので、latexmath と同じく
+  ギリシャ大文字は太字の立体になる。`text(...)` の中の 1 つの `'` や `` ` `` は活字の引用符で描かれる。
+  `math.enabled: false` ではどちらの記法も Asciidoctor が書くとおりに残す
 
 ## 単一 HTML 化のための共通仕様（形式横断）
 
@@ -129,7 +134,7 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 | 改ページ（Markdown は `<div class="page-break"></div>`、AsciiDoc は `<<<`）                                  | **対応**（v0.11）            | PDF で新しい紙を始める。ブラウザから HTML を印刷したときも同じ。Markdown では `<div style="page-break-after: always"></div>` も同じマーカーとして受け付ける。どちらも monodocs が組み立てた要素に置き換わるので、入力の属性は 1 つも残らない。Markdown ではマーカーはそれ自体が 1 つのブロックであること。引用・リスト項目・表のセル・見出しの中のものは認識しない（印刷用スタイルシートがそれらのブロックを分割しないため）。AsciiDoc では `<<<` を Asciidoctor が置いた場所に要素が出るので、そちらでもトップレベルに置くこと。受理する引用符と空白の揺れは公式サイトの設定リファレンスに列挙している |
 | ファイル間リンクの見出しアンカー（`other.md#sec` / `xref:other.adoc#sec`）                                    | **対応**                     | リンク先ページの prefix 済み要素 ID（`{page-id}-{アンカー}`）へ解決する。見出しに限らず脚注・明示アンカーも対象。アンカーはリンク先ファイルが生成する ID と照合するため、Markdown から AsciiDoc の見出しを指すには Asciidoctor が生成する ID（例: `_details`）を書く。存在しないアンカーはページ先頭へフォールバックし警告する            |
 | コードハイライト（shiki）                                                                                     | **対応**                     | `highlight.enabled: false` で無効化可。言語指定の無いブロック・未対応言語は素のテキスト表示                                                                                                                                                                                                                                               |
-| 数式（Markdown `$...$` / `$$...$$` / ```` ```math ````、AsciiDoc latexmath / `stem`） | **対応**（v0.15、制限あり） | ビルド時に MathML に描く（上の形式横断の共通仕様）。描けない部分を落として数式を描き、報告するもの: 自動の式番号（星の無い `equation`・`align`・`gather`。`math/numbering-unsupported`。KaTeX のスタイルシートが描くもので、出力はそれを持たない。星付きの環境の `\tag{}` は描く）、Unicode に文字の無い書体（`\mathit{123}`。`math/style-unsupported`）、CSS で描けない囲み（`\phase`。`math/notation-unsupported`）、ブラウザが書かれたとおりに描けない構文（`\vcenter`。`math/construct-unsupported`）。数式を書いたとおりに示し、報告するもの: KaTeX が `trust` の後ろに置くコマンドを使う数式（`\href`、`\includegraphics`。`math/command-not-allowed`）と、KaTeX が解釈できない数式（`math/parse-failed`）。描かないもの: asciimath（上記）。段の幅より広い別行立ての数式は、画面ではスクロールする。紙では全幅で印刷し、紙より広ければ紙の端で切れる。アクセント: Latin Modern Math では `\vec` の矢印が文字の左に寄る（KaTeX が書く結合文字の矢印を、そのフォントがそう描く）。ほかのアクセントは、Chromium が斜めの線ではなく文字の箱の中央に置く。`\widehat`・`\widetilde`・`\widecheck`・`\utilde` は長い項の上でも 1 文字ほどの幅のままで、どのフォントにも合う文字は無い。`\overline` と `\underline` は、フォントにかかわらず項の幅の線で描く。`\overrightarrow`・`\overbrace`・`\underbrace` は、画面でも紙でも項にわたる（[roadmap.md](roadmap.md) 6.4） |
+| 数式（Markdown `$...$` / `$$...$$` / ```` ```math ````、AsciiDoc latexmath / asciimath / `stem`） | **対応**（v0.15、asciimath は v0.16、制限あり） | ビルド時に MathML に描く（上の形式横断の共通仕様）。描けない部分を落として数式を描き、報告するもの: 自動の式番号（星の無い `equation`・`align`・`gather`。`math/numbering-unsupported`。KaTeX のスタイルシートが描くもので、出力はそれを持たない。星付きの環境の `\tag{}` は描く）、Unicode に文字の無い書体（`\mathit{123}`。`math/style-unsupported`）、CSS で描けない囲み（`\phase`。`math/notation-unsupported`）、ブラウザが書かれたとおりに描けない構文（`\vcenter`。`math/construct-unsupported`）。数式を書いたとおりに示し、報告するもの: KaTeX が `trust` の後ろに置くコマンドを使う数式（`\href`、`\includegraphics`。`math/command-not-allowed`）と、KaTeX が解釈できない数式（`math/parse-failed`）。段の幅より広い別行立ての数式は、画面ではスクロールする。紙では全幅で印刷し、紙より広ければ紙の端で切れる。アクセント: Latin Modern Math では `\vec` の矢印が文字の左に寄る（KaTeX が書く結合文字の矢印を、そのフォントがそう描く）。ほかのアクセントは、Chromium が斜めの線ではなく文字の箱の中央に置く。`\widehat`・`\widetilde`・`\widecheck`・`\utilde` は長い項の上でも 1 文字ほどの幅のままで、どのフォントにも合う文字は無い。`\overline` と `\underline` は、フォントにかかわらず項の幅の線で描く。`\overrightarrow`・`\overbrace`・`\underbrace` は、画面でも紙でも項にわたる（[roadmap.md](roadmap.md) 6.4） |
 | Markdown 拡張記法（定義リスト / 絵文字ショートコード `:smile:` / `==marker==` / 上付き `^x^` / 下付き `~x~`） | **非対応**                   | CommonMark / GFM の範囲外。同等の表現が必要なら AsciiDoc 側を使う                                                                                                                                                                                                                                                                         |
 | AsciiDoc 文書単位の目次（`:toc:`）                                                                            | **無効化**                   | 単一 HTML 共通の「ページ内目次（右カラム）」を使うため、文書ごとの TOC は出力しない                                                                                                                                                                                                                                                       |
 | AsciiDoc アイコン（`:icons: font`）                                                                           | **制限**（テキスト表示）     | Font Awesome への外部依存を避け、admonition はラベルテキスト + 色分けで表示する（自己完結を優先）                                                                                                                                                                                                                                         |

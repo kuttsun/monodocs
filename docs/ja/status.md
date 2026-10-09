@@ -538,9 +538,9 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 
 **asciimath**（[roadmap.md](roadmap.md) 6.4）
 
-- [ ] 変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない asciimath の形を、足す前に [roadmap.md](roadmap.md) 6.4 に記録し、`THIRD-PARTY-NOTICES.txt` に載せる
-- [ ] asciimath を KaTeX を通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースのコピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath とともに asciimath も止める
-- [ ] 既定で有効にするかを理由とともに [roadmap.md](roadmap.md) 6.4 で決め、`math/asciimath-not-rendered` をどうするかも、コードについての [roadmap.md](roadmap.md) 27.3 の約束のもとで決める。[syntax.md](syntax.md) が英語と日本語で説明する
+- [x] 変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない asciimath の形を、足す前に [roadmap.md](roadmap.md) 6.4 に記録し、`THIRD-PARTY-NOTICES.txt` に載せる——asciimath2tex 1.5.0、Apache-2.0、依存なし、バンドルに +38 KB、バイナリに +64 KB。ASCIIMathML の 273 の記号を、エラーと描かれる書体の両方で測り、誤るものはパーサの表で直すか報告するようにし、1 回の解析で各位置を覚えて、周りの読み方ごとに同じ位置を読み直さないようにし（`|(` の 30 段で 15 ミリ秒未満。再帰によるスタックの上限は残る）、使い果たすスタックと読めなかった出力は報告する。ほかの案とともに [roadmap.md](roadmap.md) 6.4 に記録した
+- [x] asciimath を KaTeX を通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースのコピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath とともに asciimath も止める——latexmath と同じ目印を使い、TeX は変換器のものにする（`build.asciidoc-math.test.ts`、`sources/asciidoc/asciimath.test.ts`）
+- [x] 既定で有効にするかを理由とともに [roadmap.md](roadmap.md) 6.4 で決め、`math/asciimath-not-rendered` をどうするかも、コードについての [roadmap.md](roadmap.md) 27.3 の約束のもとで決める。[syntax.md](syntax.md) が英語と日本語で説明する——Asciidoctor 自身の `stem` と同じく既定で有効にした。`math/asciimath-not-rendered` は退役させ、描けない数式は `math/parse-failed` になる
 
 **検索の畳み込み**（[roadmap.md](roadmap.md) 22.3）
 
@@ -562,7 +562,7 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 AsciiDoc のチェックリストと検索結果が既存の文書で変わり、既定で有効なら asciimath も変わるので、このリリースは 0.15.0 と同じくベータを経る。Windows で人が行う確認は 0.16.0 について行い、上で 0.13.0 から 0.15.0 に残っているものは別に行わず、それで置き換える。
 
 - [ ] ドキュメントサイトの CI ガイドが、英語・日本語とも、`v0.16.0` タグを作る前のバージョン変更そのものの中で `monodocs@0.16.0` に固定する
-- [ ] `verify-published.yml` に 0.16 の判定と、チェックリストのマークアップ、新しい検索の畳み込み、asciimath の新しい挙動を確かめる手順を足し、v0.15 の asciimath の手順は 0.15 に限り、以下より前にマージする。asciimath が文字のまま残ることを確かめる単体テストは書き換える
+- [ ] `verify-published.yml` に 0.16 の判定と、チェックリストのマークアップ、新しい検索の畳み込み、asciimath の新しい挙動を確かめる手順を足し、v0.15 の asciimath の手順は 0.15 に限り、以下より前にマージする。asciimath が文字のまま残ることを確かめる単体テストは書き換える——単体テストは描画とともに書き換えた。ワークフローはリリースの作業として残す
 - [ ] `0.16.0-beta.1` を `next` タグで公開し、`dist_tag: next` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.16 の手順が飛ばされずに走ったことを確かめる
 - [ ] ベータ中に `examples/en`、`examples/ja`、`examples/math`、サイトのサンプルをベータでビルドし、チェックリスト、数式、検索を見る。読めなくなったものは `0.16.0` を切る前に直すか記録する
 - [ ] `0.16.0` を `latest` タグで公開し、リリースノートに既存の文書で変わるものを書き、`dist_tag: 0.16.0` で同じように検証する
