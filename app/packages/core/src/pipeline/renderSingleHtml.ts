@@ -158,7 +158,7 @@ function styleWithOverrides(style: string, input: RenderHtmlInput): string {
   if (overrides.length > 0) {
     out = `${out}\n:root {\n${overrides.join("\n")}\n}\n`;
   }
-  out = `${out}\n${PRINT_PAGE_BREAK_RULES}`;
+  out = `${out}\n${FIGURE_RULES}\n${PRINT_PAGE_BREAK_RULES}`;
   if (input.pdfPageBreakLevel !== undefined && input.pdfPageBreakLevel !== false) {
     out = `${out}\n${PRINT_HEADING_BREAK_RULES}`;
   }
@@ -205,6 +205,45 @@ const PRINT_HEADING_BREAK_RULES = `@media print {
   }
 }
 `;
+
+/**
+ * Where a figure sits (20.6), on screen and on paper alike, matched by the attribute
+ * post-processing marked it with ({@link file://./figures.ts}). Emitted here rather than in the
+ * default theme for the reason the page-break marker is.
+ *
+ * An image is placed with `text-align` on the paragraph or image block that holds it, which moves
+ * the image and an AsciiDoc block title with it. Asciidoctor wraps the image in a `.content` box
+ * beside the `.title`, and a theme may align either on its own, as the default theme centred the
+ * first before 0.16; both inherit instead, so the mark decides. A theme may also float the
+ * `left` / `right` class Asciidoctor writes for `float=`, which monodocs does not honour, so a
+ * marked block does not float.
+ *
+ * A diagram is placed by its drawing, not by `text-align` on its container: a Mermaid block holds
+ * its source as text until it is drawn, and holds it for good when drawing fails, and that text
+ * must stay as written rather than be centred line by line. A pre-rendered diagram is a `<figure>`,
+ * whose 40px side margins from the browser would hold it off the column's edges, so they go.
+ */
+const FIGURE_RULES = ["left", "center", "right"]
+  .map((align) => {
+    const mark = `[data-monodocs-figure="${align}"]`;
+    const margins =
+      align === "left"
+        ? "margin-left: 0;\n  margin-right: auto;"
+        : align === "right"
+          ? "margin-left: auto;\n  margin-right: 0;"
+          : "margin-left: auto;\n  margin-right: auto;";
+    return [
+      `#content ${mark}:not(.mermaid),\n.page ${mark}:not(.mermaid) {\n  text-align: ${align};\n}`,
+      `#content .mermaid${mark} > svg,\n.page .mermaid${mark} > svg {\n  display: block;\n  ${margins}\n}`,
+    ].join("\n");
+  })
+  .concat(
+    `#content [data-monodocs-figure] > .content,\n#content [data-monodocs-figure] > .title,\n.page [data-monodocs-figure] > .content,\n.page [data-monodocs-figure] > .title {\n  text-align: inherit;\n}`,
+    `#content .imageblock[data-monodocs-figure],\n.page .imageblock[data-monodocs-figure] {\n  float: none;\n}`,
+    `#content figure.mermaid[data-monodocs-figure],\n.page figure.mermaid[data-monodocs-figure] {\n  margin-left: 0;\n  margin-right: 0;\n}`,
+  )
+  .join("\n")
+  .concat("\n");
 
 const PRINT_PAGE_BREAK_RULES = `@media print {
   #content .page-break,

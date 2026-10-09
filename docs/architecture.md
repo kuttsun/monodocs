@@ -201,7 +201,8 @@ Preserve these display and reachability invariants:
   - Themes are read from the filesystem so every distribution form supports them, and must not reference
     external assets.
   - Rules a document asked for are appended by core to whatever stylesheet the theme supplies, never left to
-    the theme: the page-break marker, `pdf.pageBreakLevel`, `pdf.density`, and the `pdf.watermark` rule
+    the theme: the page-break marker, figure placement (`figures.align` and AsciiDoc's `align=`),
+    `pdf.pageBreakLevel`, `pdf.density`, and the `pdf.watermark` rule
     ([`pipeline/watermark.ts`](../app/packages/core/src/pipeline/watermark.ts)). A theme replacing `style.css`
     must not be able to delete "CONFIDENTIAL" from a document that asked for it. The watermark text reaches the
     CSS as an escaped string, the generated cover carries the same rule, and it is painted above the content

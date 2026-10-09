@@ -168,7 +168,8 @@ try {
   const pdfHeader = (await readFile(pdfOutput)).subarray(0, 5).toString("latin1");
   if (pdfHeader !== "%PDF-") throw new Error(`Invalid PDF header: ${pdfHeader}`);
   const prerenderedHtml = await readFile(prerenderOutput, "utf8");
-  if (!prerenderedHtml.includes('<figure class="mermaid"><svg')) {
+  // Attributes may follow the class: 0.16 marks a diagram with its alignment (roadmap 20.6).
+  if (!/<figure class="mermaid"[^>]*><svg/.test(prerenderedHtml)) {
     throw new Error("Pre-rendered Mermaid SVG not found");
   }
 

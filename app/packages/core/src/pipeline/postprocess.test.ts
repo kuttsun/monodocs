@@ -407,7 +407,9 @@ describe("postprocessPages - mermaid pre-render", () => {
     expect(result.hasMermaid).toBe(true);
     // ページ id が Unicode でも SVG id は ASCII セーフでグローバル一意。
     expect(calls).toEqual([{ id: "mermaid-0", code: "graph TD\n  A --> B" }]);
-    expect(pages[0]!.html).toContain('<figure class="mermaid"><svg id="mermaid-0">');
+    expect(pages[0]!.html).toContain(
+      '<figure class="mermaid" data-monodocs-figure="center"><svg id="mermaid-0">',
+    );
     // client mode のような未描画 <pre class="mermaid"> は残らない。
     expect(pages[0]!.html).not.toContain("<pre");
     expect(pages[0]!.html).not.toContain("language-mermaid");
@@ -490,7 +492,9 @@ describe("postprocessPages - mermaid pre-render", () => {
       mermaidPrerenderer: renderer,
     });
     expect(result.hasMermaid).toBe(true);
-    expect(pages[0]!.html).toContain('<pre class="mermaid">bad diagram</pre>');
+    expect(pages[0]!.html).toContain(
+      '<pre class="mermaid" data-monodocs-figure="center">bad diagram</pre>',
+    );
     expect(result.warnings.some((w) => w.message.includes("pre-render"))).toBe(true);
   });
 

@@ -1021,10 +1021,6 @@ body.content-wide #content {
   font-size: 0.9rem;
 }
 
-#content .imageblock .content {
-  text-align: center;
-}
-
 /* tables (Asciidoctor は p.tableblock でセルを包む) */
 #content .tableblock p {
   margin: 0.2rem 0;

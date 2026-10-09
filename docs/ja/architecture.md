@@ -124,7 +124,7 @@ pre-render の次の不変条件を守ってください。
   - カスタムテーマは `template.html` / `style.css` / `app.js` の一部だけを置けばよく、残りは既定テーマで補います（配色を変えるためにクライアントスクリプトを抱え込ませない）。
   - `{{style}}` / `{{sidebar}}` / `{{pages}}` / `{{siteDataJson}}` / `{{appJs}}` / `{{bodyScripts}}` が欠けたテンプレートは、壊れた文書を出力せずビルドを失敗させます。
   - テーマはどの配布形態でも使えるようファイルシステムから読み、外部アセットを参照してはいけません。
-  - 文書が求めた規則は、テーマに任せず、テーマが渡したスタイルシートへ core が追記します。改ページマーカー、`pdf.pageBreakLevel`、`pdf.density`、`pdf.watermark` の規則（[`pipeline/watermark.ts`](../../app/packages/core/src/pipeline/watermark.ts)）です。`style.css` を差し替えたテーマが、それを求めた文書から「CONFIDENTIAL」を消せてはいけません。透かしの文字列はエスケープした CSS 文字列として届き、生成した表紙にも同じ規則が付き、`mix-blend-mode: multiply` で本文の上に描きます。下に置くとテーマの背景に覆われるからです。
+  - 文書が求めた規則は、テーマに任せず、テーマが渡したスタイルシートへ core が追記します。改ページマーカー、図の配置（`figures.align` と AsciiDoc の `align=`）、`pdf.pageBreakLevel`、`pdf.density`、`pdf.watermark` の規則（[`pipeline/watermark.ts`](../../app/packages/core/src/pipeline/watermark.ts)）です。`style.css` を差し替えたテーマが、それを求めた文書から「CONFIDENTIAL」を消せてはいけません。透かしの文字列はエスケープした CSS 文字列として届き、生成した表紙にも同じ規則が付き、`mix-blend-mode: multiply` で本文の上に描きます。下に置くとテーマの背景に覆われるからです。
 - **印刷**：印刷と PDF にはスクロールがありません。画面でスクロールさせている要素（コードブロック、表）は印刷時に折り返すか収まる形にし、ページをまたぐ表は見出し行を繰り返します。内容を紙の端で黙って切り捨ててはいけません。
 - **メッセージと言語**：monodocs が印字するもの（Commander が生成する見出しを含む `--help`、すべてのエラー、すべての警告）は、ひとつのカタログを通します。既定は英語で、`--lang ja` または `MONODOCS_LANG=ja` で日本語になり、フラグが環境変数に優先します。
   - `LANG` / `LC_ALL` は意図的に見ません。ビルドログをそれを作ったマシンに依存させないためです。
