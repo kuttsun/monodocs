@@ -650,6 +650,7 @@ html:
 | `closeSidebar`       | Close sidebar                | サイドバーを閉じる         | サイドバーヘッダの « ボタン |
 | `searchPlaceholder`  | Search…                      | 検索…                      | 検索欄のプレースホルダ |
 | `searchLabel`        | Search documents             | ドキュメントを検索         | 検索欄のアクセシブル名 |
+| `clearSearch`        | Clear search                 | 検索語を消去               | 検索欄を消す × ボタン |
 | `searchResults`      | Search results               | 検索結果                   | 結果一覧のアクセシブル名 |
 | `noResults`          | No results                   | 該当なし                   | 一致が無いときの表示 |
 | `contentWidthToggle` | Toggle content width         | 本文幅を切り替え           | 本文幅ボタンのアクセシブル名 |

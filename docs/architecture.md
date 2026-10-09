@@ -174,6 +174,12 @@ Preserve these display and reachability invariants:
   first when it is closed (otherwise the shortcut silently does nothing). No key may be taken from a reader who
   is typing or from an IME mid-composition, except `⌘K`, which carries no editing meaning; `Ctrl+K` does on
   macOS (delete to end of line).
+- **Search clear button**: the theme's own, inside the search box, and the browser's × is not drawn beside it. It
+  is shown only while the box holds a query, clears what `Escape` clears, and leaves the focus in the box and a
+  narrow screen's drawer open. A template without it still searches; `app.js` guards its absence, and the rules
+  hiding the browser's × apply only where the button is there (`.search-field.has-clear`, which `app.js` sets
+  when it finds the button; a class rather than `:has()`, which Firefox gained only in 121), so such a template
+  keeps that ×.
 - `toc.maxLevel` filters embedded headings from h2 through the configured level (2-6, default 3). It does not
   remove content.
 - `html.colorScheme` sets the initial light, dark, or automatic scheme. A stored `monodocs:theme` preference

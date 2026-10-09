@@ -32,13 +32,24 @@
           </button>
         </div>
         <div class="sidebar-tools">
-          <input
-            id="search-input"
-            type="search"
-            placeholder="{{labelSearchPlaceholder}}"
-            autocomplete="off"
-            aria-label="{{labelSearchLabel}}"
-          />
+          <div class="search-field">
+            <input
+              id="search-input"
+              type="search"
+              placeholder="{{labelSearchPlaceholder}}"
+              autocomplete="off"
+              aria-label="{{labelSearchLabel}}"
+            />
+            <button
+              id="search-clear"
+              type="button"
+              aria-label="{{labelClearSearch}}"
+              title="{{labelClearSearch}}"
+              hidden
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            </button>
+          </div>
 {{#contentWidthToggle}}
           <button
             id="content-width-toggle"

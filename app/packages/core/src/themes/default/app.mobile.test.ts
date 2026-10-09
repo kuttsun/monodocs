@@ -50,7 +50,11 @@ async function mountClient(narrow: boolean): Promise<void> {
     `<div id="app">` +
     `<aside id="sidebar">` +
     `<div class="sidebar-header"><button id="sidebar-toggle" aria-expanded="true">«</button></div>` +
-    `<div class="sidebar-tools"><input id="search-input" type="search" /></div>` +
+    `<div class="sidebar-tools"><div class="search-field">` +
+    `<input id="search-input" type="search" />` +
+    `<button id="search-clear" type="button" hidden></button>` +
+    `</div></div>` +
+    `<ul id="search-results" hidden></ul>` +
     `<nav id="sidebar-nav"><ul class="sidebar-list">` +
     `<li class="sidebar-page"><a data-route="/guide" href="#/guide">Guide</a></li>` +
     `</ul></nav>` +
@@ -129,6 +133,20 @@ describe("sidebar drawer on narrow viewports", () => {
     expect(document.body.classList.contains("sidebar-open")).toBe(true);
     (document.getElementById("content") as HTMLElement).click();
     expect(document.body.classList.contains("sidebar-open")).toBe(false);
+  });
+
+  it("stays open when the search clear button is pressed in it", async () => {
+    await mountClient(true);
+    document.getElementById("sidebar-show")!.click();
+    const input = document.getElementById("search-input") as HTMLInputElement;
+    input.value = "guide";
+    input.dispatchEvent(new Event("input"));
+
+    // Unlike Escape, which leaves the drawer, the button is pressed inside it.
+    document.getElementById("search-clear")!.click();
+    expect(input.value).toBe("");
+    expect(document.body.classList.contains("sidebar-open")).toBe(true);
+    expect(document.activeElement).toBe(input);
   });
 
   it("restores the permanent sidebar when the viewport widens after closing the drawer", async () => {

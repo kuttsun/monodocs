@@ -1335,6 +1335,10 @@
     var box = document.getElementById("search-results");
     var nav = document.getElementById("sidebar-nav");
     var input = document.getElementById("search-input");
+    // The clear button is there while the box holds anything to clear. A theme's template may
+    // leave it out.
+    var clear = document.getElementById("search-clear");
+    if (clear) clear.hidden = !(input && input.value);
     if (!box) return;
 
     // 一覧を作り直すたびに選択は解除する（結果が変われば選択位置の意味も変わる）。
@@ -1420,6 +1424,31 @@
     input.addEventListener("input", function () {
       renderSearchResults(input.value);
     });
+    // Clears what Escape clears, but leaves the focus in the box, ready for the next query, and
+    // leaves a narrow screen's drawer open: the reader pressed a button in it, not a key to leave.
+    var clear = document.getElementById("search-clear");
+    if (clear) {
+      // The stylesheet makes room for the button, and hides the browser's own ×, only where this
+      // class says the button is there.
+      var field = clear.closest(".search-field");
+      if (field) field.classList.add("has-clear");
+      // A template may hold a value in the box, or leave `hidden` off the button: start in step.
+      clear.hidden = !input.value;
+      clear.addEventListener("click", function () {
+        input.value = "";
+        renderSearchResults("");
+        input.focus();
+      });
+      // Escape on the button clears the query as it does in the box. The button hides itself, so
+      // the focus goes to the box first rather than being lost; the key then carries on to the
+      // document, which closes a narrow screen's drawer as Escape always does.
+      clear.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        input.value = "";
+        renderSearchResults("");
+        input.focus();
+      });
+    }
     input.addEventListener("keydown", function (e) {
       // IME の変換中は上下キーが候補選択、Enter が確定に割り当てられている。keydown は
       // 変換中も届くため、ここで横取りすると日本語入力そのものが壊れ、未確定の文字列で
