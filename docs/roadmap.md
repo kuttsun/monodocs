@@ -2710,8 +2710,9 @@ Three related variations stay out of scope, because each one breaks that invaria
   and needs the same position map as half-width katakana.
 
 Supporting any of them means replacing the fold-in-place model with a token-to-source position map.
-None of them justifies that rewrite alone; the three together do, and they are taken up in v0.16,
-before 1.0, since what search finds changes for every existing document.
+None of them justifies that rewrite alone; the three together do, since one position map serves
+all three. They are taken up in v0.16, before 1.0, since what search finds changes for every existing
+document.
 
 ### 22.4 Keyboard Navigation of the Results
 
@@ -4742,9 +4743,10 @@ before the number and expensive after it; the rest are checks 1.0 should not be 
   2.0. Before 1.0, the default is still open
 - **Search does not fold half-width katakana, okurigana variants, or English stemming** (22.3).
   Each breaks the length invariant the highlight and snippet offsets depend on, and 22.3 deferred
-  them because none alone justifies replacing the fold-in-place model. Together they do, and the
-  replacement has to come before 1.0: what search finds changes for every existing document, and a
-  default that 1.0 sets does not change in a minor release (12.4)
+  them because none alone justifies replacing the fold-in-place model. Together they do: one
+  position map serves all three, so its cost is paid once. And it has to come before 1.0, for the
+  reason 12.4 gives a default value: what search finds changes for every existing document without
+  its author touching anything
 - **The 1.0 surfaces are not enumerated in one place.** 1.0 listed the enumeration and the
   diagnostics schema version as its own work. The schema version is already 1
   (`DIAGNOSTICS_SCHEMA_VERSION`), and the command reference already tells a CI job to pin it rather
@@ -4769,8 +4771,9 @@ Implementation scope:
 
 Completion criteria:
 
-- Each item of an AsciiDoc checklist carries the same checkbox element a Markdown task list item
-  carries — `<input type="checkbox" disabled>`, with `checked` when checked — and no `❏` or `✓`
+- Each item of an AsciiDoc checklist carries the same checkbox element, with the same attributes, a
+  Markdown task list item carries — `<input type="checkbox" disabled>`, with `checked` when
+  checked — and no `❏` or `✓`
   from Asciidoctor reaches the output. What `[%interactive]` produces is decided and stated. A test
   asserts both, and syntax.md says so in both languages
 - `examples/en` and `examples/ja`, built to PDF in the development image, raise no font warning, and
@@ -4778,7 +4781,9 @@ Completion criteria:
   `examples/math` is still reported there, since the image has no MATH font on purpose (6.4)
 - The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`,
   `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc. Built to HTML
-  and PDF on Linux with Latin Modern Math, what 6.4 records is checked again on the fixture. Built
+  and PDF on Linux with Latin Modern Math, what 6.4 records is checked again on the fixture, and the accents it has no record
+  for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked to sit over or span
+  their base, or recorded in 6.4. Built
   on Windows with Cambria Math, each accent sits over its base and each wide one spans it, or what
   does not is recorded in 6.4. What is fixed or accepted is stated in 6.4 and in syntax.md in both
   languages
@@ -4786,7 +4791,7 @@ Completion criteria:
   asciimath forms it does not handle are recorded in 6.4 before it is added, and it is named in
   `THIRD-PARTY-NOTICES.txt`. asciimath is rendered to MathML through KaTeX with what latexmath has:
   `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula
-  that does not convert. `math.enabled: false` turns it off with latexmath. Whether it is on by
+  that does not convert. `math.enabled: false` turns asciimath off along with latexmath. Whether it is on by
   default is decided in 6.4 with its reason, and so is what becomes of
   `math/asciimath-not-rendered` — kept, retired, or reworded to name the key that turns asciimath
   on — under 27.3's promise about codes. syntax.md describes it in both languages
@@ -4800,7 +4805,7 @@ Completion criteria:
   dictionary, which 22.3 says the characters cannot replace, a matching rule that tolerates kana
   between kanji rather than deriving the variant, with the false matches that brings, or something
   else. The 20.5 size report's `page data` and total are measured on `examples/ja` before and after
-  and recorded. On by default, the method adds less than 100 KB to `examples/ja`; one that needs more
+  and recorded. If it is on by default, it adds less than 100 KB to `examples/ja`; one that needs more
   sits behind a key, and the key joins the enumeration below
 - The frozen surfaces — every configuration key with its default, every command and option, every
   diagnostic code, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc — are
@@ -4814,9 +4819,12 @@ Completion criteria:
   if it is on by default, 0.16.0 goes through a beta before `latest`, as 0.15.0 did, with the same
   verification: the published package on Linux x64 and Windows x64, the release binaries, a driven
   browser pass over what the released Linux binary builds, the samples built and looked at during the
-  beta, and the CI guide pinned to the release. The release notes state what changes. The Windows
-  checks a person has to make are made for 0.16.0; those left open for 0.13.0 to 0.15.0 are
-  superseded by them rather than made separately
+  beta, and the CI guide pinned to the release. `verify-published.yml` checks asciimath's new
+  behaviour for 0.16 and later and keeps v0.15's asciimath steps for 0.15 only, and the unit tests
+  that assert asciimath is left as text are rewritten. The release notes state what changes. The
+  Windows checks a person has to make are made for 0.16.0, on a PDF with a watermark, `pdf.toc`,
+  section numbering, and formulas, its table's numbers matching the sheets; those left open for
+  0.13.0 to 0.15.0 are superseded by them rather than made separately
 
 ---
 

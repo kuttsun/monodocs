@@ -421,10 +421,10 @@ v0.16 は、これまでのマイルストーンが先送りしたものを片�
 
 - [x] プレリリースを経ず `latest` tag で `0.13.0` を npm へ公開し、`verify-published.yml` により Linux x64 / Windows x64 で検証する。入力は既定の `next` ではなく `dist_tag: 0.13.0` とする——`next` は後述の項目で移すまで 0.12.0 を指しており、0.13 の手順をすべて飛ばしたまま成功してしまう。ログが `verifying monodocs 0.13.0` を示し、0.13 が必要な手順——`sources.lineBreak`、出力サイズの表示と `assets.budget`、`pdf.watermark`、Mermaid の lightbox のマークアップ——が飛ばされずに実行されたことを確かめる。`v0.13.0` タグから CI で provenance 付きで公開し、`latest` dist-tag が付いた。`dist_tag: 0.13.0` での実行はログに `verifying monodocs 0.13.0` を示し、0.13 の 4 つの手順は Linux x64 / Windows x64 の両方で実行されて成功した
 - [x] リリースバイナリを両プラットフォームの `verify-release-binaries.yml` で検証する。リリースが起動した実行で、両プラットフォームとも 16 項目が PASS した
-- [ ] 公開済みの `v0.13.0` の資産に対し、Windows 11 ホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
+- [ ] 公開済みの `v0.13.0` の資産に対し、Windows 11 ホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する ——0.16.0 の確認で置き換える（v0.16）
 - [x] Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）。Linux x64 ホスト上の、Node.js を入れていない `debian:stable-slim` コンテナで、公開済みの `v0.13.0` の資産に対して実行し、16 項目すべて PASS した。素のホストではなくコンテナだが、この項目が問うている環境——バイナリが自前のランタイム以外を持たない環境——であり、0.12.0 が未了で残した項目をこれで閉じる
 - [x] リリースされた Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新たに加わる 2 つ——Mermaid 図が lightbox で開き、閉じると元に戻ること、`sources.lineBreak: join` でビルドした日本語の段落が文と文のあいだに空白なく読めること——を含む。資産を `.sha256` と照合し、最小限の環境で実行して、その出力を Chromium で 13 項目確かめた——サイドバーの表示、ページの移動と現在ページの印、前後ナビ、検索結果と開いたページ内のハイライト、`Escape` による検索欄のクリアと目次の復帰、再読み込み後も保たれるダークモード、375px でトグルから開きリンクの後に閉じるドロワー、別名がページを表示して hash を書き換えること、別名がアンカーを保つこと、フッターの `monodocs v0.13.0`、スクリプトエラーが無いこと、そして新しい 2 つ——Mermaid 図が lightbox で全幅に開き、閉じるとブロックに戻ること、`join` でビルドした `examples/ja` で日本語の文と文のあいだに改行が残らず、書き手が書いた明示的な改行と、英字が続く文の改行は残ること
-- [ ] Windows で人にしかできない確認——生成した HTML が Edge でどう見えるか（とりわけ日本語）、透かし入りの PDF を開いて印刷したときの見え方、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードした資産に対する Mark of the Web と SmartScreen
+- [ ] Windows で人にしかできない確認——生成した HTML が Edge でどう見えるか（とりわけ日本語）、透かし入りの PDF を開いて印刷したときの見え方、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードした資産に対する Mark of the Web と SmartScreen ——0.16.0 の確認で置き換える（v0.16）
 - [x] `next` dist-tag を `0.13.0` へ移し、公式サイトの CI ガイドの固定バージョン（英日とも）をそれに合わせる。`next` と `latest` はどちらも `0.13.0` を指し、CI ガイドは `monodocs@0.13.0` を固定している
 
 ### v0.14: 紙の版面を仕上げる
@@ -459,10 +459,10 @@ v0.16 は、これまでのマイルストーンが先送りしたものを片�
 
 - [x] `0.14.0` をプレリリースなしで npm の `latest` タグに公開し、`verify-published.yml` を `dist_tag: 0.14.0` で実行して Linux x64 と Windows x64 で検証する——既定の `next` ではない。`next` は下で動かすまで 0.13.0 を指しており、0.14 の段をすべて飛ばしたまま通ってしまう。ログが `verifying monodocs 0.14.0` と言い、0.14 で切り替わる段（見出し番号と紙の目次。#150 が追加するので、実行前にマージしておく）が飛ばされずに実行されたことを確かめる。`npm` 環境の承認を経て `v0.14.0` タグから CI で provenance 付きで公開し、`latest` の dist-tag が付いた。`dist_tag: 0.14.0` での実行はログに `verifying monodocs 0.14.0` と出し、0.14 の 2 つの段は Linux x64 と Windows x64 の両方で実行されて通った。`:sectnums:` は `numbering/sectnums` として報告され、紙の目次は両方で Alpha 2、Alpha one 2、Alpha two 4、Beta 5、Beta one 7 と読め、いずれも見出しの載る紙と一致した
 - [x] `verify-release-binaries.yml` でリリースバイナリを両プラットフォームで検証する。リリースが起動した実行は、どちらも 16 項目を通過した
-- [ ] 公開した `v0.14.0` のアセットに対して、Windows 11 のホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
+- [ ] 公開した `v0.14.0` のアセットに対して、Windows 11 のホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する ——0.16.0 の確認で置き換える（v0.16）
 - [x] Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）。Linux x64 ホスト上の、Node.js の入っていない `debian:stable-slim` コンテナで、公開した `v0.14.0` のアセットに対して実行し、16 項目すべて通過した。0.13.0 と同じく素のホストではなくコンテナだが、バイナリは自分以外のランタイムを持たず、それがこの項目の対象である
 - [x] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新しいもの——`numbering.sections` を有効にしたとき、見出し・サイドバー・ページ内目次の番号が一致し、節番号で検索するとその節が開く——を含める。アセットを `.sha256` で確かめ、最小限の環境で `examples/en` を `numbering.sections: 3` でビルドし、出力を Chromium で操作した。20 ページすべてで、サイドバーと h1、本文の h2/h3 とページ内目次の項目が同じ番号を持ち（79 見出し、不一致なし）、`1.1` を検索するとその節が先頭に出て `Enter` で開き、語の検索は結果を返し、前後ナビとダークモードは働き、フッタは `monodocs v0.14.0` と読め、スクリプトエラーは無かった
-- [ ] Windows で人にしか答えられないこと。Edge で生成 HTML がどう見えるか（とりわけ日本語）、`pdf.toc` と番号付けを有効にした PDF を開いて印刷し、目次の番号が紙と一致すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットの Mark of the Web と SmartScreen
+- [ ] Windows で人にしか答えられないこと。Edge で生成 HTML がどう見えるか（とりわけ日本語）、`pdf.toc` と番号付けを有効にした PDF を開いて印刷し、目次の番号が紙と一致すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットの Mark of the Web と SmartScreen ——0.16.0 の確認で置き換える（v0.16）
 - [x] `next` の dist-tag を `0.14.0` へ動かす。ドキュメントサイトの CI ガイド（英語・日本語とも）は、サイトがリリースからデプロイされるようになったので、版の変更そのものの中で `monodocs@0.14.0` に固定する。0.14.0 の代わりに修正版を出す場合は、その版の変更で固定し直す。`next` と `latest` はどちらも `0.14.0` を指し、デプロイされた CI ガイドは英語・日本語とも `monodocs@0.14.0` を固定している
 
 ### v0.15: Mermaid ランタイムと数式
@@ -513,10 +513,10 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 - [x] ベータの間に、このリポジトリが公開している文書——`examples/en`、`examples/ja`、サイトの見本——をベータでビルドし、mermaid 12 でのすべての図を見る。読めなくなった図は、`0.15.0` を出す前に直すか記録する——ベータで `examples/en` と `examples/ja` をビルドし、それぞれ 3 つの図を Chromium で描いて 0.14.0 と比べた。どれも読める。mermaid 12 は、0.14.0 の薄紫の箱と曲線の代わりに、白地に濃い枠線の箱と直角に曲がる線を描き、横長の処理の流れの図ではラベルの一部を折り返し、SVG の幅が狭くなる（0.14.0 の 2,055px に対して 1,704px）ので、段の幅に縮めると文字が少し大きくなる。図が枠の左に寄ることと、横長の図が段の幅に縮むことは以前と同じ。直すものは無く、見た目の変化はリリースノートに書く。単一ファイルのサイトの見本は同じ examples から作る
 - [x] 図の変化とライセンスの変化を書いたリリースノートとともに `0.15.0` を `latest` タグに公開し、`dist_tag: 0.15.0` で同じように検証する——`npm` 環境の承認後に `v0.15.0` タグで CI から provenance 付きで公開し、`latest` を付けた。リリースノートには図の変化とライセンスの変化を書いた。`dist_tag: 0.15.0` の実行は Linux x64 と Windows x64 で `verifying monodocs 0.15.0` を出力し、0.15 の 2 つの段は両方で実行されて通った
 - [x] `verify-release-binaries.yml` で `v0.15.0` のリリースバイナリを両プラットフォームで検証する——公開時に走り、Linux x64 と Windows x64 で通った
-- [ ] 公開した `v0.15.0` のアセットに対して、Windows 11 のホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
+- [ ] 公開した `v0.15.0` のアセットに対して、Windows 11 のホストで [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する ——0.16.0 の確認で置き換える（v0.16）
 - [x] 公開した `v0.15.0` のアセットに対して、Node.js の無い Linux x64 ホストで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する（[maintenance.md](maintenance.md)）——Node.js の無い `debian:stable-slim` のコンテナで、公開した `v0.15.0` のアセットに対して実行し、16 項目すべて通った
 - [x] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。このマイルストーンで新しいもの——mermaid 12 で図が描かれ、ソースに表記があること、MATH フォントで数式が描かれること——を含む——公開したアセットを `.sha256` で確かめ、最小の環境と Node.js 無しで `examples/en` と `examples/math` をビルドし、`fonts-lmodern` を入れた Chromium で出力を操作して 11 項目を確かめた。サイドバーの描画（20 のリンク）、リンクでの移動と現在のページの印、次へ、`mermaid` の検索（結果 4 件、開いたページでのハイライト 4 つ）、`Escape` による検索欄のクリア、再読み込み後のダークモード、375px でのドロワーの開閉、フッターの `monodocs v0.15.0`、スクリプトのエラーが無いこと、そして新しい 2 つ——mermaid 12 で描かれた図とソース中に 1 回の `mermaid@12.1.0` の表記、Latin Modern Math で描かれた 21 の数式（CDP の `getPlatformFontsForNode` で確認。行列の括弧は 3.2em に伸びた）
-- [ ] Windows で人にしか答えられないこと。Edge で生成 HTML がどう見えるか（とりわけ日本語と数式）、数式を含む PDF を開いて印刷すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットの Mark of the Web と SmartScreen——一部は済んだ。ベータの間に、数式のフィクスチャの HTML を Edge で見て、数式を含む PDF を開いた（上記）。その印刷、`serve --open`、Mark of the Web と SmartScreen はまだである
+- [ ] Windows で人にしか答えられないこと。Edge で生成 HTML がどう見えるか（とりわけ日本語と数式）、数式を含む PDF を開いて印刷すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットの Mark of the Web と SmartScreen——一部は済んだ。ベータの間に、数式のフィクスチャの HTML を Edge で見て、数式を含む PDF を開いた（上記）。その印刷、`serve --open`、Mark of the Web と SmartScreen はまだである ——0.16.0 の確認で置き換える（v0.16）
 - [x] `next` の dist-tag を `0.15.0` へ動かし、デプロイされた CI ガイドが英語・日本語とも `monodocs@0.15.0` に固定されていることを確かめる——`next` と `latest` はどちらも `0.15.0` を指し、デプロイされた CI ガイドは両言語とも 4 か所で `monodocs@0.15.0` に固定されている
 
 ### v0.16: 1.0 の前に残っているもの
@@ -525,27 +525,27 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 
 **チェックリストとサンプル文書**（[roadmap.md](roadmap.md) 24.3.3）
 
-- [ ] AsciiDoc のチェックリストの各項目が、Markdown のタスクリストの項目と同じチェックボックスの要素（`<input type="checkbox" disabled>`、チェック済みなら `checked` 付き）を持ち、Asciidoctor の `❏` や `✓` が出力に届かない。`[%interactive]` が何を出すかを決めて書く。テストが両方を確かめ、[syntax.md](syntax.md) が英語と日本語でそう書く
+- [ ] AsciiDoc のチェックリストの各項目が、Markdown のタスクリストの項目と同じ要素と属性のチェックボックス（`<input type="checkbox" disabled>`、チェック済みなら `checked` 付き）を持ち、Asciidoctor の `❏` や `✓` が出力に届かない。`[%interactive]` が何を出すかを決めて書く。テストが両方を確かめ、[syntax.md](syntax.md) が英語と日本語でそう書く
 - [ ] 開発用イメージで PDF にビルドした `examples/en` と `examples/ja` がフォントの警告を出さず、テストがそれを確かめる。`examples/*/pdf.md` は `☒` そのものを書かず、サンプルが検査に引っかかると書いた [development.md](development.md) の注記は英語と日本語で消す。`examples/math` はそこでは引き続き報告される。開発用イメージには意図して MATH フォントを入れていないからである
 
 **幅の広いアクセント**（[roadmap.md](roadmap.md) 6.4）
 
 - [ ] 数式のフィクスチャが、Markdown と AsciiDoc の両方で `\acute`、`\grave`、`\widehat`、`\widetilde`、`\widecheck`、`\utilde`、`\overrightarrow`、`\overbrace` と `\underbrace` を含む
-- [ ] Linux で Latin Modern Math を使って HTML と PDF にビルドし、[roadmap.md](roadmap.md) 6.4 の記録をフィクスチャの上で確かめ直す
+- [ ] Linux で Latin Modern Math を使って HTML と PDF にビルドし、[roadmap.md](roadmap.md) 6.4 の記録をフィクスチャの上で確かめ直す。6.4 に記録の無いもの（`\grave`、`\overrightarrow`、`\overbrace`、`\underbrace`）は、基底の上に来るか基底にわたるかを確かめるか、そこに記録する
 - [ ] Windows で Cambria Math を使ってビルドし、どのアクセントも基底の上に来て、幅の広いものは基底の幅いっぱいに伸びるか、そうならないものを [roadmap.md](roadmap.md) 6.4 に記録する
 - [ ] 直したものと受け入れたものを、[roadmap.md](roadmap.md) 6.4 と英語・日本語の [syntax.md](syntax.md) に書く
 
 **asciimath**（[roadmap.md](roadmap.md) 6.4）
 
 - [ ] 変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない asciimath の形を、足す前に [roadmap.md](roadmap.md) 6.4 に記録し、`THIRD-PARTY-NOTICES.txt` に載せる
-- [ ] asciimath を KaTeX を通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースのコピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath と一緒に止める
+- [ ] asciimath を KaTeX を通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースのコピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath とともに asciimath も止める
 - [ ] 既定で有効にするかを理由とともに [roadmap.md](roadmap.md) 6.4 で決め、`math/asciimath-not-rendered` をどうするかも、コードについての [roadmap.md](roadmap.md) 27.3 の約束のもとで決める。[syntax.md](syntax.md) が英語と日本語で説明する
 
 **検索の畳み込み**（[roadmap.md](roadmap.md) 22.3）
 
 - [ ] その場で畳む方式をトークンと原文の位置対応表に置き換え、v0.9 の畳み込みはそのまま成り立ち、半角カタカナを文書化した境界として一致させないテストは反転する
 - [ ] 検索で `ｶﾞｲﾄﾞ` から `ガイド` が、`引き渡し` から `引渡し` が、それぞれ逆向きにも見つかり、`installing` と `installed` から `install` が見つかる。ハイライトと抜粋はページに書かれたとおりの文字列に付く。送り仮名の畳み込みがキーの後ろにあるなら、キーを有効にしたときに成り立つ。テストがそれぞれの畳み込みとその上のハイライトを確かめる
-- [ ] 送り仮名の揺れをどう畳むかを、ほかの案と退けた理由とともに [roadmap.md](roadmap.md) 22.3 で選び、サイズ報告の `page data` と合計を `examples/ja` で前後に測って記録する。既定で有効にする方法が足すものは 100 KB 未満であり、それを超える方法はキーの後ろに置き、そのキーを列挙に加える
+- [ ] 送り仮名の揺れをどう畳むかを、ほかの案と退けた理由とともに [roadmap.md](roadmap.md) 22.3 で選び、サイズ報告の `page data` と合計を `examples/ja` で前後に測って記録する。既定で有効にするなら、足すのは 100 KB 未満とする。それを超える方法はキーの後ろに置き、そのキーを列挙に加える
 
 **1.0 の表面**（[roadmap.md](roadmap.md) 12.4、27.3）
 
@@ -561,16 +561,23 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 AsciiDoc のチェックリストと検索結果が既存の文書で変わり、既定で有効なら asciimath も変わるので、このリリースは 0.15.0 と同じくベータを経る。Windows で人が行う確認は 0.16.0 について行い、上で 0.13.0 から 0.15.0 に残っているものは別に行わず、それで置き換える。
 
 - [ ] ドキュメントサイトの CI ガイドが、英語・日本語とも、`v0.16.0` タグを作る前のバージョン変更そのものの中で `monodocs@0.16.0` に固定する
-- [ ] `verify-published.yml` に 0.16 の判定と、チェックリストのマークアップと新しい検索の畳み込みを確かめる手順を足し、以下より前にマージする
+- [ ] `verify-published.yml` に 0.16 の判定と、チェックリストのマークアップ、新しい検索の畳み込み、asciimath の新しい挙動を確かめる手順を足し、v0.15 の asciimath の手順は 0.15 に限り、以下より前にマージする。asciimath が文字のまま残ることを確かめる単体テストは書き換える
 - [ ] `0.16.0-beta.1` を `next` タグで公開し、`dist_tag: next` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.16 の手順が飛ばされずに走ったことを確かめる
 - [ ] ベータ中に `examples/en`、`examples/ja`、`examples/math`、サイトのサンプルをベータでビルドし、チェックリスト、数式、検索を見る。読めなくなったものは `0.16.0` を切る前に直すか記録する
 - [ ] `0.16.0` を `latest` タグで公開し、リリースノートに既存の文書で変わるものを書き、`dist_tag: 0.16.0` で同じように検証する
 - [ ] `v0.16.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する
-- [ ] Node.js の無い Linux x64 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) を実行する
-- [ ] Windows 11 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) を実行する
+- [ ] Node.js の無い Linux x64 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
+- [ ] Windows 11 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
 - [ ] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。チェックリストと新しい検索の畳み込みを含める
-- [ ] 人にしか答えられない Windows での確認。生成した HTML の Edge での見え方（とりわけ日本語と数式）、数式を含む PDF を開いて印刷すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットに対する Mark of the Web と SmartScreen
+- [ ] 人にしか答えられない Windows での確認。生成した HTML の Edge での見え方（とりわけ日本語と数式）、透かし、`pdf.toc`、見出し番号、数式を含む PDF を開いて印刷し、目次の番号がシートと一致すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットに対する Mark of the Web と SmartScreen
 - [ ] `next` の dist-tag を `0.16.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.16.0` に固定していることを確かめる
+
+### 1.0
+
+このリリースは [roadmap.md](roadmap.md) が定義し、v0.16 のリリース後に始める。
+
+- [ ] `sidebar.exclude` が、`sources.exclude` を名指すメッセージとともに未知のキーとして拒否され、列挙から消える
+- [ ] 列挙のテストが通り、ドキュメントを英語と日本語でコードと突き合わせる。リファレンスにスキーマの持たないキーは無く、[architecture.md](architecture.md) にコードのしない挙動は無い
 
 ## 対応記法
 
