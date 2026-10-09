@@ -32,8 +32,8 @@ export function markChecklists(doc: Document): void {
  *
  * `[%interactive]` is rendered the same way. A single HTML file has nowhere to keep what a reader
  * ticks, so a box that can be clicked would forget it on reload, and it prints the same either way.
- * Only an `<input>` Asciidoctor wrote at the head of a checklist item's first paragraph is touched;
- * one passed through from raw HTML elsewhere is left as written.
+ * Only an `<input>` Asciidoctor wrote at the head of a checklist item's first paragraph is touched,
+ * told by the `data-item-complete` it puts on it; one passed through as raw HTML is left as written.
  */
 export function normalizeChecklistBoxes(tree: HastRoot): void {
   visit(tree, "element", (node: Element) => {
@@ -44,7 +44,11 @@ export function normalizeChecklistBoxes(tree: HastRoot): void {
       if (paragraph?.type !== "element" || paragraph.tagName !== "p") continue;
       const box = paragraph.children[0];
       if (box?.type !== "element" || box.tagName !== "input") continue;
-      if (box.properties.type !== "checkbox") continue;
+      // Asciidoctor marks the box it writes for an interactive item; an <input> passed through as
+      // raw HTML carries no such mark.
+      if (box.properties.type !== "checkbox" || box.properties.dataItemComplete === undefined) {
+        continue;
+      }
       const checked = box.properties.checked === true;
       box.properties = checked
         ? { type: "checkbox", checked: true, disabled: true }

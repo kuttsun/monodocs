@@ -54,10 +54,17 @@ describe("AsciiDoc checklists (v0.16)", () => {
     ]);
   });
 
-  it("reach a checklist nested in a list and one inside an a| table cell", async () => {
-    const adoc = await renderAdoc("* outer\n** [ ] nested\n\n|===\na|\n* [x] in a cell\n|===\n");
+  it("reach a checklist nested in a list, in a block, in a description, and in an a| cell", async () => {
+    const adoc = await renderAdoc(
+      "* outer\n** [ ] nested\n\n" +
+        "NOTE: before\n\n[NOTE]\n====\n* [ ] in a note\n====\n\n" +
+        "term:: description\n+\n* [x] in a description\n\n" +
+        "|===\na|\n* [x] in a cell\n|===\n",
+    );
     expect(boxes(adoc.html)).toEqual([
       { type: "checkbox", disabled: true },
+      { type: "checkbox", disabled: true },
+      { type: "checkbox", checked: true, disabled: true },
       { type: "checkbox", checked: true, disabled: true },
     ]);
     expect(adoc.html).not.toMatch(/[✓❏]|&#10003;|&#10063;/);
@@ -67,5 +74,13 @@ describe("AsciiDoc checklists (v0.16)", () => {
     const adoc = await renderAdoc("* [x] done\n* ✓ written by hand\n");
     expect(boxes(adoc.html)).toHaveLength(1);
     expect(adoc.html).toContain("✓ written by hand");
+  });
+
+  it("leave an <input> passed through as raw HTML as written", async () => {
+    const adoc = await renderAdoc('* [x] done\n* +++<input type="checkbox" name="keep">+++ raw\n');
+    expect(boxes(adoc.html)).toEqual([
+      { type: "checkbox", checked: true, disabled: true },
+      { type: "checkbox", name: "keep" },
+    ]);
   });
 });

@@ -604,11 +604,16 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     }
   }, 180_000);
 
-  // examples/en and examples/ja: the sample documents. Each has a page of formulas, so the only thing
-  // the development image may report of them is what a math font would draw (roadmap v0.16).
-  const SAMPLES = ["en", "ja"].map((lang) => ({
-    lang,
-    input: fileURLToPath(new URL(`../../../../examples/${lang}`, import.meta.url)),
+  // The sample documents, the math fixture with them, whole: examples/en and examples/ja each have a
+  // page of formulas, so the only thing the development image may report of any of them is what a
+  // math font would draw (roadmap v0.16).
+  const SAMPLES = [
+    { name: "en", lang: "en" },
+    { name: "ja", lang: "ja" },
+    { name: "math", lang: "ja" },
+  ].map((sample) => ({
+    ...sample,
+    input: fileURLToPath(new URL(`../../../../examples/${sample.name}`, import.meta.url)),
   }));
 
   async function buildSample(sample: (typeof SAMPLES)[number], name: string, theme: string) {
@@ -626,22 +631,22 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
 
   for (const sample of SAMPLES) {
     it.skipIf(!hasCjkAndEmoji)(
-      `reports nothing of examples/${sample.lang} with a math font`,
+      `reports nothing of examples/${sample.name} with a math font`,
       async () => {
-        const root = join(dir, `real-sample-${sample.lang}`);
+        const root = join(dir, `real-sample-${sample.name}`);
         await writeMathTheme(join(root, "my-theme"));
-        const result = await buildSample(sample, `real-sample-${sample.lang}`, "./my-theme");
+        const result = await buildSample(sample, `real-sample-${sample.name}`, "./my-theme");
         expect(fontWarnings(result).map((w) => w.message)).toEqual([]);
       },
       240_000,
     );
 
     it.runIf(hasCjkAndEmoji && noMathFont)(
-      `reports only the formulas of examples/${sample.lang} where no math font is installed`,
+      `reports only the formulas of examples/${sample.name} where no math font is installed`,
       async () => {
         // As it is: the missing MATH table, and letters as a formula draws them. The message names
         // only the first few letters, so a second build hides the formulas and has to be clean.
-        const name = `real-sample-${sample.lang}-nomath`;
+        const name = `real-sample-${sample.name}-nomath`;
         const asIs = fontWarnings(await buildSample(sample, name, "default"));
         expect(asIs.some((w) => w.code === "font/no-math-table")).toBe(true);
         for (const w of asIs.filter((w) => w.code !== "font/no-math-table")) {

@@ -527,7 +527,7 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 **チェックリストとサンプル文書**（[roadmap.md](roadmap.md) 24.3.3）
 
 - [x] AsciiDoc のチェックリストの各項目が、Markdown のタスクリストの項目と同じ要素と属性のチェックボックス（`<input type="checkbox" disabled>`、チェック済みなら `checked` 付き）を持ち、Asciidoctor の `❏` や `✓` が出力に届かない。`[%interactive]` が何を出すかを決めて書く。テストが両方を確かめ、[syntax.md](syntax.md) が英語と日本語でそう書く——renderer が、構文解析した文書のすべてのチェックリスト（入れ子のリストと `a|` セルの中を含む）に Asciidoctor の `interactive` オプションを付けて文字ではなく `<input>` を書かせ、そのチェックボックスに Markdown と同じ属性を与える。`[%interactive]` も無効にして描く。単一のファイルにはチェックを保存する場所が無いからである。`✓` で始まるように書いた項目は文字のまま残る（`sources/asciidoc/checklist.test.ts`）
-- [x] Latin Modern Math を Chromium から使えるようにして PDF にビルドした `examples/en`、`examples/ja`、`examples/math` がフォントの警告を出さず、テストがそれを確かめる。意図して MATH フォントを入れていない開発用イメージでそのままビルドしたときは、残るフォントの報告が数式のものだけであり、テストがそれも確かめる。`examples/*/pdf.md` は `☒` そのものを書かず、[development.md](development.md) の注記は `☒` と `❏` を挙げる代わりにそう書く。英語と日本語で直す——`build.fontcheck.test.ts` が `examples/en` と `examples/ja` を両方の条件でビルドし（`examples/math` は以前から確かめている）、以前の `☒` や Asciidoctor の `❏` があると失敗する。`pdf.md` は豆腐を言葉で説明するようにした
+- [x] Latin Modern Math を Chromium から使えるようにして PDF にビルドした `examples/en`、`examples/ja`、`examples/math` がフォントの警告を出さず、テストがそれを確かめる。意図して MATH フォントを入れていない開発用イメージでそのままビルドしたときは、残るフォントの報告が数式のものだけであり、テストがそれも確かめる。`examples/*/pdf.md` は `☒` そのものを書かず、[development.md](development.md) の注記は `☒` と `❏` を挙げる代わりにそう書く。英語と日本語で直す——`build.fontcheck.test.ts` が `examples/en`、`examples/ja`、`examples/math` をそのまま両方の条件でビルドし、以前の `☒` や Asciidoctor の `❏` があると失敗する。`pdf.md` は豆腐を言葉で説明するようにした
 
 **幅の広いアクセント**（[roadmap.md](roadmap.md) 6.4）
 
