@@ -465,7 +465,9 @@ latexmath と同じく描くので、latexmath が持つもの——`mathvariant
     なるごとに時間が倍になった。`(` の 20 段で 3 秒、`|(` の 12 段で 13 秒かかった。
   - `&`、`#`、`$`、`~` を TeX が記法として読むまま通し、`text(...)` と引用符の文字では波括弧しか
     エスケープしなかった。そのため `%` がコメントを始めて残りを飲み込み、`--` がダッシュになった。
-  - `color` が取る括弧の無い `color red x` を `\color{undefined}{e} d x` と書いた。
+  - `color` が取る括弧の無い `color red x` を `\color{undefined}{e} d x` と書いた。行列のセル `|x|y` も
+    `y` の代わりに `undefined` を書くはずだが、そのセルに届く式は見つからなかった。それでも両方の部分の
+    TeX から書くようにした。
 
   monodocs は出力ではなくパーサの表を直す。大文字の関数は `\operatorname{Sin}` などに、`>->>` は
   `\mathrel{\char"2916}`（⤖）にし、`mathbf` と `mathsf` にバックスラッシュを付け、`bold` を `\mathbf` に、

@@ -159,6 +159,20 @@ export function createAsciiMathParser(): AsciiMathParser {
     }
     return read;
   };
+  // A matrix cell written `|x|y` has its second part written as `.text`, which a parse result does not
+  // have, so `y` would come out as `undefined`; the cell is written again from both parts' TeX. No whole
+  // formula was found that reaches it, so this is a guard rather than a measured fix.
+  const matrixCell = internals.matrix_cell!.bind(parser);
+  internals.matrix_cell = (...args: unknown[]) => {
+    const cell = matrixCell(...args) as { tex?: string; exprs?: { tex: string }[] } | undefined;
+    if (cell?.exprs?.length === 2 && cell.tex?.startsWith("\\left \\lvert ")) {
+      return {
+        ...cell,
+        tex: `\\left \\lvert ${cell.exprs[0]!.tex} \\right \\rvert ${cell.exprs[1]!.tex}`,
+      };
+    }
+    return cell;
+  };
   const parse = parser.parse.bind(parser);
   parser.parse = (asciimath) => {
     memo = new Map();

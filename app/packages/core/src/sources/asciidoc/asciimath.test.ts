@@ -84,4 +84,18 @@ describe("asciimath to TeX (v0.16)", () => {
     expect(drawn(parser.parse("text(x'')"))).toBe("x’’");
     expect(drawn(parser.parse("|~ x ~|"))).toBe("⌈x⌉");
   });
+
+  it("writes a matrix cell's part after |x| as what it is, not undefined", () => {
+    // No whole formula was found that reaches this cell (a matrix with `|` in a cell is read as
+    // brackets instead), so the method is called on its own.
+    const internals = parser as unknown as {
+      input(source: string): void;
+      matrix_cell(position: number): { tex: string } | undefined;
+    };
+    internals.input("|x|y");
+    expect(internals.matrix_cell(0)?.tex).toBe("\\left \\lvert x \\right \\rvert y");
+    // And an author's own undefined is left alone.
+    expect(parser.parse("text(undefined)")).toBe("\\text{undefined}");
+    expect(parser.unread).toBe(false);
+  });
 });

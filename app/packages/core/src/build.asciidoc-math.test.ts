@@ -356,6 +356,7 @@ describe("AsciiDoc math", () => {
     const long = Array(6000).fill("a").join("+");
     const { html, result } = await build(
       `= T\n\n[asciimath]\n++++\n${long}\n++++\n\n` +
+        "asciimath:[text(undefined)]\n\n" +
         "asciimath:[undefined + color red x] and asciimath:[bbsf_1(A)] and asciimath:[y]\n",
     );
     const failed = result.warnings.filter((w) => w.code === "math/parse-failed");
@@ -367,7 +368,8 @@ describe("AsciiDoc math", () => {
       expect.stringMatching(/asciimath:\[bbsf_1\(A\)\].*no bbsf style/),
     ]);
     expect(html).toContain("\\$bbsf_1(A)\\$");
-    expect(attributes(html, "data-math-tex")).toEqual(["y"]);
+    // An author's own undefined, alone, is a formula like any other.
+    expect(attributes(html, "data-math-tex")).toEqual(["\\text{undefined}", "y"]);
   });
 
   it("reads words with id or class in them as letters, and a block's \\$...\\$ part by part", async () => {

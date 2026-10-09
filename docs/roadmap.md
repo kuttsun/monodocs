@@ -490,7 +490,9 @@ formula as `$TeX$`, copying, search, and diagnostics.
   - passed `&`, `#`, `$`, and `~` through, which TeX reads as markup, and in `text(...)` and quoted
     text escaped only braces, so that `%` began a comment that swallowed the rest, and `--` became a
     dash;
-  - wrote `color red x`, without the parentheses `color` takes, as `\color{undefined}{e} d x`.
+  - wrote `color red x`, without the parentheses `color` takes, as `\color{undefined}{e} d x`, and
+    would write a matrix cell `|x|y` with `undefined` for its `y`, though no whole formula was found
+    that reaches that cell; it is written from both parts' TeX all the same.
 
   monodocs adjusts the parser's tables rather than its output: the capitalised functions become
   `\operatorname{Sin}` and so on, `>->>` becomes `\mathrel{\char"2916}` (⤖), `mathbf` and `mathsf`
