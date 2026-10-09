@@ -4530,14 +4530,16 @@ v0.14 は、実測が定めた 4 つの条件のもとで、数式を機能に�
   （`<input type="checkbox" disabled>`、チェック済みなら `checked` 付き）を持ち、Asciidoctor の `❏` や
   `✓` が出力に届かない。`[%interactive]` が何を出すかを決めて書く。テストが両方を確かめ、syntax.md が
   両言語でそう書く
-- 開発用イメージで PDF にビルドした `examples/en` と `examples/ja` がフォントの警告を出さず、テストが
-  それを確かめる。出すと書いている development.md の注記は両言語で消す。`examples/math` はそこでは
-  引き続き報告される。開発用イメージには意図して MATH フォントを入れていないからである（6.4）
+- Latin Modern Math を Chromium から使えるようにして PDF にビルドした `examples/en`、`examples/ja`、
+  `examples/math` がフォントの警告を出さず、テストがそれを確かめる。意図して MATH フォントを入れて
+  いない開発用イメージ（6.4）でそのままビルドしたときは、残るフォントの報告が数式のものだけであり
+  （`examples/en` と `examples/ja` にも数式のページがある）、テストがそれも確かめる。development.md の
+  注記は、`☒` と `❏` を挙げる代わりにそう書く。両言語で直す
 - 数式のフィクスチャが、Markdown と AsciiDoc の両方で `\acute`、`\grave`、`\widehat`、`\widetilde`、
   `\widecheck`、`\utilde`、`\overrightarrow`、`\overbrace` と `\underbrace` を含む。Linux で Latin Modern
   Math を使って HTML と PDF にビルドし、6.4 の記録をフィクスチャの上で確かめ直す。6.4 に記録の
-  無いもの（`\grave`、`\overrightarrow`、`\overbrace`、`\underbrace`）は、基底の上に来るか基底に
-  わたるかを確かめ、そうならないものは 6.4 に記録する。Windows で Cambria Math を使ってビルドし、どのアクセントも基底の上に来て、幅の広いものは基底の幅いっぱいに伸びるか、
+  無いもの（`\grave`、`\overrightarrow`、`\overbrace`、`\underbrace`）は、基底の上（または下）に来るか
+  基底にわたるかを確かめ、そうならないものは 6.4 に記録する。Windows で Cambria Math を使って HTML と PDF にビルドし、どのアクセントも基底の上（`\utilde` と `\underbrace` は下）に来て、幅の広いものは基底の幅いっぱいに伸びるか、
   そうならないものを 6.4 に記録する。直したものと受け入れたものは、6.4 と両言語の syntax.md に書く
 - asciimath の変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない
   asciimath の形を、足す前に 6.4 に記録し、`THIRD-PARTY-NOTICES.txt` に載せる。asciimath は KaTeX を
@@ -4572,7 +4574,17 @@ v0.14 は、実測が定めた 4 つの条件のもとで、数式を機能に�
   0.15 に限る。asciimath が文字のまま残ることを確かめる単体テストは書き換える。リリースノートは変わる
   ものを書く。Windows で人が行う確認は 0.16.0 について、透かし、`pdf.toc`、見出し番号、数式を含む PDF
   で行い、目次の番号がシートと一致することを確かめる。0.13.0 から 0.15.0 で残ったものは別に行わず、
-  それで置き換える
+  それで置き換える。順に次のとおりである。
+  - CI ガイドを、タグより前のバージョン変更の中で `monodocs@0.16.0` に固定する
+  - `verify-published.yml` に 0.16 の判定と、チェックリストのマークアップ、新しい検索の畳み込み、
+    asciimath を確かめる手順を足し、先にマージする
+  - `0.16.0-beta.1` を `next` に公開し、Linux x64 と Windows x64 で検証して 0.16 の手順が走ったことを
+    確かめる。それでサンプルをビルドして見る
+  - `0.16.0` を `latest` に公開して同じように検証し、リリースバイナリを `verify-release-binaries.yml`、
+    Node.js の無い Linux x64 ホストでの `verify-linux-binary.sh`、Windows 11 での
+    `verify-windows-binary.ps1`、ブラウザを操作する確認で検証する
+  - 上に書いた、Windows で人が行う確認
+  - `next` を `0.16.0` に移し、デプロイした CI ガイドがそれに固定していることを確かめる
 
 ---
 

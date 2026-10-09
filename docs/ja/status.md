@@ -527,13 +527,13 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 **チェックリストとサンプル文書**（[roadmap.md](roadmap.md) 24.3.3）
 
 - [ ] AsciiDoc のチェックリストの各項目が、Markdown のタスクリストの項目と同じ要素と属性のチェックボックス（`<input type="checkbox" disabled>`、チェック済みなら `checked` 付き）を持ち、Asciidoctor の `❏` や `✓` が出力に届かない。`[%interactive]` が何を出すかを決めて書く。テストが両方を確かめ、[syntax.md](syntax.md) が英語と日本語でそう書く
-- [ ] 開発用イメージで PDF にビルドした `examples/en` と `examples/ja` がフォントの警告を出さず、テストがそれを確かめる。`examples/*/pdf.md` は `☒` そのものを書かず、サンプルが検査に引っかかると書いた [development.md](development.md) の注記は英語と日本語で消す。`examples/math` はそこでは引き続き報告される。開発用イメージには意図して MATH フォントを入れていないからである
+- [ ] Latin Modern Math を Chromium から使えるようにして PDF にビルドした `examples/en`、`examples/ja`、`examples/math` がフォントの警告を出さず、テストがそれを確かめる。意図して MATH フォントを入れていない開発用イメージでそのままビルドしたときは、残るフォントの報告が数式のものだけであり、テストがそれも確かめる。`examples/*/pdf.md` は `☒` そのものを書かず、[development.md](development.md) の注記は `☒` と `❏` を挙げる代わりにそう書く。英語と日本語で直す
 
 **幅の広いアクセント**（[roadmap.md](roadmap.md) 6.4）
 
 - [ ] 数式のフィクスチャが、Markdown と AsciiDoc の両方で `\acute`、`\grave`、`\widehat`、`\widetilde`、`\widecheck`、`\utilde`、`\overrightarrow`、`\overbrace` と `\underbrace` を含む
-- [ ] Linux で Latin Modern Math を使って HTML と PDF にビルドし、[roadmap.md](roadmap.md) 6.4 の記録をフィクスチャの上で確かめ直す。6.4 に記録の無いもの（`\grave`、`\overrightarrow`、`\overbrace`、`\underbrace`）は、基底の上に来るか基底にわたるかを確かめ、そうならないものはそこに記録する
-- [ ] Windows で Cambria Math を使ってビルドし、どのアクセントも基底の上に来て、幅の広いものは基底の幅いっぱいに伸びるか、そうならないものを [roadmap.md](roadmap.md) 6.4 に記録する
+- [ ] Linux で Latin Modern Math を使って HTML と PDF にビルドし、[roadmap.md](roadmap.md) 6.4 の記録をフィクスチャの上で確かめ直す。6.4 に記録の無いもの（`\grave`、`\overrightarrow`、`\overbrace`、`\underbrace`）は、基底の上（または下）に来るか基底にわたるかを確かめ、そうならないものはそこに記録する
+- [ ] Windows で Cambria Math を使って HTML と PDF にビルドし、どのアクセントも基底の上（`\utilde` と `\underbrace` は下）に来て、幅の広いものは基底の幅いっぱいに伸びるか、そうならないものを [roadmap.md](roadmap.md) 6.4 に記録する
 - [ ] 直したものと受け入れたものを、[roadmap.md](roadmap.md) 6.4 と英語・日本語の [syntax.md](syntax.md) に書く
 
 **asciimath**（[roadmap.md](roadmap.md) 6.4）

@@ -529,13 +529,13 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 **Checklists and the sample documents** ([roadmap.md](roadmap.md) 24.3.3)
 
 - [ ] Each item of an AsciiDoc checklist carries the same checkbox element, with the same attributes, a Markdown task list item carries — `<input type="checkbox" disabled>`, with `checked` when checked — and no `❏` or `✓` from Asciidoctor reaches the output; what `[%interactive]` produces is decided and stated; a test asserts both, and [syntax.md](syntax.md) says so in English and Japanese
-- [ ] `examples/en` and `examples/ja`, built to PDF in the development image, raise no font warning, and a test asserts it; `examples/*/pdf.md` no longer writes `☒` itself, and the note in [development.md](development.md) that says the samples trip the check is removed in English and Japanese. `examples/math` is still reported there, since the image has no MATH font on purpose
+- [ ] `examples/en`, `examples/ja`, and `examples/math`, built to PDF with Latin Modern Math made available to Chromium, raise no font warning, and a test asserts it; built in the development image as it is, which has no MATH font on purpose, the only font findings left are the formulas', and a test asserts that too. `examples/*/pdf.md` no longer writes `☒` itself, and the note in [development.md](development.md) says this instead of naming `☒` and `❏`, in English and Japanese
 
 **Wide accents** ([roadmap.md](roadmap.md) 6.4)
 
 - [ ] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc
-- [ ] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture, and the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked, any that does not sit over or span its base being recorded there
-- [ ] Built on Windows with Cambria Math, each accent sits over its base and each wide one spans it, or what does not is recorded in [roadmap.md](roadmap.md) 6.4
+- [ ] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture, and the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked, any that does not sit over (or under) or span its base being recorded there
+- [ ] Built on Windows with Cambria Math, to HTML and PDF, each accent sits over its base, or under it for `\utilde` and `\underbrace`, and each wide one spans it, or what does not is recorded in [roadmap.md](roadmap.md) 6.4
 - [ ] What is fixed or accepted is stated in [roadmap.md](roadmap.md) 6.4 and in [syntax.md](syntax.md) in English and Japanese
 
 **asciimath** ([roadmap.md](roadmap.md) 6.4)

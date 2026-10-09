@@ -4776,16 +4776,18 @@ Completion criteria:
   checked — and no `❏` or `✓`
   from Asciidoctor reaches the output. What `[%interactive]` produces is decided and stated. A test
   asserts both, and syntax.md says so in both languages
-- `examples/en` and `examples/ja`, built to PDF in the development image, raise no font warning, and
-  a test asserts it; the note in development.md that says they do is removed in both languages.
-  `examples/math` is still reported there, since the image has no MATH font on purpose (6.4)
+- `examples/en`, `examples/ja`, and `examples/math`, built to PDF with Latin Modern Math made
+  available to Chromium, raise no font warning, and a test asserts it. Built in the development
+  image as it is, which has no MATH font on purpose (6.4), the only font findings left are the
+  formulas' — `examples/en` and `examples/ja` have a math page too — and a test asserts that as
+  well. The note in development.md says this instead of naming `☒` and `❏`, in both languages
 - The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`,
   `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc. Built to HTML
   and PDF on Linux with Latin Modern Math, what 6.4 records is checked again on the fixture, and
   the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are
-  checked, any that does not sit over or span its base being recorded in 6.4. Built on Windows with
-  Cambria Math, each accent sits over its base and each wide one spans it, or what does not is
-  recorded in 6.4. What is fixed or accepted is stated in 6.4 and in syntax.md in both languages
+  checked, any that does not sit over (or under) or span its base being recorded in 6.4. Built on Windows with
+  Cambria Math, to HTML and PDF, each accent sits over its base, or under it for `\utilde` and
+  `\underbrace`, and each wide one spans it, or what does not is recorded in 6.4. What is fixed or accepted is stated in 6.4 and in syntax.md in both languages
 - The asciimath converter's licence, its size in the CLI bundle and the standalone binary, and the
   asciimath forms it does not handle are recorded in 6.4 before it is added, and it is named in
   `THIRD-PARTY-NOTICES.txt`. asciimath is rendered to MathML through KaTeX with what latexmath has:
@@ -4823,7 +4825,17 @@ Completion criteria:
   that assert asciimath is left as text are rewritten. The release notes state what changes. The
   Windows checks a person has to make are made for 0.16.0, on a PDF with a watermark, `pdf.toc`,
   section numbering, and formulas, its table's numbers matching the sheets; those left open for
-  0.13.0 to 0.15.0 are superseded by them rather than made separately
+  0.13.0 to 0.15.0 are superseded by them rather than made separately. In order:
+  - The CI guide pins `monodocs@0.16.0` in the version change, before the tag
+  - `verify-published.yml` gains a 0.16 gate and steps for the checklist markup, the new search
+    folding, and asciimath, merged first
+  - `0.16.0-beta.1` is published under `next` and verified on Linux x64 and Windows x64, the 0.16
+    steps confirmed to have run; the samples are built with it and looked at
+  - `0.16.0` is published under `latest` and verified the same way, its release binaries through
+    `verify-release-binaries.yml`, `verify-linux-binary.sh` on a Linux x64 host without Node.js,
+    `verify-windows-binary.ps1` on Windows 11, and the driven browser pass
+  - The Windows checks a person has to make, above
+  - `next` moves onto `0.16.0`, and the deployed CI guide is confirmed to pin it
 
 ---
 
