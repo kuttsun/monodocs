@@ -63,8 +63,18 @@ describe("asciimath to TeX (v0.16)", () => {
     for (const asciimath of ["bbsf(A)", "bbsfit(A)", "bbcc(A)", "bbfr(A)"]) {
       expect(() => drawn(parser.parse(asciimath))).toThrow(/Undefined control sequence/);
     }
-    expect(parser.parse("class(big)(x)")).toBe("\\htmlClass{big}{x}");
-    expect(parser.parse("id(here)(x)")).toBe("\\htmlId{here}{x}");
+    // ASCIIMathML's class and id are left out, since a symbol is matched inside a word.
+    expect(drawn(parser.parse("t_(mid) + width"))).toBe("tmid+width");
+  });
+
+  it("reads brackets in time however deeply they nest", () => {
+    // Twenty levels of `|(` took minutes before each position was remembered within a parse.
+    const nested = "|(".repeat(20) + "x" + ")|".repeat(20);
+    const started = performance.now();
+    expect(drawn(parser.parse(nested))).toContain("x");
+    expect(performance.now() - started).toBeLessThan(2000);
+    // And a parse leaves nothing behind for the next one.
+    expect(parser.parse("a/b")).toBe("\\frac{a}{b}");
   });
 
   it("keeps text from KaTeX's ligatures, and brackets made of ~ and | as brackets", () => {

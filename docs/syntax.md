@@ -87,8 +87,8 @@ Because conversion is delegated to Asciidoctor.js's standard conversion, most As
   (asciimath2tex) and rendered as latexmath is; a copy gives it back as `asciimath:[...]`, and search
   finds its TeX. A block split by a blank line or a trailing ` \` is stacked one formula a line, as
   Asciidoctor splits it. Reported rather than rendered: bold sans-serif, bold script, and bold
-  fraktur (`bbsf`, `bbsfit`, `bbcc`, `bbfr`), which KaTeX has no command for; `class` and `id`, which
-  set an attribute; and brackets nested more than 12 deep. In `text(...)` a single `'` or `` ` `` is
+  fraktur (`bbsf`, `bbsfit`, `bbcc`, `bbfr`), which KaTeX has no command for, and a formula too long
+  for the converter. `class` and `id`, which set an attribute, stay letters. In `text(...)` a single `'` or `` ` `` is
   drawn as a typographic quote. `math.enabled: false` leaves both notations as Asciidoctor writes them
 
 ## Common Specification for Single-HTML Bundling (Cross-Format)

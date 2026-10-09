@@ -467,7 +467,7 @@ formula as `$TeX$`, copying, search, and diagnostics.
 - **The converter.** asciimath2tex 1.5.0, Apache-2.0, with no dependencies, pinned to an exact
   version as KaTeX is. It ships no NOTICE file, so its licence is all that has to travel with it;
   `THIRD-PARTY-NOTICES.txt` and the binary's notices carry it, generated from the bundle. With the
-  adjustments below it adds 37 KB to the CLI bundle (21,205,543 to 21,243,556 bytes), 64 KB to the
+  adjustments below it adds 38 KB to the CLI bundle (21,205,543 to 21,244,643 bytes), 64 KB to the
   standalone binary (146,083,008 to 146,148,544 bytes, page-aligned), and 11 KiB to the binary's
   notices.
 - **Alternatives.** asciimath-to-latex 0.5.1 (MIT) rendered the same 42 sample forms, but wraps every
@@ -484,6 +484,9 @@ formula as `$TeX$`, copying, search, and diagnostics.
   - wrote `mathbf` and `mathsf` without their backslash, so they printed as their letters, and
     lacked `bold`, `italic`, `mathit`, `sfit`, `bbit`, `bbsf`, `bbsfit`, `bbcc`, `bbfr`, `overarc`,
     `overparen`, `class`, and `id`, which also printed as their letters;
+  - tried every reading of a bracket at each position and read a position again for each reading
+    around it, so its time doubled with each level of nesting: 20 levels of `(` took three seconds,
+    and 12 of `|(` thirteen;
   - passed `&`, `#`, `$`, and `~` through, which TeX reads as markup, and in `text(...)` and quoted
     text escaped only braces, so that `%` began a comment that swallowed the rest, and `--` became a
     dash;
@@ -494,24 +497,26 @@ formula as `$TeX$`, copying, search, and diagnostics.
   get their backslash, `bold` is `\mathbf`, `italic` and `mathit` are `\mathit`, `sfit` is
   `\mathsfit`, `bbit` is `\boldsymbol`, and `overarc` and `overparen` are `\overgroup`. Bold
   sans-serif, bold script, and bold fraktur (`bbsf`, `bbsfit`, `bbcc`, `bbfr`) have no command in
-  KaTeX, so they name one it does not know and are reported rather than printed as their letters;
-  `class` and `id` set an attribute, which KaTeX does only behind `trust`, so they become
-  `\htmlClass` and `\htmlId` and are refused as any such command is (`math/command-not-allowed`).
-  The four characters are themselves; text escapes every character TeX reads, and a run of `-`,
+  KaTeX, so a formula using one is reported, naming the style, rather than printed with its letters.
+  `class` and `id` are left as letters: asciimath2tex matches a symbol inside a word, so adding them
+  turned `width` and `t_(mid)` into attributes. Within one parse each position's reading is
+  remembered — none depends on anything but the position and the source — so brackets take
+  milliseconds however deeply they nest. The four characters are themselves; text escapes every character TeX reads, and a run of `-`,
   `'`, or `` ` `` is kept from KaTeX's ligatures. What is left: in text, KaTeX's font draws a single
   `'` or `` ` `` as a typographic quote, whatever its escape.
-- **What cannot be converted is reported.** asciimath2tex reads brackets with a search whose time
-  grows with how deeply they nest — 16 levels took half a second, 20 levels three — and a formula
-  of some four thousand tokens exhausts its stack. A formula whose brackets nest more than 12 deep,
-  one the converter throws on, and one whose TeX contains `undefined` it did not write are left as
-  Asciidoctor writes them and reported as `math/parse-failed`, naming the formula as written; so is
+- **What cannot be converted is reported.** A formula of some two thousand tokens exhausts the
+  converter's stack, and one it reads without understanding comes out with an `undefined` in its TeX
+  (`color red x`). Both, and a style KaTeX cannot draw, are left as Asciidoctor writes them and
+  reported as `math/parse-failed`, naming the formula as written — an `undefined` counted, so that
+  one the author wrote does not hide another; so is
   one whose TeX KaTeX cannot parse, such as a color it does not know (`color(1 2)(x)`) or four primes
   in a row, which KaTeX reads as a double superscript. asciimath is no way into TeX: a command it
   does not know, such as `\href{...}`, comes out as letters, so nothing reaches KaTeX that latexmath
   could not write.
 - **A block of several formulas.** Asciidoctor writes an asciimath block as one formula per part,
-  split at a blank line and at a line ending in ` \`. monodocs splits it the same way and stacks the
-  parts in `gathered`, one per line, which a copy still gives back as the one block written.
+  split at a blank line and at a line ending in ` \`, each part in `\$...\$` unless it has its own.
+  monodocs splits it the same way, takes a part's own `\$...\$` off, and stacks the parts in
+  `gathered`, one per line, which a copy still gives back as the one block written.
 - **On by default.** asciimath is what `stem` means unless `:stem:` says otherwise — Asciidoctor's own
   default, which its HTML renders with MathJax — so an author who wrote `stem:[x^2]` meant a formula,
   and printing `\$x^2\$` was never what they wanted; v0.15 already warned on every such formula; and

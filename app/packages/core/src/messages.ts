@@ -130,7 +130,7 @@ const EN = {
   "pages.noTitle": 'No title found in "{path}"; using "{title}".',
   "pages.mathParseFailed":
     "{where}: the formula {source} cannot be rendered and is shown as written: {detail}",
-  "pages.mathTooDeep": "its brackets are nested more than {max} deep",
+  "pages.mathAsciimathStyle": "KaTeX has no {style} style to draw it in",
   "pages.mathAsciimathUnread": "part of it could not be read as asciimath",
   "pages.mathStyleUnsupported":
     'Unicode has no {variant} form of "{chars}" in the formula {source} ({where}); it is shown without the style.',
@@ -456,7 +456,7 @@ const JA: Record<MessageKey, string> = {
   "pages.noTitle": '"{path}" にタイトルがありません。"{title}" を使います。',
   "pages.mathParseFailed":
     "{where}: 数式 {source} を描画できないため、書かれたとおりに表示します: {detail}",
-  "pages.mathTooDeep": "括弧が {max} 段より深く入れ子になっています",
+  "pages.mathAsciimathStyle": "KaTeX には描くための {style} の書体がありません",
   "pages.mathAsciimathUnread": "一部を asciimath として読めませんでした",
   "pages.mathStyleUnsupported":
     'Unicode には "{chars}" の {variant} の形がありません（数式 {source}、{where}）。スタイルなしで表示します。',

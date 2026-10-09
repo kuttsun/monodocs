@@ -58,8 +58,9 @@ const CAPITALISED = new Set(
 /**
  * What ASCIIMathML defines and asciimath2tex lacks, and the TeX for it. Bold sans-serif, bold script,
  * and bold fraktur have no command in KaTeX, so they name one it does not know and are reported as a
- * formula that cannot be rendered, rather than printed as their letters; `class` and `id` set an
- * attribute, which KaTeX does only behind `trust`, and are refused as any such command is.
+ * formula that cannot be rendered, rather than printed as their letters. ASCIIMathML's `class` and
+ * `id`, which set an attribute, are left out: asciimath2tex matches a symbol inside a word, and
+ * `width` or `t_(mid)` would then become one.
  */
 const MISSING_UNARY: AsciiMathSymbol[] = [
   { asciimath: "bold", tex: "\\mathbf" },
@@ -67,6 +68,7 @@ const MISSING_UNARY: AsciiMathSymbol[] = [
   { asciimath: "mathit", tex: "\\mathit" },
   { asciimath: "sfit", tex: "\\mathsfit" },
   { asciimath: "bbit", tex: "\\boldsymbol" },
+  // Named so that a formula using one is reported as the style it asked for.
   { asciimath: "bbsf", tex: "\\mathbfsf" },
   { asciimath: "bbsfit", tex: "\\mathbfsfit" },
   { asciimath: "bbcc", tex: "\\mathbfcal" },
@@ -74,10 +76,14 @@ const MISSING_UNARY: AsciiMathSymbol[] = [
   { asciimath: "overarc", tex: "\\overgroup", acc: true },
   { asciimath: "overparen", tex: "\\overgroup", acc: true },
 ];
-const MISSING_BINARY: AsciiMathSymbol[] = [
-  { asciimath: "class", tex: "\\htmlClass", rawfirst: true },
-  { asciimath: "id", tex: "\\htmlId", rawfirst: true },
-];
+
+/** The styles above that KaTeX cannot draw, each the command it was named with. */
+const UNDRAWABLE = MISSING_UNARY.filter(({ asciimath }) =>
+  ["bbsf", "bbsfit", "bbcc", "bbfr"].includes(asciimath),
+).map(({ asciimath, tex }) => ({ asciimath, tex: `${tex!}{` }));
+
+/** asciimath2tex's methods that read a position, recurse, and are remembered for one parse. */
+const MEMOIZED = ["simple", "matrix", "bracketed_expression", "expression_list", "expression"];
 
 /** What `\text{...}` cannot take as it is, and what it takes instead. */
 const TEXT_ESCAPES: Record<string, string> = {
@@ -114,7 +120,6 @@ export function createAsciiMathParser(): AsciiMathParser {
     if (symbol.tex === "\\twoheadrightarrowtail") symbol.tex = '\\mathrel{\\char"2916}';
   }
   parser.unary_symbols.push(...MISSING_UNARY.map((symbol) => ({ ...symbol })));
-  parser.binary_symbols.push(...MISSING_BINARY.map((symbol) => ({ ...symbol })));
   // Longest first again, so that `bbit` is not read as `bb` and `it`; the single characters, matched
   // after every longer symbol they could begin (`~~`, `~=`), go last either way.
   parser.constants.push(
@@ -124,26 +129,35 @@ export function createAsciiMathParser(): AsciiMathParser {
     { asciimath: "~", tex: "\\text{\\textasciitilde}" },
   );
   parser.sort_symbols();
+  // asciimath2tex tries every reading of a bracket at each position, and reads a position again for
+  // each reading around it, so its time doubled with each level of nesting (20 levels, three
+  // seconds; `|(` twelve times, thirteen). Its results depend on the position and the source alone —
+  // nothing it reads back is kept between calls — so within one parse each is remembered.
+  const internals = parser as unknown as Record<string, (...args: unknown[]) => unknown>;
+  let memo = new Map<string, unknown>();
+  for (const name of MEMOIZED) {
+    const original = internals[name]!.bind(parser);
+    internals[name] = (...args: unknown[]) => {
+      const key = `${name}:${args.join(":")}`;
+      if (!memo.has(key)) memo.set(key, original(...args));
+      return memo.get(key);
+    };
+  }
+  const parse = parser.parse.bind(parser);
+  parser.parse = (asciimath) => {
+    memo = new Map();
+    try {
+      return parse(asciimath);
+    } finally {
+      memo = new Map();
+    }
+  };
   parser.escape_text = (text) =>
     text
       .replace(/[\\{}&#$%~^_]/g, (c) => TEXT_ESCAPES[c]!)
       // KaTeX joins these in text into a dash or a quote, which ASCIIMathML leaves as they are.
       .replace(/([-'`])(?=[-'`])/g, "$1{}");
   return parser;
-}
-
-/** Deeper than this, asciimath2tex's time grows past a second (16 levels, half a second). */
-const MAX_BRACKET_DEPTH = 12;
-
-/** How deeply the brackets of an asciimath formula nest, counting every opening bracket. */
-function bracketDepth(asciimath: string): number {
-  let depth = 0;
-  let deepest = 0;
-  for (const c of asciimath) {
-    if (c === "(" || c === "[" || c === "{") deepest = Math.max(deepest, ++depth);
-    else if (c === ")" || c === "]" || c === "}") depth = Math.max(0, depth - 1);
-  }
-  return deepest;
 }
 
 /**
@@ -236,24 +250,36 @@ export async function createMathConverter(
   const failed: { source: string; detail: string }[] = [];
 
   /**
-   * The TeX for an asciimath formula, or `undefined`, reported, when asciimath2tex cannot make it:
-   * brackets nested too deeply for its time, or a formula long enough to exhaust its stack. A block's
-   * parts, split where Asciidoctor splits them, are stacked one per line.
+   * The TeX for an asciimath formula, or `undefined`, reported, when asciimath2tex cannot make it: a
+   * formula long enough to exhaust its stack, one it read without understanding, or a style KaTeX
+   * cannot draw. A block's parts, split where Asciidoctor splits them, each without a `\$...\$` of its
+   * own, are stacked one per line.
    */
   const asciimathTex = (written: string, source: string, block: boolean): string | undefined => {
     const parts = block
-      ? written.split(STEM_BREAK).filter((part) => part.trim() !== "")
+      ? written
+          .split(STEM_BREAK)
+          .filter((part) => part.trim() !== "")
+          .map((part) => {
+            const delimited = /^\s*\\\$([\s\S]*)\\\$\s*$/.exec(part);
+            return delimited && !/\\\$/.test(delimited[1]!) ? delimited[1]! : part;
+          })
       : [written];
-    if (parts.some((part) => bracketDepth(part) > MAX_BRACKET_DEPTH)) {
-      failed.push({ source, detail: t("pages.mathTooDeep", { max: String(MAX_BRACKET_DEPTH) }) });
-      return undefined;
-    }
     try {
       const tex = parts.map((part) => asciimathParser.parse(part));
       // What it read without understanding comes out as `undefined` (`color red x`, without the
-      // parentheses `color` takes), a formula that would render wrong rather than fail.
-      if (tex.some((part) => /\bundefined\b/.test(part) && !/\bundefined\b/.test(written))) {
+      // parentheses `color` takes), a formula that would render wrong rather than fail; counted, so
+      // that an author's own `undefined` does not hide one.
+      const undefinedIn = (text: string) => text.match(/\bundefined\b/g)?.length ?? 0;
+      if (tex.some((part, n) => undefinedIn(part) > undefinedIn(parts[n]!))) {
         failed.push({ source, detail: t("pages.mathAsciimathUnread") });
+        return undefined;
+      }
+      const style = UNDRAWABLE.find(({ tex: command }) =>
+        tex.some((part) => part.includes(command)),
+      );
+      if (style) {
+        failed.push({ source, detail: t("pages.mathAsciimathStyle", { style: style.asciimath }) });
         return undefined;
       }
       return tex.length > 1

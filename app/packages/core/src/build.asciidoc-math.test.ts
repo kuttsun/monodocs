@@ -353,31 +353,35 @@ describe("AsciiDoc math", () => {
   });
 
   it("leaves asciimath it cannot convert as Asciidoctor writes it, and reports it", async () => {
-    const deep = "(".repeat(13) + "x" + ")".repeat(13);
     const long = Array(6000).fill("a").join("+");
     const { html, result } = await build(
-      `= T\n\nasciimath:[${deep}]\n\n[asciimath]\n++++\n${long}\n++++\n\n` +
-        "asciimath:[color red x] and asciimath:[y]\n",
+      `= T\n\n[asciimath]\n++++\n${long}\n++++\n\n` +
+        "asciimath:[text(undefined) + color red x] and asciimath:[bbsf(A)] and asciimath:[y]\n",
     );
     const failed = result.warnings.filter((w) => w.code === "math/parse-failed");
     expect(failed.map((w) => w.message)).toEqual([
-      expect.stringMatching(/asciimath:\[\(+x\)+\].*nested more than 12 deep/s),
       expect.stringMatching(/\[asciimath\][\s\S]*a\+a/),
-      expect.stringMatching(/asciimath:\[color red x\].*could not be read as asciimath/),
+      // Its own `undefined` does not hide the one the converter wrote.
+      expect.stringMatching(/color red x\].*could not be read as asciimath/),
+      expect.stringMatching(/asciimath:\[bbsf\(A\)\].*no bbsf style/),
     ]);
-    expect(html).toContain(`\\$${deep}\\$`);
+    expect(html).toContain("\\$bbsf(A)\\$");
     expect(attributes(html, "data-math-tex")).toEqual(["y"]);
   });
 
-  it("refuses class and id, which set an attribute, and an asciimath block's two \\$...\\$", async () => {
+  it("reads words with id or class in them as letters, and a block's \\$...\\$ part by part", async () => {
     const { html, result } = await build(
-      "= T\n\nasciimath:[class(big)(x)]\n\n[asciimath]\n++++\n\\$a\\$ + \\$b\\$\n++++\n",
+      "= T\n\nasciimath:[t_(mid) + width + x_(side)]\n\n" +
+        "[asciimath]\n++++\n\\$a\\$ + \\$b\\$\n++++\n\n[asciimath]\n++++\n\\$c\\$\n\n\\$d\\$\n++++\n",
     );
-    expect(result.warnings.map((w) => w.code)).toContain("math/command-not-allowed");
-    // Not taken for one pair of delimiters around the whole.
-    expect(attributes(html, "data-math-source")).toContain(
-      "[asciimath]\n++++\n\\$a\\$ + \\$b\\$\n++++",
-    );
+    expect(result.warnings).toEqual([]);
+    expect(attributes(html, "data-math-tex")).toEqual([
+      // `dt` is AsciiMath's differential, here as in ASCIIMathML.
+      "t_{m i d} + w i dt h + x_{s i d e}",
+      // Two pairs in one part are not taken for one around it.
+      "\\$ a \\$ + \\$ b \\$",
+      "\\begin{gathered}c \\\\ d\\end{gathered}",
+    ]);
   });
 
   it("shows a formula with < or quotes in the title as $TeX$", async () => {
