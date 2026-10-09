@@ -533,10 +533,10 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 
 **Wide accents** ([roadmap.md](roadmap.md) 6.4)
 
-- [ ] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc
-- [ ] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture, and the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked, any that does not sit over (or under) or span its base being recorded there
+- [x] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc — the inline `\acute{e},\ \grave{a}` and display formula 15 on both pages, 8 inline and 15 display formulas each (`build.math.test.ts`)
+- [x] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture, and the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked, any that does not sit over (or under) or span its base being recorded there — recorded in [roadmap.md](roadmap.md) 6.4 (v0.16): `\acute` and `\grave` over their letter, the four wide accents still a letter wide and accepted, `\overrightarrow` and the braces spanning the term. On screen, Chromium left part of a stretched brace unpainted, over and under, depending on where it fell on its raster tiles; two transparent shadows far to either side of `mo[stretchy="true"]` in the default theme fix it, in forced colors too, and `build.math-chromium.test.ts` checks it
 - [ ] Built on Windows with Cambria Math, to HTML and PDF, each accent sits over its base, or under it for `\utilde` and `\underbrace`, and each wide one spans it, or what does not is recorded in [roadmap.md](roadmap.md) 6.4
-- [ ] What is fixed or accepted is stated in [roadmap.md](roadmap.md) 6.4 and in [syntax.md](syntax.md) in English and Japanese
+- [ ] What is fixed or accepted is stated in [roadmap.md](roadmap.md) 6.4 and in [syntax.md](syntax.md) in English and Japanese — the Linux results are stated in both; what Windows shows is still to come
 
 **asciimath** ([roadmap.md](roadmap.md) 6.4)
 

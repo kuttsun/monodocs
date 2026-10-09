@@ -697,6 +697,34 @@ there, `\vec`'s combining arrow centred, as v0.14 saw the accents in Edge. The f
 `\acute` or `\grave`, nor a wide accent, so how Cambria Math sets those, and `\widehat` and the
 others, is not yet seen; v0.16 adds them to the fixture and looks.
 
+**The accents, on the fixture (v0.16).** The fixture gains an inline `\acute{e},\ \grave{a}` and a
+fifteenth display formula with `\widehat`, `\widetilde`, `\widecheck`, and `\utilde` over (or under)
+`xyz`, `\overrightarrow{ABC}`, and `\overbrace` and `\underbrace` of `a+b+c` with `n` beyond the brace.
+Built on Linux with Latin Modern Math (Chromium 154), in HTML and in the PDF, on both pages:
+
+- `\acute` and `\grave` sit over their letter, centred on its box as the other accents are;
+- `\widehat`, `\widetilde`, `\widecheck`, and `\utilde` still keep about the size of a letter,
+  centred over (under, for `\utilde`) the middle of the term, as recorded above, and stay accepted
+  until Windows shows how Cambria Math sets them;
+- `\overrightarrow` spans its base, and `\overbrace` and `\underbrace` span the term, with `n` above
+  and below the brace;
+- on screen, Chromium left part of a stretched brace unpainted — a run from one end, or both ends of
+  a long one, over and under alike — depending on where the formula fell; the PDF had them whole.
+  KaTeX's MathML on a bare page did the same, with or without the `accent` monodocs adds. Chromium
+  keeps a horizontally stretched operator's box at the width of the glyph before it stretched, and a
+  raster tile that misses that box skips its part (the cut moved with the 256-pixel tile grid, not
+  with the formula). The default theme now gives `mo[stretchy="true"]` two transparent shadows, 20,000
+  pixels to either side, which neither lay out nor scroll, so that what the operator paints spans its
+  row for 20,000 pixels on either side of its box, far beyond any formula a page holds; in forced colors, which would drop the shadows, the operator keeps them
+  (`forced-color-adjust: none`) and is drawn in `CanvasText`. A transparent outline was tried first and
+  lost twice over: as wide as the viewport, it left a brace three viewports long cut at both ends,
+  and forced colors turned it opaque, a black band across the page. A test moves both braces and an
+  arrow through a tile's width, scrolls a brace three viewports long along its length, in normal and
+  forced colors, and finds no run of empty columns longer than 8 pixels inside any of them (the
+  glyph assembly's joints leave 4 or 5 light ones); the PDF is the same pixel for pixel with
+  the shadows and without. A tall bracket's box has its stretched height, and is not cut. The rule is the default theme's, like the
+  display formula's scroll, so a theme with its own `style.css` carries it too or loses it.
+
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
   `THIRD-PARTY-NOTICES.txt` with the bundle's other packages and in the runtime's own notices. Measured on

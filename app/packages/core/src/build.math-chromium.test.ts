@@ -275,6 +275,172 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
     }
   }, 60_000);
 
+  it("paints a stretched brace or arrow whole on screen, wherever it falls", async () => {
+    // Chromium keeps a horizontally stretched operator's box at the width of the glyph before it
+    // stretched, and a raster tile that misses that box skips its part of the brace: on screen, not
+    // in the PDF (roadmap 6.4, v0.16). Each operator is moved through a whole tile's width, and a
+    // brace three viewports long scrolled along its length, in normal and forced colors; no run of
+    // columns inside the operator may be empty.
+    const braces = join(dir, "braces");
+    await mkdir(braces, { recursive: true });
+    const term = "a+b+c+d+e+f+g+h+i+j+k+l+m+n+o";
+    const long = Array(7).fill(term).join("+");
+    await writeFile(
+      join(braces, "b.md"),
+      `# B\n\n$$\\overbrace{${term}}^{n}$$\n\n$$\\underbrace{${term}}_{n}$$\n\n` +
+        `$$\\overrightarrow{${term}}$$\n\n$$\\overbrace{${long}}^{n}$$\n`,
+    );
+    const configFile = join(braces, "monodocs.config.yml");
+    await writeFile(configFile, "");
+    const built = join(braces, "out.html");
+    await buildSite({ configFile, inputDir: braces, outputFile: built, format: "html" });
+    const font = readFileSync(
+      new URL("../test-fixtures/fonts/lm-math/opentype/latinmodern-math.otf", import.meta.url),
+    ).toString("base64");
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1000, height: 700, deviceScaleFactor: 1 });
+      await page.goto(pathToFileURL(built).href);
+      await page.addStyleTag({
+        content:
+          `@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }` +
+          ' math { font-family: "Fixture Math"; }',
+      });
+      await page.evaluate(() => document.fonts.ready);
+
+      // The longest run of empty columns in a screenshot, read in a canvas of its own. The glyph
+      // assembly's own joints leave a few light columns at this scale, so a run longer than 8px is a
+      // cut; a skipped tile leaves dozens.
+      const longestGap = async (clip: { x: number; y: number; width: number; height: number }) => {
+        const png = await page.screenshot({ clip, encoding: "base64" });
+        return page.evaluate(async (b64) => {
+          const img = new Image();
+          img.src = `data:image/png;base64,${b64}`;
+          await img.decode();
+          const ctx = new OffscreenCanvas(img.width, img.height).getContext("2d")!;
+          ctx.drawImage(img, 0, 0);
+          const { data, width, height } = ctx.getImageData(0, 0, img.width, img.height);
+          // Ink is what differs from the background, the band's most common shade, so that a dark
+          // forced-colors scheme is read as well as a light one.
+          const shade = (at: number) =>
+            data[at]! * 0.3 + data[at + 1]! * 0.59 + data[at + 2]! * 0.11;
+          const counts = new Map<number, number>();
+          for (let at = 0; at < data.length; at += 4) {
+            const key = Math.round(shade(at) / 8);
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+          }
+          const background = [...counts].sort((a, b) => b[1] - a[1])[0]![0] * 8;
+          let longest = 0;
+          let run = 0;
+          for (let x = 0; x < width; x++) {
+            let ink = false;
+            for (let y = 0; y < height && !ink; y++)
+              ink = Math.abs(shade((y * width + x) * 4) - background) > 100;
+            run = ink ? 0 : run + 1;
+            longest = Math.max(longest, run);
+          }
+          return longest;
+        }, png as string);
+      };
+
+      // The band the operator is drawn in, over or under its base, cut to what the scroll box shows.
+      const band = (index: number, selector: string, over: boolean) =>
+        page.evaluate(
+          (i, sel, o) => {
+            const display = document.querySelectorAll("#content .math-display")[i]!;
+            const op = display.querySelector(sel)!;
+            const base = op.firstElementChild!.getBoundingClientRect();
+            const all = op.getBoundingClientRect();
+            const shown = display.getBoundingClientRect();
+            const x = Math.max(base.left, shown.left);
+            const right = Math.min(base.right, shown.right);
+            return o
+              ? { x, y: all.top, width: right - x, height: base.top - all.top }
+              : { x, y: base.bottom, width: right - x, height: all.bottom - base.bottom };
+          },
+          index,
+          selector,
+          over,
+        );
+
+      const cut: string[] = [];
+      const check = async (mode: string) => {
+        for (const [index, selector, over] of [
+          [0, "mover > mover", true],
+          [1, "munder > munder", false],
+          [2, "mover", true],
+        ] as const) {
+          for (let shift = -128; shift < 128; shift += 16) {
+            // Moved without changing its width, so that it moves by `shift` exactly.
+            const moved = await page.evaluate(
+              (i, s) => {
+                const math = document.querySelectorAll<HTMLElement>("#content .math-display math")[
+                  i
+                ]!;
+                math.style.left = "0px";
+                math.style.position = "relative";
+                const before = math.getBoundingClientRect().left;
+                math.style.left = `${s}px`;
+                return math.getBoundingClientRect().left - before;
+              },
+              index,
+              shift,
+            );
+            expect(moved).toBeCloseTo(shift, 0);
+            const gap = await longestGap(await band(index, selector, over));
+            if (gap > 8) cut.push(`${mode} ${selector} #${index} at ${shift}px: ${gap}`);
+          }
+        }
+        // The long brace, scrolled along its whole length.
+        const scroll = await page.evaluate(() => {
+          const display = document.querySelectorAll<HTMLElement>("#content .math-display")[3]!;
+          return display.scrollWidth - display.clientWidth;
+        });
+        expect(scroll).toBeGreaterThan(1500);
+        // Every 150px, and the far end, wherever the steps fall.
+        const stops = [...Array(Math.floor(scroll / 150) + 1).keys()].map((n) => n * 150);
+        for (const x of new Set([...stops, scroll])) {
+          const reached = await page.evaluate((left) => {
+            const display = document.querySelectorAll<HTMLElement>("#content .math-display")[3]!;
+            display.scrollLeft = left;
+            return display.scrollLeft;
+          }, x);
+          expect(reached).toBe(x);
+          const gap = await longestGap(await band(3, "mover > mover", true));
+          if (gap > 8) cut.push(`${mode} long brace scrolled ${x}px: ${gap}`);
+        }
+      };
+
+      await check("normal");
+      expect(cut).toEqual([]);
+      const cdp = await page.createCDPSession();
+      await cdp.send("Emulation.setEmulatedMedia", {
+        features: [{ name: "forced-colors", value: "active" }],
+      });
+      // In forced colors nothing the fix adds may become visible: no outline, and shadows that stay
+      // transparent.
+      const forced = await page.evaluate(() => {
+        const style = getComputedStyle(document.querySelector('#content mo[stretchy="true"]')!);
+        return {
+          active: matchMedia("(forced-colors: active)").matches,
+          outline: style.outlineStyle,
+          shadows: style.boxShadow.match(/rgba?\([^)]*\)/g),
+        };
+      });
+      expect(forced).toEqual({
+        active: true,
+        outline: "none",
+        shadows: ["rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0)"],
+      });
+      await check("forced");
+      expect(cut).toEqual([]);
+    } finally {
+      await browser.close();
+    }
+  }, 240_000);
+
   it("starts no line with the punctuation after an inline formula, nor ends one with a bracket", async () => {
     const root = join(dir, "breaks");
     await mkdir(root, { recursive: true });

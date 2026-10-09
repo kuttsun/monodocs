@@ -10,6 +10,7 @@ xref:index.md[数式（Markdown）] と同じ数式を AsciiDoc で書いたも�
 
 質量とエネルギーは latexmath:[E = mc^2] の関係にある。
 ギリシャ文字 latexmath:[\alpha + \beta = \gamma]、添字 latexmath:[x_{i,j}^{2}]、累乗根 latexmath:[\sqrt[3\]{x}]、分数 latexmath:[\frac{a}{b}]、アクセント latexmath:[\hat{\theta},\ \bar{x},\ \vec{v},\ \dot{x}]、集合 latexmath:[\forall x \in \mathbb{R},\ \exists n \in \mathbb{N}] を文中に含む段落。
+鋭アクセントと重アクセント latexmath:[\acute{e},\ \grave{a}] も文中に含む。
 
 == 式 1
 
@@ -107,4 +108,11 @@ P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}
 [latexmath]
 ++++
 e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} + \frac{x^5}{5!} + \frac{x^6}{6!} + \frac{x^7}{7!} + \frac{x^8}{8!} + \frac{x^9}{9!} + \frac{x^{10}}{10!} + \cdots
+++++
+
+== 式 15
+
+[latexmath]
+++++
+\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{ABC},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}
 ++++
