@@ -560,8 +560,8 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 
 **1.0 の表面**（[roadmap.md](roadmap.md) 12.4、27.3）
 
-- [ ] 既定値付きのすべての設定キー、すべてのコマンドとオプション、すべての診断コード、CommonMark・GFM・AsciiDoc を超えて monodocs が認識する記法を、サイトのリファレンスの 1 ページに英語と日本語で列挙し、`sidebar.exclude` は非推奨で 1.0 で削除するものとして載せる。テストがそのページをスキーマ、CLI、`DIAGNOSTIC_CODES` と双方向に、既定値も含めて比べる
-- [ ] 列挙は、CI ジョブが固定するものとして診断 JSON の `schemaVersion: 1` を名指し、それを定義するコマンドのリファレンスへリンクする
+- [x] 既定値付きのすべての設定キー、すべてのコマンドとオプション、すべての診断コード、CommonMark・GFM・AsciiDoc を超えて monodocs が認識する記法を、サイトのリファレンスの 1 ページに英語と日本語で列挙し、`sidebar.exclude` は非推奨で 1.0 で削除するものとして載せる。テストがそのページをスキーマ、CLI、`DIAGNOSTIC_CODES` と双方向に、既定値も含めて比べる——「1.0 が凍結するもの」（`site/ja/docs/surfaces.md`）。キーには `figures.align` と `clearSearch` のラベルも入る。テストが CLI を実行せずにコマンドを読めるよう、CLI のコマンドは `cli/src/program.ts` に移した。記法は 1 つの定義から読めないので、レビューで保つ（`surfaces.test.ts`）
+- [x] 列挙は、CI ジョブが固定するものとして診断 JSON の `schemaVersion: 1` を名指し、それを定義するコマンドのリファレンスへリンクする（`surfaces.test.ts`）
 
 **テスト**
 

@@ -233,6 +233,11 @@ Preserve these display and reachability invariants:
   - Everything monodocs throws is a `MonodocsError` carrying its code, so an error caught at the top is
     reported as the finding it was; anything else reaching that boundary is reported as `internal/unexpected`.
   - A code is never renamed or given a different meaning once released.
+- **Frozen surfaces**: every configuration key with its default, command, option, and diagnostic code is listed
+  on the site's "What 1.0 Freezes" page in both languages, and `surfaces.test.ts` fails when the page and the
+  code differ in either direction. Adding one means adding it there. The CLI's commands are defined in
+  `cli/src/program.ts` (`createProgram`), apart from the entry point, so the test reads them without running
+  the CLI.
 - **PDF page numbers**: every body page carries its number and the total, centred at the foot.
   - The generated cover (`pdf.cover`) is rendered apart from the body with no bands, so it has no number, the
     body starts at 1, and the total counts the body only. Page labels make the viewer agree.

@@ -147,7 +147,8 @@ describe("every emitted string goes through the catalogue", () => {
     expect(files.length).toBeGreaterThan(20);
     // Windows では join() が \\ を返すので、比較の前に区切りを揃える。
     const posix = (f: string) => f.split(sep).join("/");
-    expect(files.some((f) => posix(f).endsWith("/cli/src/index.ts"))).toBe(true);
+    // The CLI's commands and their messages are in program.ts; index.ts only starts it.
+    expect(files.some((f) => posix(f).endsWith("/cli/src/program.ts"))).toBe(true);
 
     // ファイル全体に対して掛ける。行ごとに見ると、引数を次の行に書いた呼び出しを見逃す。
     const patterns = [

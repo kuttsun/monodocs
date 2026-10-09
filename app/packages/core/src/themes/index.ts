@@ -29,7 +29,7 @@ const THEME_FILES = {
  * クライアント JS が無い、Mermaid ランタイムを注入できない）ものだけを必須とする。
  * `{{title}}` / `{{htmlAttrs}}` / `{{bodyAttrs}}` などは欠けても文書は読めるので必須にしない。
  */
-const REQUIRED_TEMPLATE_TOKENS = [
+export const REQUIRED_TEMPLATE_TOKENS = [
   "{{style}}",
   "{{sidebar}}",
   "{{pages}}",
