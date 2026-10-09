@@ -62,8 +62,9 @@ jobs:
       # the diagnostics JSON and `document` in 0.11, and `root` / `sources.include`, route aliases,
       # `sources.asciidoc.attributes`, and the include boundary in 0.12, `sources.lineBreak`, the
       # size report and `assets.budget`, and `pdf.watermark` in 0.13, `numbering.sections` and
-      # `pdf.toc` in 0.14, and the inline Mermaid runtime's notices and math in 0.15. Verifying an
-      # older release must stay possible, so those steps ask rather than assume.
+      # `pdf.toc` in 0.14, the inline Mermaid runtime's notices and math in 0.15, and checklists,
+      # asciimath rendered, search folding, figure alignment, and the search clear button in 0.16.
+      # Verifying an older release must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
           version="$(monodocs --version | tr -d '\r')"
@@ -76,7 +77,7 @@ jobs:
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
             const major = Number(m[1]), minor = Number(m[2]);
             const atLeast = (n) => major > 0 || minor >= n;
-            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15)].map(String).join(' '));
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
@@ -85,6 +86,7 @@ jobs:
           echo "SUPPORTS_V013=$(echo "$gate" | cut -d' ' -f4)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V014=$(echo "$gate" | cut -d' ' -f5)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V015=$(echo "$gate" | cut -d' ' -f6)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V016=$(echo "$gate" | cut -d' ' -f7)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -694,13 +696,14 @@ jobs:
 
       # v0.15. Formulas render at build time to MathML only: Markdown's $...$ and fenced math block,
       # AsciiDoc's latexmath and stem when it means latexmath (6.4). No KaTeX class or stylesheet
-      # reaches the output, \mathbb becomes its own letter, math.enabled: false gives no MathML, and
-      # asciimath is reported and left as written. The PDF is built, not checked for fonts: whether
-      # this runner has a math font is the runner's (the font check is the CI guide's to set up).
+      # reaches the output, \mathbb becomes its own letter, and math.enabled: false gives no MathML.
+      # What asciimath does is the next steps', since 0.16 changed it. The PDF is built, not checked
+      # for fonts: whether this runner has a math font is the runner's (the font check is the CI
+      # guide's to set up).
       - name: Math
         if: env.SUPPORTS_V015 == 'true'
         run: |
-          mkdir -p math/docs math/ascii
+          mkdir -p math/docs
           cat > math/docs/index.md <<'EOF'
           # Math
 
@@ -716,16 +719,10 @@ jobs:
 
           The angle latexmath:[\alpha] and stem:[y^2].
           EOF
-          cat > math/ascii/index.adoc <<'EOF'
-          = Ascii
-
-          The value stem:[x/y] in asciimath.
-          EOF
           printf 'math:\n  enabled: false\n' > math/off.yml
           monodocs build math/docs -o math/on.html
           monodocs build math/docs -c math/off.yml -o math/off.html
           monodocs build math/docs --format pdf -o math/on.pdf
-          monodocs build math/ascii -o math/ascii.html
           node -e "
             const fs = require('node:fs');
             const on = fs.readFileSync('math/on.html', 'utf8');
@@ -748,8 +745,20 @@ jobs:
             if (!on.includes('\u211D')) fail('\\\\mathbb{R} did not become its own letter');
             if (off.includes('<math')) fail('math.enabled: false still rendered MathML');
             if (fs.readFileSync('math/on.pdf').subarray(0, 5).toString() !== '%PDF-') fail('the PDF is not a PDF');
-            if (fs.readFileSync('math/ascii.html', 'utf8').includes('<math')) fail('asciimath was rendered');
           "
+
+      # v0.15 only. asciimath is reported and left as written; 0.16 renders it (next step).
+      - name: asciimath left as text (0.15)
+        if: env.SUPPORTS_V015 == 'true' && env.SUPPORTS_V016 != 'true'
+        run: |
+          mkdir -p math/ascii
+          cat > math/ascii/index.adoc <<'EOF'
+          = Ascii
+
+          The value stem:[x/y] in asciimath.
+          EOF
+          monodocs build math/ascii -o math/ascii.html
+          if grep -q '<math' math/ascii.html; then echo "asciimath was rendered"; exit 1; fi
           status=0
           monodocs validate math/ascii --format json > math/ascii.json || status=$?
           cat math/ascii.json
@@ -759,4 +768,169 @@ jobs:
             if (!r.diagnostics.some((d) => d.code === 'math/asciimath-not-rendered' && d.severity === 'warning')) {
               throw new Error('asciimath was not reported as math/asciimath-not-rendered');
             }
+          "
+
+      # v0.16. asciimath renders through KaTeX on the same terms as latexmath, on by default: stem
+      # with no :stem: value and asciimath:[...] both become MathML, stem carrying its source as the
+      # asciimath it resolved to, the fraction and the sum drawn as such, and validate reports
+      # nothing about them; math.enabled: false leaves asciimath as written, as it does latexmath (6.4).
+      - name: asciimath rendered (0.16)
+        if: env.SUPPORTS_V016 == 'true'
+        run: |
+          mkdir -p ascii16/docs
+          cat > ascii16/docs/index.adoc <<'EOF'
+          = Ascii
+
+          The value stem:[x/y] and asciimath:[sum_(i=1)^n i].
+          EOF
+          monodocs build ascii16/docs -o ascii16/out.html
+          printf 'math:\n  enabled: false\n' > ascii16/off.yml
+          monodocs build ascii16/docs -c ascii16/off.yml -o ascii16/off.html
+          status=0
+          monodocs validate ascii16/docs --format json > ascii16/report.json || status=$?
+          cat ascii16/report.json
+          if [ "$status" -ne 0 ]; then echo "validate exited $status"; exit 1; fi
+          node -e "
+            const fs = require('node:fs');
+            const h = fs.readFileSync('ascii16/out.html', 'utf8');
+            const fail = (m) => { throw new Error(m); };
+            if (h.split('<math').length - 1 !== 2) fail('expected two formulas, found ' + (h.split('<math').length - 1));
+            if (/katex/i.test(h)) fail('KaTeX markup or a stylesheet reached the output');
+            // Each formula's MathML, by the source it carries, so the structure checked is the converter's:
+            // passing the asciimath to KaTeX as TeX would give neither a fraction nor a sum.
+            const formula = (source) => {
+              const at = h.indexOf('data-math-source=\"' + source + '\"');
+              if (at < 0) fail('no formula carries the source ' + source);
+              return h.slice(at, h.indexOf('</math>', at));
+            };
+            if (!/<mfrac><mi>x<\/mi><mi>y<\/mi><\/mfrac>/.test(formula('asciimath:[x/y]'))) fail('x/y is not a fraction of x over y');
+            if (!/<msubsup><mo>\u2211<\/mo><mrow><mi>i<\/mi><mo>=<\/mo><mn>1<\/mn><\/mrow><mi>n<\/mi><\/msubsup>/.test(formula('asciimath:[sum_(i=1)^n i]'))) {
+              fail('sum_(i=1)^n is not a sum from i = 1 to n');
+            }
+            // math.enabled: false turns asciimath off with latexmath, leaving it as written.
+            const off = fs.readFileSync('ascii16/off.html', 'utf8');
+            if (off.includes('<math')) fail('math.enabled: false still rendered asciimath');
+            if (!off.includes('x/y')) fail('math.enabled: false did not leave asciimath as written');
+            const r = JSON.parse(fs.readFileSync('ascii16/report.json', 'utf8'));
+            if (r.diagnostics.length !== 0) fail('validate reported: ' + JSON.stringify(r.diagnostics));
+          "
+
+      # v0.16. An AsciiDoc checklist item carries the checkbox a Markdown task list item does, checked
+      # or not, rather than a character no font may have (24.3.3).
+      - name: Checklists (0.16)
+        if: env.SUPPORTS_V016 == 'true'
+        run: |
+          mkdir -p check/docs
+          cat > check/docs/index.adoc <<'EOF'
+          = Checklist
+
+          * [x] done
+          * [ ] open
+          EOF
+          printf '# Tasks\n\n- [x] done\n- [ ] open\n' > check/docs/tasks.md
+          monodocs build check/docs -o check/out.html
+          node -e "
+            const h = require('node:fs').readFileSync('check/out.html', 'utf8');
+            const fail = (m) => { throw new Error(m); };
+            // The article itself: a sidebar link carries the same data-route.
+            const article = (route) => {
+              const start = h.indexOf('<article class=\"page\" data-route=\"' + route + '\"');
+              if (start < 0) fail('no article for ' + route);
+              return h.slice(start, h.indexOf('</article>', start));
+            };
+            const boxes = (html) => [...html.matchAll(/<input type=\"checkbox\"[^>]*>/g)].map((m) => m[0]);
+            const adoc = boxes(article('/'));
+            const md = boxes(article('/tasks'));
+            if (adoc.length !== 2 || !adoc.every((b) => b.includes('disabled'))) fail('expected two disabled checkboxes: ' + adoc);
+            if (adoc.filter((b) => b.includes('checked')).length !== 1) fail('expected one checked box: ' + adoc);
+            // The same element a Markdown task list item carries, checked and unchecked.
+            if (JSON.stringify(adoc) !== JSON.stringify(md)) fail('AsciiDoc ' + JSON.stringify(adoc) + ' is not Markdown ' + JSON.stringify(md));
+            // U+274F and U+2713 are the characters Asciidoctor draws a box with by default.
+            if (h.includes('\u274F') || h.includes('\u2713')) fail('a box was drawn as a character');
+          "
+
+      # v0.16. Figures are marked with where they sit, figures.align setting it and AsciiDoc's align=
+      # winning, and the rules that place them are in the stylesheet (20.6). The search box has a
+      # clear button of the theme's own, named by a label html.labels can replace (22.6). Where they
+      # land and what the button does are the browser pass's.
+      - name: Figures and the search clear button (0.16)
+        if: env.SUPPORTS_V016 == 'true'
+        run: |
+          mkdir -p fig/docs
+          # A 1x1 PNG.
+          node -e "require('node:fs').writeFileSync('fig/docs/a.png', Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'))"
+          printf '# Figure\n\n![Figure](a.png)\n\nInline ![icon](a.png) image.\n' > fig/docs/index.md
+          printf '= Block\n\nimage::a.png[Block,align=left]\n' > fig/docs/block.adoc
+          printf 'figures:\n  align: right\nhtml:\n  labels:\n    clearSearch: "Reset"\n' > fig/config.yml
+          monodocs build fig/docs -c fig/config.yml -o fig/out.html
+          printf 'lang: ja\n' > fig/ja.yml
+          monodocs build fig/docs -c fig/ja.yml -o fig/ja.html
+          node -e "
+            const fs = require('node:fs');
+            const h = fs.readFileSync('fig/out.html', 'utf8');
+            const ja = fs.readFileSync('fig/ja.html', 'utf8');
+            const fail = (m) => { throw new Error(m); };
+            if (!/<p data-monodocs-figure=\"right\"><img/.test(h)) fail('the Markdown figure was not marked right');
+            // Unset, figures.align is center, which moves an existing Markdown figure from the left.
+            if (!/<p data-monodocs-figure=\"center\"><img/.test(ja)) fail('an unaligned figure is not centred by default');
+            if (!/class=\"imageblock text-left\" data-monodocs-figure=\"left\"/.test(h)) fail('align=left did not win over the key');
+            if (/<p data-monodocs-figure[^>]*>Inline/.test(h)) fail('an inline image was taken for a figure');
+            if (!h.includes('[data-monodocs-figure=\"right\"]:not(.mermaid)')) fail('the placement rules are not in the stylesheet');
+            if (!/id=\"search-clear\"[^>]*aria-label=\"Reset\"/.test(h)) fail('the clear button is missing or html.labels did not name it');
+            if (!/id=\"search-clear\"[^>]*aria-label=\"\u691C\u7D22\u8A9E\u3092\u6D88\u53BB\"/.test(ja)) fail('the clear button has no Japanese name');
+          "
+
+      # v0.16. Search folds half-width katakana and matches okurigana variants and English inflections
+      # (22.3). That happens in the browser, so the page is driven with the puppeteer-core the
+      # package installed, in the Chrome the PDF steps use.
+      - name: Search folding (0.16)
+        if: env.SUPPORTS_V016 == 'true'
+        run: |
+          mkdir -p fold/docs
+          # Written by node, with the Japanese as escapes, so no shell's locale decides the bytes.
+          node -e "
+            const fs = require('node:fs');
+            fs.writeFileSync('fold/docs/guide.md', '# Guide\n\n\u30AC\u30A4\u30C9\u3092\u8AAD\u3080\u3002\n');
+            fs.writeFileSync('fold/docs/handover.md', '# Handover\n\n\u5F15\u6E21\u3057\u306E\u624B\u9806\u3002\n');
+            fs.writeFileSync('fold/docs/index.md', '# Setup\n\nRun the install command.\n');
+            fs.writeFileSync('fold/docs/half.md', '# Half\n\n\uFF76\uFF9E\uFF72\uFF84\uFF9E\u3092\u8AAD\u3080\u3002\n');
+            fs.writeFileSync('fold/docs/written.md', '# Written\n\n\u5F15\u304D\u6E21\u3057\u306E\u624B\u9806\u3002\n');
+          "
+          monodocs build fold/docs -o fold/out.html
+          MONODOCS_ROOT="$(npm root -g | tr -d '\r')/monodocs" node -e "
+            const path = require('node:path');
+            const { pathToFileURL } = require('node:url');
+            const puppeteer = require(require.resolve('puppeteer-core', { paths: [process.env.MONODOCS_ROOT] }));
+            (async () => {
+              const browser = await puppeteer.launch({ headless: true, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+              try {
+                const page = await browser.newPage();
+                await page.goto(pathToFileURL(path.resolve('fold/out.html')).href);
+                const found = async (query) => {
+                  await page.\$eval('#search-input', (el, q) => { el.value = q; el.dispatchEvent(new Event('input')); }, query);
+                  return page.\$\$eval('#search-results a[data-route]', (as) => as.map((a) => a.getAttribute('data-route')));
+                };
+                // Half-width katakana finds the full-width page and the reverse, okurigana written in
+                // finds the page that leaves it out and the reverse, and inflections find the word.
+                // Each case names the page it must find and every page it may find, so a search that
+                // ignored the query and listed everything would fail; a word on no page finds nothing.
+                const katakana = ['/guide', '/half'];
+                const handover = ['/handover', '/written'];
+                const cases = [
+                  ['\uFF76\uFF9E\uFF72\uFF84\uFF9E', '/guide', katakana], ['\u30AC\u30A4\u30C9', '/half', katakana],
+                  ['\u5F15\u304D\u6E21\u3057', '/handover', handover], ['\u5F15\u6E21\u3057', '/written', handover],
+                  ['installing', '/', ['/']], ['installed', '/', ['/']],
+                ];
+                for (const [query, route, allowed] of cases) {
+                  const routes = await found(query);
+                  if (!routes.includes(route)) throw new Error(JSON.stringify(query) + ' did not find ' + route + ': ' + JSON.stringify(routes));
+                  const stray = routes.filter((r) => !allowed.includes(r));
+                  if (stray.length > 0) throw new Error(JSON.stringify(query) + ' also found ' + JSON.stringify(stray));
+                }
+                const none = await found('zebra');
+                if (none.length !== 0) throw new Error('a word on no page found ' + JSON.stringify(none));
+              } finally {
+                await browser.close();
+              }
+            })().catch((e) => { console.error(e); process.exit(1); });
           "
