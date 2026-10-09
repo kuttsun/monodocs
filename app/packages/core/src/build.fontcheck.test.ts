@@ -345,6 +345,11 @@ const hasCjkAndEmoji = fontconfigCovers("65E5") === true && fontconfigCovers("27
  * 言えないので、在ることの判定には使わない）。開発用イメージがこれに当たる。
  */
 const noMathFont = fontconfigCovers("1D465") === false;
+/**
+ * Set where the CJK and emoji fonts are installed on purpose (the Linux job in pr-ci.yml), so that the
+ * sample documents' check fails there rather than skipping if the fonts go missing.
+ */
+const requireSampleFonts = process.env.MONODOCS_TEST_SAMPLE_FONTS === "1";
 
 /**
  * A theme that sets formulas in Latin Modern Math: the default theme's stylesheet, which a theme's
@@ -373,6 +378,9 @@ async function writeMathTheme(theme: string, extra = "", withFont = true): Promi
 const FORMULAS_ONLY =
   "#content article * { visibility: hidden; }\n" +
   "#content article math, #content article math * { visibility: visible; }\n";
+
+/** The inverse of `FORMULAS_ONLY`: the formulas hidden, everything else measured. */
+const FORMULAS_HIDDEN = "#content article math, #content article math * { visibility: hidden; }\n";
 
 /** Latin Modern Math, a font with an OpenType MATH table, kept for these tests (GUST Font License). */
 const MATH_FONT = new URL(
@@ -600,6 +608,68 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
       expect(named.filter((c) => !/\p{Script=Han}/u.test(c))).toEqual([]);
     }
   }, 180_000);
+
+  // The sample documents, the math fixture with them, whole: examples/en and examples/ja each have a
+  // page of formulas, so the only thing the development image may report of any of them is what a
+  // math font would draw (roadmap v0.16).
+  const SAMPLES = [
+    { name: "en", lang: "en" },
+    { name: "ja", lang: "ja" },
+    { name: "math", lang: "ja" },
+  ].map((sample) => ({
+    ...sample,
+    input: fileURLToPath(new URL(`../../../../examples/${sample.name}`, import.meta.url)),
+  }));
+
+  async function buildSample(sample: (typeof SAMPLES)[number], name: string, theme: string) {
+    const root = join(dir, name);
+    const configFile = join(root, "monodocs.config.yml");
+    await mkdir(root, { recursive: true });
+    await writeFile(configFile, `lang: "${sample.lang}"\nhtml:\n  theme: "${theme}"\n`);
+    return buildSite({
+      inputDir: sample.input,
+      configFile,
+      outputFile: join(root, "docs.pdf"),
+      format: "pdf",
+    });
+  }
+
+  for (const sample of SAMPLES) {
+    it.skipIf(!hasCjkAndEmoji && !requireSampleFonts)(
+      `reports nothing of examples/${sample.name} with a math font`,
+      async () => {
+        const root = join(dir, `real-sample-${sample.name}`);
+        await writeMathTheme(join(root, "my-theme"));
+        const result = await buildSample(sample, `real-sample-${sample.name}`, "./my-theme");
+        expect(fontWarnings(result).map((w) => w.message)).toEqual([]);
+      },
+      240_000,
+    );
+
+    it.runIf(hasCjkAndEmoji && noMathFont)(
+      `reports only the formulas of examples/${sample.name} where no math font is installed`,
+      async () => {
+        // As it is: the missing MATH table, and letters as a formula draws them. The message names
+        // only the first few letters, so a second build hides the formulas and has to be clean.
+        const name = `real-sample-${sample.name}-nomath`;
+        const asIs = fontWarnings(await buildSample(sample, name, "default"));
+        expect(asIs.some((w) => w.code === "font/no-math-table")).toBe(true);
+        for (const w of asIs.filter((w) => w.code !== "font/no-math-table")) {
+          expect(w.code).toBe("font/missing");
+          const named = [...w.message.matchAll(/U\+([0-9A-F]{4,6})/g)].map((m) =>
+            parseInt(m[1]!, 16),
+          );
+          expect(named.filter((cp) => cp < 0x1d400 || cp > 0x1d7ff)).toEqual([]);
+        }
+
+        const root = join(dir, `${name}-hidden`);
+        await writeMathTheme(join(root, "my-theme"), FORMULAS_HIDDEN, false);
+        const hidden = fontWarnings(await buildSample(sample, `${name}-hidden`, "./my-theme"));
+        expect(hidden.map((w) => w.message)).toEqual([]);
+      },
+      240_000,
+    );
+  }
 
   it("catches a diagram that mermaid pre-render would bake the tofu into", async () => {
     const root = join(dir, "real-mermaid");

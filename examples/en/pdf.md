@@ -51,8 +51,8 @@ pdf:
 > [!IMPORTANT]
 > PDF output uses a headless Chromium, so **Chromium must be available** in the runtime
 > environment. PDFs are also drawn with the **system fonts of that environment**, so if a
-> font for the characters used in the body (CJK, emoji, …) is missing, they render as tofu
-> (□ / ☒). The dev image bundles Japanese (CJK) and emoji fonts.
+> font for the characters used in the body (CJK, emoji, …) is missing, they render as tofu:
+> empty or crossed-out boxes. The dev image bundles Japanese (CJK) and emoji fonts.
 
 > [!WARNING]
 > The bundled CLI (single `.cjs` / single executable) cannot produce PDFs because it does
