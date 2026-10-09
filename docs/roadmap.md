@@ -4900,6 +4900,21 @@ before the number and expensive after it; the rest are checks 1.0 should not be 
   position map serves all three, so its cost is paid once. And it has to come before 1.0, for the
   reason 12.4 gives a default value: what search finds changes for every existing document without
   its author touching anything
+- **A figure cannot be centred or right-aligned** (20.2, 20.3). A Markdown image is an `<img>`
+  inside a paragraph, so it always sits at the left. An AsciiDoc image block is always centred by
+  the default theme, and `align=left` or `align=right`, which Asciidoctor writes as `text-left` or
+  `text-right` on the block, has no effect, because the theme centres the block's content whatever
+  its class. The same figure sits differently depending on the format it was written in, and the
+  default theme gives the author no choice. Raw HTML is dropped from Markdown (syntax.md), so
+  `<p align="center">`, the usual workaround, does not help. How alignment is chosen adds a surface
+  1.0 freezes, so it is settled before 1.0
+- **The search box has no clear button of its own** (22.4, 22.5). It is an `<input type="search">`,
+  so Chromium and Safari draw a × of their own, each on conditions of its own, and Firefox draws
+  none. Escape clears the box, its results, and the highlight in the body, but only while the box
+  has the focus. A reader with a keyboard gets there with `/` or `Ctrl+K` (`⌘K`), which open the
+  drawer on a narrow screen too; a reader using only a pointer or touch clicks back into the box
+  first or deletes the query by hand. A button needs a label, which adds an entry `html.labels` can
+  replace (23.4), a surface 1.0 freezes
 - **The 1.0 surfaces are not enumerated in one place.** 1.0 listed the enumeration and the
   diagnostics schema version as its own work. The schema version is already 1
   (`DIAGNOSTICS_SCHEMA_VERSION`), and the command reference already tells a CI job to pin it rather
@@ -4919,6 +4934,10 @@ Implementation scope:
 - Replace the fold-in-place model with a token-to-source position map, and fold half-width katakana,
   okurigana variants, and English stemming on it, with the method for okurigana chosen in the open
   against the size budget (20.5, 22.3)
+- Let a figure be aligned left, centre, or right, in HTML and PDF alike, with how it is chosen —
+  a configuration key, markup on each image, or both — decided in the open (7.2, 20.2, 20.3)
+- Give the search box a clear button of the theme's own, in every browser, clearing what Escape
+  clears but leaving the focus in the box and the drawer open (22.4, 22.5, 23.4)
 - Enumerate the frozen surfaces in one place, the diagnostic codes and the diagnostics schema
   version among them (12.4, 27.3)
 
@@ -4961,6 +4980,25 @@ Completion criteria:
   else. The 20.5 size report's `page data` and total are measured on `examples/ja` before and after
   and recorded. If it is on by default, it adds less than 100 KB to `examples/ja`; one that needs more
   sits behind a key, and the key joins the enumeration below
+- A figure can be aligned left, centre, or right in Markdown and AsciiDoc, in HTML and PDF alike.
+  How it is chosen is decided with the alternatives and why they lost: a configuration key for every
+  figure, markup on each image (which GFM has none of, so that other viewers would show or drop it),
+  or both. An AsciiDoc `align=` on an image block takes effect. Which images count as figures (a
+  paragraph holding only an image, not an inline icon; and whether an image wrapped in a link, an
+  AsciiDoc `float=` or block title, and a Mermaid diagram are among them) and what an unaligned
+  figure does in each format are decided and stated; if an existing document's figures move, the
+  release notes say so. Tests in Chromium measure where each alignment puts a figure in both
+  formats, on screen and in print, and that an inline image does not move; syntax.md describes it in
+  both languages; whatever key or markup it adds joins the enumeration below
+- The search box has a clear button of the theme's own, shown while the box holds a query, the
+  browser's own × no longer drawn beside it. Pressing it clears the box, the results, and the
+  highlight in the body, as Escape does, but leaves the focus in the box and the drawer open. It is
+  reached by keyboard and named by a label in the `en` and `ja` tables that `html.labels` can
+  replace, the label joining the enumeration below. It sits right in the drawer on a narrow screen
+  and is not printed. Tests in Chromium cover each of these. The real-browser tests run Chromium
+  only, so the button is drawn by the theme's own markup and CSS, nothing a browser supplies, and
+  Firefox is looked at by a person during the beta, Safari too if a Mac or an iPhone is at hand,
+  with the versions recorded and one not seen recorded as not seen
 - The frozen surfaces — every configuration key with its default, every command and option, every
   diagnostic code, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc — are
   enumerated on one page of the site's reference in both languages, with `sidebar.exclude` listed as
@@ -4969,25 +5007,27 @@ Completion criteria:
 - The enumeration names the diagnostics JSON's `schemaVersion: 1` as what a CI job pins, and links
   to the command reference that defines it
 - testing.md lists the new and inverted tests in both languages
-- Because AsciiDoc checklists and search results change for existing documents, and asciimath does
-  if it is on by default, 0.16.0 goes through a beta before `latest`, as 0.15.0 did, with the same
-  verification: the published package on Linux x64 and Windows x64, the release binaries, a driven
-  browser pass over what the released Linux binary builds, the samples built and looked at during the
-  beta, and the CI guide pinned to the release. `verify-published.yml` checks asciimath's new
-  behaviour for 0.16 and later and keeps v0.15's asciimath steps for 0.15 only, and the unit tests
-  that assert asciimath is left as text are rewritten. The release notes state what changes. The
-  Windows checks a person has to make are made for 0.16.0, on a PDF with a watermark, `pdf.toc`,
-  section numbering, and formulas, its table's numbers matching the sheets; those left open for
-  0.13.0 to 0.15.0 are superseded by them rather than made separately. In order:
+- Because AsciiDoc checklists and search results change for existing documents, asciimath does if it
+  is on by default, and figures do if alignment moves them, 0.16.0 goes through a beta before
+  `latest`, as 0.15.0 did, with the same verification: the published package on Linux x64 and
+  Windows x64, the release binaries, a driven browser pass over what the released Linux binary
+  builds, the samples built and looked at during the beta, and the CI guide pinned to the release.
+  `verify-published.yml` checks asciimath's new behaviour for 0.16 and later and keeps v0.15's
+  asciimath steps for 0.15 only, and the unit tests that assert asciimath is left as text are
+  rewritten. The release notes state what changes. The Windows checks a person has to make are made
+  for 0.16.0, on a PDF with a watermark, `pdf.toc`, section numbering, and formulas, its table's
+  numbers matching the sheets; those left open for 0.13.0 to 0.15.0 are superseded by them rather
+  than made separately. In order:
   - The CI guide pins `monodocs@0.16.0` in the version change, before the tag
   - `verify-published.yml` gains a 0.16 gate and steps for the checklist markup, the new search
     folding, and asciimath, merged first
   - `0.16.0-beta.1` is published under `next` and verified on Linux x64 and Windows x64, the 0.16
-    steps confirmed to have run; the samples are built with it and looked at
+    steps confirmed to have run; the samples are built with it and looked at, their figures in the
+    HTML and the PDF and the clear button among them, the button in Firefox too
   - `0.16.0` is published under `latest` and verified the same way, its release binaries through
     `verify-release-binaries.yml`, `verify-linux-binary.sh` on a Linux x64 host without Node.js,
-    `verify-windows-binary.ps1` on Windows 11, and the driven browser pass, the checklists and the
-    new search folding included
+    `verify-windows-binary.ps1` on Windows 11, and the driven browser pass, the checklists, the
+    new search folding, figure alignment, and the clear button included
   - The Windows checks a person has to make: the HTML in Edge, Japanese text and formulas above all,
     the PDF above opened and printed, `serve --open`, and Mark of the Web with SmartScreen for an
     asset downloaded through a browser

@@ -25,7 +25,7 @@ Last updated: 2026-10-09
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
-| Checklists, wide accents, asciimath, search folding, surfaces enumerated | 🚧 Planned| v0.16 |
+| Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | 🚧 Planned| v0.16 |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -550,6 +550,16 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 - [x] Search finds `ガイド` from `ｶﾞｲﾄﾞ` and `引渡し` from `引き渡し`, each the other way too, and `install` from `installing` and `installed`, highlighting and quoting the text as written in the page — with the key on, if okurigana folding sits behind one; tests cover each fold and a highlight over each — the term is loosened, never the text: an English word by a light stem, and between two kanji up to two kana there or not; a page every term matches exactly is ranked before any that needed the loose pattern, so none is pushed out of the twenty results; stems start a word and are at least four letters (`app.search.test.ts`)
 - [x] How okurigana variants are folded is chosen in [roadmap.md](roadmap.md) 22.3 with the alternatives and why they lost, and the size report's `page data` and total on `examples/ja` are measured before and after and recorded; if it is on by default, it adds less than 100 KB, and one that needs more sits behind a key that joins the enumeration — loosening the term chosen over a dictionary (megabytes in every document) and over normalising the text (which cannot tell okurigana from a particle), with its false matches recorded; `page data` on `examples/ja` 55.4 KB before and after, the file +11,994 bytes, so it is on by default
 
+**Figure alignment** ([roadmap.md](roadmap.md) 7.2, 20.2, 20.3)
+
+- [ ] A figure can be aligned left, centre, or right in Markdown and AsciiDoc, in HTML and PDF alike, and an AsciiDoc `align=` on an image block takes effect
+- [ ] How alignment is chosen — a configuration key, markup on each image, or both — is decided in [roadmap.md](roadmap.md) with the alternatives and why they lost, and so are which images count as figures (a paragraph holding only an image, never an inline icon; an image wrapped in a link, an AsciiDoc `float=` or block title, and a Mermaid diagram included or not) and what an unaligned figure does in each format; tests in Chromium measure where each alignment puts a figure in both formats, on screen and in print, and that an inline image does not move, and [syntax.md](syntax.md) describes it in English and Japanese; whatever key or markup it adds joins the enumeration, and if an existing document's figures move, the release notes say so
+
+**Search clear button** ([roadmap.md](roadmap.md) 22.4, 22.5, 23.4)
+
+- [ ] The search box has a clear button of the theme's own, drawn by its own markup and CSS and shown while the box holds a query, with the browser's own × no longer drawn; pressing it clears the box, the results, and the highlight in the body, as Escape does, but leaves the focus in the box and the drawer open
+- [ ] The button is reached by keyboard and named by a label in the `en` and `ja` tables that `html.labels` can replace, the label joining the enumeration; it sits right in the drawer on a narrow screen and is not printed; tests in Chromium cover each of these, and Firefox is looked at during the beta, Safari too if a Mac or an iPhone is at hand, the versions recorded and one not seen recorded as not seen
+
 **The 1.0 surfaces** ([roadmap.md](roadmap.md) 12.4, 27.3)
 
 - [ ] Every configuration key with its default, every command and option, every diagnostic code, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc are enumerated on one page of the site's reference in English and Japanese, with `sidebar.exclude` listed as deprecated and removed in 1.0; a test compares the page with the schema, the CLI, and `DIAGNOSTIC_CODES` in both directions, defaults included
@@ -561,17 +571,17 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 
 **Release**
 
-AsciiDoc checklists and search results change for existing documents, and asciimath does if it is on by default, so this release goes through a beta, as 0.15.0 did. The Windows checks a person has to make are made for 0.16.0; those left open above for 0.13.0 to 0.15.0 are superseded by them rather than made separately.
+AsciiDoc checklists and search results change for existing documents, asciimath does if it is on by default, and figures do if alignment moves them, so this release goes through a beta, as 0.15.0 did. The Windows checks a person has to make are made for 0.16.0; those left open above for 0.13.0 to 0.15.0 are superseded by them rather than made separately.
 
 - [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.16.0` in the version change itself, before the `v0.16.0` tag is created
 - [ ] `verify-published.yml` gains a 0.16 gate and steps for the checklist markup, the new search folding, and asciimath's new behaviour, with v0.15's asciimath steps kept for 0.15 only, merged before anything below runs; the unit tests that assert asciimath is left as text are rewritten — the unit tests are, with the rendering itself; the workflow is left for the release
 - [ ] Publish `0.16.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the 0.16 steps ran rather than being skipped
-- [ ] During the beta, build `examples/en`, `examples/ja`, `examples/math`, and the site samples with the beta and look at the checklists, the formulas, and search; what no longer reads is fixed or recorded before `0.16.0` is cut
+- [ ] During the beta, build `examples/en`, `examples/ja`, `examples/math`, and the site samples with the beta and look at the checklists, the formulas, the figures, search, and the clear button, the button in Firefox too; what no longer reads is fixed or recorded before `0.16.0` is cut
 - [ ] Publish `0.16.0` under the `latest` tag, with release notes stating what changes for existing documents, and verify it the same way with `dist_tag: 0.16.0`
 - [ ] Verify the `v0.16.0` release binaries through `verify-release-binaries.yml` on both platforms
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.16.0` assets on a Linux x64 host without Node.js
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.16.0` assets on a Windows 11 host
-- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the checklists and the new search folding
+- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the checklists, the new search folding, figure alignment, and the clear button
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with a watermark, `pdf.toc`, section numbering, and formulas opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
 - [ ] Move the `next` dist-tag onto `0.16.0`, and confirm that the deployed CI guide pins `monodocs@0.16.0` in English and Japanese
 
