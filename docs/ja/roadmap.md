@@ -4582,8 +4582,10 @@ v0.14 は、実測が定めた 4 つの条件のもとで、数式を機能に�
     確かめる。それでサンプルをビルドして見る
   - `0.16.0` を `latest` に公開して同じように検証し、リリースバイナリを `verify-release-binaries.yml`、
     Node.js の無い Linux x64 ホストでの `verify-linux-binary.sh`、Windows 11 での
-    `verify-windows-binary.ps1`、ブラウザを操作する確認で検証する
-  - 上に書いた、Windows で人が行う確認
+    `verify-windows-binary.ps1`、チェックリストと新しい検索の畳み込みを含めてブラウザを操作する確認で
+    検証する
+  - Windows で人が行う確認。Edge での HTML（とりわけ日本語と数式）、上に書いた PDF を開いて印刷する
+    こと、`serve --open`、ブラウザでダウンロードしたアセットに対する Mark of the Web と SmartScreen
   - `next` を `0.16.0` に移し、デプロイした CI ガイドがそれに固定していることを確かめる
 
 ---

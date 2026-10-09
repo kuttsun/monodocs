@@ -4833,8 +4833,11 @@ Completion criteria:
     steps confirmed to have run; the samples are built with it and looked at
   - `0.16.0` is published under `latest` and verified the same way, its release binaries through
     `verify-release-binaries.yml`, `verify-linux-binary.sh` on a Linux x64 host without Node.js,
-    `verify-windows-binary.ps1` on Windows 11, and the driven browser pass
-  - The Windows checks a person has to make, above
+    `verify-windows-binary.ps1` on Windows 11, and the driven browser pass, the checklists and the
+    new search folding included
+  - The Windows checks a person has to make: the HTML in Edge, Japanese text and formulas above all,
+    the PDF above opened and printed, `serve --open`, and Mark of the Web with SmartScreen for an
+    asset downloaded through a browser
   - `next` moves onto `0.16.0`, and the deployed CI guide is confirmed to pin it
 
 ---
