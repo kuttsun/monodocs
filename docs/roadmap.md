@@ -2831,9 +2831,9 @@ text, so a match falls on the text as written:
   letters is not used: `string` would find `construct` through `str`, so `running` does not find
   `run`, nor `using` `use`, nor `boxes` `box`. `-es` is cut only after `x`, `ch`, `sh`, `ss`, or `z`
   (`processes` finds `process`), and only a final `i` that was a `y` matches either. A stem is a
-  prefix, so `installing` finds `install` and `installer` alike, and `basis` finds `basic`; a word
-  starts after any character that is not a letter, a digit included, so `install` is found in
-  `v2install`;
+  prefix, so `installing` finds `install` and `installer` alike, `basis` finds `basic`, and
+  `studies` finds `studio`; a word starts after any character that is not a letter, a digit
+  included, so `installing` finds `v2install`;
 - between two kanji, the term's own okurigana of one or two kana is left out, and one or two kana
   are allowed in the text, there or not: `引き渡し` and `引渡し` are both `引[ぁ-ゖ]{0,2}渡し`, and
   find each other.
@@ -2842,7 +2842,8 @@ A page that every term matches exactly — in its title, a heading, its text, or
 before any page that needed the loose pattern for one of them, whatever their scores, so a loose
 match never pushes an exact one out of the twenty results shown. What loose matches score is kept
 apart: between two exact pages it breaks only a tie, so their order is what their exact matches
-make it, and a result opens the heading that matched exactly before one that matched loosely. Only
+make it, and of two headings matching as many terms, a result opens the one matching more of them
+exactly. Only
 exact occurrences count again in the text, since a stem can occur far more often than the word.
 
 How okurigana was settled:
