@@ -6,7 +6,10 @@
 #   2) その CLI で英日それぞれの examples を単一 HTML 化（ドッグフーディング）
 #      英: examples/en -> site/public/sample.html      (/sample.html)
 #      日: examples/ja -> site/public/ja/sample.html   (/ja/sample.html)
-#   3) 版面密度（pdf.density）の比較サンプルを生成（scripts/site-density.sh）
+#   3) Print the same examples as PDFs with a cover and contents (scripts/site-pdf-sample.sh)
+#      en: examples/en -> site/public/sample.pdf      (/sample.pdf)
+#      ja: examples/ja -> site/public/ja/sample.pdf   (/ja/sample.pdf)
+#      版面密度（pdf.density）の比較サンプルを生成（scripts/site-density.sh）
 #      英: site/samples/density/print-density.en.md -> site/public/density/*.pdf|png
 #      日: site/samples/density/print-density.ja.md -> site/public/ja/density/*.pdf|png
 #   4) VitePress でサイトをビルド（site/.vitepress/dist/）
@@ -30,7 +33,8 @@ mkdir -p "$ROOT/site/public/ja"
 "$APP" node packages/cli/dist/index.js build ../examples/en -o ../site/public/sample.html
 "$APP" node packages/cli/dist/index.js build ../examples/ja -o ../site/public/ja/sample.html
 
-echo "[site-build] 3/4 版面密度の比較サンプルを生成（PDF 4 段 + 1 ページ目のサムネイル）"
+echo "[site-build] 3/4 PDF サンプル（sample.pdf / ja/sample.pdf）と版面密度の比較サンプルを生成"
+"$ROOT/scripts/site-pdf-sample.sh"
 "$ROOT/scripts/site-density.sh"
 
 echo "[site-build] 4/4 VitePress でサイトをビルド"
@@ -50,6 +54,7 @@ cat <<'EOF'
 [site-build] 完了。
   サイト生成物: site/.vitepress/dist/
   併載デモ    : site/public/sample.html（英）/ site/public/ja/sample.html（日）
+  PDF サンプル: site/public/sample.pdf（英）/ site/public/ja/sample.pdf（日）
   密度サンプル: site/public/density/（英）/ site/public/ja/density/（日）
 
   ローカル確認 : scripts/site.sh npm run docs:preview   (http://localhost:4173/)
