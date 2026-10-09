@@ -356,16 +356,17 @@ describe("AsciiDoc math", () => {
     const long = Array(6000).fill("a").join("+");
     const { html, result } = await build(
       `= T\n\n[asciimath]\n++++\n${long}\n++++\n\n` +
-        "asciimath:[text(undefined) + color red x] and asciimath:[bbsf(A)] and asciimath:[y]\n",
+        "asciimath:[text(undefined) + color red x] and asciimath:[bbsf_1(A)] and asciimath:[y]\n",
     );
     const failed = result.warnings.filter((w) => w.code === "math/parse-failed");
     expect(failed.map((w) => w.message)).toEqual([
       expect.stringMatching(/\[asciimath\][\s\S]*a\+a/),
       // Its own `undefined` does not hide the one the converter wrote.
       expect.stringMatching(/color red x\].*could not be read as asciimath/),
-      expect.stringMatching(/asciimath:\[bbsf\(A\)\].*no bbsf style/),
+      // With a subscript between the style and its argument too.
+      expect.stringMatching(/asciimath:\[bbsf_1\(A\)\].*no bbsf style/),
     ]);
-    expect(html).toContain("\\$bbsf(A)\\$");
+    expect(html).toContain("\\$bbsf_1(A)\\$");
     expect(attributes(html, "data-math-tex")).toEqual(["y"]);
   });
 

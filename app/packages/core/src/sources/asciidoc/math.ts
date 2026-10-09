@@ -80,7 +80,10 @@ const MISSING_UNARY: AsciiMathSymbol[] = [
 /** The styles above that KaTeX cannot draw, each the command it was named with. */
 const UNDRAWABLE = MISSING_UNARY.filter(({ asciimath }) =>
   ["bbsf", "bbsfit", "bbcc", "bbfr"].includes(asciimath),
-).map(({ asciimath, tex }) => ({ asciimath, tex: `${tex!}{` }));
+).map(({ asciimath, tex }) => ({
+  asciimath,
+  command: new RegExp(`${tex!.replace(/\\/g, "\\\\")}(?![A-Za-z])`),
+}));
 
 /** asciimath2tex's methods that read a position, recurse, and are remembered for one parse. */
 const MEMOIZED = ["simple", "matrix", "bracketed_expression", "expression_list", "expression"];
@@ -275,9 +278,7 @@ export async function createMathConverter(
         failed.push({ source, detail: t("pages.mathAsciimathUnread") });
         return undefined;
       }
-      const style = UNDRAWABLE.find(({ tex: command }) =>
-        tex.some((part) => part.includes(command)),
-      );
+      const style = UNDRAWABLE.find(({ command }) => tex.some((part) => command.test(part)));
       if (style) {
         failed.push({ source, detail: t("pages.mathAsciimathStyle", { style: style.asciimath }) });
         return undefined;
