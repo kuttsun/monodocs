@@ -2802,23 +2802,70 @@ that Japanese text writes interchangeably, so a reader who types one spelling fi
   interchangeably in the same position, and the wave dash pair in particular swaps depending on the
   authoring platform.
 
-Every mapping is one character to one character, which preserves the length invariant that the
-highlight and snippet offsets depend on (22.2).
+Until v0.16 every mapping was one character to one character, which kept the folded string as long
+as the original, so the highlight and snippet offsets (22.2) were shared with it. Three variations
+broke that invariant and were left out: half-width katakana (`ｶﾞ` → `ガ`) composes two characters
+into one; okurigana variants (`引き渡し` / `引渡し`) cannot be derived from the characters; and
+English inflections (`installing` / `install`) change a word's length. None justified a rewrite
+alone, but one design serves all three, and what search finds changes for every existing document,
+so they are taken up together, in v0.16, before 1.0.
 
-Three related variations stay out of scope, because each one breaks that invariant:
+**Folding with a position map (v0.16).** Each folded character now carries the range of the
+original text it came from, so folding may change the length: half-width katakana becomes
+full-width, its voiced and semi-voiced marks composed with the kana before them (`ｶﾞ` → `ガ`, by
+NFKC on the pair), and then hiragana as before. A match, wherever folding found it, is mapped back
+through those ranges, so the result list and the body highlight mark the text as written (`ｶﾞｲﾄﾞ`
+for a search for `ガイド`). Everything v0.9 folds folds as before. Text without half-width kana keeps no
+map, its folded characters standing where they stood, so most pages fold as fast as before; and the
+snippet and the highlight search only the window they show. A lone `ﾞ` or `ﾟ` becomes the combining
+mark, not the spacing `゛`.
 
-- **Half-width katakana** (`ｶﾞ` → `ガ`) composes two characters into one, so the folded string would
-  stop sharing offsets with the original.
-- **Okurigana variants** (`引き渡し` / `引渡し`) cannot be derived from the characters at all. They
-  need a morphological analyzer whose dictionary runs to several megabytes — inside every generated
-  document, for a tool whose purpose is one self-contained file.
-- **English stemming** (`installing` → `install`) is small to implement, but it changes token length
-  and needs the same position map as half-width katakana.
+**Loose matching (v0.16).** Besides the folded term, a looser pattern made from it is matched, and
+never instead of it, so nothing found before is lost. Only the term is loosened, never the page's
+text, so a match falls on the text as written:
 
-Supporting any of them means replacing the fold-in-place model with a token-to-source position map.
-None of them justifies that rewrite alone; the three together do, since one position map serves
-all three. They are taken up in v0.16, before 1.0, since what search finds changes for every existing
-document.
+- an English word is matched by its stem, from the start of a word: a light suffix stripping
+  (`-ing`, `-ed`, `-es`, `-s`, `-ies`, a final `e`, a doubled final consonant, a `y` after a
+  consonant as `i`, matching `i` or `y`), so `installing` and `installed` are `install`,
+  `configured` is `configur`, and `dependencies` finds `dependency`. A stem shorter than four
+  letters is not used: `string` would find `construct` through `str`, so `running` does not find
+  `run`, nor `using` `use`, nor `boxes` `box`. `-es` is cut only after `x`, `ch`, `sh`, `ss`, or `z`
+  (`processes` finds `process`), and only a final `i` that was a `y` matches either. A stem is a
+  prefix, so `installing` finds `install` and `installer` alike, `basis` finds `basic`, and
+  `studies` finds `studio`; a word starts after any character that is not a letter, a digit
+  included, so `installing` finds `v2install`;
+- between two kanji, the term's own okurigana of one or two kana is left out, and one or two kana
+  are allowed in the text, there or not: `引き渡し` and `引渡し` are both `引[ぁ-ゖ]{0,2}渡し`, and
+  find each other.
+
+A page that every term matches exactly — in its title, a heading, its text, or a formula — is ranked
+before any page that needed the loose pattern for one of them, whatever their scores, so a loose
+match never pushes an exact one out of the twenty results shown, a page found by its section number
+included. What loose matches score is kept apart and counts only between pages that are not exact,
+so exact pages keep the order, ties included, they had before v0.16; and of two headings matching as
+many terms, a result opens the one matching more of them exactly. Only
+exact occurrences count again in the text, since a stem can occur far more often than the word.
+
+How okurigana was settled:
+
+- **A dictionary** — a morphological analyzer such as kuromoji, reading each word's lemma — would
+  know `引き渡し` and `引渡し` as one word, but its dictionary runs to several megabytes, and would sit
+  in every generated document, for a tool whose purpose is one self-contained file. Rejected, as
+  22.3 said before.
+- **Normalising the page's text** — dropping kana between kanji in the text and in the term alike —
+  was tried first and lost: in the text it cannot tell okurigana from a particle, so `引渡しの手順`
+  became `引渡手順`, and `引渡し` no longer found it.
+- **Loosening only the term**, as above, needs no dictionary and no copy of the text. Its cost is
+  false matches: between any two kanji of the term it allows one or two kana, particles included,
+  so `日出` finds `日の出`, `日本` finds the `日は本` of `今日は本当に`, and `一ヶ月` finds `一月` (`ヶ`
+  folds to a kana). Okurigana at the end of the term is not between two kanji and is not
+  loosened: `受付` finds `受け付け`, but `受け付け` does not find `受付`. Kanji outside the Basic
+  Multilingual Plane (`𠮟`) match exactly but are not loosened.
+
+Measured on `examples/ja`, built before and after: the size report's `page data` is 55.4 KB both
+times, since the client folds the text it already has; the whole file grows by 11,994 bytes
+(6,016,273 to 6,028,267), the longer client script. That is far under the 100 KB v0.16 allowed a
+method on by default, so there is no key.
 
 ### 22.4 Keyboard Navigation of the Results
 

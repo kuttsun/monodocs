@@ -11,6 +11,8 @@ type ClientPage = {
   headings: ClientHeading[];
   text: string;
   formulas?: { tex: string; section?: string }[];
+  /** The page's section number, as core publishes it with numbering.sections. */
+  number?: string;
   /** Body HTML placed in the article after the headings (for the in-body highlight; not client data). */
   html?: string;
 };
@@ -66,6 +68,7 @@ async function mountClient(
       headings: p.headings,
       text: p.text,
       ...(p.formulas ? { formulas: p.formulas } : {}),
+      ...(p.number ? { number: p.number } : {}),
     })),
   };
 
@@ -92,6 +95,7 @@ function page(route: string, title: string, extra: Partial<ClientPage> = {}): Cl
     headings: extra.headings ?? [],
     text: extra.text ?? title,
     html: extra.html,
+    number: extra.number,
   };
 }
 
@@ -296,13 +300,195 @@ describe("v0.9 search folding (app.js)", () => {
     expect(resultRoutes()).toEqual(["/dash", "/katakana"]);
   });
 
-  it("leaves half-width katakana unmatched, the documented boundary of folding", async () => {
-    await mountClient(KANA);
+  it("matches half-width katakana, its voiced marks composed, and marks it as written", async () => {
+    await mountClient([
+      page("/half", "ｶﾞｲﾄﾞ", { text: "ﾊﾟｽﾜｰﾄﾞ の設定。" }),
+      page("/full", "ガイド", { text: "パスワード の設定。" }),
+    ]);
 
-    // 濁点付き半角カナ（ｶ + ﾞ）は 2 文字 → 1 文字で長さが変わり、位置を共有する
-    // ハイライトが成立しないため畳まない。roadmap 22.3 に記録した制限。
-    typeQuery("ｲﾝｽﾄｰﾙ");
-    expect(document.querySelector("#search-results .search-empty")).not.toBeNull();
+    // Both ways (v0.16): folding composes ｶ + ﾞ into one character, and maps it back to both.
+    // A tie keeps document order.
+    typeQuery("ガイド");
+    expect(resultRoutes()).toEqual(["/half", "/full"]);
+    expect(
+      document.querySelector("#search-results a[data-route='/half'] .search-result-title mark")!
+        .textContent,
+    ).toBe("ｶﾞｲﾄﾞ");
+    typeQuery("ﾊﾟｽﾜｰﾄﾞ");
+    expect(resultRoutes()).toEqual(["/half", "/full"]);
+    const snippet = document.querySelector(
+      "#search-results a[data-route='/full'] .search-result-snippet mark",
+    )!;
+    expect(snippet.textContent).toBe("パスワード");
+  });
+});
+
+const LOOSE: ClientPage[] = [
+  page("/okuri", "引渡しの手順", { text: "物件の引渡しは月末に行う。" }),
+  page("/okurigana", "引き渡しの準備", { text: "書類を引き渡し、受領印をもらう。" }),
+  page("/english", "Setup", { text: "The installer installed the package. Install it again." }),
+  page("/plain", "Other", { text: "Installing nothing here, only configuring." }),
+];
+
+describe("v0.16 loose search (app.js)", () => {
+  beforeEach(() => {
+    window.location.hash = "";
+    document.body.innerHTML = "";
+  });
+
+  it("finds a word with its okurigana and without, both ways, and marks it as written", async () => {
+    await mountClient(LOOSE);
+
+    typeQuery("引き渡し");
+    expect(resultRoutes()).toEqual(["/okurigana", "/okuri"]);
+    const marked = (route: string) =>
+      document.querySelector(`#search-results a[data-route='${route}'] .search-result-title mark`)!
+        .textContent;
+    expect(marked("/okuri")).toBe("引渡し");
+    typeQuery("引渡し");
+    expect(resultRoutes()).toEqual(["/okuri", "/okurigana"]);
+    expect(marked("/okurigana")).toBe("引き渡し");
+  });
+
+  it("finds install from installing and installed, and installing from install as before", async () => {
+    await mountClient(LOOSE);
+
+    // The page that spells it so comes first; the other needs the stem.
+    typeQuery("installing");
+    expect(resultRoutes()).toEqual(["/plain", "/english"]);
+    const snippetMarks = (route: string) =>
+      Array.from(
+        document.querySelectorAll(
+          `#search-results a[data-route='${route}'] .search-result-snippet mark`,
+        ),
+      ).map((m) => m.textContent);
+    // The stem is marked in each spelling the page uses.
+    expect(snippetMarks("/english")).toEqual(["install", "install", "Install"]);
+    typeQuery("installed");
+    expect(resultRoutes()).toEqual(["/english", "/plain"]);
+    // Substring matching still finds every word that contains the term.
+    typeQuery("install");
+    expect(resultRoutes()).toEqual(["/english", "/plain"]);
+    typeQuery("configured");
+    expect(resultRoutes()).toEqual(["/plain"]);
+  });
+
+  it("ranks every exact match before any loose one, so none is pushed out of the list", async () => {
+    // 25 titles a loose `sett` (from `setting`) would match, and one page that says `setting` in its
+    // text: the title tier no longer outranks the exact match, and the 20-result cap cannot drop it.
+    const loose = Array.from({ length: 25 }, (_, i) => page(`/s${i}`, `Settle ${i}`));
+    await mountClient([...loose, page("/exact", "Other", { text: "Change the setting here." })]);
+    typeQuery("setting");
+    expect(resultRoutes()).toHaveLength(20);
+    expect(resultRoutes()[0]).toBe("/exact");
+  });
+
+  it("orders exact matches by their exact score, and opens the exact heading", async () => {
+    await mountClient([
+      page("/p1", "Installing", { text: "Nothing more." }),
+      page("/p2", "Install guide", {
+        text: "Read before installing.",
+        headings: [
+          { id: "p2-a", text: "Install", level: 2 },
+          { id: "p2-b", text: "Installing", level: 2 },
+        ],
+      }),
+    ]);
+    // Both match exactly; the loose title of /p2 does not lift it above the exact title of /p1.
+    typeQuery("installing");
+    expect(resultRoutes()).toEqual(["/p1", "/p2"]);
+    // The exact heading is opened, not the loose one before it.
+    const link = document.querySelector("#search-results a[data-route='/p2']")!;
+    expect(link.getAttribute("href")).toContain("p2-b");
+  });
+
+  it("keeps the order of exact matches as before, and puts them before a numbered loose one", async () => {
+    await mountClient([
+      page("/a", "Other", { text: "Read before installing." }),
+      page("/b", "Install guide", { text: "Read before installing." }),
+      page("/n", "Install", { number: "1", text: "Nothing." }),
+      page("/e", "Exact", { text: "Step 1 installing." }),
+    ]);
+    // A tie between exact matches stays in document order; /b's loose title does not decide it.
+    typeQuery("installing");
+    expect(resultRoutes().slice(0, 3)).toEqual(["/a", "/b", "/e"]);
+    // /n matches `1` by its number but `installing` only loosely; /e matches both exactly.
+    typeQuery("1 installing");
+    expect(resultRoutes()).toEqual(["/e", "/n"]);
+  });
+
+  it("stems from the start of a word, and takes y and ies for each other", async () => {
+    await mountClient([
+      page("/y", "Deploy", { text: "A dependency to deploy, then display it, for a study." }),
+      page("/inside", "Construct", { text: "A member of the plugin within, basic." }),
+      page("/box", "Box", { text: "The process and the approach." }),
+    ]);
+    for (const query of ["deployed", "dependencies", "displays", "studies"]) {
+      typeQuery(query);
+      expect([query, resultRoutes()]).toEqual([query, ["/y"]]);
+    }
+    // -es after x, ch, sh, ss, or z is cut; a stem under four letters (box) is not used.
+    for (const query of ["processes", "approaches"]) {
+      typeQuery(query);
+      expect([query, resultRoutes()]).toEqual([query, ["/box"]]);
+    }
+    // A stem inside a word, or one too short to say much, finds nothing.
+    for (const query of ["strings", "embedded", "pluses"]) {
+      typeQuery(query);
+      expect([query, resultRoutes()]).toEqual([query, []]);
+    }
+  });
+
+  it("places a match after a length-changing fold where it is in the text", async () => {
+    const before = "ｶﾞ".repeat(100);
+    await mountClient([page("/after", "After", { text: `${before} target here` })]);
+    typeQuery("target");
+    const mark = document.querySelector("#search-results .search-result-snippet mark")!;
+    expect(mark.textContent).toBe("target");
+  });
+
+  it("marks half-width katakana in the body as written, and an exact and a loose match together", async () => {
+    await mountClient([
+      page("/half", "Half", {
+        html: "<p>ﾊﾟｽﾜｰﾄﾞを installing し、install する。</p>",
+        text: "ﾊﾟｽﾜｰﾄﾞを installing し、install する。",
+      }),
+    ]);
+    typeQuery("パスワード installing");
+    (document.querySelector("#search-results a") as HTMLElement).click();
+    expect(
+      Array.from(document.querySelectorAll("#content mark.search-hit")).map((m) => m.textContent),
+    ).toEqual(["ﾊﾟｽﾜｰﾄﾞ", "installing", "install"]);
+  });
+
+  it("does not take a word broken by inline markup for one starting there", async () => {
+    await mountClient([
+      page("/b", "Installing", {
+        html: "<p><em>re</em>install it.</p><p>install now</p>",
+        text: "reinstall it. install now",
+      }),
+    ]);
+    typeQuery("installing");
+    (document.querySelector("#search-results a") as HTMLElement).click();
+    // `reinstall` continues through </em>; the next paragraph starts a word.
+    expect(
+      Array.from(document.querySelectorAll("#content mark.search-hit")).map((m) => m.textContent),
+    ).toEqual(["install"]);
+    expect(document.querySelector("#content p:last-child mark.search-hit")).not.toBeNull();
+  });
+
+  it("marks a loose match in the body of the page it opens", async () => {
+    await mountClient([
+      page("/okuri", "引渡し", {
+        html: "<p>書類を引き渡します。</p>",
+        text: "書類を引き渡します。",
+      }),
+    ]);
+    typeQuery("引渡し");
+    (document.querySelector("#search-results a") as HTMLElement).click();
+    expect(
+      Array.from(document.querySelectorAll("#content mark.search-hit")).map((m) => m.textContent),
+    ).toEqual(["引き渡し"]);
   });
 });
 
