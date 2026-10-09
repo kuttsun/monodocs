@@ -724,8 +724,8 @@ body.content-wide #content {
 /* Chromium keeps a horizontally stretched operator's box at the width of the glyph before it
    stretched, so on screen a raster tile that misses that box skips its part of a brace or an arrow
    (roadmap 6.4, v0.16); the PDF has no tiles. Two transparent shadows far to either side, which
-   neither lay out nor scroll, widen what the operator paints across its own row, however long it
-   is. Forced colors would drop the shadows, so there the operator keeps them, in the system's text
+   neither lay out nor scroll, widen what the operator paints across its own row, 20,000px to
+   either side of its box. Forced colors would drop the shadows, so there the operator keeps them, in the system's text
    color. */
 #content math mo[stretchy="true"] {
   box-shadow:

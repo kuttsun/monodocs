@@ -715,12 +715,13 @@ Built on Linux with Latin Modern Math (Chromium 154), in HTML and in the PDF, on
   raster tile that misses that box skips its part (the cut moved with the 256-pixel tile grid, not
   with the formula). The default theme now gives `mo[stretchy="true"]` two transparent shadows, 20,000
   pixels to either side, which neither lay out nor scroll, so that what the operator paints spans its
-  row however long it is; in forced colors, which would drop the shadows, the operator keeps them
+  row for 20,000 pixels on either side of its box, far beyond any formula a page holds; in forced colors, which would drop the shadows, the operator keeps them
   (`forced-color-adjust: none`) and is drawn in `CanvasText`. A transparent outline was tried first and
   lost twice over: as wide as the viewport, it left a brace three viewports long cut at both ends,
   and forced colors turned it opaque, a black band across the page. A test moves both braces and an
   arrow through a tile's width, scrolls a brace three viewports long along its length, in normal and
-  forced colors, and finds no empty run inside any of them; the PDF is the same pixel for pixel with
+  forced colors, and finds no run of empty columns longer than 8 pixels inside any of them (the
+  glyph assembly's joints leave 4 or 5 light ones); the PDF is the same pixel for pixel with
   the shadows and without. A tall bracket's box has its stretched height, and is not cut. The rule is the default theme's, like the
   display formula's scroll, so a theme with its own `style.css` carries it too or loses it.
 

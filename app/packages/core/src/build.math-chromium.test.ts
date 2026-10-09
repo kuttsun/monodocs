@@ -311,7 +311,8 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
       await page.evaluate(() => document.fonts.ready);
 
       // The longest run of empty columns in a screenshot, read in a canvas of its own. The glyph
-      // assembly's own joints leave a few light columns at this scale; a skipped tile leaves dozens.
+      // assembly's own joints leave a few light columns at this scale, so a run longer than 8px is a
+      // cut; a skipped tile leaves dozens.
       const longestGap = async (clip: { x: number; y: number; width: number; height: number }) => {
         const png = await page.screenshot({ clip, encoding: "base64" });
         return page.evaluate(async (b64) => {
@@ -321,11 +322,22 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           const ctx = new OffscreenCanvas(img.width, img.height).getContext("2d")!;
           ctx.drawImage(img, 0, 0);
           const { data, width, height } = ctx.getImageData(0, 0, img.width, img.height);
+          // Ink is what differs from the background, the band's most common shade, so that a dark
+          // forced-colors scheme is read as well as a light one.
+          const shade = (at: number) =>
+            data[at]! * 0.3 + data[at + 1]! * 0.59 + data[at + 2]! * 0.11;
+          const counts = new Map<number, number>();
+          for (let at = 0; at < data.length; at += 4) {
+            const key = Math.round(shade(at) / 8);
+            counts.set(key, (counts.get(key) ?? 0) + 1);
+          }
+          const background = [...counts].sort((a, b) => b[1] - a[1])[0]![0] * 8;
           let longest = 0;
           let run = 0;
           for (let x = 0; x < width; x++) {
             let ink = false;
-            for (let y = 0; y < height && !ink; y++) ink = data[(y * width + x) * 4]! < 128;
+            for (let y = 0; y < height && !ink; y++)
+              ink = Math.abs(shade((y * width + x) * 4) - background) > 100;
             run = ink ? 0 : run + 1;
             longest = Math.max(longest, run);
           }
@@ -387,10 +399,15 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
           return display.scrollWidth - display.clientWidth;
         });
         expect(scroll).toBeGreaterThan(1500);
-        for (let x = 0; x <= scroll; x += 150) {
-          await page.evaluate((left) => {
-            document.querySelectorAll<HTMLElement>("#content .math-display")[3]!.scrollLeft = left;
+        // Every 150px, and the far end, wherever the steps fall.
+        const stops = [...Array(Math.floor(scroll / 150) + 1).keys()].map((n) => n * 150);
+        for (const x of new Set([...stops, scroll])) {
+          const reached = await page.evaluate((left) => {
+            const display = document.querySelectorAll<HTMLElement>("#content .math-display")[3]!;
+            display.scrollLeft = left;
+            return display.scrollLeft;
           }, x);
+          expect(reached).toBe(x);
           const gap = await longestGap(await band(3, "mover > mover", true));
           if (gap > 8) cut.push(`${mode} long brace scrolled ${x}px: ${gap}`);
         }
