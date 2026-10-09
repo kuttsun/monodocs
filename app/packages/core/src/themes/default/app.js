@@ -655,20 +655,29 @@
       found.push(range);
       return true;
     };
-    var at = from;
+    // Only the window is searched: from one character before it, for the lead group to see what
+    // precedes a word starting there, to as far past its end as a match starting inside it can reach.
+    var low = Math.max(0, from - 1);
+    var high =
+      to === Infinity
+        ? field.folded.length
+        : Math.min(field.folded.length, foldedIndex(field, to) + term.length * 3 + 2);
+    var haystack =
+      low === 0 && high === field.folded.length ? field.folded : field.folded.slice(low, high);
+    var at = from - low;
     for (var count = 0; count < max; count++) {
-      var pos = field.folded.indexOf(term, at);
-      if (pos === -1 || !add(pos, term.length, true)) break;
+      var pos = haystack.indexOf(term, at);
+      if (pos === -1 || !add(low + pos, term.length, true)) break;
       at = pos + term.length;
     }
     var matcher = looseMatcher(term);
     if (matcher) {
-      // One character back, for the lead group to see what precedes a word starting at `from`.
-      matcher.lastIndex = Math.max(0, from - 1);
+      matcher.lastIndex = 0;
       var match;
-      for (var n = 0; n < max && (match = matcher.exec(field.folded)); n++) {
+      for (var n = 0; n < max && (match = matcher.exec(haystack)); n++) {
         var lead = match[1].length;
-        if (!add(match.index + lead, match[0].length - lead, false)) break;
+        if (low + match.index + lead < from) continue;
+        if (!add(low + match.index + lead, match[0].length - lead, false)) break;
       }
     }
     found.sort(function (a, b) {
@@ -1054,11 +1063,9 @@
     // 同点は閲覧順（文書順）を保つ。番号の一致が無い検索の順位は変わらない。
     results.sort(function (a, b) {
       return (
-        Number(b.numberHit) - Number(a.numberHit) ||
         Number(b.exact) - Number(a.exact) ||
-        (a.exact
-          ? b.score - a.score || b.looseScore - a.looseScore
-          : b.score + b.looseScore - (a.score + a.looseScore)) ||
+        Number(b.numberHit) - Number(a.numberHit) ||
+        (a.exact ? b.score - a.score : b.score + b.looseScore - (a.score + a.looseScore)) ||
         a.index - b.index
       );
     });

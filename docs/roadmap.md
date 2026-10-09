@@ -2840,10 +2840,10 @@ text, so a match falls on the text as written:
 
 A page that every term matches exactly — in its title, a heading, its text, or a formula — is ranked
 before any page that needed the loose pattern for one of them, whatever their scores, so a loose
-match never pushes an exact one out of the twenty results shown. What loose matches score is kept
-apart: between two exact pages it breaks only a tie, so their order is what their exact matches
-make it, and of two headings matching as many terms, a result opens the one matching more of them
-exactly. Only
+match never pushes an exact one out of the twenty results shown, a page found by its section number
+included. What loose matches score is kept apart and counts only between pages that are not exact,
+so exact pages keep the order, ties included, they had before v0.16; and of two headings matching as
+many terms, a result opens the one matching more of them exactly. Only
 exact occurrences count again in the text, since a stem can occur far more often than the word.
 
 How okurigana was settled:
@@ -2863,8 +2863,8 @@ How okurigana was settled:
   Multilingual Plane (`𠮟`) match exactly but are not loosened.
 
 Measured on `examples/ja`, built before and after: the size report's `page data` is 55.4 KB both
-times, since the client folds the text it already has; the whole file grows by 8,781 bytes
-(6,016,273 to 6,025,054), the longer client script. That is far under the 100 KB v0.16 allowed a
+times, since the client folds the text it already has; the whole file grows by 10,613 bytes
+(6,016,273 to 6,026,886), the longer client script. That is far under the 100 KB v0.16 allowed a
 method on by default, so there is no key.
 
 ### 22.4 Keyboard Navigation of the Results

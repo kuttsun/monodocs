@@ -11,6 +11,8 @@ type ClientPage = {
   headings: ClientHeading[];
   text: string;
   formulas?: { tex: string; section?: string }[];
+  /** The page's section number, as core publishes it with numbering.sections. */
+  number?: string;
   /** Body HTML placed in the article after the headings (for the in-body highlight; not client data). */
   html?: string;
 };
@@ -66,6 +68,7 @@ async function mountClient(
       headings: p.headings,
       text: p.text,
       ...(p.formulas ? { formulas: p.formulas } : {}),
+      ...(p.number ? { number: p.number } : {}),
     })),
   };
 
@@ -92,6 +95,7 @@ function page(route: string, title: string, extra: Partial<ClientPage> = {}): Cl
     headings: extra.headings ?? [],
     text: extra.text ?? title,
     html: extra.html,
+    number: extra.number,
   };
 }
 
@@ -396,6 +400,21 @@ describe("v0.16 loose search (app.js)", () => {
     // The exact heading is opened, not the loose one before it.
     const link = document.querySelector("#search-results a[data-route='/p2']")!;
     expect(link.getAttribute("href")).toContain("p2-b");
+  });
+
+  it("keeps the order of exact matches as before, and puts them before a numbered loose one", async () => {
+    await mountClient([
+      page("/a", "Other", { text: "Read before installing." }),
+      page("/b", "Install guide", { text: "Read before installing." }),
+      page("/n", "Install", { number: "1", text: "Nothing." }),
+      page("/e", "Exact", { text: "Step 1 installing." }),
+    ]);
+    // A tie between exact matches stays in document order; /b's loose title does not decide it.
+    typeQuery("installing");
+    expect(resultRoutes().slice(0, 3)).toEqual(["/a", "/b", "/e"]);
+    // /n matches `1` by its number but `installing` only loosely; /e matches both exactly.
+    typeQuery("1 installing");
+    expect(resultRoutes()).toEqual(["/e", "/n"]);
   });
 
   it("stems from the start of a word, and takes y and ies for each other", async () => {
