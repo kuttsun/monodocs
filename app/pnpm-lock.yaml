@@ -51,6 +51,9 @@ importers:
       '@asciidoctor/core':
         specifier: ^4.1.0
         version: 4.1.0
+      asciimath2tex:
+        specifier: 1.5.0
+        version: 1.5.0
       decode-named-character-reference:
         specifier: ^1.3.0
         version: 1.3.0
@@ -792,6 +795,9 @@ packages:
   ansi-styles@6.2.3:
     resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
     engines: {node: '>=12'}
+
+  asciimath2tex@1.5.0:
+    resolution: {integrity: sha512-vp0GOt71u59HDJhaH5ws18iyszRizJ+BRPT87HKlpv4DNy7zRmXDaU4ia0UPQMX1nGZ7xf4jLoeOeQOu3Lxuvw==}
 
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
@@ -2273,6 +2279,8 @@ snapshots:
 
   ansi-styles@6.2.3:
     optional: true
+
+  asciimath2tex@1.5.0: {}
 
   assertion-error@2.0.1: {}
 

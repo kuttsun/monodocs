@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { ConverterFactory } from "@asciidoctor/core";
+import asciimath2tex from "asciimath2tex";
 import { fromHtml } from "hast-util-from-html";
 import type { Element, ElementContent, Root as HastRoot, Text } from "hast";
 import { SKIP, visit } from "unist-util-visit";
 
 /**
- * AsciiDoc math (roadmap 6.4): Asciidoctor's own markup — `latexmath:[...]`, the `[latexmath]` block,
- * and `stem:[...]` and the `[stem]` block when they mean latexmath — rendered as Markdown's formulas
- * are.
+ * AsciiDoc math (roadmap 6.4): Asciidoctor's own markup — `latexmath:[...]` and `asciimath:[...]`,
+ * their blocks, and `stem:[...]` and the `[stem]` block, which mean one or the other — rendered as
+ * Markdown's formulas are. asciimath is first turned into TeX by asciimath2tex (v0.16).
  *
  * The converter's output for a formula is replaced inside Asciidoctor's conversion, and the formulas
  * are made once the HTML is parsed. An inline formula is marked with characters, not a tag: three
@@ -19,15 +20,72 @@ import { SKIP, visit } from "unist-util-visit";
  * conversion, and what it stands for is kept by the converter, so raw HTML from a passthrough can
  * neither pass for a formula nor change one. A formula the HTML around it broke apart (its own
  * substitutions let a `</span>` through) is written back with `\(` and `\)`, as Asciidoctor writes it,
- * and reported. asciimath is left to Asciidoctor, whose output stays as it was, and is only noted.
+ * and reported.
  */
+
+/** The parts of asciimath2tex's parser that are adjusted below; its tables are read at parse time. */
+interface AsciiMathParser {
+  parse(asciimath: string): string;
+  escape_text(text: string): string;
+  unary_symbols: { asciimath: string; tex?: string }[];
+  constants: { asciimath: string; tex?: string }[];
+}
+
+/**
+ * asciimath2tex's parser. Its types declare an ES default export, but its CommonJS build assigns the
+ * class to `module.exports`, which is what Node and the bundler hand over as the default import.
+ */
+const AsciiMathParserClass = asciimath2tex as unknown as new () => AsciiMathParser;
+
+/** Capitalised functions asciimath2tex writes as a command TeX does not have (`\Sin`). */
+const CAPITALISED = new Set(
+  "Sin Cos Tan Sinh Cosh Tanh Cot Sec Csc Arcsin Arccos Arctan Log Ln".split(" "),
+);
+
+/** What `\text{...}` cannot take as it is, and what it takes instead. */
+const TEXT_ESCAPES: Record<string, string> = {
+  "\\": "\\textbackslash{}",
+  "{": "\\{",
+  "}": "\\}",
+  "&": "\\&",
+  "#": "\\#",
+  $: "\\$",
+  "%": "\\%",
+  "~": "\\textasciitilde{}",
+  "^": "\\textasciicircum{}",
+  _: "\\_",
+};
+
+/**
+ * An asciimath2tex parser whose TeX KaTeX reads for every symbol AsciiMath defines (roadmap 6.4,
+ * v0.16). Measured against ASCIIMathML's own table, it wrote 15 of 273 symbols as TeX KaTeX cannot
+ * read: the capitalised functions, as `\Sin`, and `>->>`, as `\twoheadrightarrowtail`. It also passed
+ * `&`, `#`, `$`, and `~` through as they are, which TeX reads as markup, and escaped only braces in
+ * text. It never throws: what it cannot read is passed on, and KaTeX reports it.
+ */
+export function createAsciiMathParser(): AsciiMathParser {
+  const parser = new AsciiMathParserClass();
+  for (const symbol of parser.unary_symbols) {
+    if (CAPITALISED.has(symbol.asciimath)) symbol.tex = `\\operatorname{${symbol.asciimath}}`;
+  }
+  for (const symbol of parser.constants) {
+    if (symbol.tex === "\\twoheadrightarrowtail") symbol.tex = '\\mathrel{\\char"2916}';
+  }
+  // Single characters, matched after every longer symbol they could begin (`~~`, `~=`).
+  parser.constants.push(
+    { asciimath: "&", tex: "\\&" },
+    { asciimath: "#", tex: "\\#" },
+    { asciimath: "$", tex: "\\$" },
+    { asciimath: "~", tex: "\\text{\\textasciitilde}" },
+  );
+  parser.escape_text = (text) => text.replace(/[\\{}&#$%~^_]/g, (c) => TEXT_ESCAPES[c]!);
+  return parser;
+}
 
 /** What a conversion with the math converter found. */
 export interface AsciidocMath {
   /** The converter to hand Asciidoctor (as `_preCreatedConverter`, so that titles use it too). */
   converter: object;
-  /** asciimath formulas, as written, which are not rendered. */
-  asciimath: string[];
   /** latexmath formulas the HTML around them broke apart, written as Asciidoctor writes them. */
   broken: string[];
   /** Turn the markers in parsed HTML into formulas. */
@@ -101,7 +159,7 @@ export async function createMathConverter(
     options.htmlsyntax === undefined ? {} : { htmlsyntax: options.htmlsyntax },
   )) as Converter & object;
   const nonce = randomUUID().replace(/-/g, "");
-  const asciimath: string[] = [];
+  const asciimathParser = createAsciiMathParser();
   const broken: string[] = [];
   const formulas = new Map<string, Formula>();
   let count = 0;
@@ -116,27 +174,36 @@ export async function createMathConverter(
 
   const convert = async (node: MathNode, transform?: string, opts?: unknown): Promise<string> => {
     const name = transform ?? node.getNodeName();
-    if (name === "inline_quoted" && node.type === "latexmath") {
+    const inline = name === "inline_quoted" ? node.type : undefined;
+    if (inline === "latexmath" || inline === "asciimath") {
       const converted = node.text ?? "";
-      const tex = decode(converted);
+      const written = decode(converted);
       const key = newKey({
-        tex,
-        source: `latexmath:[${tex.replace(/\]/g, "\\]")}]`,
+        tex: inline === "asciimath" ? asciimathParser.parse(written) : written,
+        source: `${inline}:[${written.replace(/\]/g, "\\]")}]`,
         display: false,
       });
       return `\uE000${key}\uE001${converted}\uE002${key}\uE003`;
     }
-    if (name === "inline_quoted" && node.type === "asciimath") {
-      asciimath.push(`asciimath:[${decode(node.text ?? "")}]`);
-    }
-    if (name === "stem" && node.style === "latexmath") {
+    const block = name === "stem" ? node.style : undefined;
+    if (block === "latexmath" || block === "asciimath") {
       // Decoded whatever the block's substitutions, as the browser decoded it for MathJax before; and
-      // without the `\[...\]` an author may have written around it, which Asciidoctor does not add a
-      // second time. One pair around the whole: `\[a\] + \[b\]` is two formulas, which KaTeX reports.
-      let tex = decode((await node.content?.()) ?? "");
-      const delimited = /^\s*\\\[([\s\S]*)\\\]\s*$/.exec(tex);
-      if (delimited && !/\\[[\]]/.test(delimited[1]!)) tex = delimited[1]!;
-      const formula: Formula = { tex, source: `[latexmath]\n++++\n${tex}\n++++`, display: true };
+      // without the `\[...\]` (or, for asciimath, `\$...\$`) an author may have written around it,
+      // which Asciidoctor does not add a second time. One pair around the whole: `\[a\] + \[b\]` is
+      // two formulas, which KaTeX reports.
+      let written = decode((await node.content?.()) ?? "");
+      const delimited =
+        block === "latexmath"
+          ? /^\s*\\\[([\s\S]*)\\\]\s*$/.exec(written)
+          : /^\s*\\\$([\s\S]*)\\\$\s*$/.exec(written);
+      const inner = block === "latexmath" ? /\\[[\]]/ : /\\\$/;
+      if (delimited && !inner.test(delimited[1]!)) written = delimited[1]!;
+      const tex = block === "asciimath" ? asciimathParser.parse(written) : written;
+      const formula: Formula = {
+        tex,
+        source: `[${block}]\n++++\n${written}\n++++`,
+        display: true,
+      };
       const key = newKey(formula);
       const id = node.id ? ` id="${attribute(node.id)}"` : "";
       const role = node.role ? ` ${attribute(node.role)}` : "";
@@ -154,9 +221,6 @@ export async function createMathConverter(
         asciidoctorDecoded: decode(asciidoctor),
       };
       return ours;
-    }
-    if (name === "stem" && node.style === "asciimath") {
-      asciimath.push(`[asciimath]\n++++\n${decode((await node.content?.()) ?? "")}\n++++`);
     }
     return base.convert(node, transform, opts);
   };
@@ -296,7 +360,6 @@ export async function createMathConverter(
 
   return {
     converter,
-    asciimath,
     broken,
     markFormulas(tree) {
       visit(tree, (node, index, parent) => {

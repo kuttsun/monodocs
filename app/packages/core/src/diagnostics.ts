@@ -47,7 +47,6 @@ export const DIAGNOSTIC_CODES = [
   "lang/unsupported",
   "link/unresolved",
   "link/unresolved-anchor",
-  "math/asciimath-not-rendered",
   "math/command-not-allowed",
   "math/construct-unsupported",
   "math/notation-unsupported",

@@ -579,11 +579,10 @@ numbering:
 
 | キー           | 型      | 既定値 | 説明                                                                                                         |
 | -------------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------ |
-| `math.enabled` | boolean | `true` | 数式（Markdown の `$...$`、`$$...$$`、言語が `math` のフェンスのブロック。AsciiDoc の latexmath と、latexmath を意味する `stem`）をビルド時に MathML に描く。`false` では以前と同じく、数式を文字として、`math` のフェンスのブロックをコードとして出力する。 |
+| `math.enabled` | boolean | `true` | 数式（Markdown の `$...$`、`$$...$$`、言語が `math` のフェンスのブロック。AsciiDoc の latexmath と asciimath、そのどちらかを意味する `stem`）をビルド時に MathML に描く。`false` では以前と同じく、数式を文字として、`math` のフェンスのブロックをコードとして出力する。 |
 
 数式は KaTeX が MathML だけに描き、出力にスクリプトもスタイルシートも加えない。報告されるものは次のとおり。
 
-- AsciiDoc の asciimath は Asciidoctor が書くとおりに残す（`math/asciimath-not-rendered`）。
 - KaTeX が解析できない数式（`math/parse-failed`）や、`\href` などのリンクや HTML のコマンドを使う数式（`math/command-not-allowed`）は、書かれたとおりに示す。
 - 次のものはそれぞれ報告し、その部分なしで数式を描く。Unicode に文字の無い書体（`math/style-unsupported`、例：`\mathit{123}`）、自動の数式番号（`math/numbering-unsupported`、例：星の無い `equation`）、CSS で描けない囲み（`math/notation-unsupported`、例：`\phase`）、ブラウザが書かれたとおりに描けない構文（`math/construct-unsupported`、例：`\vcenter`）。
 

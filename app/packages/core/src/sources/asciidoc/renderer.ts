@@ -173,10 +173,6 @@ export function createAsciidocRenderer(
         // text), and reported once.
         math: unique([
           ...problems,
-          ...(math?.asciimath ?? []).map((formula): MathProblem => ({
-            kind: "asciimath",
-            source: formula,
-          })),
           ...(math?.broken ?? []).map((formula): MathProblem => ({
             kind: "broken",
             source: formula,

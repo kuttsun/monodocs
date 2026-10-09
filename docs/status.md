@@ -540,9 +540,9 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 
 **asciimath** ([roadmap.md](roadmap.md) 6.4)
 
-- [ ] The converter's licence, its size in the CLI bundle and the standalone binary, and the asciimath forms it does not handle are recorded in [roadmap.md](roadmap.md) 6.4 before it is added, and it is named in `THIRD-PARTY-NOTICES.txt`
-- [ ] asciimath is rendered to MathML through KaTeX with what latexmath has: `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula that does not convert; `math.enabled: false` turns asciimath off along with latexmath
-- [ ] Whether asciimath is on by default is decided in [roadmap.md](roadmap.md) 6.4 with its reason, and so is what becomes of `math/asciimath-not-rendered` under the promise [roadmap.md](roadmap.md) 27.3 makes about codes; [syntax.md](syntax.md) describes it in English and Japanese
+- [x] The converter's licence, its size in the CLI bundle and the standalone binary, and the asciimath forms it does not handle are recorded in [roadmap.md](roadmap.md) 6.4 before it is added, and it is named in `THIRD-PARTY-NOTICES.txt` — asciimath2tex 1.5.0, Apache-2.0, no dependencies, +34 KB to the bundle and +64 KB to the binary; ASCIIMathML's 273 symbols measured, the 15 it wrote as TeX KaTeX cannot read and the characters it passed through fixed in the parser's tables, so all 273 render; recorded in [roadmap.md](roadmap.md) 6.4 with the alternatives
+- [x] asciimath is rendered to MathML through KaTeX with what latexmath has: `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula that does not convert; `math.enabled: false` turns asciimath off along with latexmath — through the same marker latexmath uses, with its TeX from the converter (`build.asciidoc-math.test.ts`, `sources/asciidoc/asciimath.test.ts`)
+- [x] Whether asciimath is on by default is decided in [roadmap.md](roadmap.md) 6.4 with its reason, and so is what becomes of `math/asciimath-not-rendered` under the promise [roadmap.md](roadmap.md) 27.3 makes about codes; [syntax.md](syntax.md) describes it in English and Japanese — on by default, as Asciidoctor's own `stem` is; `math/asciimath-not-rendered` retired, a formula that cannot be rendered being `math/parse-failed`
 
 **Search folding** ([roadmap.md](roadmap.md) 22.3)
 

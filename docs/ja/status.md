@@ -538,9 +538,9 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 
 **asciimath**（[roadmap.md](roadmap.md) 6.4）
 
-- [ ] 変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない asciimath の形を、足す前に [roadmap.md](roadmap.md) 6.4 に記録し、`THIRD-PARTY-NOTICES.txt` に載せる
-- [ ] asciimath を KaTeX を通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースのコピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath とともに asciimath も止める
-- [ ] 既定で有効にするかを理由とともに [roadmap.md](roadmap.md) 6.4 で決め、`math/asciimath-not-rendered` をどうするかも、コードについての [roadmap.md](roadmap.md) 27.3 の約束のもとで決める。[syntax.md](syntax.md) が英語と日本語で説明する
+- [x] 変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない asciimath の形を、足す前に [roadmap.md](roadmap.md) 6.4 に記録し、`THIRD-PARTY-NOTICES.txt` に載せる——asciimath2tex 1.5.0、Apache-2.0、依存なし、バンドルに +34 KB、バイナリに +64 KB。ASCIIMathML の 273 の記号を測り、KaTeX の読めない TeX にした 15 と、そのまま通した文字をパーサの表で直したので、273 すべてを描く。ほかの案とともに [roadmap.md](roadmap.md) 6.4 に記録した
+- [x] asciimath を KaTeX を通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースのコピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath とともに asciimath も止める——latexmath と同じ目印を使い、TeX は変換器のものにする（`build.asciidoc-math.test.ts`、`sources/asciidoc/asciimath.test.ts`）
+- [x] 既定で有効にするかを理由とともに [roadmap.md](roadmap.md) 6.4 で決め、`math/asciimath-not-rendered` をどうするかも、コードについての [roadmap.md](roadmap.md) 27.3 の約束のもとで決める。[syntax.md](syntax.md) が英語と日本語で説明する——Asciidoctor 自身の `stem` と同じく既定で有効にした。`math/asciimath-not-rendered` は退役させ、描けない数式は `math/parse-failed` になる
 
 **検索の畳み込み**（[roadmap.md](roadmap.md) 22.3）
 

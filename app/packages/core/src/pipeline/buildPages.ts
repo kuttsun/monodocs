@@ -149,43 +149,41 @@ export async function buildPages(
       warnings.push(
         problem.kind === "broken"
           ? warn("math/construct-unsupported", t("pages.mathBroken", params), where)
-          : problem.kind === "asciimath"
-            ? warn("math/asciimath-not-rendered", t("pages.mathAsciimath", params), where)
-            : problem.kind === "parse"
+          : problem.kind === "parse"
+            ? warn(
+                "math/parse-failed",
+                t("pages.mathParseFailed", { ...params, detail: problem.detail }),
+                where,
+              )
+            : problem.kind === "not-allowed"
               ? warn(
-                  "math/parse-failed",
-                  t("pages.mathParseFailed", { ...params, detail: problem.detail }),
+                  "math/command-not-allowed",
+                  t("pages.mathNotAllowed", { ...params, commands: problem.commands }),
                   where,
                 )
-              : problem.kind === "not-allowed"
+              : problem.kind === "construct"
                 ? warn(
-                    "math/command-not-allowed",
-                    t("pages.mathNotAllowed", { ...params, commands: problem.commands }),
+                    "math/construct-unsupported",
+                    t("pages.mathConstruct", { ...params, constructs: problem.constructs }),
                     where,
                   )
-                : problem.kind === "construct"
+                : problem.kind === "notation"
                   ? warn(
-                      "math/construct-unsupported",
-                      t("pages.mathConstruct", { ...params, constructs: problem.constructs }),
+                      "math/notation-unsupported",
+                      t("pages.mathNotation", { ...params, notations: problem.notations }),
                       where,
                     )
-                  : problem.kind === "notation"
-                    ? warn(
-                        "math/notation-unsupported",
-                        t("pages.mathNotation", { ...params, notations: problem.notations }),
+                  : problem.kind === "numbering"
+                    ? warn("math/numbering-unsupported", t("pages.mathNumbering", params), where)
+                    : warn(
+                        "math/style-unsupported",
+                        t("pages.mathStyleUnsupported", {
+                          ...params,
+                          variant: problem.variant,
+                          chars: problem.chars,
+                        }),
                         where,
-                      )
-                    : problem.kind === "numbering"
-                      ? warn("math/numbering-unsupported", t("pages.mathNumbering", params), where)
-                      : warn(
-                          "math/style-unsupported",
-                          t("pages.mathStyleUnsupported", {
-                            ...params,
-                            variant: problem.variant,
-                            chars: problem.chars,
-                          }),
-                          where,
-                        ),
+                      ),
       );
     }
 
