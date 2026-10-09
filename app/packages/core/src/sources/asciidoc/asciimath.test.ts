@@ -42,4 +42,36 @@ describe("asciimath to TeX (v0.16)", () => {
       expect(drawn(parser.parse(`"${text}"`))).toBe(text.replace(/ /g, " "));
     }
   });
+
+  it("draws the styles ASCIIMathML defines as it does, and refuses those KaTeX cannot draw", () => {
+    const variant = (tex: string) =>
+      /mathvariant="([^"]+)"/.exec(katex.renderToString(tex, { output: "mathml" }))?.[1];
+    for (const [asciimath, style] of [
+      ["mathbf(A)", "bold"],
+      ["bold(A)", "bold"],
+      ["mathsf(A)", "sans-serif"],
+      ["sfit(A)", "sans-serif-italic"],
+      ["bbit(A)", "bold-italic"],
+    ]) {
+      expect([asciimath, variant(parser.parse(asciimath!))]).toEqual([asciimath, style]);
+    }
+    // A single letter is italic without a mathvariant, so these are checked as the TeX they become.
+    expect(parser.parse("italic(A) mathit(B)")).toBe("\\mathit{A} \\mathit{B}");
+    expect(drawn(parser.parse("overarc(AB)"))).toContain("⏠");
+    // `bbit` is read whole, not as `bb` followed by `it`.
+    expect(parser.parse("bbit(A)")).toBe("\\boldsymbol{A}");
+    for (const asciimath of ["bbsf(A)", "bbsfit(A)", "bbcc(A)", "bbfr(A)"]) {
+      expect(() => drawn(parser.parse(asciimath))).toThrow(/Undefined control sequence/);
+    }
+    expect(parser.parse("class(big)(x)")).toBe("\\htmlClass{big}{x}");
+    expect(parser.parse("id(here)(x)")).toBe("\\htmlId{here}{x}");
+  });
+
+  it("keeps text from KaTeX's ligatures, and brackets made of ~ and | as brackets", () => {
+    // Dashes stay as typed. KaTeX's text font draws a quote character as a typographic quote whatever
+    // its escape, so two stay two rather than becoming one double quote.
+    expect(drawn(parser.parse("text(a--b c---d)"))).toBe("a--b\u00A0c---d");
+    expect(drawn(parser.parse("text(x'')"))).toBe("x’’");
+    expect(drawn(parser.parse("|~ x ~|"))).toBe("⌈x⌉");
+  });
 });

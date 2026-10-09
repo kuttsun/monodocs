@@ -465,27 +465,53 @@ which is then rendered as latexmath is, with what latexmath has — `mathvariant
 formula as `$TeX$`, copying, search, and diagnostics.
 
 - **The converter.** asciimath2tex 1.5.0, Apache-2.0, with no dependencies, pinned to an exact
-  version as KaTeX is. `THIRD-PARTY-NOTICES.txt` and the binary's notices name it with its licence,
-  generated from the bundle. It adds 34 KB to the CLI bundle (21,205,543 to 21,239,883 bytes), 64 KB
-  to the standalone binary (146,083,008 to 146,148,544 bytes, page-aligned), and 11 KiB to the
-  binary's notices.
+  version as KaTeX is. It ships no NOTICE file, so its licence is all that has to travel with it;
+  `THIRD-PARTY-NOTICES.txt` and the binary's notices carry it, generated from the bundle. With the
+  adjustments below it adds 37 KB to the CLI bundle (21,205,543 to 21,243,556 bytes), 64 KB to the
+  standalone binary (146,083,008 to 146,148,544 bytes, page-aligned), and 11 KiB to the binary's
+  notices.
 - **Alternatives.** asciimath-to-latex 0.5.1 (MIT) rendered the same 42 sample forms, but wraps every
   token in braces (`{\sum_{{{i}={1}}}^{{n}}}` for `sum_(i=1)^n`), and that TeX is what search indexes
   and a result's snippet shows. ASCIIMathML (`asciimath` on npm), AsciiMath's own implementation,
   writes MathML through a browser's DOM rather than TeX KaTeX reads. MathJax renders AsciiMath itself,
   but is 34 MB unpacked and would be a second renderer beside KaTeX.
-- **What it does not handle, measured.** Every symbol in ASCIIMathML's own table, 273 of them, was
-  converted and rendered with KaTeX in strict mode. As published, asciimath2tex wrote 15 as TeX
-  KaTeX cannot read: the capitalised functions `Sin` to `Ln` as `\Sin` and so on, and `>->>` as
-  `\twoheadrightarrowtail`. It passed `&`, `#`, `$`, and `~` through, which TeX reads as markup, and
-  escaped only braces in `text(...)` and quoted text, where `%` began a comment that swallowed the
-  rest. monodocs adjusts the parser's tables rather than its output: the capitalised functions become
-  `\operatorname{Sin}` and so on, `>->>` becomes `\mathrel{\char"2916}` (⤖), the four characters are
-  themselves, and text escapes every character TeX reads. All 273 then render. The converter never
-  throws; what it cannot read reaches KaTeX, which reports it as `math/parse-failed`, naming the
-  formula as written: a color KaTeX does not know (`color(1 2)(x)`), or four primes in a row, which
-  KaTeX reads as a double superscript. asciimath is no way into TeX: a command it does not know, such
-  as `\href{...}`, comes out as letters, so nothing reaches KaTeX that latexmath could not write.
+- **What it gets wrong, measured, and what monodocs does about it.** Every symbol in ASCIIMathML's own
+  table, 273 of them, was converted and rendered with KaTeX in strict mode, and the styles were
+  checked for the `mathvariant` ASCIIMathML gives them, since rendering without an error is not
+  rendering right. As published, asciimath2tex
+  - wrote the capitalised functions `Sin` to `Ln` as `\Sin` and so on, and `>->>` as
+    `\twoheadrightarrowtail`, which KaTeX does not know;
+  - wrote `mathbf` and `mathsf` without their backslash, so they printed as their letters, and
+    lacked `bold`, `italic`, `mathit`, `sfit`, `bbit`, `bbsf`, `bbsfit`, `bbcc`, `bbfr`, `overarc`,
+    `overparen`, `class`, and `id`, which also printed as their letters;
+  - passed `&`, `#`, `$`, and `~` through, which TeX reads as markup, and in `text(...)` and quoted
+    text escaped only braces, so that `%` began a comment that swallowed the rest, and `--` became a
+    dash;
+  - wrote `color red x`, without the parentheses `color` takes, as `\color{undefined}{e} d x`.
+
+  monodocs adjusts the parser's tables rather than its output: the capitalised functions become
+  `\operatorname{Sin}` and so on, `>->>` becomes `\mathrel{\char"2916}` (⤖), `mathbf` and `mathsf`
+  get their backslash, `bold` is `\mathbf`, `italic` and `mathit` are `\mathit`, `sfit` is
+  `\mathsfit`, `bbit` is `\boldsymbol`, and `overarc` and `overparen` are `\overgroup`. Bold
+  sans-serif, bold script, and bold fraktur (`bbsf`, `bbsfit`, `bbcc`, `bbfr`) have no command in
+  KaTeX, so they name one it does not know and are reported rather than printed as their letters;
+  `class` and `id` set an attribute, which KaTeX does only behind `trust`, so they become
+  `\htmlClass` and `\htmlId` and are refused as any such command is (`math/command-not-allowed`).
+  The four characters are themselves; text escapes every character TeX reads, and a run of `-`,
+  `'`, or `` ` `` is kept from KaTeX's ligatures. What is left: in text, KaTeX's font draws a single
+  `'` or `` ` `` as a typographic quote, whatever its escape.
+- **What cannot be converted is reported.** asciimath2tex reads brackets with a search whose time
+  grows with how deeply they nest — 16 levels took half a second, 20 levels three — and a formula
+  of some four thousand tokens exhausts its stack. A formula whose brackets nest more than 12 deep,
+  one the converter throws on, and one whose TeX contains `undefined` it did not write are left as
+  Asciidoctor writes them and reported as `math/parse-failed`, naming the formula as written; so is
+  one whose TeX KaTeX cannot parse, such as a color it does not know (`color(1 2)(x)`) or four primes
+  in a row, which KaTeX reads as a double superscript. asciimath is no way into TeX: a command it
+  does not know, such as `\href{...}`, comes out as letters, so nothing reaches KaTeX that latexmath
+  could not write.
+- **A block of several formulas.** Asciidoctor writes an asciimath block as one formula per part,
+  split at a blank line and at a line ending in ` \`. monodocs splits it the same way and stacks the
+  parts in `gathered`, one per line, which a copy still gives back as the one block written.
 - **On by default.** asciimath is what `stem` means unless `:stem:` says otherwise — Asciidoctor's own
   default, which its HTML renders with MathJax — so an author who wrote `stem:[x^2]` meant a formula,
   and printing `\$x^2\$` was never what they wanted; v0.15 already warned on every such formula; and
@@ -521,11 +547,13 @@ are the same text.
   substitutions, the marker keeping the block's ID, title, and roles — and renders the markers
   afterwards; text an author wrote as `\(x\)` is not a marker and stays text. The same converter is used
   where monodocs reads a document's title, so a formula there can be shown as `$TeX$`. asciimath is
-  marked the same way since v0.16, its TeX the one it converts to. A macro given its own substitutions, such as `latexmath:a[...]`, carries what those
-  substitutions made of the text rather than the bare TeX. Asciidoctor has already resolved `stem` by
-  then — `stem:[x]` under `:stem: latexmath` arrives as latexmath — so the source recorded is
-  `latexmath:[...]` or `asciimath:[...]` inline, with `]` escaped as `\]`, and a `[latexmath]` or
-  `[asciimath]` block with `++++` delimiters for display, which also keeps a pasted formula from being read as asciimath where `:stem:` is unset.
+  marked the same way since v0.16, its TeX the one it converts to. A macro given its own
+  substitutions, such as `latexmath:a[...]`, carries what those substitutions made of the text rather
+  than the bare TeX. Asciidoctor has already resolved `stem` by then — `stem:[x]` under
+  `:stem: latexmath` arrives as latexmath — so the source recorded names the notation: `latexmath:[...]`
+  or `asciimath:[...]` inline, with `]` escaped as `\]`, and a `[latexmath]` or `[asciimath]` block with
+  `++++` delimiters for display. Naming it keeps a pasted latexmath formula from being read as
+  asciimath where `:stem:` is unset.
 - **Copying.** On `copy`, when the selection includes a formula, the script writes both formats
   itself, since replacing the plain text discards the browser's own HTML. The plain text has each
   formula replaced by its source in that form; a display formula sits on lines of its own, without the

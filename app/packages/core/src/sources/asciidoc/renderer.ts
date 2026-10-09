@@ -177,6 +177,11 @@ export function createAsciidocRenderer(
             kind: "broken",
             source: formula,
           })),
+          ...(math?.failed ?? []).map(({ source, detail }): MathProblem => ({
+            kind: "parse",
+            source,
+            detail,
+          })),
         ]),
       };
     },

@@ -79,7 +79,11 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
   `tex` のとき（ブロックのスタイルが `[stem,asciimath]` のように別の指定をしない限り）か、ブロックの
   スタイルが `latexmath` のときで、それ以外は Asciidoctor と同じく asciimath を意味する。asciimath は
   TeX に変換して（asciimath2tex）latexmath と同じく描く。コピーすると `asciimath:[...]` として戻り、
-  検索はその TeX で見つかる。`math.enabled: false` ではどちらも Asciidoctor が書くとおりに残す
+  検索はその TeX で見つかる。空行や行末の ` \` で区切ったブロックは、Asciidoctor と同じく区切り、1 行に
+  1 つの式として積む。描かずに報告するもの: KaTeX にコマンドの無い太字のサンセリフ、太字のスクリプト、
+  太字のフラクトゥール（`bbsf`、`bbsfit`、`bbcc`、`bbfr`）、属性を設定する `class` と `id`、12 段より深く
+  入れ子になった括弧。`text(...)` の中の 1 つの `'` や `` ` `` は活字の引用符で描かれる。
+  `math.enabled: false` ではどちらの記法も Asciidoctor が書くとおりに残す
 
 ## 単一 HTML 化のための共通仕様（形式横断）
 

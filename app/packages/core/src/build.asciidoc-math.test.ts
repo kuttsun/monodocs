@@ -338,6 +338,48 @@ describe("AsciiDoc math", () => {
     expect(attributes(html, "data-math-tex")).toEqual(["a < b", "\\frac{c}{d}"]);
   });
 
+  it("splits an asciimath block where Asciidoctor does, one formula a line", async () => {
+    const { html, result } = await build(
+      "= T\n\n[asciimath]\n++++\nx = 1 \\\ny = 2\n\nz = 3\n++++\n",
+    );
+    expect(attributes(html, "data-math-tex")).toEqual([
+      "\\begin{gathered}x = 1 \\\\ y = 2 \\\\ z = 3\\end{gathered}",
+    ]);
+    // Copied whole, as written.
+    expect(attributes(html, "data-math-source")).toEqual([
+      "[asciimath]\n++++\nx = 1 \\\ny = 2\n\nz = 3\n++++",
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("leaves asciimath it cannot convert as Asciidoctor writes it, and reports it", async () => {
+    const deep = "(".repeat(13) + "x" + ")".repeat(13);
+    const long = Array(6000).fill("a").join("+");
+    const { html, result } = await build(
+      `= T\n\nasciimath:[${deep}]\n\n[asciimath]\n++++\n${long}\n++++\n\n` +
+        "asciimath:[color red x] and asciimath:[y]\n",
+    );
+    const failed = result.warnings.filter((w) => w.code === "math/parse-failed");
+    expect(failed.map((w) => w.message)).toEqual([
+      expect.stringMatching(/asciimath:\[\(+x\)+\].*nested more than 12 deep/s),
+      expect.stringMatching(/\[asciimath\][\s\S]*a\+a/),
+      expect.stringMatching(/asciimath:\[color red x\].*could not be read as asciimath/),
+    ]);
+    expect(html).toContain(`\\$${deep}\\$`);
+    expect(attributes(html, "data-math-tex")).toEqual(["y"]);
+  });
+
+  it("refuses class and id, which set an attribute, and an asciimath block's two \\$...\\$", async () => {
+    const { html, result } = await build(
+      "= T\n\nasciimath:[class(big)(x)]\n\n[asciimath]\n++++\n\\$a\\$ + \\$b\\$\n++++\n",
+    );
+    expect(result.warnings.map((w) => w.code)).toContain("math/command-not-allowed");
+    // Not taken for one pair of delimiters around the whole.
+    expect(attributes(html, "data-math-source")).toContain(
+      "[asciimath]\n++++\n\\$a\\$ + \\$b\\$\n++++",
+    );
+  });
+
   it("shows a formula with < or quotes in the title as $TeX$", async () => {
     const { html } = await build('= Q latexmath:[a < b, "c"]\n\ntext\n');
     expect(pageData(html).title).toBe('Q $a &lt; b, "c"$');
