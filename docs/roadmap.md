@@ -3018,6 +3018,42 @@ The CSS Custom Highlight API would avoid touching the DOM at all, but it is not 
 a fallback for the browsers a self-contained document is opened in, and that fallback is the `<mark>`
 implementation anyway.
 
+### 22.6 The Clear Button (v0.16)
+
+The search box is an `<input type="search">`, and until v0.16 its only clear control was whatever
+the browser drew. Chromium and Safari draw a × of their own, each on conditions of its own, and
+Firefox draws none. `Escape` clears the box, the results, and the highlight in the body (22.5), but
+only while the box has the focus. A reader with a keyboard gets there with `/` or `Ctrl+K` (`⌘K`),
+which open the drawer on a narrow screen too; a reader using only a pointer or touch had to click
+back into the box first or delete the query by hand.
+
+The theme draws a clear button of its own inside the box's right edge, the same in every browser,
+and the browser's own × is no longer drawn beside it. It is there while the box holds anything and
+gone when the box is empty, so it is reached by `Tab` from the box only when there is something to
+clear. Pressing it clears what `Escape` clears, with two differences, both because the reader
+pressed a button rather than a key to leave: the focus stays in the box, ready for the next query,
+and a narrow screen's drawer stays open. `Escape` on the button clears the query too, and puts the
+focus in the box, since the button hides itself; the key then closes a narrow screen's drawer as it
+does anywhere. The box keeps padding free under the button, so a long query never runs beneath it.
+On a touch screen (`pointer: coarse`) the button is larger. The sidebar is not printed, and neither
+is the button.
+
+The button is named by the `clearSearch` label ("Clear search" / "検索語を消去"), which `html.labels` can
+replace (23.4), and which joins the frozen surface with the rest of the label table. The rules that
+hide the browser's × and make room for the button apply only where the button is there
+(`.search-field.has-clear`, which `app.js` sets when it finds the button; a class rather than
+`:has()`, which Firefox gained only in 121). A theme whose template replaces the default one and
+leaves the button out, as every theme template from before 0.16 does, takes the default `style.css`
+and still keeps the browser's ×, so it searches and clears as before, and so does one that keeps the
+wrapper without the button. `app.js` also sets the button from what the box holds when the page
+loads, so a template that puts a value in the box, or leaves `hidden` off the button, starts in
+step.
+
+The browser's own × is hidden with `::-webkit-search-cancel-button`, which Chromium and Safari read.
+Chromium 154 draws it, focused and hovered, without that rule and not with it (measured in
+`search-clear.layout.test.ts`, by deleting the rule). The real-browser tests run Chromium only, so
+Firefox and Safari are looked at by a person during the 0.16 beta, with the versions recorded.
+
 ---
 
 ## 23. HTML Template
@@ -5099,7 +5135,8 @@ Completion criteria:
     folding, and asciimath, merged first
   - `0.16.0-beta.1` is published under `next` and verified on Linux x64 and Windows x64, the 0.16
     steps confirmed to have run; the samples are built with it and looked at, their figures in the
-    HTML and the PDF and the clear button among them, the button in Firefox too
+    HTML and the PDF and the clear button among them, the button in Firefox too and in Safari if a
+    Mac or an iPhone is at hand, with the versions recorded
   - `0.16.0` is published under `latest` and verified the same way, its release binaries through
     `verify-release-binaries.yml`, `verify-linux-binary.sh` on a Linux x64 host without Node.js,
     `verify-windows-binary.ps1` on Windows 11, and the driven browser pass, the checklists, the

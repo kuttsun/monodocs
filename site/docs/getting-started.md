@@ -18,6 +18,7 @@ Type in the sidebar search box to search titles, headings, and body text.
 - **Keywords**: separate them with spaces; a page is listed only when it contains every keyword. Results rank by where the keywords appear (title, then heading, then body), and a heading match jumps straight to that heading.
 - **Matching**: substring-based (Japanese needs no spaces inside a keyword) and case-insensitive. Full-width alphanumerics (`ＰＤＦ`) match their half-width form, katakana matches hiragana (`インストール` finds `いんすとーる`), and the prolonged sound mark and dashes (`ー` / `―`) and the wave dash and full-width tilde (`〜` / `～`) are treated alike. So is half-width katakana (`ｶﾞｲﾄﾞ` finds `ガイド`). A keyword also matches loosely: an English word by its stem (`installing` finds `install`), and okurigana between two kanji there or not (`引き渡し` finds `引渡し`); a page that every keyword matches as typed comes first.
 - **Keyboard**: `↓` / `↑` move through the results (wrapping at both ends), `Enter` opens the selected one (or the top one if you have not moved), and `Escape` clears the box. The cursor stays in the box, so you can keep typing.
+- **Clear**: the × at the right of the box clears the query, the results, and the highlight, as `Escape` does, even after you have moved on to a page (on a narrow screen, open the sidebar first). The cursor goes back into the box.
 - **Highlight**: the keywords stay highlighted in the page you open and on pages you move to after it, until you change or clear the query.
 
 ## Install

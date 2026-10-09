@@ -203,6 +203,15 @@ body.sidebar-collapsed #sidebar {
   padding: 0 1.25rem 0.75rem;
 }
 
+/* The search box and its clear button. The button sits inside the box's right edge, over padding
+   the box keeps free for it, so the query never runs under it. */
+.search-field {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 #search-input {
   flex: 1 1 auto;
   min-width: 0;
@@ -218,6 +227,77 @@ body.sidebar-collapsed #sidebar {
 #search-input:focus {
   outline: none;
   border-color: var(--color-accent);
+}
+
+/* Room for the clear button, and none for the browser's own ×. Chromium and Safari draw a × of their
+   own in a search box, each on its own conditions, and Firefox draws none; the theme's button
+   replaces it, so there is one, the same in every browser. Both only where the button is there,
+   which app.js marks on the wrapper with .has-clear (a class rather than :has(), which Firefox
+   gained only in 121): a theme template from before 0.16 has no button, nor does one that keeps
+   the wrapper and leaves the button out, and either keeps the browser's × rather than losing it. */
+.search-field.has-clear #search-input {
+  padding-right: 2.1rem;
+}
+
+.search-field.has-clear #search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+#search-clear {
+  position: absolute;
+  top: 50%;
+  right: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  transform: translateY(-50%);
+}
+
+/* `hidden` would lose to the display above without this. */
+#search-clear[hidden] {
+  display: none;
+}
+
+#search-clear:hover {
+  color: var(--color-text);
+  background: var(--color-accent-bg);
+}
+
+#search-clear:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* A finger needs more than a pointer does. */
+@media (pointer: coarse) {
+  .search-field.has-clear #search-input {
+    padding-right: 2.4rem;
+  }
+
+  #search-clear {
+    width: 2rem;
+    height: 2rem;
+    right: 0.2rem;
+  }
+}
+
+#search-clear svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
 }
 
 #content-width-toggle,

@@ -23,7 +23,12 @@ type ClientPage = {
  */
 async function mountClient(
   pages: ClientPage[],
-  options: { tocMaxLevel?: number } = {},
+  options: {
+    tocMaxLevel?: number;
+    clearButton?: boolean;
+    initialQuery?: string;
+    clearHidden?: boolean;
+  } = {},
 ): Promise<void> {
   const theme = await loadTheme("default");
 
@@ -48,7 +53,14 @@ async function mountClient(
   document.body.innerHTML =
     `<div id="app">` +
     `<aside id="sidebar">` +
-    `<div class="sidebar-tools"><input id="search-input" type="search" /></div>` +
+    `<div class="sidebar-tools"><div class="search-field">` +
+    `<input id="search-input" type="search"` +
+    (options.initialQuery ? ` value="${options.initialQuery}"` : "") +
+    ` />` +
+    (options.clearButton === false
+      ? ""
+      : `<button id="search-clear" type="button"${options.clearHidden === false ? "" : " hidden"}></button>`) +
+    `</div></div>` +
     `<ul id="search-results" hidden></ul>` +
     `<nav id="sidebar-nav"><ul class="sidebar-list">${links}</ul></nav>` +
     `</aside>` +
@@ -938,5 +950,81 @@ describe("v0.15 search of formulas (app.js)", () => {
         "data-heading",
       ),
     ).toBe("m-b");
+  });
+});
+
+describe("search clear button", () => {
+  const button = () => document.getElementById("search-clear") as HTMLButtonElement;
+  const input = () => document.getElementById("search-input") as HTMLInputElement;
+
+  beforeEach(() => {
+    window.location.hash = "";
+  });
+
+  it("is there while the box holds anything, and goes when it is emptied", async () => {
+    await mountClient(SAMPLE);
+    expect(button().hidden).toBe(true);
+    typeQuery("install");
+    expect(button().hidden).toBe(false);
+    typeQuery("");
+    expect(button().hidden).toBe(true);
+    typeQuery("install");
+    input().focus();
+    pressKey("Escape");
+    expect(button().hidden).toBe(true);
+  });
+
+  it("clears the box, the results, and the highlight as Escape does, keeping the focus", async () => {
+    await mountClient(BODY);
+    typeQuery("install");
+    openResult("/guide");
+    expect(highlighted("/guide").length).toBeGreaterThan(0);
+    // The reader has gone on to the page: the focus is no longer in the box, which is when
+    // Escape cannot reach it and the button is needed.
+    input().blur();
+
+    button().click();
+
+    expect(input().value).toBe("");
+    expect(document.getElementById("search-results")!.hidden).toBe(true);
+    expect(document.getElementById("sidebar-nav")!.hidden).toBe(false);
+    expect(document.querySelectorAll("#content mark.search-hit").length).toBe(0);
+    expect(input().getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(input());
+    expect(button().hidden).toBe(true);
+  });
+
+  it("clears on Escape when the focus is on the button, putting the focus in the box", async () => {
+    await mountClient(SAMPLE);
+    typeQuery("install");
+    button().focus();
+    button().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(input().value).toBe("");
+    expect(document.getElementById("search-results")!.hidden).toBe(true);
+    expect(document.activeElement).toBe(input());
+  });
+
+  it("marks the wrapper when the button is there, which is where the stylesheet makes room", async () => {
+    // A class rather than `:has()`, which Firefox gained only in 121.
+    await mountClient(SAMPLE);
+    expect(document.querySelector(".search-field")!.classList.contains("has-clear")).toBe(true);
+    await mountClient(SAMPLE, { clearButton: false });
+    expect(document.querySelector(".search-field")!.classList.contains("has-clear")).toBe(false);
+  });
+
+  it("starts in step with what the box holds when the page loads", async () => {
+    // A template could put a value in the box, or leave `hidden` off the button.
+    await mountClient(SAMPLE, { initialQuery: "install" });
+    expect(button().hidden).toBe(false);
+    await mountClient(SAMPLE, { clearHidden: false });
+    expect(button().hidden).toBe(true);
+  });
+
+  it("leaves a theme without the button searching as before", async () => {
+    await mountClient(SAMPLE, { clearButton: false });
+    typeQuery("install");
+    expect(resultRoutes().length).toBeGreaterThan(0);
+    pressKey("Escape");
+    expect(input().value).toBe("");
   });
 });

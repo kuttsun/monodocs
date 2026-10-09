@@ -694,6 +694,7 @@ key set:
 | `closeSidebar`       | Close sidebar                | サイドバーを閉じる         | The « button in the sidebar header |
 | `searchPlaceholder`  | Search…                      | 検索…                      | Placeholder in the search box |
 | `searchLabel`        | Search documents             | ドキュメントを検索         | Accessible name of the search box |
+| `clearSearch`        | Clear search                 | 検索語を消去               | The × that clears the search box |
 | `searchResults`      | Search results               | 検索結果                   | Accessible name of the result list |
 | `noResults`          | No results                   | 該当なし                   | Shown when a query matches nothing |
 | `contentWidthToggle` | Toggle content width         | 本文幅を切り替え           | Accessible name of the width button |
