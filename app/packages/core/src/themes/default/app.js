@@ -553,8 +553,8 @@
   /**
    * A light English stem, the same for every inflection of a word that keeps its spelling:
    * `install`, `installs`, `installed`, and `installing` are all `install`; `configure` and
-   * `configuring` are `configur`; `study` and `studies` are `studi`. A `y` after a consonant is
-   * written `i`, and the pattern takes either back.
+   * `configuring` are `configur`; `study` and `studies` are `studI`. A `y` after a consonant is
+   * written `I`, which no folded term holds, and the pattern takes `i` or `y` for it alone.
    */
   function stemEnglish(word) {
     var w = word;
@@ -565,10 +565,13 @@
       }
       return false;
     };
-    if (w.length - 3 >= MIN_STEM - 1 && w.slice(-3) === "ies") w = w.slice(0, -3) + "i";
-    else if (!cut("ing") && !cut("ed") && !cut("es") && w.slice(-2) !== "ss") cut("s");
+    if (w.length - 3 >= MIN_STEM - 1 && w.slice(-3) === "ies") w = w.slice(0, -3) + "I";
+    else if (!cut("ing") && !cut("ed") && !(/(x|ch|sh|ss|z)es$/.test(w) && cut("es"))) {
+      if (w.slice(-2) !== "ss") cut("s");
+    }
     if (w.length > MIN_STEM && w.slice(-1) === "e") w = w.slice(0, -1);
-    if (/[^aeiou]y$/.test(w)) w = w.slice(0, -1) + "i";
+    // A `y` after a consonant is written `I`, so the pattern can tell it from an `i` the word had.
+    if (/[^aeiou]y$/.test(w)) w = w.slice(0, -1) + "I";
     var last = w.slice(-1);
     if (w.length > MIN_STEM && last === w.slice(-2, -1) && /[bdfgkmnprt]/.test(last)) {
       w = w.slice(0, -1);
@@ -607,7 +610,7 @@
           // From the start of a word: a term that starts with the word anchors the match there.
           if (i === 0) lead = "(^|[^a-z])";
           pattern +=
-            stem.slice(-1) === "i" ? escapeRegExp(stem.slice(0, -1)) + "[iy]" : escapeRegExp(stem);
+            stem.slice(-1) === "I" ? escapeRegExp(stem.slice(0, -1)) + "[iy]" : escapeRegExp(stem);
         } else {
           pattern += escapeRegExp(word);
         }
@@ -660,7 +663,8 @@
     }
     var matcher = looseMatcher(term);
     if (matcher) {
-      matcher.lastIndex = from;
+      // One character back, for the lead group to see what precedes a word starting at `from`.
+      matcher.lastIndex = Math.max(0, from - 1);
       var match;
       for (var n = 0; n < max && (match = matcher.exec(field.folded)); n++) {
         var lead = match[1].length;
@@ -767,6 +771,11 @@
     // Whether every term matched exactly somewhere, so the page comes before any that needed the loose
     // pattern for one of them.
     var exact = true;
+    // What loose matches score, kept apart: between two pages every term matches exactly it decides
+    // only a tie, so a loose match never reorders exact ones; between two that are not, it counts.
+    var looseScore = 0;
+    // Heading ID → the number of terms it matched exactly, to prefer it over a loose one.
+    var headingExactHits = Object.create(null);
 
     for (var i = 0; i < terms.length; i++) {
       var term = terms[i];
@@ -775,10 +784,9 @@
       var pageNumberMatched = Boolean(entry.number) && entry.number === term;
       if (pageNumberMatched) pageNumberHit = true;
       var titleMatch = pageNumberMatched ? 2 : fieldMatch(entry.title, term);
-      if (titleMatch > 0) {
-        score += SCORE_TITLE;
-        matched = true;
-      }
+      if (titleMatch === 2) score += SCORE_TITLE;
+      else if (titleMatch === 1) looseScore += SCORE_TITLE;
+      if (titleMatch > 0) matched = true;
       var exactTerm = titleMatch === 2;
 
       var headingMatch = 0;
@@ -788,12 +796,12 @@
         if (match === 0) return;
         if (numberMatched) numberHits[h.id] = true;
         headingHits[h.id] = (headingHits[h.id] || 0) + 1;
+        if (match === 2) headingExactHits[h.id] = (headingExactHits[h.id] || 0) + 1;
         headingMatch = Math.max(headingMatch, match);
       });
-      if (headingMatch > 0) {
-        score += SCORE_HEADING;
-        matched = true;
-      }
+      if (headingMatch === 2) score += SCORE_HEADING;
+      else if (headingMatch === 1) looseScore += SCORE_HEADING;
+      if (headingMatch > 0) matched = true;
       if (headingMatch === 2) exactTerm = true;
 
       // Each term counts once per section, however many of the section's formulas it is in.
@@ -818,9 +826,12 @@
         var exactCount = found.filter(function (r) {
           return r.exact;
         }).length;
-        if (exactCount > 0) exactTerm = true;
-        score +=
-          SCORE_TEXT + Math.min(Math.max(exactCount - 1, 0), MAX_TEXT_REPEAT) * SCORE_TEXT_REPEAT;
+        if (exactCount > 0) {
+          exactTerm = true;
+          score += SCORE_TEXT + Math.min(exactCount - 1, MAX_TEXT_REPEAT) * SCORE_TEXT_REPEAT;
+        } else {
+          looseScore += SCORE_TEXT;
+        }
         textHits.push({ term: term, positions: positions });
         matched = true;
       }
@@ -848,6 +859,8 @@
       pageNumberHit: pageNumberHit,
       formulaHits: formulaHits,
       exact: exact,
+      looseScore: looseScore,
+      headingExactHits: headingExactHits,
     };
   }
 
@@ -865,12 +878,16 @@
     if (!anyNumberHit && scored.pageNumberHit) return null;
     var best = null;
     var bestCount = 0;
+    var bestExact = 0;
     entry.headings.forEach(function (h) {
       if (anyNumberHit && !numberHits[h.id]) return;
       var count = headingHits[h.id] || 0;
-      if (count > bestCount) {
+      // Among headings matching as many terms, the one matching more of them exactly.
+      var exactCount = scored.headingExactHits[h.id] || 0;
+      if (count > bestCount || (count === bestCount && count > 0 && exactCount > bestExact)) {
         best = h;
         bestCount = count;
+        bestExact = exactCount;
       }
     });
     if (best || anyNumberHit) return best;
@@ -1027,6 +1044,7 @@
         score: scored.score,
         numberHit: scored.pageNumberHit || Object.keys(scored.numberHits).length > 0,
         exact: scored.exact,
+        looseScore: scored.looseScore,
         index: index,
       });
     });
@@ -1038,7 +1056,9 @@
       return (
         Number(b.numberHit) - Number(a.numberHit) ||
         Number(b.exact) - Number(a.exact) ||
-        b.score - a.score ||
+        (a.exact
+          ? b.score - a.score || b.looseScore - a.looseScore
+          : b.score + b.looseScore - (a.score + a.looseScore)) ||
         a.index - b.index
       );
     });

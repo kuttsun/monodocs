@@ -379,14 +379,39 @@ describe("v0.16 loose search (app.js)", () => {
     expect(resultRoutes()[0]).toBe("/exact");
   });
 
+  it("orders exact matches by their exact score, and opens the exact heading", async () => {
+    await mountClient([
+      page("/p1", "Installing", { text: "Nothing more." }),
+      page("/p2", "Install guide", {
+        text: "Read before installing.",
+        headings: [
+          { id: "p2-a", text: "Install", level: 2 },
+          { id: "p2-b", text: "Installing", level: 2 },
+        ],
+      }),
+    ]);
+    // Both match exactly; the loose title of /p2 does not lift it above the exact title of /p1.
+    typeQuery("installing");
+    expect(resultRoutes()).toEqual(["/p1", "/p2"]);
+    // The exact heading is opened, not the loose one before it.
+    const link = document.querySelector("#search-results a[data-route='/p2']")!;
+    expect(link.getAttribute("href")).toContain("p2-b");
+  });
+
   it("stems from the start of a word, and takes y and ies for each other", async () => {
     await mountClient([
       page("/y", "Deploy", { text: "A dependency to deploy, then display it, for a study." }),
-      page("/inside", "Construct", { text: "A member of the plugin within." }),
+      page("/inside", "Construct", { text: "A member of the plugin within, basic." }),
+      page("/box", "Box", { text: "The process and the approach." }),
     ]);
     for (const query of ["deployed", "dependencies", "displays", "studies"]) {
       typeQuery(query);
       expect([query, resultRoutes()]).toEqual([query, ["/y"]]);
+    }
+    // -es after x, ch, sh, ss, or z is cut; a stem under four letters (box) is not used.
+    for (const query of ["processes", "approaches"]) {
+      typeQuery(query);
+      expect([query, resultRoutes()]).toEqual([query, ["/box"]]);
     }
     // A stem inside a word, or one too short to say much, finds nothing.
     for (const query of ["strings", "embedded", "pluses"]) {
