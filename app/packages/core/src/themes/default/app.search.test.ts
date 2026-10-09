@@ -349,8 +349,9 @@ describe("v0.16 loose search (app.js)", () => {
   it("finds install from installing and installed, and installing from install as before", async () => {
     await mountClient(LOOSE);
 
+    // The page that spells it so comes first; the other needs the stem.
     typeQuery("installing");
-    expect(resultRoutes()).toEqual(["/english", "/plain"]);
+    expect(resultRoutes()).toEqual(["/plain", "/english"]);
     const snippetMarks = (route: string) =>
       Array.from(
         document.querySelectorAll(
@@ -366,6 +367,54 @@ describe("v0.16 loose search (app.js)", () => {
     expect(resultRoutes()).toEqual(["/english", "/plain"]);
     typeQuery("configured");
     expect(resultRoutes()).toEqual(["/plain"]);
+  });
+
+  it("ranks every exact match before any loose one, so none is pushed out of the list", async () => {
+    // 25 titles a loose `sett` (from `setting`) would match, and one page that says `setting` in its
+    // text: the title tier no longer outranks the exact match, and the 20-result cap cannot drop it.
+    const loose = Array.from({ length: 25 }, (_, i) => page(`/s${i}`, `Settle ${i}`));
+    await mountClient([...loose, page("/exact", "Other", { text: "Change the setting here." })]);
+    typeQuery("setting");
+    expect(resultRoutes()).toHaveLength(20);
+    expect(resultRoutes()[0]).toBe("/exact");
+  });
+
+  it("stems from the start of a word, and takes y and ies for each other", async () => {
+    await mountClient([
+      page("/y", "Deploy", { text: "A dependency to deploy, then display it, for a study." }),
+      page("/inside", "Construct", { text: "A member of the plugin within." }),
+    ]);
+    for (const query of ["deployed", "dependencies", "displays", "studies"]) {
+      typeQuery(query);
+      expect([query, resultRoutes()]).toEqual([query, ["/y"]]);
+    }
+    // A stem inside a word, or one too short to say much, finds nothing.
+    for (const query of ["strings", "embedded", "pluses"]) {
+      typeQuery(query);
+      expect([query, resultRoutes()]).toEqual([query, []]);
+    }
+  });
+
+  it("places a match after a length-changing fold where it is in the text", async () => {
+    const before = "ｶﾞ".repeat(100);
+    await mountClient([page("/after", "After", { text: `${before} target here` })]);
+    typeQuery("target");
+    const mark = document.querySelector("#search-results .search-result-snippet mark")!;
+    expect(mark.textContent).toBe("target");
+  });
+
+  it("marks half-width katakana in the body as written, and an exact and a loose match together", async () => {
+    await mountClient([
+      page("/half", "Half", {
+        html: "<p>ﾊﾟｽﾜｰﾄﾞを installing し、install する。</p>",
+        text: "ﾊﾟｽﾜｰﾄﾞを installing し、install する。",
+      }),
+    ]);
+    typeQuery("パスワード installing");
+    (document.querySelector("#search-results a") as HTMLElement).click();
+    expect(
+      Array.from(document.querySelectorAll("#content mark.search-hit")).map((m) => m.textContent),
+    ).toEqual(["ﾊﾟｽﾜｰﾄﾞ", "installing", "install"]);
   });
 
   it("marks a loose match in the body of the page it opens", async () => {

@@ -2815,22 +2815,29 @@ original text it came from, so folding may change the length: half-width katakan
 full-width, its voiced and semi-voiced marks composed with the kana before them (`ｶﾞ` → `ガ`, by
 NFKC on the pair), and then hiragana as before. A match, wherever folding found it, is mapped back
 through those ranges, so the result list and the body highlight mark the text as written (`ｶﾞｲﾄﾞ`
-for a search for `ガイド`). Everything v0.9 folds folds as before.
+for a search for `ガイド`). Everything v0.9 folds folds as before. Text without half-width kana keeps no
+map, its folded characters standing where they stood, so most pages fold as fast as before; and the
+snippet and the highlight search only the window they show. A lone `ﾞ` or `ﾟ` becomes the combining
+mark, not the spacing `゛`.
 
 **Loose matching (v0.16).** Besides the folded term, a looser pattern made from it is matched, and
 never instead of it, so nothing found before is lost. Only the term is loosened, never the page's
 text, so a match falls on the text as written:
 
-- an English word is matched by its stem: a light suffix stripping (`-ing`, `-ed`, `-es`, `-s`,
-  `-ies`, a final `e`, a doubled final consonant), so `installing` and `installed` are `install`,
-  and `configured` is `configur`, which finds `configuring` and `configuration`. Matched as a
-  substring, as every term is, `installing` finds `install` and `installer` alike;
+- an English word is matched by its stem, from the start of a word: a light suffix stripping
+  (`-ing`, `-ed`, `-es`, `-s`, `-ies`, a final `e`, a doubled final consonant, a `y` after a
+  consonant as `i`, matching `i` or `y`), so `installing` and `installed` are `install`,
+  `configured` is `configur`, and `dependencies` finds `dependency`. A stem shorter than four
+  letters is not used: `string` would find `construct` through `str`, so `running` does not find
+  `run`, nor `using` `use`. `installing` finds `install` and `installer` alike;
 - between two kanji, the term's own okurigana of one or two kana is left out, and one or two kana
   are allowed in the text, there or not: `引き渡し` and `引渡し` are both `引[ぁ-ゖ]{0,2}渡し`, and
   find each other.
 
-A page that matches a term only loosely scores one point less in that field (title, heading, or
-text), so the page spelling the term as typed comes first, and no field's tier is crossed.
+A page that every term matches exactly — in its title, a heading, its text, or a formula — is ranked
+before any page that needed the loose pattern for one of them, whatever their scores, so a loose
+match never pushes an exact one down, nor out of the twenty results shown. Only exact occurrences
+count again in the text, since a stem can occur far more often than the word.
 
 How okurigana was settled:
 
@@ -2842,13 +2849,15 @@ How okurigana was settled:
   was tried first and lost: in the text it cannot tell okurigana from a particle, so `引渡しの手順`
   became `引渡手順`, and `引渡し` no longer found it.
 - **Loosening only the term**, as above, needs no dictionary and no copy of the text. Its cost is
-  false matches: between kanji it allows any one or two kana, so `日出` finds `日の出`, and `手順`
-  finds a `手の順`. Okurigana at a word's end (`行う` / `行なう`, `受付` / `受け付け`) is not between
-  two kanji and is not loosened.
+  false matches: between any two kanji of the term it allows one or two kana, particles included,
+  so `日出` finds `日の出`, `日本` finds the `日は本` of `今日は本当に`, and `一ヶ月` finds `一月` (`ヶ`
+  folds to a kana). Okurigana at the end of the term is not between two kanji and is not
+  loosened: `受付` finds `受け付け`, but `受け付け` does not find `受付`. Kanji outside the Basic
+  Multilingual Plane (`𠮟`) match exactly but are not loosened.
 
 Measured on `examples/ja`, built before and after: the size report's `page data` is 55.4 KB both
-times, since the client folds the text it already has; the whole file grows by 6,013 bytes
-(6,016,273 to 6,022,286), the longer client script. That is far under the 100 KB v0.16 allowed a
+times, since the client folds the text it already has; the whole file grows by 8,781 bytes
+(6,016,273 to 6,025,054), the longer client script. That is far under the 100 KB v0.16 allowed a
 method on by default, so there is no key.
 
 ### 22.4 Keyboard Navigation of the Results
