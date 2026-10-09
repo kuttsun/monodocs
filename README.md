@@ -10,7 +10,9 @@
 
 `monodocs` is a CLI that turns a directory of Markdown and AsciiDoc files into a **single self-contained HTML or PDF document**: write in many files, distribute one.
 
-**📖 Full documentation → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference. Try the [single-file sample](https://kuttsun.github.io/monodocs/sample.html) and the [PDF sample](https://kuttsun.github.io/monodocs/sample.pdf) (with a cover, a table of contents, and formulas).
+- 📖 **[Documentation](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference
+- 🌐 **[HTML sample](https://kuttsun.github.io/monodocs/sample.html)** — a single self-contained HTML file built from [`examples/en`](examples/en)
+- 📄 **[PDF sample](https://kuttsun.github.io/monodocs/sample.pdf)** — the same examples as a PDF with a cover, a table of contents, and formulas
 
 ## Features
 

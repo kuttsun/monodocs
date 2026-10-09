@@ -10,7 +10,9 @@
 
 複数の Markdown / AsciiDoc ファイルから **自己完結した単一の HTML または PDF** を生成する CLI です。書くときは複数ファイル、配るときは 1 ファイルにできます。
 
-**📖 ドキュメント → [kuttsun.github.io/monodocs](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス。[単一ファイルのサンプル](https://kuttsun.github.io/monodocs/ja/sample.html)と [PDF のサンプル](https://kuttsun.github.io/monodocs/ja/sample.pdf)（表紙・目次・数式入り）もあります。
+- 📖 **[ドキュメント](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス
+- 🌐 **[HTML のサンプル](https://kuttsun.github.io/monodocs/ja/sample.html)** — [`examples/ja`](examples/ja) から生成した自己完結の単一 HTML
+- 📄 **[PDF のサンプル](https://kuttsun.github.io/monodocs/ja/sample.pdf)** — 同じサンプルを表紙・目次・数式入りの PDF にしたもの
 
 ## 特徴
 
