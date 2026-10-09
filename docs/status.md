@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-10-07
+Last updated: 2026-10-09
 
 ## Support Status
 
@@ -25,7 +25,8 @@ Last updated: 2026-10-07
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
-| Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
+| Checklists, wide accents, asciimath, search folding, surfaces enumerated | 🚧 Planned| v0.16 |
+| `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
@@ -49,7 +50,11 @@ what it was for is done: the published package verified on Linux and Windows, ev
 at under mermaid 12, and the math fixture checked on Windows with Cambria Math. 0.15.0 went out
 under `latest` with the CI guide pinned to it, and the published package, the release binaries, and
 the HTML they produce were verified after `latest` moved. The Windows host script and part of the
-Windows checks a person has to make are still open, as for 0.14.0.
+Windows checks a person has to make are still open, as for 0.14.0; v0.16 makes them for 0.16.0
+instead.
+
+v0.16 clears what earlier milestones set aside and enumerates what 1.0 freezes, so that 1.0 is left with
+the removal of `sidebar.exclude` and a final check ([roadmap.md](roadmap.md)).
 
 ## Completion Criteria Status
 
@@ -419,10 +424,10 @@ Windows checks a person has to make are still open, as for 0.14.0.
 
 - [x] Publish `0.13.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.13.0` — not the default `next`, which still points at 0.12.0 until it is moved below and would skip every 0.13 step while passing — confirming that the log says `verifying monodocs 0.13.0` and that the steps gated on 0.13 ran rather than being skipped: `sources.lineBreak`, the size report and `assets.budget`, `pdf.watermark`, and the Mermaid lightbox markup. Published from CI on the `v0.13.0` tag with provenance, carrying the `latest` dist-tag. The run with `dist_tag: 0.13.0` logs `verifying monodocs 0.13.0`, and the four 0.13 steps ran and passed on both Linux x64 and Windows x64
 - [x] Verify the release binaries through `verify-release-binaries.yml` on both platforms: the run the release triggered passes sixteen checks on each
-- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.13.0` assets on a Windows 11 host
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.13.0` assets on a Windows 11 host — superseded by the 0.16.0 check (v0.16)
 - [x] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md)). Run in a `debian:stable-slim` container on a Linux x64 host, with no Node.js in it, against the published `v0.13.0` assets: all sixteen checks pass. A container rather than a bare host, but it is the environment the item is about — the binary had no runtime but its own — and it closes the item 0.12.0 had to leave open
 - [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the two new for this milestone: a Mermaid diagram opening in the lightbox and coming back on close, and a Japanese paragraph built with `sources.lineBreak: join` reading without spaces between sentences. The asset was checked against its `.sha256`, run with a minimal environment, and its output opened in Chromium through thirteen checks: the sidebar rendering, navigating and marking the current page, previous/next, search returning results and highlighting them in the page it opens, `Escape` clearing the box and restoring the tree, dark mode surviving a reload, the drawer at 375px opening from the toggle and closing after a link, an alias rendering its page and rewriting the hash, an alias keeping its anchor, the footer reading `monodocs v0.13.0`, no script errors, and the two new ones — a Mermaid diagram opening in the lightbox at full width and returning to its block on close, and `examples/ja` built under `join` with no newline left between two Japanese sentences, while a hard break the author wrote and a sentence followed by Latin text keep theirs
-- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a watermarked PDF opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a watermarked PDF opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — superseded by the 0.16.0 check (v0.16)
 - [x] Move the `next` dist-tag onto `0.13.0`, and pin the CI guide on the documentation site — English and Japanese alike — to it: `next` and `latest` both point at `0.13.0`, and the CI guide pins `monodocs@0.13.0`
 
 ### v0.14: Setting the Printed Page
@@ -457,10 +462,10 @@ Windows checks a person has to make are still open, as for 0.14.0.
 
 - [x] Publish `0.14.0` to npm under the `latest` tag, with no prerelease, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.14.0` — not the default `next`, which still points at 0.13.0 until it is moved below and would skip every 0.14 step while passing — confirming that the log says `verifying monodocs 0.14.0` and that the steps gated on 0.14 ran rather than being skipped: section numbering and the printed table of contents, which #150 adds, so it is merged before this runs. Published from CI on the `v0.14.0` tag with provenance, after the `npm` environment was approved, carrying the `latest` dist-tag. The run with `dist_tag: 0.14.0` logs `verifying monodocs 0.14.0`, and both 0.14 steps ran and passed on Linux x64 and Windows x64: `:sectnums:` was reported as `numbering/sectnums`, and the printed table read Alpha 2, Alpha one 2, Alpha two 4, Beta 5, Beta one 7 on both, each the sheet its heading is on
 - [x] Verify the release binaries through `verify-release-binaries.yml` on both platforms: the run the release triggered passes sixteen checks on each
-- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.14.0` assets on a Windows 11 host
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.14.0` assets on a Windows 11 host — superseded by the 0.16.0 check (v0.16)
 - [x] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on a Linux x64 host without Node.js ([maintenance.md](maintenance.md)). Run in a `debian:stable-slim` container on a Linux x64 host, with no Node.js in it, against the published `v0.14.0` assets: all sixteen checks pass. A container rather than a bare host, as for 0.13.0, but the binary had no runtime but its own, which is what the item is about
 - [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: with `numbering.sections` on, the numbers in the headings, the sidebar, and the in-page table of contents agree, and searching a section number opens that section. The asset was checked against its `.sha256`, run with a minimal environment on `examples/en` with `numbering.sections: 3`, and its output driven in Chromium: on all 20 pages the sidebar agrees with each h1, and every h2/h3 heading agrees with its in-page table-of-contents entry (79 headings, no mismatch); searching `1.1` lists that section first and `Enter` opens it; a word search returns results; previous/next and dark mode work; the footer reads `monodocs v0.14.0`; and there are no script errors
-- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a PDF with `pdf.toc` and numbering on opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text above all), a PDF with `pdf.toc` and numbering on opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — superseded by the 0.16.0 check (v0.16)
 - [x] Move the `next` dist-tag onto `0.14.0`. The CI guide on the documentation site — English and Japanese alike — pins `monodocs@0.14.0` in the version change itself, since the site is now deployed from the release; if a fix-forward version ships instead of 0.14.0, its own version change re-pins it: `next` and `latest` both point at `0.14.0`, and the deployed CI guide pins `monodocs@0.14.0` in English and Japanese
 
 ### v0.15: The Mermaid Runtime and Math
@@ -511,11 +516,71 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 - [x] During the beta, build the documents this repository publishes — `examples/en`, `examples/ja`, and the site samples — with the beta and look at every diagram under mermaid 12; a diagram that no longer reads is fixed or recorded before `0.15.0` is cut — `examples/en` and `examples/ja` built by the beta, their three diagrams each drawn in Chromium and compared with 0.14.0's: every one reads. Mermaid 12 draws boxes white with dark borders and edges at right angles where 0.14.0 drew light purple boxes and curves, and wraps some labels of the wide pipeline diagram, whose SVG is then narrower (1,704px against 0.14.0's 2,055px), so that shrunk to the column its text is slightly larger; diagrams sitting left in their frame and a wide one shrunk to the column are as they were. Nothing to fix; the change of look goes into the release notes. The single-file site samples are built from the same examples
 - [x] Publish `0.15.0` under the `latest` tag, with release notes stating the change in diagrams and the licence change, and verify it the same way with `dist_tag: 0.15.0` — published from CI on the `v0.15.0` tag with provenance after the `npm` environment was approved, carrying `latest`, with the release notes stating both. The run with `dist_tag: 0.15.0` logs `verifying monodocs 0.15.0` on Linux x64 and Windows x64, and both 0.15 steps ran and passed on both
 - [x] Verify the `v0.15.0` release binaries through `verify-release-binaries.yml` on both platforms — run on publish, passing on Linux x64 and Windows x64
-- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.15.0` assets on a Windows 11 host
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.15.0` assets on a Windows 11 host — superseded by the 0.16.0 check (v0.16)
 - [x] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.15.0` assets on a Linux x64 host without Node.js ([maintenance.md](maintenance.md)) — run in a `debian:stable-slim` container with no Node.js against the published `v0.15.0` assets: all sixteen checks pass
 - [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: diagrams rendering under mermaid 12 with the notices in the source, and formulas drawn with a MATH font — the published asset checked against its `.sha256`, run with a minimal environment and no Node.js on `examples/en` and `examples/math`, and its output driven in Chromium with `fonts-lmodern` installed through eleven checks: the sidebar rendering its 20 links, a link navigating and marking the current page, next, a search for `mermaid` returning 4 results with 4 highlights in the page it opens, `Escape` clearing the box, dark mode surviving a reload, the drawer at 375px opening and closing after a link, the footer reading `monodocs v0.15.0`, no script errors, and the two new ones: the diagram drawn under mermaid 12 with the `mermaid@12.1.0` notices once in the source, and the 21 formulas drawn in Latin Modern Math (by CDP `getPlatformFontsForNode`), the matrix's bracket stretched to 3.2em
-- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — in part: the math fixture's HTML looked at in Edge, and its PDF with formulas opened, during the beta (above); printing it, `serve --open`, and Mark of the Web with SmartScreen are still to be done
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — in part: the math fixture's HTML looked at in Edge, and its PDF with formulas opened, during the beta (above); printing it, `serve --open`, and Mark of the Web with SmartScreen are still to be done — superseded by the 0.16.0 check (v0.16)
 - [x] Move the `next` dist-tag onto `0.15.0`, and confirm that the deployed CI guide pins `monodocs@0.15.0` in English and Japanese — `next` and `latest` both read `0.15.0`, and the deployed CI guide pins `monodocs@0.15.0` four times in each language
+
+### v0.16: What Is Left Before 1.0
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**Checklists and the sample documents** ([roadmap.md](roadmap.md) 24.3.3)
+
+- [ ] Each item of an AsciiDoc checklist carries the same checkbox element, with the same attributes, a Markdown task list item carries — `<input type="checkbox" disabled>`, with `checked` when checked — and no `❏` or `✓` from Asciidoctor reaches the output; what `[%interactive]` produces is decided and stated; a test asserts both, and [syntax.md](syntax.md) says so in English and Japanese
+- [ ] `examples/en`, `examples/ja`, and `examples/math`, built to PDF with Latin Modern Math made available to Chromium, raise no font warning, and a test asserts it; built in the development image as it is, which has no MATH font on purpose, the only font findings left are the formulas', and a test asserts that too. `examples/*/pdf.md` no longer writes `☒` itself, and the note in [development.md](development.md) says this instead of naming `☒` and `❏`, in English and Japanese
+
+**Wide accents** ([roadmap.md](roadmap.md) 6.4)
+
+- [ ] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc
+- [ ] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture, and the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked, any that does not sit over (or under) or span its base being recorded there
+- [ ] Built on Windows with Cambria Math, to HTML and PDF, each accent sits over its base, or under it for `\utilde` and `\underbrace`, and each wide one spans it, or what does not is recorded in [roadmap.md](roadmap.md) 6.4
+- [ ] What is fixed or accepted is stated in [roadmap.md](roadmap.md) 6.4 and in [syntax.md](syntax.md) in English and Japanese
+
+**asciimath** ([roadmap.md](roadmap.md) 6.4)
+
+- [ ] The converter's licence, its size in the CLI bundle and the standalone binary, and the asciimath forms it does not handle are recorded in [roadmap.md](roadmap.md) 6.4 before it is added, and it is named in `THIRD-PARTY-NOTICES.txt`
+- [ ] asciimath is rendered to MathML through KaTeX with what latexmath has: `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula that does not convert; `math.enabled: false` turns asciimath off along with latexmath
+- [ ] Whether asciimath is on by default is decided in [roadmap.md](roadmap.md) 6.4 with its reason, and so is what becomes of `math/asciimath-not-rendered` under the promise [roadmap.md](roadmap.md) 27.3 makes about codes; [syntax.md](syntax.md) describes it in English and Japanese
+
+**Search folding** ([roadmap.md](roadmap.md) 22.3)
+
+- [ ] The fold-in-place model is replaced by a token-to-source position map, the folding v0.9 does still holds, and the test that keeps half-width katakana unmatched as a documented boundary is inverted
+- [ ] Search finds `ガイド` from `ｶﾞｲﾄﾞ` and `引渡し` from `引き渡し`, each the other way too, and `install` from `installing` and `installed`, highlighting and quoting the text as written in the page — with the key on, if okurigana folding sits behind one; tests cover each fold and a highlight over each
+- [ ] How okurigana variants are folded is chosen in [roadmap.md](roadmap.md) 22.3 with the alternatives and why they lost, and the size report's `page data` and total on `examples/ja` are measured before and after and recorded; if it is on by default, it adds less than 100 KB, and one that needs more sits behind a key that joins the enumeration
+
+**The 1.0 surfaces** ([roadmap.md](roadmap.md) 12.4, 27.3)
+
+- [ ] Every configuration key with its default, every command and option, every diagnostic code, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc are enumerated on one page of the site's reference in English and Japanese, with `sidebar.exclude` listed as deprecated and removed in 1.0; a test compares the page with the schema, the CLI, and `DIAGNOSTIC_CODES` in both directions, defaults included
+- [ ] The enumeration names the diagnostics JSON's `schemaVersion: 1` as what a CI job pins, and links to the command reference that defines it
+
+**Tests**
+
+- [ ] [testing.md](testing.md) lists the new and inverted tests in English and Japanese
+
+**Release**
+
+AsciiDoc checklists and search results change for existing documents, and asciimath does if it is on by default, so this release goes through a beta, as 0.15.0 did. The Windows checks a person has to make are made for 0.16.0; those left open above for 0.13.0 to 0.15.0 are superseded by them rather than made separately.
+
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.16.0` in the version change itself, before the `v0.16.0` tag is created
+- [ ] `verify-published.yml` gains a 0.16 gate and steps for the checklist markup, the new search folding, and asciimath's new behaviour, with v0.15's asciimath steps kept for 0.15 only, merged before anything below runs; the unit tests that assert asciimath is left as text are rewritten
+- [ ] Publish `0.16.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the 0.16 steps ran rather than being skipped
+- [ ] During the beta, build `examples/en`, `examples/ja`, `examples/math`, and the site samples with the beta and look at the checklists, the formulas, and search; what no longer reads is fixed or recorded before `0.16.0` is cut
+- [ ] Publish `0.16.0` under the `latest` tag, with release notes stating what changes for existing documents, and verify it the same way with `dist_tag: 0.16.0`
+- [ ] Verify the `v0.16.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.16.0` assets on a Linux x64 host without Node.js
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.16.0` assets on a Windows 11 host
+- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the checklists and the new search folding
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with a watermark, `pdf.toc`, section numbering, and formulas opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
+- [ ] Move the `next` dist-tag onto `0.16.0`, and confirm that the deployed CI guide pins `monodocs@0.16.0` in English and Japanese
+
+### 1.0
+
+[roadmap.md](roadmap.md) defines this release; it starts once v0.16 is released.
+
+- [ ] `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the enumeration no longer lists it
+- [ ] The enumeration's test passes, and the documentation is checked against the code in English and Japanese: no key in the reference that the schema does not have, and no behaviour in [architecture.md](architecture.md) that the code does not do
 
 ## Supported Syntax
 
