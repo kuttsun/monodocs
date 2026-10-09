@@ -8,8 +8,8 @@ import type { BuildOptions, BuildResult } from "./types.js";
 
 /** ライブリロード用の SSE エンドポイント。 */
 const LIVE_RELOAD_PATH = "/__monodocs-livereload";
-const DEFAULT_PORT = 4173;
-const DEFAULT_HOST = "127.0.0.1";
+export const DEFAULT_PORT = 4173;
+export const DEFAULT_HOST = "127.0.0.1";
 
 export type ServeOptions = BuildOptions & {
   port?: number;

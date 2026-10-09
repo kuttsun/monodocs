@@ -91,7 +91,8 @@ export default defineConfig({
                     { text: 'highlight', link: '/docs/configuration#highlight' },
                     { text: 'html', link: '/docs/configuration#html' }
                   ]
-                }
+                },
+                { text: 'What 1.0 Freezes', link: '/docs/surfaces' }
               ]
             },
             {
@@ -147,7 +148,8 @@ export default defineConfig({
                     { text: 'highlight', link: '/ja/docs/configuration#highlight' },
                     { text: 'html', link: '/ja/docs/configuration#html' }
                   ]
-                }
+                },
+                { text: '1.0 が凍結するもの', link: '/ja/docs/surfaces' }
               ]
             },
             {

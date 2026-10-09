@@ -66,7 +66,7 @@ describe("every error monodocs raises carries a code", () => {
     // report it as an untyped sentence, which is what the model exists to remove. Subclasses are
     // allowed — they extend MonodocsError and fix a code of their own.
     const files = [...(await sourceFiles(SRC)), ...(await sourceFiles(CLI_SRC))];
-    expect(files.some((f) => f.split(sep).join("/").endsWith("/cli/src/index.ts"))).toBe(true);
+    expect(files.some((f) => f.split(sep).join("/").endsWith("/cli/src/program.ts"))).toBe(true);
 
     const offenders: string[] = [];
     for (const file of files) {

@@ -1583,6 +1583,24 @@ saying where it went (12.3), which is the pattern: the old spelling keeps workin
 replacement, and is removed no earlier than the next major release. Nothing is removed in a minor
 release, and nothing is removed without having warned in a release before it.
 
+**Where the surfaces are listed (v0.16).** The site's reference has one page, "What 1.0 Freezes",
+in both languages: every configuration key with its default, every command and option, every
+diagnostic code with the `schemaVersion` a CI job pins, and the markup monodocs recognises beyond
+CommonMark, GFM, and AsciiDoc. `sidebar.exclude` is listed as deprecated and removed in 1.0. The
+keys include those inside a list's items (`sidebar.items[].path`) and inside the object a value may
+be instead (`pdf.density.fontSize`), and the values two defaults stand for: the built-in exclusions
+and the `pdf.density` presets. A last section lists what the tables do not hold but a script,
+a theme, or a link depends on: `MONODOCS_LANG`, where the configuration file is found, the options'
+defaults, how routes and element IDs are formed, and a custom theme's files and required tokens.
+`surfaces.test.ts` compares the page with the configuration schema, the defaults a configuration
+with no file resolves to (for each output format, where it differs), the CLI's commands, arguments,
+and options as `--help` shows them, `DIAGNOSTIC_CODES` and the schema version, the options'
+defaults, and the required tokens, in both directions where the code holds a list, so a key,
+option, or code added to the code without the page, or the reverse, fails the build. The CLI's
+commands are defined in `cli/src/program.ts`, apart from the entry point that runs them, so the test
+reads them without running the CLI. The markup, the addresses, and the file lookup are what the test
+cannot read from a single definition, and they are kept by review.
+
 ### 12.5 The Input Root and What It Selects (v0.12)
 
 `input` names one directory, or since v0.10 one file (25.2). A repository whose `README.md` sits at

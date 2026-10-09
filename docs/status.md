@@ -562,8 +562,8 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 
 **The 1.0 surfaces** ([roadmap.md](roadmap.md) 12.4, 27.3)
 
-- [ ] Every configuration key with its default, every command and option, every diagnostic code, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc are enumerated on one page of the site's reference in English and Japanese, with `sidebar.exclude` listed as deprecated and removed in 1.0; a test compares the page with the schema, the CLI, and `DIAGNOSTIC_CODES` in both directions, defaults included
-- [ ] The enumeration names the diagnostics JSON's `schemaVersion: 1` as what a CI job pins, and links to the command reference that defines it
+- [x] Every configuration key with its default, every command and option, every diagnostic code, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc are enumerated on one page of the site's reference in English and Japanese, with `sidebar.exclude` listed as deprecated and removed in 1.0; a test compares the page with the schema, the CLI, and `DIAGNOSTIC_CODES` in both directions, defaults included — "What 1.0 Freezes" (`site/docs/surfaces.md`), `figures.align` and the `clearSearch` label among the keys; the CLI's commands moved to `cli/src/program.ts` so the test reads them without running the CLI; the markup, which no single definition holds, is kept by review (`surfaces.test.ts`)
+- [x] The enumeration names the diagnostics JSON's `schemaVersion: 1` as what a CI job pins, and links to the command reference that defines it (`surfaces.test.ts`)
 
 **Tests**
 

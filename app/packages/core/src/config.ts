@@ -185,7 +185,7 @@ export type SidebarMode = "folder" | "custom";
  * 読み込み時＝CLI が言語を決める前に評価され、`--lang ja` を付けても英語のまま固定される。
  * loadConfig はビルド 1 回につき 1 度しか呼ばれないので、組み立て直す費用は無視できる。
  */
-function buildConfigFileSchema() {
+export function buildConfigFileSchema() {
   const regexTitleTransformSchema = z
     .object({
       type: z.literal("regex"),
