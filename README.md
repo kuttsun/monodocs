@@ -20,10 +20,7 @@
 - **Rich content** — Mermaid diagrams and Shiki syntax highlighting that follow the selected color scheme.
 - **PDF output** — produces a PDF with bookmarks and inter-page links through Chromium.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/bundle-dark.svg">
-  <img alt="A docs directory of Markdown, AsciiDoc and image files, nested in folders, bundled by 'monodocs build ./docs' into a single docs.html whose sidebar follows the same hierarchy of pages, or a single docs.pdf. The image is embedded in the output." src="docs/assets/bundle-light.svg">
-</picture>
+<img alt="A docs directory of Markdown, AsciiDoc and image files, nested in folders, bundled by 'monodocs build ./docs' into a single docs.html whose sidebar follows the same hierarchy of pages, or a single docs.pdf. The image is embedded in the output." src="docs/assets/bundle.svg">
 
 ## PDF output
 

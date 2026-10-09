@@ -20,10 +20,7 @@
 - **リッチなコンテンツ** — Mermaid 図と shiki コードハイライト（ダークモードに追従）に対応。
 - **PDF 出力** — しおり・ページ間リンク付きの PDF を Chromium 経由で生成。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/bundle-dark.svg">
-  <img alt="フォルダ階層に置かれた Markdown / AsciiDoc / 画像ファイルを monodocs build ./docs でまとめ、ページの階層がそのままサイドバーになる単一の docs.html、または単一の docs.pdf を生成する図。画像は出力に埋め込まれる。" src="docs/assets/bundle-light.svg">
-</picture>
+<img alt="フォルダ階層に置かれた Markdown / AsciiDoc / 画像ファイルを monodocs build ./docs でまとめ、ページの階層がそのままサイドバーになる単一の docs.html、または単一の docs.pdf を生成する図。画像は出力に埋め込まれる。" src="docs/assets/bundle.svg">
 
 ## PDF 出力
 
