@@ -780,8 +780,8 @@
     // Whether every term matched exactly somewhere, so the page comes before any that needed the loose
     // pattern for one of them.
     var exact = true;
-    // What loose matches score, kept apart: between two pages every term matches exactly it decides
-    // only a tie, so a loose match never reorders exact ones; between two that are not, it counts.
+    // What loose matches score, kept apart: it counts only between pages that are not exact, so exact
+    // pages keep the order they had before loose matching, ties included.
     var looseScore = 0;
     // Heading ID → the number of terms it matched exactly, to prefer it over a loose one.
     var headingExactHits = Object.create(null);
@@ -1135,8 +1135,19 @@
   function highlightTextNode(node, terms, budget) {
     var text = node.nodeValue;
     if (!text || !text.trim()) return 0;
+    // The character before the node, through inline elements only, so that a loose match knows
+    // whether a word starts here (`<em>re</em>install` is one word; a new paragraph starts one).
+    var before = precedingInlineChar(node);
     // Anything past the budget would be discarded, so stop collecting at budget matches per term.
-    var ranges = matchRanges(foldField(text), terms, 0, text.length, budget);
+    var ranges = matchRanges(
+      foldField(before + text),
+      terms,
+      before.length,
+      before.length + text.length,
+      budget,
+    ).map(function (r) {
+      return { start: r.start - before.length, end: r.end - before.length };
+    });
     if (ranges.length === 0) return 0;
     if (ranges.length > budget) ranges = ranges.slice(0, budget);
     var parent = node.parentNode;
@@ -1156,6 +1167,53 @@
     if (cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
     parent.replaceChild(frag, node);
     return ranges.length;
+  }
+
+  // Elements a word runs on through: the text before one is part of the same line of prose.
+  var INLINE_TAGS = [
+    "A",
+    "ABBR",
+    "B",
+    "BDI",
+    "BDO",
+    "CITE",
+    "CODE",
+    "DATA",
+    "DEL",
+    "DFN",
+    "EM",
+    "I",
+    "INS",
+    "KBD",
+    "MARK",
+    "Q",
+    "S",
+    "SAMP",
+    "SMALL",
+    "SPAN",
+    "STRONG",
+    "SUB",
+    "SUP",
+    "TIME",
+    "U",
+    "VAR",
+  ];
+
+  /** The last character before a text node within its run of inline elements, or "". */
+  function precedingInlineChar(node) {
+    var current = node;
+    while (current) {
+      var previous = current.previousSibling;
+      while (previous) {
+        var content = previous.textContent || "";
+        if (content) return content.slice(-1);
+        previous = previous.previousSibling;
+      }
+      var parent = current.parentNode;
+      if (!parent || INLINE_TAGS.indexOf(String(parent.tagName).toUpperCase()) === -1) return "";
+      current = parent;
+    }
+    return "";
   }
 
   /** Mark the text below an element. Returns the remaining budget. */

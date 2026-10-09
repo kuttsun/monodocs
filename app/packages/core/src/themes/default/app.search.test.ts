@@ -461,6 +461,22 @@ describe("v0.16 loose search (app.js)", () => {
     ).toEqual(["ﾊﾟｽﾜｰﾄﾞ", "installing", "install"]);
   });
 
+  it("does not take a word broken by inline markup for one starting there", async () => {
+    await mountClient([
+      page("/b", "Installing", {
+        html: "<p><em>re</em>install it.</p><p>install now</p>",
+        text: "reinstall it. install now",
+      }),
+    ]);
+    typeQuery("installing");
+    (document.querySelector("#search-results a") as HTMLElement).click();
+    // `reinstall` continues through </em>; the next paragraph starts a word.
+    expect(
+      Array.from(document.querySelectorAll("#content mark.search-hit")).map((m) => m.textContent),
+    ).toEqual(["install"]);
+    expect(document.querySelector("#content p:last-child mark.search-hit")).not.toBeNull();
+  });
+
   it("marks a loose match in the body of the page it opens", async () => {
     await mountClient([
       page("/okuri", "引渡し", {

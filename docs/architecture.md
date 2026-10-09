@@ -74,8 +74,8 @@ All sources share one HTML document, so every element ID must be globally unique
     sidebar, which needs only titles and paths, is built before post-processing.
   - Routes, page IDs, heading IDs, `page.text`, and heading text stay exactly as without numbering.
   - The client receives the number beside the title and heading text, never inside them, so search matches a
-    number as a whole and digits cannot change how a word scores. A result whose number matched is listed
-    before any that did not.
+    number as a whole and digits cannot change how a word scores. Among results alike in matching every
+    term exactly or not ([roadmap.md](roadmap.md) 22.3), one whose number matched is listed before any that did not.
   - The span core writes carries `data-monodocs-section-number`, so the client leaves those digits out of the
     in-body highlight without touching a document's own markup that uses the class.
   - AsciiDoc `:sectnums:` is refused while numbering is on, by asking Asciidoctor which sections it numbered

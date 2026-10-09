@@ -2863,8 +2863,8 @@ How okurigana was settled:
   Multilingual Plane (`𠮟`) match exactly but are not loosened.
 
 Measured on `examples/ja`, built before and after: the size report's `page data` is 55.4 KB both
-times, since the client folds the text it already has; the whole file grows by 10,613 bytes
-(6,016,273 to 6,026,886), the longer client script. That is far under the 100 KB v0.16 allowed a
+times, since the client folds the text it already has; the whole file grows by 11,994 bytes
+(6,016,273 to 6,028,267), the longer client script. That is far under the 100 KB v0.16 allowed a
 method on by default, so there is no key.
 
 ### 22.4 Keyboard Navigation of the Results
