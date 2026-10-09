@@ -166,6 +166,7 @@ export async function preparePages(
     mermaidPrerenderer: opts.mermaidPrerenderer,
     codeHighlight: config.codeHighlight,
     pdfPageBreakLevel: config.pdfPageBreakLevel,
+    figureAlign: config.figuresAlign,
     sectionNumbers,
   });
   // custom はサイドバーが閲覧順そのものになるため、ページの並びもそれに合わせる

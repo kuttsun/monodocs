@@ -1425,6 +1425,11 @@ numbering:
   # Number headings across the whole document down to this level: false (default) or 2–6 (v0.14, 19.1).
   sections: false
 
+figures:
+  # Where a figure sits when it does not say: left / center (default) / right (v0.16, 20.6).
+  # An AsciiDoc align= on an image block wins. Markdown has no markup of its own for it.
+  align: "center"
+
 assets:
   embedImages: true
   maxInlineSize: "5MB"
@@ -2565,6 +2570,77 @@ screenshot to 200 KB is the largest single saving available here, and monodocs w
 image stays a file beside the HTML, which is a document that is no longer single-file and says so.
 An author who wants smaller images has tools that specialise in exactly that, and running one is a
 step in their build rather than a promise in this one.
+
+### 20.6 Figure Alignment (v0.16)
+
+Until v0.16 where a figure sat depended on the format it was written in. A Markdown image is an
+`<img>` inside a paragraph, so it sat at the left. An AsciiDoc image block sat in the centre, because
+the default theme centred the block's content whatever its class, so `align=left` and `align=right`,
+which Asciidoctor writes as `text-left` and `text-right` on the block, did nothing. A Mermaid diagram
+sat at the left in both. Raw HTML is dropped from Markdown, so `<p align="center">` did not help.
+
+**How alignment is chosen.**
+
+- **A key, `figures.align`** (`left` / `center` / `right`), places every figure that does not say
+  otherwise, in the HTML and the PDF alike.
+- **AsciiDoc's own `align=`** on an image block wins over the key. It is AsciiDoc's markup, not
+  monodocs', so honouring it adds a behaviour to the frozen surface but no syntax.
+- **No markup places one Markdown figure.** GFM has none, and each candidate costs more than it
+  gives. An attribute block after the image (`{align=center}`, as Pandoc and markdown-it-attrs write
+  it) shows as text on GitHub and in every other viewer. A URL fragment (`![](a.png#center)`) is
+  ignored there without a trace, but it is a convention no other tool reads, and an SVG's own
+  fragment identifiers already use that place. An author who needs one figure placed apart from the
+  rest has AsciiDoc's `align=`. Markup can be added in a 1.x release if it is asked for, because
+  adding it is compatible and removing it is not.
+
+Rejected: a key alone, which leaves `align=` ignored, so an AsciiDoc author's own markup keeps doing
+nothing. Markup alone, which makes an author who wants every figure centred write it on every image,
+and gives Markdown no way at all.
+
+**The default is `center`.** AsciiDoc figures stay where they were, and a centred figure is the
+convention in specifications and books, which is what a monodocs document usually is. **Markdown
+figures and Mermaid diagrams in an existing document move from the left to the centre**, and the
+release notes say so. `figures.align: left` puts them back. AsciiDoc figures then move to the left
+unless their block says `align=`, which is the consistency the key is for.
+
+**What a figure is.**
+
+- **Markdown:** a paragraph holding one image and nothing else, bare or as the only content of a
+  link. An image beside text (an icon), beside another image (a row of badges), or in a link with
+  text is not a figure and stays in its line. A loose list item's paragraph holding only an image is
+  a figure, placed across the list item. A blank line puts an image in a paragraph of its own,
+  between the items or inside one; in a tight list (`- ![](a.png)`) the image is not in a paragraph,
+  so it is not a figure.
+- **AsciiDoc:** an image block (`image::`). An inline `image:` is never a figure, even alone in its
+  paragraph. A block title goes with its image. `float=` is not alignment: Asciidoctor writes it as a
+  class (`left`, `right`) the theme has never styled, and a floated block is placed as an unaligned
+  figure.
+- **A Mermaid diagram**, in either format, placed by the key. Neither format has markup for one
+  diagram. An AsciiDoc block title over it goes with it. The drawing is placed, not its block: the
+  block holds the source as text until the drawing replaces it, and for good if drawing fails, and
+  that text must stay as written rather than be centred line by line. A pre-rendered diagram is a
+  `<figure>`, and the 40px side margins the browser gives one are removed, or they would hold the
+  diagram off the column's edges. A block title is placed whether or not the diagram is drawn, so
+  while a diagram is still source, or for good if drawing fails, the title moves and the source does
+  not.
+- **Nothing in a table cell**, in either format. A cell has an alignment of its own, which Markdown
+  writes in the delimiter row and AsciiDoc as `halign`, and an image or diagram in it sits as the
+  cell's content does. Before 0.16 the default theme centred an AsciiDoc image block in a cell too;
+  it now sits at the left, because the default theme does not yet apply `halign` at all, a gap of
+  its own that predates this. The release notes say so with the rest.
+
+**How.** Post-processing marks each figure with `data-monodocs-figure` and its alignment
+(`pipeline/figures.ts`), and core appends the rules that place what is marked to whatever stylesheet
+the theme supplies, as it does the page-break marker. A theme replacing `style.css` therefore cannot
+delete the feature. A theme written before 0.16 that centres `.imageblock .content` itself does not
+override the mark either, because that box, and the block title beside it, inherit their alignment
+from the block, and a marked block does not float, whatever a theme says of the `left` or `right`
+class `float=` leaves on it — as long as the theme's selector is no more specific than
+`#content .imageblock .content`. One that is, or one that makes `#content img` a block, overrides
+it, and is the theme's to change. The default theme's own rule is removed. The PDF is printed from
+the same HTML, so it places figures as the screen does. `build.figures.test.ts` measures each
+alignment in Chromium, on screen and in print, in both formats, against the page's column.
+
 ---
 
 ## 21. Mermaid
@@ -5008,16 +5084,16 @@ Completion criteria:
   to the command reference that defines it
 - testing.md lists the new and inverted tests in both languages
 - Because AsciiDoc checklists and search results change for existing documents, asciimath does if it
-  is on by default, and figures do if alignment moves them, 0.16.0 goes through a beta before
-  `latest`, as 0.15.0 did, with the same verification: the published package on Linux x64 and
-  Windows x64, the release binaries, a driven browser pass over what the released Linux binary
-  builds, the samples built and looked at during the beta, and the CI guide pinned to the release.
-  `verify-published.yml` checks asciimath's new behaviour for 0.16 and later and keeps v0.15's
-  asciimath steps for 0.15 only, and the unit tests that assert asciimath is left as text are
-  rewritten. The release notes state what changes. The Windows checks a person has to make are made
-  for 0.16.0, on a PDF with a watermark, `pdf.toc`, section numbering, and formulas, its table's
-  numbers matching the sheets; those left open for 0.13.0 to 0.15.0 are superseded by them rather
-  than made separately. In order:
+  is on by default, Markdown figures and diagrams move to the centre, and AsciiDoc image blocks in
+  table cells to the left, 0.16.0 goes through a beta before `latest`, as 0.15.0 did, with the same
+  verification: the published package on Linux x64 and Windows x64, the release binaries, a driven
+  browser pass over what the released Linux binary builds, the samples built and looked at during
+  the beta, and the CI guide pinned to the release. `verify-published.yml` checks asciimath's new
+  behaviour for 0.16 and later and keeps v0.15's asciimath steps for 0.15 only, and the unit tests
+  that assert asciimath is left as text are rewritten. The release notes state what changes. The
+  Windows checks a person has to make are made for 0.16.0, on a PDF with a watermark, `pdf.toc`,
+  section numbering, and formulas, its table's numbers matching the sheets; those left open for
+  0.13.0 to 0.15.0 are superseded by them rather than made separately. In order:
   - The CI guide pins `monodocs@0.16.0` in the version change, before the tag
   - `verify-published.yml` gains a 0.16 gate and steps for the checklist markup, the new search
     folding, and asciimath, merged first

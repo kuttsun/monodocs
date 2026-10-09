@@ -50,7 +50,9 @@ describe("buildSite - mermaid pre-render (browserless via injected renderer)", (
     const prepared = await preparePages(config, dir, { mermaidPrerenderer: renderer });
     expect(renderer.calls).toEqual(["mermaid-0"]);
     expect(prepared.hasMermaid).toBe(true);
-    expect(prepared.pages[0]!.html).toContain('<figure class="mermaid"><svg id="mermaid-0">');
+    expect(prepared.pages[0]!.html).toContain(
+      '<figure class="mermaid" data-monodocs-figure="center"><svg id="mermaid-0">',
+    );
     expect(prepared.pages[0]!.html).not.toContain("language-mermaid");
   });
 
@@ -88,7 +90,7 @@ describe.skipIf(!chromium)("buildSite - mermaid pre-render (real Chromium)", () 
     const html = await readFile(out, "utf8");
     // ビルド時に SVG 化されて埋め込まれる。
     expect(html).toContain("<svg");
-    expect(html).toContain('<figure class="mermaid">');
+    expect(html).toContain('<figure class="mermaid" data-monodocs-figure="center">');
     // pre-render では client ランタイム（cdn / inline bundle）を注入しない。
     expect(html).not.toContain("cdn.jsdelivr.net/npm/mermaid");
     expect(html).not.toContain("mermaid.initialize");

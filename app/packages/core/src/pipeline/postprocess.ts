@@ -6,12 +6,19 @@ import rehypeStringify from "rehype-stringify";
 import { toText } from "hast-util-to-text";
 import { EXIT, SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
-import type { MermaidMode, OnLargeImage, PdfPageBreakLevel, SectionNumbering } from "../config.js";
+import type {
+  FigureAlign,
+  MermaidMode,
+  OnLargeImage,
+  PdfPageBreakLevel,
+  SectionNumbering,
+} from "../config.js";
 import type { Page } from "../types.js";
 import { type Diagnostic, type DiagnosticSource, MonodocsError, warn } from "../diagnostics.js";
 import { type MermaidPrerenderer } from "./mermaidPrerender.js";
 import type { EmbeddedImage } from "./outputSize.js";
 import { BrowserSetupError } from "./browser.js";
+import { markFigures } from "./figures.js";
 import { markPageBreakHeadings } from "./pageBreakHeadings.js";
 import { checkHeadingLevels, checkImageAlt } from "./pageChecks.js";
 import { numberHeadings } from "./sectionNumbers.js";
@@ -213,6 +220,8 @@ export type PostprocessOptions = {
    * （{@link file://./pageBreakHeadings.ts}）。`false` なら何も印を付けない。
    */
   pdfPageBreakLevel: PdfPageBreakLevel;
+  /** `figures.align` (20.6): where a figure that does not say sits. Omitted, `"center"`. */
+  figureAlign?: FigureAlign;
   /**
    * `numbering.sections` (19.1): the deepest heading level numbered, and each page's own number
    * taken from the sidebar ({@link numberSidebar}). Omitted, nothing is numbered.
@@ -1072,6 +1081,7 @@ export async function postprocessPages(
     if (options.embedImages) {
       await embedImages(tree, page, options, realRoot, warnings, embeddedImages);
     }
+    markFigures(tree, page.format, options.figureAlign ?? "center");
     // 印は最後に付ける。見出しの前に何があるかは、リンク書き換えや画像埋め込みのあとの姿で決まる。
     if (options.pdfPageBreakLevel !== false) {
       markPageBreakHeadings(tree, options.pdfPageBreakLevel);

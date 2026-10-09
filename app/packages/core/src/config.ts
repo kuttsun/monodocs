@@ -134,6 +134,10 @@ export type PdfPageBreakLevel = false | 2 | 3 | 4 | 5 | 6;
  */
 export type SectionNumbering = false | 2 | 3 | 4 | 5 | 6;
 
+/** `figures.align`: where a figure sits across the column, in HTML and PDF alike (20.6). */
+export const FIGURE_ALIGNS = ["left", "center", "right"] as const;
+export type FigureAlign = (typeof FIGURE_ALIGNS)[number];
+
 /** Names accepted by `pdf.density`, and by `base` inside its object form. Loosest first. */
 export const PDF_DENSITY_NAMES = ["relaxed", "normal", "compact", "tight"] as const;
 export type PdfDensityName = (typeof PDF_DENSITY_NAMES)[number];
@@ -442,6 +446,16 @@ function buildConfigFileSchema() {
         })
         .strict()
         .optional(),
+      figures: z
+        .object({
+          /**
+           * Where a figure sits when it does not say (20.6): an AsciiDoc `align=` on its block
+           * wins, and Markdown has no markup of its own for it.
+           */
+          align: z.enum(FIGURE_ALIGNS).optional(),
+        })
+        .strict()
+        .optional(),
       assets: z
         .object({
           embedImages: z.boolean().optional(),
@@ -692,6 +706,8 @@ export type ResolvedConfig = {
   tocMaxLevel: number;
   /** The deepest heading level given a section number (19.1); `false` numbers nothing. */
   numberingSections: SectionNumbering;
+  /** Where a figure sits when it does not say (20.6). */
+  figuresAlign: FigureAlign;
   /**
    * テーマ。組み込みテーマ名（"default"）か、カスタムテーマディレクトリの絶対パス。
    * 設定ファイルにパスらしき値が書かれていれば設定ファイル基準で解決する。
@@ -1228,6 +1244,7 @@ export async function loadConfig(
     sidebarFlattenSingleChild: fileConfig.sidebar?.flattenSingleChild ?? false,
     tocMaxLevel: fileConfig.toc?.maxLevel ?? DEFAULT_TOC_MAX_LEVEL,
     numberingSections: fileConfig.numbering?.sections ?? false,
+    figuresAlign: fileConfig.figures?.align ?? "center",
     theme: resolveTheme(configBaseDir, fileConfig.html?.theme),
     colorScheme: fileConfig.html?.colorScheme ?? "light",
     contentWidth: parseContentWidth(fileConfig.html?.contentWidth),

@@ -551,3 +551,42 @@ describe("loadConfig: pdf.pageBreakLevel", () => {
     }
   });
 });
+
+describe("loadConfig: figures.align", () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "monodocs-config-"));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  async function writeConfig(yaml: string): Promise<void> {
+    await writeFile(join(dir, "monodocs.config.yml"), yaml);
+  }
+
+  it("centres a figure by default", async () => {
+    expect((await loadConfig({}, dir)).figuresAlign).toBe("center");
+  });
+
+  it("takes left, center, and right", async () => {
+    for (const value of ["left", "center", "right"]) {
+      await writeConfig(`figures:\n  align: ${value}\n`);
+      expect((await loadConfig({}, dir)).figuresAlign, value).toBe(value);
+    }
+  });
+
+  it("rejects any other value and an unknown key beside it, naming what is allowed", async () => {
+    // `centre` is the spelling a British author guesses, and `justify` the next CSS value along.
+    for (const value of ["centre", "justify", "true"]) {
+      await writeConfig(`figures:\n  align: ${value}\n`);
+      await expect(loadConfig({}, dir), value).rejects.toThrow(
+        /figures\.align.*left.*center.*right/s,
+      );
+    }
+    await writeConfig("figures:\n  float: right\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow(/figures: .*float/);
+  });
+});

@@ -128,7 +128,7 @@ jobs:
         run: |
           node -e "require('node:fs').writeFileSync('pre-render.yml','mermaid:\n  mode: pre-render\n');"
           monodocs build examples/en -c pre-render.yml -o out/pre-render.html
-          node -e "const h=require('node:fs').readFileSync('out/pre-render.html','utf8'); if(!h.includes('<figure class=\"mermaid\"><svg')) throw new Error('Mermaid diagram was not pre-rendered to inline SVG');"
+          node -e "const h=require('node:fs').readFileSync('out/pre-render.html','utf8'); if(!/<figure class=\"mermaid\"[^>]*><svg/.test(h)) throw new Error('Mermaid diagram was not pre-rendered to inline SVG');"
 
       # v0.10. The messages are asserted through files rather than through the shell, so the check
       # does not depend on the console code page of a Windows runner, and the Japanese is written as
@@ -689,7 +689,7 @@ jobs:
             }
             // The builds without notices are what they are meant to be, so that their silence counts.
             if (!read('cdn.html').includes('cdn.jsdelivr.net/npm/mermaid@12.')) fail('the CDN build loads no mermaid 12');
-            if (!read('prerender.html').includes('<figure class=\"mermaid\"><svg')) fail('pre-render drew no SVG');
+            if (!/<figure class=\"mermaid\"[^>]*><svg/.test(read('prerender.html'))) fail('pre-render drew no SVG');
           "
 
       # v0.15. Formulas render at build time to MathML only: Markdown's $...$ and fenced math block,

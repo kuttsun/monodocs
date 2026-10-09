@@ -119,6 +119,9 @@ toc:
 numbering:
   sections: false # false, or the deepest heading level numbered (2–6)
 
+figures:
+  align: center # left | center | right; an AsciiDoc align= wins
+
 assets:
   embedImages: true
   maxInlineSize: 5MB # "500KB", "5MB", or a raw byte count
@@ -541,6 +544,34 @@ numbering:
   The check asks Asciidoctor which sections it numbered, so a `:sectnums:` turned on above one
   section and off again below it is caught too. With `numbering.sections: false`, `:sectnums:` works
   as before.
+
+### `figures` {#figures}
+
+| Key             | Type                           | Default  | Description |
+| --------------- | ------------------------------ | -------- | ----------- |
+| `figures.align` | `left` / `center` / `right`    | `center` | Where a figure sits across the column, on screen and in the PDF alike. See below. |
+
+```yaml
+figures:
+  align: left
+```
+
+- **What a figure is.** In Markdown, a paragraph holding one image and nothing else, bare or as the
+  only content of a link. In AsciiDoc, an image block (`image::`). In either format, a Mermaid
+  diagram. An image beside text or beside another image, an image or diagram in a table cell, and an
+  AsciiDoc inline `image:` are not figures and stay where they are. In a list, an image is a figure
+  when it is alone in a paragraph of its own, which a blank line puts it in, between the items or
+  inside one; in a tight list (`- ![](a.png)`) it is not.
+- **One figure placed apart.** In AsciiDoc, `align=` on the image block wins over the key
+  (`image::arch.png[Architecture,align=right]`), and a block title goes with the image, or with a
+  diagram. Markdown has
+  no markup for it: GFM has none, and other viewers would show it as text. `float=` is not honoured;
+  a floated block is placed like any other figure.
+- **Before 0.16**, Markdown figures and Mermaid diagrams sat at the left, and AsciiDoc image blocks
+  sat in the centre whatever their `align=` said. With the default, the first two now move to the
+  centre. `left` puts them back and moves AsciiDoc figures that do not say `align=` to the left. An
+  AsciiDoc image block in a table cell, centred before 0.16, now sits as the cell's text does, which
+  in the default theme is at the left.
 
 ### `assets`
 
