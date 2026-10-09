@@ -296,13 +296,90 @@ describe("v0.9 search folding (app.js)", () => {
     expect(resultRoutes()).toEqual(["/dash", "/katakana"]);
   });
 
-  it("leaves half-width katakana unmatched, the documented boundary of folding", async () => {
-    await mountClient(KANA);
+  it("matches half-width katakana, its voiced marks composed, and marks it as written", async () => {
+    await mountClient([
+      page("/half", "ｶﾞｲﾄﾞ", { text: "ﾊﾟｽﾜｰﾄﾞ の設定。" }),
+      page("/full", "ガイド", { text: "パスワード の設定。" }),
+    ]);
 
-    // 濁点付き半角カナ（ｶ + ﾞ）は 2 文字 → 1 文字で長さが変わり、位置を共有する
-    // ハイライトが成立しないため畳まない。roadmap 22.3 に記録した制限。
-    typeQuery("ｲﾝｽﾄｰﾙ");
-    expect(document.querySelector("#search-results .search-empty")).not.toBeNull();
+    // Both ways (v0.16): folding composes ｶ + ﾞ into one character, and maps it back to both.
+    // A tie keeps document order.
+    typeQuery("ガイド");
+    expect(resultRoutes()).toEqual(["/half", "/full"]);
+    expect(
+      document.querySelector("#search-results a[data-route='/half'] .search-result-title mark")!
+        .textContent,
+    ).toBe("ｶﾞｲﾄﾞ");
+    typeQuery("ﾊﾟｽﾜｰﾄﾞ");
+    expect(resultRoutes()).toEqual(["/half", "/full"]);
+    const snippet = document.querySelector(
+      "#search-results a[data-route='/full'] .search-result-snippet mark",
+    )!;
+    expect(snippet.textContent).toBe("パスワード");
+  });
+});
+
+const LOOSE: ClientPage[] = [
+  page("/okuri", "引渡しの手順", { text: "物件の引渡しは月末に行う。" }),
+  page("/okurigana", "引き渡しの準備", { text: "書類を引き渡し、受領印をもらう。" }),
+  page("/english", "Setup", { text: "The installer installed the package. Install it again." }),
+  page("/plain", "Other", { text: "Installing nothing here, only configuring." }),
+];
+
+describe("v0.16 loose search (app.js)", () => {
+  beforeEach(() => {
+    window.location.hash = "";
+    document.body.innerHTML = "";
+  });
+
+  it("finds a word with its okurigana and without, both ways, and marks it as written", async () => {
+    await mountClient(LOOSE);
+
+    typeQuery("引き渡し");
+    expect(resultRoutes()).toEqual(["/okurigana", "/okuri"]);
+    const marked = (route: string) =>
+      document.querySelector(`#search-results a[data-route='${route}'] .search-result-title mark`)!
+        .textContent;
+    expect(marked("/okuri")).toBe("引渡し");
+    typeQuery("引渡し");
+    expect(resultRoutes()).toEqual(["/okuri", "/okurigana"]);
+    expect(marked("/okurigana")).toBe("引き渡し");
+  });
+
+  it("finds install from installing and installed, and installing from install as before", async () => {
+    await mountClient(LOOSE);
+
+    typeQuery("installing");
+    expect(resultRoutes()).toEqual(["/english", "/plain"]);
+    const snippetMarks = (route: string) =>
+      Array.from(
+        document.querySelectorAll(
+          `#search-results a[data-route='${route}'] .search-result-snippet mark`,
+        ),
+      ).map((m) => m.textContent);
+    // The stem is marked in each spelling the page uses.
+    expect(snippetMarks("/english")).toEqual(["install", "install", "Install"]);
+    typeQuery("installed");
+    expect(resultRoutes()).toEqual(["/english", "/plain"]);
+    // Substring matching still finds every word that contains the term.
+    typeQuery("install");
+    expect(resultRoutes()).toEqual(["/english", "/plain"]);
+    typeQuery("configured");
+    expect(resultRoutes()).toEqual(["/plain"]);
+  });
+
+  it("marks a loose match in the body of the page it opens", async () => {
+    await mountClient([
+      page("/okuri", "引渡し", {
+        html: "<p>書類を引き渡します。</p>",
+        text: "書類を引き渡します。",
+      }),
+    ]);
+    typeQuery("引渡し");
+    (document.querySelector("#search-results a") as HTMLElement).click();
+    expect(
+      Array.from(document.querySelectorAll("#content mark.search-hit")).map((m) => m.textContent),
+    ).toEqual(["引き渡し"]);
   });
 });
 

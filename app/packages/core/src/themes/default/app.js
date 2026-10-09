@@ -454,12 +454,142 @@
   }
 
   /**
-   * 検索用に文字列を畳む（小文字化 + 全角英数字 → 半角 + カタカナ → ひらがな + 記号の書き分け）。
-   * スニペットとハイライトの位置を元文字列と共有するため、必ず同じ長さを保つ。NFKC や
-   * 半角カタカナの合成（ｶ + ﾞ → ガ）は長さが変わりうるので使わない。
+   * Half-width katakana (U+FF61–U+FF9F) as its full-width form, a voiced or semi-voiced mark composed
+   * with the kana before it (ｶﾞ → ガ). Returns the folded string and, for each of its characters, the
+   * range [start, end) of `s` it came from, since composing makes the two lengths differ.
    */
+  function composeHalfWidthKana(s) {
+    var out = "";
+    var starts = [];
+    var ends = [];
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charAt(i);
+      var end = i + 1;
+      if (c >= "｡" && c <= "ﾟ") {
+        var next = s.charAt(i + 1);
+        var pair = next === "ﾞ" || next === "ﾟ" ? (c + next).normalize("NFKC") : "";
+        if (pair.length === 1) {
+          c = pair;
+          end = i + 2;
+        } else {
+          var single = c.normalize("NFKC");
+          if (single.length === 1) c = single;
+        }
+      }
+      out += c;
+      starts.push(i);
+      ends.push(end);
+      i = end - 1;
+    }
+    return { folded: out, starts: starts, ends: ends };
+  }
+
+  /**
+   * 検索用に文字列を畳む（小文字化 + 全角英数字 → 半角 + 半角カナ → 全角 + カタカナ → ひらがな +
+   * 記号の書き分け）。半角カナの合成（ｶ + ﾞ → ガ）で長さが変わるので、畳んだ文字ごとに元の
+   * 範囲 [starts[i], ends[i]) を持ち、ハイライトと抜粋はそれを通して原文の位置に戻す（v0.16）。
+   */
+  function foldField(s) {
+    var text = String(s);
+    var composed = composeHalfWidthKana(toHalfWidth(lowerKeepingLength(text)));
+    return {
+      text: text,
+      folded: foldDashes(katakanaToHiragana(composed.folded)),
+      starts: composed.starts,
+      ends: composed.ends,
+    };
+  }
+
   function fold(s) {
-    return foldDashes(katakanaToHiragana(toHalfWidth(lowerKeepingLength(String(s)))));
+    return foldField(s).folded;
+  }
+
+  // ---- loose matching (v0.16) ----
+  // Besides the folded term, a looser pattern made from it is matched, never instead of it: what was
+  // found before is found still. The page's text is left as it is; only the term is loosened, so the
+  // match falls on the text as written. An English word is matched by its stem, and between two kanji
+  // up to two kana of okurigana may be there or not, so `installing` finds `install` and `引き渡し`
+  // finds `引渡し`, both ways.
+  var KANJI = /[㐀-䶿一-鿿豈-﫿々]/;
+  var HIRAGANA = /[ぁ-ゖ]/;
+  // Okurigana is one or two kana; a longer run of kana between kanji is a word of its own.
+  var OKURIGANA = "[ぁ-ゖ]{0,2}";
+
+  /**
+   * A light English stem, the same for every inflection of a word that keeps its spelling:
+   * `install`, `installs`, `installed`, and `installing` are all `install`; `configure` and
+   * `configuring` are `configur`. Matched as a substring, a stem finds each inflection.
+   */
+  function stemEnglish(word) {
+    if (word.length < 4) return word;
+    var w = word;
+    var cut = function (suffix) {
+      if (w.length - suffix.length >= 3 && w.slice(-suffix.length) === suffix) {
+        w = w.slice(0, -suffix.length);
+        return true;
+      }
+      return false;
+    };
+    if (w.slice(-3) === "ies" && w.length > 4) w = w.slice(0, -3) + "i";
+    else if (!cut("ing") && !cut("ed") && !cut("es") && w.slice(-2) !== "ss") cut("s");
+    if (w.length > 3 && w.slice(-1) === "e") w = w.slice(0, -1);
+    if (w.slice(-1) === "y") w = w.slice(0, -1) + "i";
+    var last = w.slice(-1);
+    if (w.length > 3 && last === w.slice(-2, -1) && /[bdfgkmnprt]/.test(last)) w = w.slice(0, -1);
+    return w;
+  }
+
+  /**
+   * The loose pattern for a folded term, or null when it would find nothing the term does not: each
+   * English word as its stem, and between two kanji the term's own okurigana left out and up to two
+   * kana allowed instead.
+   */
+  var looseMatchers = Object.create(null);
+  function looseMatcher(term) {
+    if (term in looseMatchers) return looseMatchers[term];
+    var pattern = "";
+    var loosened = false;
+    var i = 0;
+    while (i < term.length) {
+      var c = term.charAt(i);
+      if (c >= "a" && c <= "z") {
+        var j = i;
+        while (j < term.length && term.charAt(j) >= "a" && term.charAt(j) <= "z") j++;
+        var word = term.slice(i, j);
+        var stem = stemEnglish(word);
+        if (stem !== word) loosened = true;
+        pattern += escapeRegExp(stem);
+        i = j;
+        continue;
+      }
+      pattern += escapeRegExp(c);
+      if (KANJI.test(c)) {
+        var run = i + 1;
+        while (run < term.length && HIRAGANA.test(term.charAt(run)) && run - i <= 2) run++;
+        if (run - i - 1 <= 2 && KANJI.test(term.charAt(run))) {
+          pattern += OKURIGANA;
+          loosened = true;
+          i = run;
+          continue;
+        }
+      }
+      i++;
+    }
+    looseMatchers[term] = loosened ? new RegExp(pattern, "g") : null;
+    return looseMatchers[term];
+  }
+
+  // A field a term matches only loosely scores this much less, so a page that spells the term as the
+  // reader typed it comes first, and no tier (title, heading, text) is crossed.
+  var LOOSE_PENALTY = 1;
+
+  /** How a term is in a field: 2 as it is, 1 only loosely, 0 not at all. */
+  function fieldMatch(field, term) {
+    if (field.folded.indexOf(term) !== -1) return 2;
+    var matcher = looseMatcher(term);
+    if (!matcher) return 0;
+    matcher.lastIndex = 0;
+    return matcher.test(field.folded) ? 1 : 0;
   }
 
   // 空白区切りのクエリを語の配列にする（全角空白も \s に含まれる）。重複語は落とす。
@@ -497,17 +627,14 @@
         // A section number is matched as a whole and on its own, never folded into the title or
         // heading text: "3.2" asks for a section, and digits must not change how a word scores.
         number: typeof p.number === "string" ? fold(p.number) : "",
-        title: title,
-        titleFolded: fold(title),
-        text: text,
-        textFolded: fold(text),
+        title: foldField(title),
+        text: foldField(text),
         headings: (p.headings || []).map(function (h) {
           var htext = h.text || "";
           return {
             id: h.id,
             number: typeof h.number === "string" ? fold(h.number) : "",
-            text: htext,
-            folded: fold(htext),
+            text: foldField(htext),
           };
         }),
         // Each formula's TeX with the section it falls in: a query that matches a formula, and no
@@ -527,17 +654,49 @@
     return searchIndex;
   }
 
-  // 出現位置を先頭から集める（上限まで）。
-  function occurrences(folded, term) {
-    var positions = [];
-    var from = 0;
-    while (positions.length < MAX_OCCURRENCES) {
-      var pos = folded.indexOf(term, from);
-      if (pos === -1) break;
-      positions.push(pos);
-      from = pos + term.length;
+  /**
+   * Where a term occurs in a field, folded and loose, as ranges of the original text in document
+   * order, at most `limit` from each reading (MAX_OCCURRENCES when omitted).
+   */
+  function occurrences(field, term, limit) {
+    var max = typeof limit === "number" ? limit : MAX_OCCURRENCES;
+    var found = [];
+    var collect = function (reading, needle) {
+      var from = 0;
+      var count = 0;
+      while (count < max) {
+        var pos = reading.folded.indexOf(needle, from);
+        if (pos === -1) break;
+        found.push({ start: reading.starts[pos], end: reading.ends[pos + needle.length - 1] });
+        from = pos + needle.length;
+        count++;
+      }
+    };
+    collect(field, term);
+    var matcher = looseMatcher(term);
+    if (matcher) {
+      matcher.lastIndex = 0;
+      var match;
+      var count = 0;
+      while (count < max && (match = matcher.exec(field.folded))) {
+        if (match[0] === "") {
+          matcher.lastIndex++;
+          continue;
+        }
+        found.push({
+          start: field.starts[match.index],
+          end: field.ends[match.index + match[0].length - 1],
+        });
+        count++;
+      }
     }
-    return positions;
+    found.sort(function (a, b) {
+      return a.start - b.start || b.end - a.end;
+    });
+    // One occurrence found both ways is one occurrence.
+    return found.filter(function (r, i) {
+      return i === 0 || r.start !== found[i - 1].start;
+    });
   }
 
   /**
@@ -564,21 +723,23 @@
 
       var pageNumberMatched = Boolean(entry.number) && entry.number === term;
       if (pageNumberMatched) pageNumberHit = true;
-      if (entry.titleFolded.indexOf(term) !== -1 || pageNumberMatched) {
-        score += SCORE_TITLE;
+      var titleMatch = pageNumberMatched ? 2 : fieldMatch(entry.title, term);
+      if (titleMatch > 0) {
+        score += SCORE_TITLE - (titleMatch === 1 ? LOOSE_PENALTY : 0);
         matched = true;
       }
 
-      var headingMatched = false;
+      var headingMatch = 0;
       entry.headings.forEach(function (h) {
         var numberMatched = Boolean(h.number) && h.number === term;
-        if (h.folded.indexOf(term) === -1 && !numberMatched) return;
+        var match = numberMatched ? 2 : fieldMatch(h.text, term);
+        if (match === 0) return;
         if (numberMatched) numberHits[h.id] = true;
         headingHits[h.id] = (headingHits[h.id] || 0) + 1;
-        headingMatched = true;
+        headingMatch = Math.max(headingMatch, match);
       });
-      if (headingMatched) {
-        score += SCORE_HEADING;
+      if (headingMatch > 0) {
+        score += SCORE_HEADING - (headingMatch === 1 ? LOOSE_PENALTY : 0);
         matched = true;
       }
 
@@ -594,9 +755,12 @@
         formulaHits[key] = (formulaHits[key] || 0) + 1;
       });
 
-      var positions = occurrences(entry.textFolded, term);
+      var positions = occurrences(entry.text, term).map(function (r) {
+        return r.start;
+      });
       if (positions.length > 0) {
         score += SCORE_TEXT + Math.min(positions.length - 1, MAX_TEXT_REPEAT) * SCORE_TEXT_REPEAT;
+        if (entry.text.folded.indexOf(term) === -1) score -= LOOSE_PENALTY;
         textHits.push({ term: term, positions: positions });
         matched = true;
       }
@@ -605,14 +769,14 @@
     }
 
     if (phrase) {
-      if (phrase.test(entry.titleFolded)) score += SCORE_PHRASE_TITLE;
+      if (phrase.test(entry.title.folded)) score += SCORE_PHRASE_TITLE;
       else if (
         entry.headings.some(function (h) {
-          return phrase.test(h.folded);
+          return phrase.test(h.text.folded);
         })
       )
         score += SCORE_PHRASE_HEADING;
-      else if (phrase.test(entry.textFolded)) score += SCORE_PHRASE_TEXT;
+      else if (phrase.test(entry.text.folded)) score += SCORE_PHRASE_TEXT;
     }
 
     return {
@@ -668,27 +832,22 @@
   }
 
   /**
-   * Return the ranges of [start, end) where a term matches, in document order. Folding preserves
-   * length, so the ranges apply to the original string as well: the result list HTML and the
-   * in-body highlight share the same positions. `limit` caps how many matches are collected per
-   * term (unlimited when omitted); a single text node can hold a whole paragraph or code block, so
+   * Return the ranges of [start, end) of a field's original text where a term matches, folded or
+   * loose, in document order: the result list HTML and the in-body highlight mark the text as
+   * written, whatever folding found it. `limit` caps how many matches are collected per term and
+   * reading (unlimited when omitted); a single text node can hold a whole paragraph or code block, so
    * the in-body highlight stops collecting once it has enough instead of gathering every occurrence
    * and discarding the surplus. Merging only ever reduces the count, so a limit yields the same
    * ranges from the start of the range.
    */
-  function matchRanges(folded, terms, start, end, limit) {
+  function matchRanges(field, terms, start, end, limit) {
     var max = typeof limit === "number" ? limit : Infinity;
     var ranges = [];
     terms.forEach(function (term) {
-      var from = start;
-      var found = 0;
-      while (found < max) {
-        var pos = folded.indexOf(term, from);
-        if (pos === -1 || pos >= end) break;
-        ranges.push({ start: pos, end: Math.min(pos + term.length, end) });
-        from = pos + term.length;
-        found++;
-      }
+      occurrences(field, term, max).forEach(function (r) {
+        if (r.end <= start || r.start >= end) return;
+        ranges.push({ start: Math.max(r.start, start), end: Math.min(r.end, end) });
+      });
     });
     // 語同士が重なる場合（部分文字列を含むクエリ）に <mark> が入れ子にならないよう束ねる。
     ranges.sort(function (a, b) {
@@ -704,10 +863,11 @@
   }
 
   // [start, end) の範囲を、語の一致部分だけ <mark> で囲んだエスケープ済み HTML にする。
-  function markRange(text, folded, terms, start, end) {
+  function markRange(field, terms, start, end) {
+    var text = field.text;
     var html = "";
     var cursor = start;
-    matchRanges(folded, terms, start, end).forEach(function (r) {
+    matchRanges(field, terms, start, end).forEach(function (r) {
       html += escapeHtml(text.slice(cursor, r.start));
       html += "<mark>" + escapeHtml(text.slice(r.start, r.end)) + "</mark>";
       cursor = r.end;
@@ -715,8 +875,8 @@
     return html + escapeHtml(text.slice(cursor, end));
   }
 
-  function markMatches(text, folded, terms) {
-    return markRange(text, folded, terms, 0, text.length);
+  function markMatches(field, terms) {
+    return markRange(field, terms, 0, field.text.length);
   }
 
   /**
@@ -724,7 +884,7 @@
    * 本文に語が無い（タイトル・見出しだけの一致）場合は本文の先頭を返す。
    */
   function snippet(entry, terms, textHits) {
-    var text = entry.text;
+    var text = entry.text.text;
     if (!text) return "";
 
     var start = 0;
@@ -770,7 +930,7 @@
     var end = Math.min(text.length, start + SNIPPET_WINDOW + SNIPPET_LEAD);
     return (
       (start > 0 ? "…" : "") +
-      markRange(text, entry.textFolded, terms, start, end) +
+      markRange(entry.text, terms, start, end) +
       (end < text.length ? "…" : "")
     );
   }
@@ -795,11 +955,11 @@
         route: entry.route,
         title:
           sectionNumberHtml(entry.number, matchedNumber(entry.number, terms)) +
-          markMatches(entry.title, entry.titleFolded, terms),
+          markMatches(entry.title, terms),
         headingId: heading ? heading.id : null,
         heading: heading
           ? sectionNumberHtml(heading.number, matchedNumber(heading.number, terms)) +
-            markMatches(heading.text, heading.folded, terms)
+            markMatches(heading.text, terms)
           : "",
         snippet: snippet(entry, terms, scored.textHits),
         score: scored.score,
@@ -881,7 +1041,7 @@
     var text = node.nodeValue;
     if (!text || !text.trim()) return 0;
     // Anything past the budget would be discarded, so stop collecting at budget matches per term.
-    var ranges = matchRanges(fold(text), terms, 0, text.length, budget);
+    var ranges = matchRanges(foldField(text), terms, 0, text.length, budget);
     if (ranges.length === 0) return 0;
     if (ranges.length > budget) ranges = ranges.slice(0, budget);
     var parent = node.parentNode;
