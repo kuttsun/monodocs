@@ -502,8 +502,9 @@ formula as `$TeX$`, copying, search, and diagnostics.
   KaTeX, so a formula using one is reported, naming the style, rather than printed with its letters.
   `class` and `id` are left as letters: asciimath2tex matches a symbol inside a word, so adding them
   turned `width` and `t_(mid)` into attributes. Within one parse each position's reading is
-  remembered — none depends on anything but the position and the source — so brackets take
-  milliseconds however deeply they nest. The four characters are themselves; text escapes every character TeX reads, and a run of `-`,
+  remembered — none depends on anything but the position and the source — so a position is no longer
+  read again for each reading around it: 30 levels of `|(` and 60 of `(` took under 15 ms. The
+  recursion, and with it the stack's limit below, remains. The four characters are themselves; text escapes every character TeX reads, and a run of `-`,
   `'`, or `` ` `` is kept from KaTeX's ligatures. What is left: in text, KaTeX's font draws a single
   `'` or `` ` `` as a typographic quote, whatever its escape; and `bbit` is KaTeX's `\boldsymbol`, which
   sets a capital Greek letter bold upright, as TeX does, rather than bold italic — the same as
