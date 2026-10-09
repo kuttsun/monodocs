@@ -638,6 +638,21 @@ Cambria Math の Windows で npm の `0.15.0-beta.1` でビルドすると、フ
 フィクスチャに `\acute` と `\grave` も幅の広いアクセントも無いので、Cambria Math がそれらや `\widehat` などを
 どう描くかはまだ見ていない。v0.16 でフィクスチャに足して見る。
 
+**フィクスチャでのアクセント（v0.16）。** フィクスチャに、文中の `\acute{e},\ \grave{a}` と、15 番目の
+別行立ての数式を足した。後者は、`xyz` の上（または下）の `\widehat`、`\widetilde`、`\widecheck`、
+`\utilde`、`\overrightarrow{AB}`、`a+b+c` の `\overbrace` と `\underbrace`（括弧の先に `n`）である。
+Linux で Latin Modern Math（Chromium 154）を使い、HTML と PDF の両方で、両方のページを見た。
+
+- `\acute` と `\grave` は文字の上に来て、ほかのアクセントと同じく文字の箱の中央に置かれる。
+- `\widehat`、`\widetilde`、`\widecheck`、`\utilde` は上の記録のとおり 1 文字分ほどの大きさに
+  とどまり、項の中央の上（`\utilde` は下）に来る。Cambria Math での組み方を Windows で見るまで、
+  引き続き受け入れる。
+- `\overrightarrow` は基底にわたり、`\overbrace` と `\underbrace` は項にわたって、`n` は括弧の上と
+  下に来る。
+- 画面でだけ、Chromium は上の括弧の一方の端（数式の位置によって左か右の鉤）を描かない。PDF では
+  括弧は欠けず、下の括弧はどちらでも欠けない。KaTeX の MathML をそのまま描いても、monodocs が足す
+  `accent` の有無にかかわらず同じになるので、ブラウザのものとして受け入れる。
+
 - **依存としての KaTeX。** KaTeX 0.16.47 は MIT である。Mermaid のランタイムがすでに同梱している版と同じで、
   2 つが食い違うとテストが失敗するので、告知が名指す KaTeX は 1 つになる。告知では、バンドルのほかの
   パッケージとともに `THIRD-PARTY-NOTICES.txt` に、そしてランタイム自身の告知に現れる。追加したときに

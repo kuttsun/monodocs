@@ -5,8 +5,8 @@ order: 1
 
 # 数式（Markdown）
 
-v0.14 が実測した数式です（[roadmap.md](https://github.com/kuttsun/monodocs/blob/main/docs/roadmap.md) 6.4）。
-文中の数式が 7 つ、別行立ての数式が 14 あります。
+v0.14 が実測した数式と、v0.16 で足したアクセントです（[roadmap.md](https://github.com/kuttsun/monodocs/blob/main/docs/roadmap.md) 6.4）。
+文中の数式が 8 つ、別行立ての数式が 15 あります。
 同じ数式を AsciiDoc で書いたものが [数式（AsciiDoc）](asciidoc.adoc) にあります。
 
 ```bash
@@ -20,6 +20,7 @@ monodocs build examples/math --format both -o dist/math   # dist/math/docs.html 
 - `\mathbb` と `\mathbf` の文字（式 9 の太字の E、B と、下の段落の二重線の R、N）が、ふつうの変数と見分けられる
 - 伸びる括弧（式 5、6、8、11）と根号（式 1、3）が中身に合わせて伸びる
 - アクセント（下の段落）が文字の上に来る。`aligned`（式 7）の `=` の前の隙間を見る
+- 幅の広いアクセント（式 15）が中身の上（`\utilde` と `\underbrace` は下）に来て、中身の幅に伸びる
 
 MATH フォントの無いマシンで PDF を作ると、フォント検査が数式の文字（`font/missing`）と MATH テーブルの不在（`font/no-math-table`）を報告します。
 
@@ -27,6 +28,7 @@ MATH フォントの無いマシンで PDF を作ると、フォント検査が�
 
 質量とエネルギーは $E = mc^2$ の関係にある。
 ギリシャ文字 $\alpha + \beta = \gamma$、添字 $x_{i,j}^{2}$、累乗根 $\sqrt[3]{x}$、分数 $\frac{a}{b}$、アクセント $\hat{\theta},\ \bar{x},\ \vec{v},\ \dot{x}$、集合 $\forall x \in \mathbb{R},\ \exists n \in \mathbb{N}$ を文中に含む段落。
+鋭アクセントと重アクセント $\acute{e},\ \grave{a}$ も文中に含む。
 
 ## 式 1
 
@@ -110,4 +112,10 @@ P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}
 
 ```math
 e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} + \frac{x^5}{5!} + \frac{x^6}{6!} + \frac{x^7}{7!} + \frac{x^8}{8!} + \frac{x^9}{9!} + \frac{x^{10}}{10!} + \cdots
+```
+
+## 式 15
+
+```math
+\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{AB},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}
 ```

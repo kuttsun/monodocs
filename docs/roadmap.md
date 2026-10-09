@@ -697,6 +697,22 @@ there, `\vec`'s combining arrow centred, as v0.14 saw the accents in Edge. The f
 `\acute` or `\grave`, nor a wide accent, so how Cambria Math sets those, and `\widehat` and the
 others, is not yet seen; v0.16 adds them to the fixture and looks.
 
+**The accents, on the fixture (v0.16).** The fixture gains an inline `\acute{e},\ \grave{a}` and a
+fifteenth display formula with `\widehat`, `\widetilde`, `\widecheck`, and `\utilde` over (or under)
+`xyz`, `\overrightarrow{AB}`, and `\overbrace` and `\underbrace` of `a+b+c` with `n` beyond the brace.
+Built on Linux with Latin Modern Math (Chromium 154), in HTML and in the PDF, on both pages:
+
+- `\acute` and `\grave` sit over their letter, centred on its box as the other accents are;
+- `\widehat`, `\widetilde`, `\widecheck`, and `\utilde` still keep about the size of a letter,
+  centred over (under, for `\utilde`) the middle of the term, as recorded above, and stay accepted
+  until Windows shows how Cambria Math sets them;
+- `\overrightarrow` spans its base, and `\overbrace` and `\underbrace` span the term, with `n` above
+  and below the brace;
+- on screen only, Chromium leaves one end of the overbrace's brace unpainted, the left hook or the
+  right depending on where the formula sits, while the PDF has the whole brace and the underbrace is
+  whole in both. KaTeX's MathML as it is does the same, with or without the `accent` monodocs adds,
+  so it is the browser's, and accepted.
+
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
   `THIRD-PARTY-NOTICES.txt` with the bundle's other packages and in the runtime's own notices. Measured on

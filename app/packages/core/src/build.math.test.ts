@@ -287,7 +287,8 @@ describe("Markdown math", () => {
   });
 
   it("builds the math fixture, its Markdown and AsciiDoc pages giving the same formulas", async () => {
-    // examples/math: the formulas v0.14 measured, 7 inline and 14 display, on each page.
+    // examples/math: the formulas v0.14 measured and the accents v0.16 added, 8 inline and 15
+    // display, on each page.
     const fixture = fileURLToPath(new URL("../../../../examples/math", import.meta.url));
     const out = join(dir, "math.html");
     const result = await buildSite({
@@ -303,8 +304,8 @@ describe("Markdown math", () => {
       .pages;
     const formulas = (title: string) =>
       pages.find((p) => p.title.includes(title))!.formulas!.map((f) => f.tex);
-    // The 21 formulas v0.14 measured (roadmap 6.4), kept apart from the fixture so that a change to
-    // both of its pages alike is still caught.
+    // The 21 formulas v0.14 measured (roadmap 6.4) and the 2 accent formulas v0.16 added, kept apart
+    // from the fixture so that a change to both of its pages alike is still caught.
     const measured = [
       String.raw`E = mc^2`,
       String.raw`\alpha + \beta = \gamma`,
@@ -313,6 +314,7 @@ describe("Markdown math", () => {
       String.raw`\frac{a}{b}`,
       String.raw`\hat{\theta},\ \bar{x},\ \vec{v},\ \dot{x}`,
       String.raw`\forall x \in \mathbb{R},\ \exists n \in \mathbb{N}`,
+      String.raw`\acute{e},\ \grave{a}`,
       String.raw`x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`,
       String.raw`e^{i\pi} + 1 = 0`,
       String.raw`\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}`,
@@ -327,6 +329,7 @@ describe("Markdown math", () => {
       String.raw`\operatorname{softmax}(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^{K} e^{z_j}}`,
       String.raw`\text{速度}\ v = \frac{\Delta x}{\Delta t} \quad [\mathrm{m/s}]`,
       String.raw`e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} + \frac{x^5}{5!} + \frac{x^6}{6!} + \frac{x^7}{7!} + \frac{x^8}{8!} + \frac{x^9}{9!} + \frac{x^{10}}{10!} + \cdots`,
+      String.raw`\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{AB},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}`,
     ];
     expect(formulas("Markdown")).toEqual(measured);
     expect(formulas("AsciiDoc")).toEqual(formulas("Markdown"));
@@ -334,8 +337,8 @@ describe("Markdown math", () => {
       html.split(/<article /).find((a) => a.includes(`>数式（${title}）</h1>`))!;
     for (const title of ["Markdown", "AsciiDoc"]) {
       const page = article(title);
-      expect(page.match(/class="math math-inline"/g)).toHaveLength(7);
-      expect(page.match(/class="math math-display"/g)).toHaveLength(14);
+      expect(page.match(/class="math math-inline"/g)).toHaveLength(8);
+      expect(page.match(/class="math math-display"/g)).toHaveLength(15);
       // \mathbf and \mathbb come out as their own letters, which a plain variable is not.
       for (const letter of ["\u{1D404}", "\u{1D401}", "\u{1D433}", "\u211D", "\u2115"]) {
         expect([title, page.includes(letter)]).toEqual([title, true]);
