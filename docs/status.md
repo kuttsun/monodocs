@@ -50,7 +50,8 @@ what it was for is done: the published package verified on Linux and Windows, ev
 at under mermaid 12, and the math fixture checked on Windows with Cambria Math. 0.15.0 went out
 under `latest` with the CI guide pinned to it, and the published package, the release binaries, and
 the HTML they produce were verified after `latest` moved. The Windows host script and part of the
-Windows checks a person has to make are still open, as for 0.14.0.
+Windows checks a person has to make are still open, as for 0.14.0; v0.16 makes them for 0.16.0
+instead.
 
 v0.16 clears what earlier milestones set aside and enumerates what 1.0 freezes, so that 1.0 is left with
 the removal of `sidebar.exclude` and a final check ([roadmap.md](roadmap.md)).
@@ -533,7 +534,7 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 **Wide accents** ([roadmap.md](roadmap.md) 6.4)
 
 - [ ] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc
-- [ ] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture, and the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked to sit over or span their base, or recorded there
+- [ ] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture, and the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked, any that does not sit over or span its base being recorded there
 - [ ] Built on Windows with Cambria Math, each accent sits over its base and each wide one spans it, or what does not is recorded in [roadmap.md](roadmap.md) 6.4
 - [ ] What is fixed or accepted is stated in [roadmap.md](roadmap.md) 6.4 and in [syntax.md](syntax.md) in English and Japanese
 

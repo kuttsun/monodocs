@@ -4781,18 +4781,17 @@ Completion criteria:
   `examples/math` is still reported there, since the image has no MATH font on purpose (6.4)
 - The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`,
   `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc. Built to HTML
-  and PDF on Linux with Latin Modern Math, what 6.4 records is checked again on the fixture, and the accents it has no record
-  for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked to sit over or span
-  their base, or recorded in 6.4. Built
-  on Windows with Cambria Math, each accent sits over its base and each wide one spans it, or what
-  does not is recorded in 6.4. What is fixed or accepted is stated in 6.4 and in syntax.md in both
-  languages
+  and PDF on Linux with Latin Modern Math, what 6.4 records is checked again on the fixture, and
+  the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are
+  checked, any that does not sit over or span its base being recorded in 6.4. Built on Windows with
+  Cambria Math, each accent sits over its base and each wide one spans it, or what does not is
+  recorded in 6.4. What is fixed or accepted is stated in 6.4 and in syntax.md in both languages
 - The asciimath converter's licence, its size in the CLI bundle and the standalone binary, and the
   asciimath forms it does not handle are recorded in 6.4 before it is added, and it is named in
   `THIRD-PARTY-NOTICES.txt`. asciimath is rendered to MathML through KaTeX with what latexmath has:
   `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula
-  that does not convert. `math.enabled: false` turns asciimath off along with latexmath. Whether it is on by
-  default is decided in 6.4 with its reason, and so is what becomes of
+  that does not convert. `math.enabled: false` turns asciimath off along with latexmath. Whether it
+  is on by default is decided in 6.4 with its reason, and so is what becomes of
   `math/asciimath-not-rendered` — kept, retired, or reworded to name the key that turns asciimath
   on — under 27.3's promise about codes. syntax.md describes it in both languages
 - Search finds `ガイド` from `ｶﾞｲﾄﾞ` and the reverse, `引渡し` from `引き渡し` and the reverse, and

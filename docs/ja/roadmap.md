@@ -4535,15 +4535,15 @@ v0.14 は、実測が定めた 4 つの条件のもとで、数式を機能に�
   引き続き報告される。開発用イメージには意図して MATH フォントを入れていないからである（6.4）
 - 数式のフィクスチャが、Markdown と AsciiDoc の両方で `\acute`、`\grave`、`\widehat`、`\widetilde`、
   `\widecheck`、`\utilde`、`\overrightarrow`、`\overbrace` と `\underbrace` を含む。Linux で Latin Modern
-  Math を使って HTML と PDF にビルドし、6.4 の記録をフィクスチャの上で確かめ直す。6.4 に記録の無いもの（`\grave`、`\overrightarrow`、
-  `\overbrace`、`\underbrace`）は、基底の上に来るか基底にわたるかを確かめるか、6.4 に記録する。Windows で Cambria
-  Math を使ってビルドし、どのアクセントも基底の上に来て、幅の広いものは基底の幅いっぱいに伸びるか、
+  Math を使って HTML と PDF にビルドし、6.4 の記録をフィクスチャの上で確かめ直す。6.4 に記録の
+  無いもの（`\grave`、`\overrightarrow`、`\overbrace`、`\underbrace`）は、基底の上に来るか基底に
+  わたるかを確かめ、そうならないものは 6.4 に記録する。Windows で Cambria Math を使ってビルドし、どのアクセントも基底の上に来て、幅の広いものは基底の幅いっぱいに伸びるか、
   そうならないものを 6.4 に記録する。直したものと受け入れたものは、6.4 と両言語の syntax.md に書く
 - asciimath の変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない
   asciimath の形を、足す前に 6.4 に記録し、`THIRD-PARTY-NOTICES.txt` に載せる。asciimath は KaTeX を
   通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースの
-  コピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath とともに asciimath も止める。
-  既定で有効にするかは理由とともに 6.4 で決め、`math/asciimath-not-rendered` をどうするか（残す、
+  コピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath とともに
+  asciimath も止める。既定で有効にするかは理由とともに 6.4 で決め、`math/asciimath-not-rendered` をどうするか（残す、
   退役させる、asciimath を有効にするキーを名指すように言い換える）も、コードについての 27.3 の約束の
   もとで決める。syntax.md が両言語で説明する
 - 検索で `ｶﾞｲﾄﾞ` から `ガイド` が、`引き渡し` から `引渡し` が、それぞれ逆向きにも見つかり、
