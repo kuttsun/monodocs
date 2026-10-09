@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-10-07
+Last updated: 2026-10-09
 
 ## Support Status
 
@@ -25,7 +25,8 @@ Last updated: 2026-10-07
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
-| Frozen surfaces, JSON schema version 1            | 🚧 Planned| 1.0            |
+| Checklists, wide accents, asciimath, search folding, surfaces enumerated | 🚧 Planned| v0.16 |
+| `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
@@ -50,6 +51,9 @@ at under mermaid 12, and the math fixture checked on Windows with Cambria Math. 
 under `latest` with the CI guide pinned to it, and the published package, the release binaries, and
 the HTML they produce were verified after `latest` moved. The Windows host script and part of the
 Windows checks a person has to make are still open, as for 0.14.0.
+
+v0.16 clears what earlier milestones set aside and enumerates what 1.0 freezes, so that 1.0 is left with
+the removal of `sidebar.exclude` and a final check ([roadmap.md](roadmap.md)).
 
 ## Completion Criteria Status
 
@@ -516,6 +520,45 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 - [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including what is new for this milestone: diagrams rendering under mermaid 12 with the notices in the source, and formulas drawn with a MATH font — the published asset checked against its `.sha256`, run with a minimal environment and no Node.js on `examples/en` and `examples/math`, and its output driven in Chromium with `fonts-lmodern` installed through eleven checks: the sidebar rendering its 20 links, a link navigating and marking the current page, next, a search for `mermaid` returning 4 results with 4 highlights in the page it opens, `Escape` clearing the box, dark mode surviving a reload, the drawer at 375px opening and closing after a link, the footer reading `monodocs v0.15.0`, no script errors, and the two new ones: the diagram drawn under mermaid 12 with the `mermaid@12.1.0` notices once in the source, and the 21 formulas drawn in Latin Modern Math (by CDP `getPlatformFontsForNode`), the matrix's bracket stretched to 3.2em
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — in part: the math fixture's HTML looked at in Edge, and its PDF with formulas opened, during the beta (above); printing it, `serve --open`, and Mark of the Web with SmartScreen are still to be done
 - [x] Move the `next` dist-tag onto `0.15.0`, and confirm that the deployed CI guide pins `monodocs@0.15.0` in English and Japanese — `next` and `latest` both read `0.15.0`, and the deployed CI guide pins `monodocs@0.15.0` four times in each language
+
+### v0.16: What Is Left Before 1.0
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**Checklists and the sample documents** ([roadmap.md](roadmap.md) 6.3, 24.3.3)
+
+- [ ] An AsciiDoc checklist and a Markdown task list with the same items produce the same list markup, checked and unchecked, and no `❏` or `✓` from Asciidoctor reaches the output; a test asserts both, and [syntax.md](syntax.md) says so in English and Japanese
+- [ ] `examples/en`, `examples/ja`, and `examples/math`, built in the development image, raise no font warning, and a test asserts it; `examples/*/pdf.md` no longer writes `☒` itself, and the note in [development.md](development.md) that says the samples trip the check is removed in English and Japanese
+
+**Wide accents** ([roadmap.md](roadmap.md) 6.4)
+
+- [ ] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc
+- [ ] Built to HTML and PDF on Linux with Latin Modern Math, each accent sits over its base and each wide one spans it; what does not is fixed or recorded in [roadmap.md](roadmap.md) 6.4 as accepted
+- [ ] The same on Windows with Cambria Math
+
+**asciimath** ([roadmap.md](roadmap.md) 6.4)
+
+- [ ] The converter's licence, its size in the CLI bundle and the standalone binary, and the asciimath forms it does not handle are recorded in [roadmap.md](roadmap.md) 6.4 before it is added
+- [ ] asciimath is rendered to MathML through KaTeX with what latexmath has: `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula that does not convert
+- [ ] Whether asciimath is on by default is decided in [roadmap.md](roadmap.md) 6.4 with its reason; the warning v0.15 raises for it is gone or, if it stays off by default, names the key that turns it on; [syntax.md](syntax.md) describes it in English and Japanese
+
+**Search folding** ([roadmap.md](roadmap.md) 22.3)
+
+- [ ] The fold-in-place model is replaced by a token-to-source position map, and the folding v0.9 does still holds
+- [ ] Search finds `ガイド` from `ｶﾞｲﾄﾞ`, `引渡し` from `引き渡し`, and `install` from `installing`, each the other way too, highlighting and quoting the text as written in the page; tests cover each fold and a highlight over each
+- [ ] How okurigana variants are folded is chosen in [roadmap.md](roadmap.md) 22.3 with the alternatives and why they lost, and the search index's size on `examples/ja` is measured before and after and recorded; nothing that runs to megabytes is added to every document by default
+
+**The 1.0 surfaces** ([roadmap.md](roadmap.md) 12.4, 27.3)
+
+- [ ] Every configuration key with its default, every command and option, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc are enumerated in one place in English and Japanese, and a test fails when a key the schema accepts or a command or option the CLI defines is missing from it
+- [ ] The enumeration names the diagnostics JSON's `schemaVersion: 1` as what a CI job pins, and links to the command reference that defines it
+
+**Release**
+
+AsciiDoc checklists and search results change for existing documents, and asciimath does if it is on by default, so this release goes through a beta, as 0.15.0 did.
+
+- [ ] Publish `0.16.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`
+- [ ] Publish `0.16.0` under the `latest` tag, with release notes stating what changes for existing documents, and verify it and its release binaries the same way
 
 ## Supported Syntax
 
