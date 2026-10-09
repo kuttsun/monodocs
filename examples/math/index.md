@@ -20,7 +20,7 @@ monodocs build examples/math --format both -o dist/math   # dist/math/docs.html 
 - `\mathbb` と `\mathbf` の文字（式 9 の太字の E、B と、下の段落の二重線の R、N）が、ふつうの変数と見分けられる
 - 伸びる括弧（式 5、6、8、11）と根号（式 1、3）が中身に合わせて伸びる
 - アクセント（下の段落）が文字の上に来る。`aligned`（式 7）の `=` の前の隙間を見る
-- 幅の広いアクセント（式 15）が中身の上（`\utilde` と `\underbrace` は下）に来て、中身の幅に伸びる
+- 幅の広いアクセント（式 15）が中身の上（`\utilde` と `\underbrace` は下）に来る。`\overrightarrow` と括弧は中身の幅に伸び、`\widehat` などは Latin Modern Math では 1 文字ほどにとどまる（roadmap 6.4）
 
 MATH フォントの無いマシンで PDF を作ると、フォント検査が数式の文字（`font/missing`）と MATH テーブルの不在（`font/no-math-table`）を報告します。
 
@@ -117,5 +117,5 @@ e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} + \frac{x^5}{5!} 
 ## 式 15
 
 ```math
-\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{AB},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}
+\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{ABC},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}
 ```

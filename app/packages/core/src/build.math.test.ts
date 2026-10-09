@@ -329,7 +329,7 @@ describe("Markdown math", () => {
       String.raw`\operatorname{softmax}(\mathbf{z})_i = \frac{e^{z_i}}{\sum_{j=1}^{K} e^{z_j}}`,
       String.raw`\text{速度}\ v = \frac{\Delta x}{\Delta t} \quad [\mathrm{m/s}]`,
       String.raw`e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} + \frac{x^5}{5!} + \frac{x^6}{6!} + \frac{x^7}{7!} + \frac{x^8}{8!} + \frac{x^9}{9!} + \frac{x^{10}}{10!} + \cdots`,
-      String.raw`\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{AB},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}`,
+      String.raw`\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{ABC},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}`,
     ];
     expect(formulas("Markdown")).toEqual(measured);
     expect(formulas("AsciiDoc")).toEqual(formulas("Markdown"));

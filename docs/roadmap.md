@@ -699,7 +699,7 @@ others, is not yet seen; v0.16 adds them to the fixture and looks.
 
 **The accents, on the fixture (v0.16).** The fixture gains an inline `\acute{e},\ \grave{a}` and a
 fifteenth display formula with `\widehat`, `\widetilde`, `\widecheck`, and `\utilde` over (or under)
-`xyz`, `\overrightarrow{AB}`, and `\overbrace` and `\underbrace` of `a+b+c` with `n` beyond the brace.
+`xyz`, `\overrightarrow{ABC}`, and `\overbrace` and `\underbrace` of `a+b+c` with `n` beyond the brace.
 Built on Linux with Latin Modern Math (Chromium 154), in HTML and in the PDF, on both pages:
 
 - `\acute` and `\grave` sit over their letter, centred on its box as the other accents are;
@@ -708,10 +708,15 @@ Built on Linux with Latin Modern Math (Chromium 154), in HTML and in the PDF, on
   until Windows shows how Cambria Math sets them;
 - `\overrightarrow` spans its base, and `\overbrace` and `\underbrace` span the term, with `n` above
   and below the brace;
-- on screen only, Chromium leaves one end of the overbrace's brace unpainted, the left hook or the
-  right depending on where the formula sits, while the PDF has the whole brace and the underbrace is
-  whole in both. KaTeX's MathML as it is does the same, with or without the `accent` monodocs adds,
-  so it is the browser's, and accepted.
+- on screen, Chromium left part of a stretched brace unpainted — a run from one end, or both ends of
+  a long one, over and under alike — depending on where the formula fell; the PDF had them whole.
+  KaTeX's MathML on a bare page did the same, with or without the `accent` monodocs adds. Chromium
+  keeps a horizontally stretched operator's box at the width of the glyph before it stretched, and a
+  raster tile that misses that box skips its part (the cut moved with the 256-pixel tile grid, not
+  with the formula). The default theme now gives `mo[stretchy="true"]` a transparent outline as wide
+  as the viewport, which neither lays out nor scrolls, so that what the operator paints covers it;
+  a test moves both braces across a tile's width and measures their ink. A tall bracket's box has its
+  stretched height, and is not cut.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in

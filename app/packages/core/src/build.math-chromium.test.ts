@@ -275,6 +275,99 @@ describe.skipIf(!chromium)("formulas in a real browser", () => {
     }
   }, 60_000);
 
+  it("paints a stretched brace whole on screen, wherever the formula falls", async () => {
+    // Chromium keeps a stretched operator's box at the width of the glyph before it stretched, and a
+    // raster tile that misses that box skips its part of the brace: on screen, not in the PDF
+    // (roadmap 6.4, v0.16). The formula is moved across a tile's width and each brace's ink measured.
+    const braces = join(dir, "braces");
+    await mkdir(braces, { recursive: true });
+    const term = "a+b+c+d+e+f+g+h+i+j+k+l+m+n+o";
+    await writeFile(
+      join(braces, "b.md"),
+      `# B\n\n$$\\overbrace{${term}}^{n}$$\n\n$$\\underbrace{${term}}_{n}$$\n`,
+    );
+    const configFile = join(braces, "monodocs.config.yml");
+    await writeFile(configFile, "");
+    const built = join(braces, "out.html");
+    await buildSite({ configFile, inputDir: braces, outputFile: built, format: "html" });
+    const font = readFileSync(
+      new URL("../test-fixtures/fonts/lm-math/opentype/latinmodern-math.otf", import.meta.url),
+    ).toString("base64");
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1400, height: 600, deviceScaleFactor: 1 });
+      await page.goto(pathToFileURL(built).href);
+      await page.addStyleTag({
+        content:
+          `@font-face { font-family: "Fixture Math"; src: url(data:font/otf;base64,${font}); }` +
+          ' math { font-family: "Fixture Math"; }',
+      });
+      await page.evaluate(() => document.fonts.ready);
+      const cut: string[] = [];
+      for (let shift = 0; shift < 256; shift += 16) {
+        // Each display moved right by `shift`, still inside its column so that nothing is scrolled
+        // out of sight.
+        const scrolled = await page.evaluate((px) => {
+          const displays = [...document.querySelectorAll<HTMLElement>("#content .math-display")];
+          for (const d of displays) d.style.paddingLeft = `${px}px`;
+          return displays.some((d) => d.scrollWidth > d.clientWidth);
+        }, shift);
+        expect(scrolled).toBe(false);
+        for (const [tag, over] of [
+          ["mover", true],
+          ["munder", false],
+        ] as const) {
+          // The brace's own mover or munder, the one around the term rather than the script's.
+          const box = await page.evaluate((t) => {
+            const inner = document.querySelector(`#content .math-display ${t} > ${t}`)!;
+            const base = inner.firstElementChild!.getBoundingClientRect();
+            const all = inner.getBoundingClientRect();
+            return {
+              x: base.left,
+              w: base.width,
+              top: all.top,
+              bottom: all.bottom,
+              baseTop: base.top,
+              baseBottom: base.bottom,
+            };
+          }, tag);
+          const band = over
+            ? { y: box.top, height: box.baseTop - box.top }
+            : { y: box.baseBottom, height: box.bottom - box.baseBottom };
+          const clip = { x: box.x - 20, y: band.y, width: box.w + 40, height: band.height };
+          const png = await page.screenshot({ clip, encoding: "base64" });
+          // The ink's left and right edge, read from the screenshot in a canvas of its own.
+          const [left, right] = await page.evaluate(async (b64) => {
+            const img = new Image();
+            img.src = `data:image/png;base64,${b64}`;
+            await img.decode();
+            const canvas = new OffscreenCanvas(img.width, img.height);
+            const ctx = canvas.getContext("2d")!;
+            ctx.drawImage(img, 0, 0);
+            const { data, width, height } = ctx.getImageData(0, 0, img.width, img.height);
+            let min = width;
+            let max = -1;
+            for (let y = 0; y < height; y++)
+              for (let x = 0; x < width; x++)
+                if (data[(y * width + x) * 4]! < 128) {
+                  min = Math.min(min, x);
+                  max = Math.max(max, x);
+                }
+            return [min, max];
+          }, png as string);
+          // The brace reaches both ends of the term, within a few pixels of each.
+          if (left > 20 + 4 || right < 20 + box.w - 4)
+            cut.push(`${tag} at +${shift}px: ${left}–${right} of 20–${Math.round(20 + box.w)}`);
+        }
+      }
+      expect(cut).toEqual([]);
+    } finally {
+      await browser.close();
+    }
+  }, 120_000);
+
   it("starts no line with the punctuation after an inline formula, nor ends one with a bracket", async () => {
     const root = join(dir, "breaks");
     await mkdir(root, { recursive: true });

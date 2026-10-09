@@ -114,5 +114,5 @@ e^x = 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} + \frac{x^5}{5!} 
 
 [latexmath]
 ++++
-\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{AB},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}
+\widehat{xyz},\ \widetilde{xyz},\ \widecheck{xyz},\ \utilde{xyz},\ \overrightarrow{ABC},\ \overbrace{a+b+c}^{n},\ \underbrace{a+b+c}_{n}
 ++++

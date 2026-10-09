@@ -557,7 +557,8 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     expect(fontWarnings(result).map((w) => w.message)).toEqual([]);
   }, 120_000);
 
-  // examples/math: the formulas v0.14 measured, which it printed with every variable as tofu.
+  // examples/math: the formulas v0.14 measured, which it printed with every variable as tofu, and the
+  // accents v0.16 added.
   const MATH_FIXTURE = fileURLToPath(new URL("../../../../examples/math", import.meta.url));
 
   it.runIf(noMathFont)(

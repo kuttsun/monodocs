@@ -532,7 +532,7 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 **幅の広いアクセント**（[roadmap.md](roadmap.md) 6.4）
 
 - [x] 数式のフィクスチャが、Markdown と AsciiDoc の両方で `\acute`、`\grave`、`\widehat`、`\widetilde`、`\widecheck`、`\utilde`、`\overrightarrow`、`\overbrace` と `\underbrace` を含む——文中の `\acute{e},\ \grave{a}` と別行立ての式 15 を両方のページに足した。どちらも文中が 8、別行立てが 15 になる（`build.math.test.ts`）
-- [x] Linux で Latin Modern Math を使って HTML と PDF にビルドし、[roadmap.md](roadmap.md) 6.4 の記録をフィクスチャの上で確かめ直す。6.4 に記録の無いもの（`\grave`、`\overrightarrow`、`\overbrace`、`\underbrace`）は、基底の上（または下）に来るか基底にわたるかを確かめ、そうならないものはそこに記録する——[roadmap.md](roadmap.md) 6.4（v0.16）に記録した。`\acute` と `\grave` は文字の上、幅の広い 4 つは引き続き 1 文字ほどで受け入れ、`\overrightarrow` と括弧は項にわたる。画面でだけ Chromium が上の括弧の一方の端を描かず、KaTeX の MathML をそのまま描いても同じで、PDF では欠けない。ブラウザのものとして受け入れる
+- [x] Linux で Latin Modern Math を使って HTML と PDF にビルドし、[roadmap.md](roadmap.md) 6.4 の記録をフィクスチャの上で確かめ直す。6.4 に記録の無いもの（`\grave`、`\overrightarrow`、`\overbrace`、`\underbrace`）は、基底の上（または下）に来るか基底にわたるかを確かめ、そうならないものはそこに記録する——[roadmap.md](roadmap.md) 6.4（v0.16）に記録した。`\acute` と `\grave` は文字の上、幅の広い 4 つは引き続き 1 文字ほどで受け入れ、`\overrightarrow` と括弧は項にわたる。画面では Chromium が、ラスタタイルへの掛かり方によって、伸ばした括弧の一部を上下とも描かなかった。既定のテーマで `mo[stretchy="true"]` に透明な outline を与えて直し、`build.math-chromium.test.ts` が確かめる
 - [ ] Windows で Cambria Math を使って HTML と PDF にビルドし、どのアクセントも基底の上（`\utilde` と `\underbrace` は下）に来て、幅の広いものは基底の幅いっぱいに伸びるか、そうならないものを [roadmap.md](roadmap.md) 6.4 に記録する
 - [ ] 直したものと受け入れたものを、[roadmap.md](roadmap.md) 6.4 と英語・日本語の [syntax.md](syntax.md) に書く——Linux の結果は両方に書いた。Windows での結果はまだ
 

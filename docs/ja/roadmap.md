@@ -640,7 +640,7 @@ Cambria Math の Windows で npm の `0.15.0-beta.1` でビルドすると、フ
 
 **フィクスチャでのアクセント（v0.16）。** フィクスチャに、文中の `\acute{e},\ \grave{a}` と、15 番目の
 別行立ての数式を足した。後者は、`xyz` の上（または下）の `\widehat`、`\widetilde`、`\widecheck`、
-`\utilde`、`\overrightarrow{AB}`、`a+b+c` の `\overbrace` と `\underbrace`（括弧の先に `n`）である。
+`\utilde`、`\overrightarrow{ABC}`、`a+b+c` の `\overbrace` と `\underbrace`（括弧の先に `n`）である。
 Linux で Latin Modern Math（Chromium 154）を使い、HTML と PDF の両方で、両方のページを見た。
 
 - `\acute` と `\grave` は文字の上に来て、ほかのアクセントと同じく文字の箱の中央に置かれる。
@@ -649,9 +649,14 @@ Linux で Latin Modern Math（Chromium 154）を使い、HTML と PDF の両方�
   引き続き受け入れる。
 - `\overrightarrow` は基底にわたり、`\overbrace` と `\underbrace` は項にわたって、`n` は括弧の上と
   下に来る。
-- 画面でだけ、Chromium は上の括弧の一方の端（数式の位置によって左か右の鉤）を描かない。PDF では
-  括弧は欠けず、下の括弧はどちらでも欠けない。KaTeX の MathML をそのまま描いても、monodocs が足す
-  `accent` の有無にかかわらず同じになるので、ブラウザのものとして受け入れる。
+- 画面では、Chromium は伸ばした括弧の一部（端からの一続き。長い括弧では両端）を、上下の括弧とも、
+  数式の位置によって描かなかった。PDF では欠けなかった。素のページに KaTeX の MathML を置いても、
+  monodocs が足す `accent` の有無にかかわらず同じだった。Chromium は横に伸ばした演算子の箱を伸ばす
+  前のグリフの幅のまま残し、その箱を含まないラスタタイルはその部分を描かない（欠ける位置は数式では
+  なく 256 ピクセルのタイルの格子に沿って動いた）。既定のテーマは `mo[stretchy="true"]` に、
+  レイアウトにもスクロールにも入らない、ビューポートの幅の透明な outline を与え、演算子が描く範囲が
+  括弧を覆うようにした。テストが両方の括弧をタイルの幅だけ動かし、インクを測る。縦に伸びる括弧の
+  箱は伸びた高さを持つので欠けない。
 
 - **依存としての KaTeX。** KaTeX 0.16.47 は MIT である。Mermaid のランタイムがすでに同梱している版と同じで、
   2 つが食い違うとテストが失敗するので、告知が名指す KaTeX は 1 つになる。告知では、バンドルのほかの
