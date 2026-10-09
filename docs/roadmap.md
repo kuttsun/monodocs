@@ -713,10 +713,15 @@ Built on Linux with Latin Modern Math (Chromium 154), in HTML and in the PDF, on
   KaTeX's MathML on a bare page did the same, with or without the `accent` monodocs adds. Chromium
   keeps a horizontally stretched operator's box at the width of the glyph before it stretched, and a
   raster tile that misses that box skips its part (the cut moved with the 256-pixel tile grid, not
-  with the formula). The default theme now gives `mo[stretchy="true"]` a transparent outline as wide
-  as the viewport, which neither lays out nor scrolls, so that what the operator paints covers it;
-  a test moves both braces and an arrow across a tile's width and measures their ink. A tall
-  bracket's box has its stretched height, and is not cut. The rule is the default theme's, like the
+  with the formula). The default theme now gives `mo[stretchy="true"]` two transparent shadows, 20,000
+  pixels to either side, which neither lay out nor scroll, so that what the operator paints spans its
+  row however long it is; in forced colors, which would drop the shadows, the operator keeps them
+  (`forced-color-adjust: none`) and is drawn in `CanvasText`. A transparent outline was tried first and
+  lost twice over: as wide as the viewport, it left a brace three viewports long cut at both ends,
+  and forced colors turned it opaque, a black band across the page. A test moves both braces and an
+  arrow through a tile's width, scrolls a brace three viewports long along its length, in normal and
+  forced colors, and finds no empty run inside any of them; the PDF is the same pixel for pixel with
+  the shadows and without. A tall bracket's box has its stretched height, and is not cut. The rule is the default theme's, like the
   display formula's scroll, so a theme with its own `style.css` carries it too or loses it.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already

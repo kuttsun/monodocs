@@ -721,12 +721,23 @@ body.content-wide #content {
   padding: 0.25em 0;
 }
 
-/* Chromium keeps a stretched operator's box at the width of the glyph before it stretched, so on
-   screen a raster tile that misses that box skips its part of a brace or an arrow (roadmap 6.4,
-   v0.16); the PDF has no tiles. A transparent outline, which neither lays out nor scrolls, widens
-   what the operator paints to cover the whole of it. */
+/* Chromium keeps a horizontally stretched operator's box at the width of the glyph before it
+   stretched, so on screen a raster tile that misses that box skips its part of a brace or an arrow
+   (roadmap 6.4, v0.16); the PDF has no tiles. Two transparent shadows far to either side, which
+   neither lay out nor scroll, widen what the operator paints across its own row, however long it
+   is. Forced colors would drop the shadows, so there the operator keeps them, in the system's text
+   color. */
 #content math mo[stretchy="true"] {
-  outline: 100vw solid transparent;
+  box-shadow:
+    -20000px 0 transparent,
+    20000px 0 transparent;
+}
+
+@media (forced-colors: active) {
+  #content math mo[stretchy="true"] {
+    forced-color-adjust: none;
+    color: CanvasText;
+  }
 }
 
 /* What a formula draws as a background — `\rule`, `\colorbox` — is part of what it says, so it is
