@@ -525,40 +525,54 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
-**Checklists and the sample documents** ([roadmap.md](roadmap.md) 6.3, 24.3.3)
+**Checklists and the sample documents** ([roadmap.md](roadmap.md) 24.3.3)
 
-- [ ] An AsciiDoc checklist and a Markdown task list with the same items produce the same list markup, checked and unchecked, and no `❏` or `✓` from Asciidoctor reaches the output; a test asserts both, and [syntax.md](syntax.md) says so in English and Japanese
-- [ ] `examples/en`, `examples/ja`, and `examples/math`, built in the development image, raise no font warning, and a test asserts it; `examples/*/pdf.md` no longer writes `☒` itself, and the note in [development.md](development.md) that says the samples trip the check is removed in English and Japanese
+- [ ] Each item of an AsciiDoc checklist carries the same checkbox element a Markdown task list item carries — `<input type="checkbox" disabled>`, with `checked` when checked — and no `❏` or `✓` from Asciidoctor reaches the output; what `[%interactive]` produces is decided and stated; a test asserts both, and [syntax.md](syntax.md) says so in English and Japanese
+- [ ] `examples/en` and `examples/ja`, built to PDF in the development image, raise no font warning, and a test asserts it; `examples/*/pdf.md` no longer writes `☒` itself, and the note in [development.md](development.md) that says the samples trip the check is removed in English and Japanese. `examples/math` is still reported there, since the image has no MATH font on purpose
 
 **Wide accents** ([roadmap.md](roadmap.md) 6.4)
 
-- [ ] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc
-- [ ] Built to HTML and PDF on Linux with Latin Modern Math, each accent sits over its base and each wide one spans it; what does not is fixed or recorded in [roadmap.md](roadmap.md) 6.4 as accepted
-- [ ] The same on Windows with Cambria Math
+- [ ] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc
+- [ ] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture
+- [ ] Built on Windows with Cambria Math, each accent sits over its base and each wide one spans it, or what does not is recorded in [roadmap.md](roadmap.md) 6.4
+- [ ] What is fixed or accepted is stated in [roadmap.md](roadmap.md) 6.4 and in [syntax.md](syntax.md) in English and Japanese
 
 **asciimath** ([roadmap.md](roadmap.md) 6.4)
 
-- [ ] The converter's licence, its size in the CLI bundle and the standalone binary, and the asciimath forms it does not handle are recorded in [roadmap.md](roadmap.md) 6.4 before it is added
-- [ ] asciimath is rendered to MathML through KaTeX with what latexmath has: `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula that does not convert
-- [ ] Whether asciimath is on by default is decided in [roadmap.md](roadmap.md) 6.4 with its reason; the warning v0.15 raises for it is gone or, if it stays off by default, names the key that turns it on; [syntax.md](syntax.md) describes it in English and Japanese
+- [ ] The converter's licence, its size in the CLI bundle and the standalone binary, and the asciimath forms it does not handle are recorded in [roadmap.md](roadmap.md) 6.4 before it is added, and it is named in `THIRD-PARTY-NOTICES.txt`
+- [ ] asciimath is rendered to MathML through KaTeX with what latexmath has: `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula that does not convert; `math.enabled: false` turns it off with latexmath
+- [ ] Whether asciimath is on by default is decided in [roadmap.md](roadmap.md) 6.4 with its reason, and so is what becomes of `math/asciimath-not-rendered` under the promise [roadmap.md](roadmap.md) 27.3 makes about codes; [syntax.md](syntax.md) describes it in English and Japanese
 
 **Search folding** ([roadmap.md](roadmap.md) 22.3)
 
-- [ ] The fold-in-place model is replaced by a token-to-source position map, and the folding v0.9 does still holds
-- [ ] Search finds `ガイド` from `ｶﾞｲﾄﾞ`, `引渡し` from `引き渡し`, and `install` from `installing`, each the other way too, highlighting and quoting the text as written in the page; tests cover each fold and a highlight over each
-- [ ] How okurigana variants are folded is chosen in [roadmap.md](roadmap.md) 22.3 with the alternatives and why they lost, and the search index's size on `examples/ja` is measured before and after and recorded; nothing that runs to megabytes is added to every document by default
+- [ ] The fold-in-place model is replaced by a token-to-source position map, the folding v0.9 does still holds, and the test that keeps half-width katakana unmatched as a documented boundary is inverted
+- [ ] Search finds `ガイド` from `ｶﾞｲﾄﾞ` and `引渡し` from `引き渡し`, each the other way too, and `install` from `installing` and `installed`, highlighting and quoting the text as written in the page — with the key on, if okurigana folding sits behind one; tests cover each fold and a highlight over each
+- [ ] How okurigana variants are folded is chosen in [roadmap.md](roadmap.md) 22.3 with the alternatives and why they lost, and the size report's `page data` and total on `examples/ja` are measured before and after and recorded; on by default, the method adds less than 100 KB, and one that needs more sits behind a key that joins the enumeration
 
 **The 1.0 surfaces** ([roadmap.md](roadmap.md) 12.4, 27.3)
 
-- [ ] Every configuration key with its default, every command and option, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc are enumerated in one place in English and Japanese, and a test fails when a key the schema accepts or a command or option the CLI defines is missing from it
+- [ ] Every configuration key with its default, every command and option, every diagnostic code, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc are enumerated on one page of the site's reference in English and Japanese, with `sidebar.exclude` listed as deprecated and removed in 1.0; a test compares the page with the schema, the CLI, and `DIAGNOSTIC_CODES` in both directions, defaults included
 - [ ] The enumeration names the diagnostics JSON's `schemaVersion: 1` as what a CI job pins, and links to the command reference that defines it
+
+**Tests**
+
+- [ ] [testing.md](testing.md) lists the new and inverted tests in English and Japanese
 
 **Release**
 
-AsciiDoc checklists and search results change for existing documents, and asciimath does if it is on by default, so this release goes through a beta, as 0.15.0 did.
+AsciiDoc checklists and search results change for existing documents, and asciimath does if it is on by default, so this release goes through a beta, as 0.15.0 did. The Windows checks a person has to make are made for 0.16.0; those left open above for 0.13.0 to 0.15.0 are superseded by them rather than made separately.
 
-- [ ] Publish `0.16.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml`
-- [ ] Publish `0.16.0` under the `latest` tag, with release notes stating what changes for existing documents, and verify it and its release binaries the same way
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.16.0` in the version change itself, before the `v0.16.0` tag is created
+- [ ] `verify-published.yml` gains a 0.16 gate and steps for the checklist markup and the new search folding, merged before anything below runs
+- [ ] Publish `0.16.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the 0.16 steps ran rather than being skipped
+- [ ] During the beta, build `examples/en`, `examples/ja`, `examples/math`, and the site samples with the beta and look at the checklists, the formulas, and search; what no longer reads is fixed or recorded before `0.16.0` is cut
+- [ ] Publish `0.16.0` under the `latest` tag, with release notes stating what changes for existing documents, and verify it the same way with `dist_tag: 0.16.0`
+- [ ] Verify the `v0.16.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.16.0` assets on a Linux x64 host without Node.js
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.16.0` assets on a Windows 11 host
+- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the checklists and the new search folding
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
+- [ ] Move the `next` dist-tag onto `0.16.0`, and confirm that the deployed CI guide pins `monodocs@0.16.0` in English and Japanese
 
 ## Supported Syntax
 

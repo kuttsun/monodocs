@@ -2710,7 +2710,8 @@ Three related variations stay out of scope, because each one breaks that invaria
   and needs the same position map as half-width katakana.
 
 Supporting any of them means replacing the fold-in-place model with a token-to-source position map.
-None of them justifies that rewrite alone, so the three are taken up together, in v0.16.
+None of them justifies that rewrite alone; the three together do, and they are taken up in v0.16,
+before 1.0, since what search finds changes for every existing document.
 
 ### 22.4 Keyboard Navigation of the Results
 
@@ -4721,26 +4722,29 @@ Completion criteria:
 Purpose:
 
 Clear what earlier milestones set aside, and enumerate what 1.0 will freeze, so that 1.0 is left
-with nothing but the removal 12.4 reserves for a major release and a final check. Every item here
-either changes what an existing document builds or adds a surface 1.0 enumerates, which is why it
-belongs before the number rather than after it (12.4).
+with nothing but the removal 12.4 reserves for a major release and a final check. Most items here
+change what an existing document builds or add a surface 1.0 enumerates, which 12.4 makes cheap
+before the number and expensive after it; the rest are checks 1.0 should not be claimed without.
 
 - **AsciiDoc checklists are drawn with characters no default font has.** Asciidoctor renders an
   unchecked item as `❏` (U+274F) and a checked one as `✓`, where Markdown's task list renders a
   checkbox. No font in the development image covers `❏`, so every AsciiDoc checklist is tofu in
-  the PDF, and the two formats disagree on what the same list looks like (6.3). The sample
-  documents trip the font check for this reason and for `☒`, which `examples/*/pdf.md` writes to
-  describe tofu, so the build of the samples cannot show that the check is quiet when it should be
-- **Wide accents are unseen** (6.4). The math fixture has no `\acute`, `\grave`, `\widehat`,
-  `\widetilde`, or the other wide accents, so how a MATH font sets them is not known on either
-  platform
+  the PDF, and the same list looks different depending on the format it was written in, which
+  syntax.md's cross-format specification does not intend. The sample documents trip the font check
+  for this reason and for `☒`, which `examples/*/pdf.md` writes to describe tofu, so a build of the
+  samples cannot show that the check is quiet when it should be
+- **Wide accents are not settled** (6.4). On Linux with Latin Modern Math, `\widehat`, `\widetilde`,
+  `\widecheck`, and `\utilde` keep about the size of a letter, which 6.4 accepts until the Windows
+  check shows how Cambria Math sets them. That check was never made: the math fixture has none of
+  them, nor `\acute` or `\grave`, so Windows has not seen them
 - **asciimath prints as text** (6.4). v0.15 left AsciiDoc's asciimath unrendered with a warning,
   and said a 1.x release could add a converter only behind a key and render it by default only in
   2.0. Before 1.0, the default is still open
-- **Search does not fold half-width katakana, okurigana variants, or English inflections** (22.3).
-  Each breaks the length invariant the highlight and snippet offsets depend on, and 22.3 said to
-  revisit the three together, since none justifies replacing the fold-in-place model alone. Taking
-  them together is that rewrite
+- **Search does not fold half-width katakana, okurigana variants, or English stemming** (22.3).
+  Each breaks the length invariant the highlight and snippet offsets depend on, and 22.3 deferred
+  them because none alone justifies replacing the fold-in-place model. Together they do, and the
+  replacement has to come before 1.0: what search finds changes for every existing document, and a
+  default that 1.0 sets does not change in a minor release (12.4)
 - **The 1.0 surfaces are not enumerated in one place.** 1.0 listed the enumeration and the
   diagnostics schema version as its own work. The schema version is already 1
   (`DIAGNOSTICS_SCHEMA_VERSION`), and the command reference already tells a CI job to pin it rather
@@ -4749,54 +4753,70 @@ belongs before the number rather than after it (12.4).
 
 Implementation scope:
 
-- Render AsciiDoc checklist items as Markdown's task list renders them, checked and unchecked, so
-  that no font-dependent glyph reaches the output, and stop `examples/*/pdf.md` from writing `☒`
-  itself (6.3, 24.3.3)
-- Add the wide accents to the math fixture, check them on Linux and Windows, and fix or record what
-  is wrong (6.4)
+- Give each AsciiDoc checklist item the checkbox Markdown's task list gives it, checked and
+  unchecked, so that no font-dependent glyph reaches the output, and stop `examples/*/pdf.md` from
+  writing `☒` itself (24.3.3)
+- Add the accents 6.4 names to the math fixture, check them on Linux and Windows, and fix or record
+  what is wrong (6.4)
 - Choose an asciimath converter, after checking its licence and size as CONTRIBUTING.md requires of
   a dependency, render asciimath through KaTeX on the same terms as latexmath, and decide in the
   open whether it is on by default (6.4)
 - Replace the fold-in-place model with a token-to-source position map, and fold half-width katakana,
-  okurigana variants, and English inflections on it, with the method for okurigana chosen in the
-  open against the size budget (20.5, 22.3)
-- Enumerate the frozen surfaces in one place, the diagnostics schema version among them (12.4, 27.3)
+  okurigana variants, and English stemming on it, with the method for okurigana chosen in the open
+  against the size budget (20.5, 22.3)
+- Enumerate the frozen surfaces in one place, the diagnostic codes and the diagnostics schema
+  version among them (12.4, 27.3)
 
 Completion criteria:
 
-- An AsciiDoc checklist and a Markdown task list with the same items produce the same list markup,
-  checked and unchecked, and no `❏` or `✓` from Asciidoctor reaches the output. A test asserts both,
-  and syntax.md says so in both languages
-- `examples/en`, `examples/ja`, and `examples/math`, built in the development image, raise no font
-  warning, and a test asserts it; the note in development.md that says they do is removed in both
+- Each item of an AsciiDoc checklist carries the same checkbox element a Markdown task list item
+  carries — `<input type="checkbox" disabled>`, with `checked` when checked — and no `❏` or `✓`
+  from Asciidoctor reaches the output. What `[%interactive]` produces is decided and stated. A test
+  asserts both, and syntax.md says so in both languages
+- `examples/en` and `examples/ja`, built to PDF in the development image, raise no font warning, and
+  a test asserts it; the note in development.md that says they do is removed in both languages.
+  `examples/math` is still reported there, since the image has no MATH font on purpose (6.4)
+- The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`,
+  `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc. Built to HTML
+  and PDF on Linux with Latin Modern Math, what 6.4 records is checked again on the fixture. Built
+  on Windows with Cambria Math, each accent sits over its base and each wide one spans it, or what
+  does not is recorded in 6.4. What is fixed or accepted is stated in 6.4 and in syntax.md in both
   languages
-- The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\overrightarrow`, and
-  `\overbrace` with `\underbrace`, in Markdown and AsciiDoc. Built to HTML and PDF on Linux with
-  Latin Modern Math and on Windows with Cambria Math, each accent sits over its base and each wide
-  one spans it; what does not is fixed or recorded in 6.4 as accepted
 - The asciimath converter's licence, its size in the CLI bundle and the standalone binary, and the
-  asciimath forms it does not handle are recorded in 6.4 before it is added. asciimath is rendered
-  to MathML through KaTeX with what latexmath has: `mathvariant` conversion, copying its source as
-  written, search, and a diagnostic for a formula that does not convert. Whether it is on by default
-  is decided in 6.4 with its reason; the warning v0.15 raises for asciimath is gone or, if it stays
-  off by default, names the key that turns it on
+  asciimath forms it does not handle are recorded in 6.4 before it is added, and it is named in
+  `THIRD-PARTY-NOTICES.txt`. asciimath is rendered to MathML through KaTeX with what latexmath has:
+  `mathvariant` conversion, copying its source as written, search, and a diagnostic for a formula
+  that does not convert. `math.enabled: false` turns it off with latexmath. Whether it is on by
+  default is decided in 6.4 with its reason, and so is what becomes of
+  `math/asciimath-not-rendered` — kept, retired, or reworded to name the key that turns asciimath
+  on — under 27.3's promise about codes. syntax.md describes it in both languages
 - Search finds `ガイド` from `ｶﾞｲﾄﾞ` and the reverse, `引渡し` from `引き渡し` and the reverse, and
-  `install` from `installing` and the reverse, highlighting and quoting the text as written in the
-  page rather than its folded form. The folding that v0.9 does still holds, and tests cover each
-  fold and a highlight over each
-- How okurigana variants are folded — a dictionary, a rule, or something else — is chosen in 22.3
-  with the alternatives and why they lost, and the search index's size is measured on
-  `examples/ja` before and after and recorded. Nothing that runs to megabytes is added to every
-  document by default; if the chosen method needs that, it sits behind a key
-- The frozen surfaces — every configuration key with its default, every command and option, and the
-  markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc — are enumerated in one place in
-  both languages, and a test fails when a key the schema accepts or a command or option the CLI
-  defines is missing from it
+  `install` from `installing` and `installed` (the other way already holds, since matching is by
+  substring), highlighting and quoting the text as written in the page rather than its folded form.
+  If okurigana folding sits behind a key, it holds with the key on. The folding v0.9 does still
+  holds, the test that keeps half-width katakana unmatched as a documented boundary is inverted, and
+  tests cover each fold and a highlight over each
+- How okurigana variants are folded is chosen in 22.3 with the alternatives and why they lost: a
+  dictionary, which 22.3 says the characters cannot replace, a matching rule that tolerates kana
+  between kanji rather than deriving the variant, with the false matches that brings, or something
+  else. The 20.5 size report's `page data` and total are measured on `examples/ja` before and after
+  and recorded. On by default, the method adds less than 100 KB to `examples/ja`; one that needs more
+  sits behind a key, and the key joins the enumeration below
+- The frozen surfaces — every configuration key with its default, every command and option, every
+  diagnostic code, and the markup monodocs recognises beyond CommonMark, GFM, and AsciiDoc — are
+  enumerated on one page of the site's reference in both languages, with `sidebar.exclude` listed as
+  deprecated and removed in 1.0. A test compares the page with the schema, the CLI, and
+  `DIAGNOSTIC_CODES` in both directions, defaults included
 - The enumeration names the diagnostics JSON's `schemaVersion: 1` as what a CI job pins, and links
   to the command reference that defines it
+- testing.md lists the new and inverted tests in both languages
 - Because AsciiDoc checklists and search results change for existing documents, and asciimath does
-  if it is on by default, 0.16.0 goes through a beta before `latest`, as 0.15.0 did, and the release
-  notes state what changes
+  if it is on by default, 0.16.0 goes through a beta before `latest`, as 0.15.0 did, with the same
+  verification: the published package on Linux x64 and Windows x64, the release binaries, a driven
+  browser pass over what the released Linux binary builds, the samples built and looked at during the
+  beta, and the CI guide pinned to the release. The release notes state what changes. The Windows
+  checks a person has to make are made for 0.16.0; those left open for 0.13.0 to 0.15.0 are
+  superseded by them rather than made separately
 
 ---
 
@@ -4816,6 +4836,13 @@ What it contains:
 - Documentation, in both languages, that describes the tool as it is: no key in the reference that
   the schema does not have, and no behaviour in architecture.md that the code does not do. v0.11
   makes this true; 1.0 is where it is checked again, because that is what the number claims
+
+Completion criteria:
+
+- `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the
+  enumeration no longer lists it
+- The enumeration's test passes, and the documentation is checked against the code in both
+  languages as described above
 
 ---
 

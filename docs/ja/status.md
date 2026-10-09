@@ -523,40 +523,54 @@ mermaid 12 では図を含む既存の文書がすべて違うものにビルド
 
 このマイルストーンは [roadmap.md](roadmap.md) が定義し、以下の一覧で追跡する。
 
-**チェックリストとサンプル文書**（[roadmap.md](roadmap.md) 6.3、24.3.3）
+**チェックリストとサンプル文書**（[roadmap.md](roadmap.md) 24.3.3）
 
-- [ ] 同じ項目を持つ AsciiDoc のチェックリストと Markdown のタスクリストが、チェック済みも未チェックも同じリストのマークアップを出し、Asciidoctor の `❏` や `✓` が出力に届かない。テストが両方を確かめ、[syntax.md](syntax.md) が日英でそう書く
-- [ ] 開発用イメージでビルドした `examples/en`、`examples/ja`、`examples/math` がフォントの警告を出さず、テストがそれを確かめる。`examples/*/pdf.md` は `☒` そのものを書かず、サンプルが検査に引っかかると書いた [development.md](development.md) の注記は日英で消す
+- [ ] AsciiDoc のチェックリストの各項目が、Markdown のタスクリストの項目と同じチェックボックスの要素（`<input type="checkbox" disabled>`、チェック済みなら `checked` 付き）を持ち、Asciidoctor の `❏` や `✓` が出力に届かない。`[%interactive]` が何を出すかを決めて書く。テストが両方を確かめ、[syntax.md](syntax.md) が英語と日本語でそう書く
+- [ ] 開発用イメージで PDF にビルドした `examples/en` と `examples/ja` がフォントの警告を出さず、テストがそれを確かめる。`examples/*/pdf.md` は `☒` そのものを書かず、サンプルが検査に引っかかると書いた [development.md](development.md) の注記は英語と日本語で消す。`examples/math` はそこでは引き続き報告される。開発用イメージには意図して MATH フォントを入れていないからである
 
 **幅の広いアクセント**（[roadmap.md](roadmap.md) 6.4）
 
-- [ ] 数式のフィクスチャが、Markdown と AsciiDoc の両方で `\acute`、`\grave`、`\widehat`、`\widetilde`、`\overrightarrow`、`\overbrace` と `\underbrace` を含む
-- [ ] Linux で Latin Modern Math を使って HTML と PDF にビルドし、どのアクセントも基底の上に来て、幅の広いものは基底にわたる。そうならないものは直すか、受け入れるものとして [roadmap.md](roadmap.md) 6.4 に記録する
-- [ ] Windows で Cambria Math を使って同じことを確かめる
+- [ ] 数式のフィクスチャが、Markdown と AsciiDoc の両方で `\acute`、`\grave`、`\widehat`、`\widetilde`、`\widecheck`、`\utilde`、`\overrightarrow`、`\overbrace` と `\underbrace` を含む
+- [ ] Linux で Latin Modern Math を使って HTML と PDF にビルドし、[roadmap.md](roadmap.md) 6.4 の記録をフィクスチャの上で確かめ直す
+- [ ] Windows で Cambria Math を使ってビルドし、どのアクセントも基底の上に来て、幅の広いものは基底の幅いっぱいに伸びるか、そうならないものを [roadmap.md](roadmap.md) 6.4 に記録する
+- [ ] 直したものと受け入れたものを、[roadmap.md](roadmap.md) 6.4 と英語・日本語の [syntax.md](syntax.md) に書く
 
 **asciimath**（[roadmap.md](roadmap.md) 6.4）
 
-- [ ] 変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない asciimath の形を、足す前に [roadmap.md](roadmap.md) 6.4 に記録する
-- [ ] asciimath を KaTeX を通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースのコピー、検索、変換できない数式への診断である
-- [ ] 既定で有効にするかを理由とともに [roadmap.md](roadmap.md) 6.4 で決める。v0.15 が出す警告は無くなるか、既定で無効のままなら有効にするキーを名指すものになる。[syntax.md](syntax.md) が日英で説明する
+- [ ] 変換器のライセンス、CLI のバンドルとスタンドアロンバイナリでのサイズ、扱えない asciimath の形を、足す前に [roadmap.md](roadmap.md) 6.4 に記録し、`THIRD-PARTY-NOTICES.txt` に載せる
+- [ ] asciimath を KaTeX を通して MathML に描き、latexmath と同じものを持つ。`mathvariant` の変換、書かれたとおりのソースのコピー、検索、変換できない数式への診断である。`math.enabled: false` は latexmath と一緒に止める
+- [ ] 既定で有効にするかを理由とともに [roadmap.md](roadmap.md) 6.4 で決め、`math/asciimath-not-rendered` をどうするかも、コードについての [roadmap.md](roadmap.md) 27.3 の約束のもとで決める。[syntax.md](syntax.md) が英語と日本語で説明する
 
 **検索の畳み込み**（[roadmap.md](roadmap.md) 22.3）
 
-- [ ] その場で畳む方式をトークンと原文の位置対応表に置き換え、v0.9 の畳み込みはそのまま成り立つ
-- [ ] 検索で `ｶﾞｲﾄﾞ` から `ガイド` が、`引き渡し` から `引渡し` が、`installing` から `install` が、それぞれ逆向きにも見つかり、ハイライトと抜粋はページに書かれたとおりの文字列に付く。テストがそれぞれの畳み込みとその上のハイライトを確かめる
-- [ ] 送り仮名の揺れをどう畳むかを、ほかの案と退けた理由とともに [roadmap.md](roadmap.md) 22.3 で選び、`examples/ja` の検索インデックスのサイズを前後に測って記録する。メガバイト単位になるものを既定ですべての文書に足さない
+- [ ] その場で畳む方式をトークンと原文の位置対応表に置き換え、v0.9 の畳み込みはそのまま成り立ち、半角カタカナを文書化した境界として一致させないテストは反転する
+- [ ] 検索で `ｶﾞｲﾄﾞ` から `ガイド` が、`引き渡し` から `引渡し` が、それぞれ逆向きにも見つかり、`installing` と `installed` から `install` が見つかる。ハイライトと抜粋はページに書かれたとおりの文字列に付く。送り仮名の畳み込みがキーの後ろにあるなら、キーを有効にしたときに成り立つ。テストがそれぞれの畳み込みとその上のハイライトを確かめる
+- [ ] 送り仮名の揺れをどう畳むかを、ほかの案と退けた理由とともに [roadmap.md](roadmap.md) 22.3 で選び、サイズ報告の `page data` と合計を `examples/ja` で前後に測って記録する。既定で有効にする方法が足すものは 100 KB 未満であり、それを超える方法はキーの後ろに置き、そのキーを列挙に加える
 
 **1.0 の表面**（[roadmap.md](roadmap.md) 12.4、27.3）
 
-- [ ] 既定値付きのすべての設定キー、すべてのコマンドとオプション、CommonMark・GFM・AsciiDoc を超えて monodocs が認識する記法を日英で 1 か所に列挙し、スキーマが受理するキーや CLI が定義するコマンド・オプションがそこに無ければテストが失敗する
+- [ ] 既定値付きのすべての設定キー、すべてのコマンドとオプション、すべての診断コード、CommonMark・GFM・AsciiDoc を超えて monodocs が認識する記法を、サイトのリファレンスの 1 ページに英語と日本語で列挙し、`sidebar.exclude` は非推奨で 1.0 で削除するものとして載せる。テストがそのページをスキーマ、CLI、`DIAGNOSTIC_CODES` と双方向に、既定値も含めて比べる
 - [ ] 列挙は、CI ジョブが固定するものとして診断 JSON の `schemaVersion: 1` を名指し、それを定義するコマンドのリファレンスへリンクする
+
+**テスト**
+
+- [ ] [testing.md](testing.md) が、新しいテストと反転したテストを英語と日本語で載せる
 
 **リリース**
 
-AsciiDoc のチェックリストと検索結果が既存の文書で変わり、既定で有効なら asciimath も変わるので、このリリースは 0.15.0 と同じくベータを経る。
+AsciiDoc のチェックリストと検索結果が既存の文書で変わり、既定で有効なら asciimath も変わるので、このリリースは 0.15.0 と同じくベータを経る。Windows で人が行う確認は 0.16.0 について行い、上で 0.13.0 から 0.15.0 に残っているものは別に行わず、それで置き換える。
 
-- [ ] `0.16.0-beta.1` を `next` タグで公開し、`verify-published.yml` で Linux x64 と Windows x64 で検証する
-- [ ] `0.16.0` を `latest` タグで公開し、リリースノートに既存の文書で変わるものを書き、同じように本体とリリースバイナリを検証する
+- [ ] ドキュメントサイトの CI ガイドが、英語・日本語とも、`v0.16.0` タグを作る前のバージョン変更そのものの中で `monodocs@0.16.0` に固定する
+- [ ] `verify-published.yml` に 0.16 の判定と、チェックリストのマークアップと新しい検索の畳み込みを確かめる手順を足し、以下より前にマージする
+- [ ] `0.16.0-beta.1` を `next` タグで公開し、`dist_tag: next` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.16 の手順が飛ばされずに走ったことを確かめる
+- [ ] ベータ中に `examples/en`、`examples/ja`、`examples/math`、サイトのサンプルをベータでビルドし、チェックリスト、数式、検索を見る。読めなくなったものは `0.16.0` を切る前に直すか記録する
+- [ ] `0.16.0` を `latest` タグで公開し、リリースノートに既存の文書で変わるものを書き、`dist_tag: 0.16.0` で同じように検証する
+- [ ] `v0.16.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する
+- [ ] Node.js の無い Linux x64 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) を実行する
+- [ ] Windows 11 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) を実行する
+- [ ] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。チェックリストと新しい検索の畳み込みを含める
+- [ ] 人にしか答えられない Windows での確認。生成した HTML の Edge での見え方（とりわけ日本語と数式）、数式を含む PDF を開いて印刷すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットに対する Mark of the Web と SmartScreen
+- [ ] `next` の dist-tag を `0.16.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.16.0` に固定していることを確かめる
 
 ## 対応記法
 
