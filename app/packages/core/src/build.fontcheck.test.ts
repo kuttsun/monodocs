@@ -345,6 +345,11 @@ const hasCjkAndEmoji = fontconfigCovers("65E5") === true && fontconfigCovers("27
  * 言えないので、在ることの判定には使わない）。開発用イメージがこれに当たる。
  */
 const noMathFont = fontconfigCovers("1D465") === false;
+/**
+ * Set where the CJK and emoji fonts are installed on purpose (the Linux job in pr-ci.yml), so that the
+ * sample documents' check fails there rather than skipping if the fonts go missing.
+ */
+const requireSampleFonts = process.env.MONODOCS_TEST_SAMPLE_FONTS === "1";
 
 /**
  * A theme that sets formulas in Latin Modern Math: the default theme's stylesheet, which a theme's
@@ -630,7 +635,7 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
   }
 
   for (const sample of SAMPLES) {
-    it.skipIf(!hasCjkAndEmoji)(
+    it.skipIf(!hasCjkAndEmoji && !requireSampleFonts)(
       `reports nothing of examples/${sample.name} with a math font`,
       async () => {
         const root = join(dir, `real-sample-${sample.name}`);

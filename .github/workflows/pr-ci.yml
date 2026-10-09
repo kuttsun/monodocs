@@ -56,8 +56,18 @@ jobs:
       - name: Audit app dependencies
         run: pnpm audit
 
+      # The fonts the development image has, so that the sample documents' font check runs here
+      # (build.fontcheck.test.ts) instead of skipping for want of them.
+      - name: Install CJK and emoji fonts
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk fonts-noto-color-emoji
+
       - name: Run app checks
         run: pnpm ci:check
+        env:
+          MONODOCS_TEST_SAMPLE_FONTS: ${{ runner.os == 'Linux' && '1' || '' }}
 
       - name: Verify third-party notices
         run: >-
