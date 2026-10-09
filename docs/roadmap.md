@@ -503,12 +503,14 @@ formula as `$TeX$`, copying, search, and diagnostics.
   remembered — none depends on anything but the position and the source — so brackets take
   milliseconds however deeply they nest. The four characters are themselves; text escapes every character TeX reads, and a run of `-`,
   `'`, or `` ` `` is kept from KaTeX's ligatures. What is left: in text, KaTeX's font draws a single
-  `'` or `` ` `` as a typographic quote, whatever its escape.
+  `'` or `` ` `` as a typographic quote, whatever its escape; and `bbit` is KaTeX's `\boldsymbol`, which
+  sets a capital Greek letter bold upright, as TeX does, rather than bold italic — the same as
+  `\boldsymbol` in latexmath — and a digit bold, Unicode having no bold italic digits.
 - **What cannot be converted is reported.** A formula of some two thousand tokens exhausts the
-  converter's stack, and one it reads without understanding comes out with an `undefined` in its TeX
-  (`color red x`). Both, and a style KaTeX cannot draw, are left as Asciidoctor writes them and
-  reported as `math/parse-failed`, naming the formula as written — an `undefined` counted, so that
-  one the author wrote does not hide another; so is
+  converter's stack, and `color` given its first argument without the brackets it takes it from
+  (`color red x`) writes `undefined` in its place. Both, an `undefined` in TeX made from a source
+  without the word, and a style KaTeX cannot draw are left as Asciidoctor writes them, in
+  asciimath's `\$...\$`, and reported as `math/parse-failed`, naming the formula as written; so is
   one whose TeX KaTeX cannot parse, such as a color it does not know (`color(1 2)(x)`) or four primes
   in a row, which KaTeX reads as a double superscript. asciimath is no way into TeX: a command it
   does not know, such as `\href{...}`, comes out as letters, so nothing reaches KaTeX that latexmath

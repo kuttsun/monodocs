@@ -39,6 +39,8 @@ interface AsciiMathParser {
   parse(asciimath: string): string;
   escape_text(text: string): string;
   sort_symbols(): void;
+  /** Set by a parse that wrote a value it did not read, such as `color`'s, which is then reported. */
+  unread?: boolean;
   unary_symbols: AsciiMathSymbol[];
   binary_symbols: AsciiMathSymbol[];
   constants: AsciiMathSymbol[];
@@ -146,9 +148,21 @@ export function createAsciiMathParser(): AsciiMathParser {
       return memo.get(key);
     };
   }
+  // `color` takes its first argument as it is written, from inside its brackets; given one without
+  // them (`color red x`) it writes `undefined` in its place, which is marked so the formula is reported.
+  const binary = internals.binary!.bind(parser);
+  internals.binary = (...args: unknown[]) => {
+    const read = binary(...args) as
+      { op?: { rawfirst?: boolean }; arg1?: { middle_asciimath?: string } | null } | undefined;
+    if (read?.op?.rawfirst && read.arg1 && read.arg1.middle_asciimath === undefined) {
+      parser.unread = true;
+    }
+    return read;
+  };
   const parse = parser.parse.bind(parser);
   parser.parse = (asciimath) => {
     memo = new Map();
+    parser.unread = false;
     try {
       return parse(asciimath);
     } finally {
@@ -224,10 +238,18 @@ const INLINE = /\uE000([\uE010-\uE01F]+)\uE001([^\uE000-\uE003]*)\uE002\1\uE003/
 const BLOCK_KEY = /data-monodocs-math="([\uE010-\uE01F]+)"/g;
 const END = /\uE000([\uE010-\uE01F]+)\uE001|\uE002([\uE010-\uE01F]+)\uE003/g;
 
+/** The delimiters Asciidoctor writes an inline formula with, by notation. */
+const DELIMITERS = {
+  latexmath: ["\\(", "\\)"],
+  asciimath: ["\\$", "\\$"],
+} as const;
+
 interface Formula {
   tex: string;
   source: string;
   display: boolean;
+  /** The delimiters Asciidoctor writes an inline formula of this notation with. */
+  delimiters: readonly [string, string];
   /** A display formula's block, as this converter wrote it and as Asciidoctor writes it. */
   block?: { ours: string; asciidoctor: string; oursDecoded: string; asciidoctorDecoded: string };
 }
@@ -269,12 +291,18 @@ export async function createMathConverter(
           })
       : [written];
     try {
-      const tex = parts.map((part) => asciimathParser.parse(part));
-      // What it read without understanding comes out as `undefined` (`color red x`, without the
-      // parentheses `color` takes), a formula that would render wrong rather than fail; counted, so
-      // that an author's own `undefined` does not hide one.
-      const undefinedIn = (text: string) => text.match(/\bundefined\b/g)?.length ?? 0;
-      if (tex.some((part, n) => undefinedIn(part) > undefinedIn(parts[n]!))) {
+      let unread = false;
+      const tex = parts.map((part) => {
+        const converted = asciimathParser.parse(part);
+        unread ||= asciimathParser.unread === true;
+        return converted;
+      });
+      // A value it did not read would render wrong rather than fail. Besides `color`'s, an
+      // `undefined` in TeX made from a source without the word is one too.
+      if (
+        unread ||
+        (tex.some((part) => part.includes("undefined")) && !written.includes("undefined"))
+      ) {
         failed.push({ source, detail: t("pages.mathAsciimathUnread") });
         return undefined;
       }
@@ -311,7 +339,7 @@ export async function createMathConverter(
       const source = `${inline}:[${written.replace(/\]/g, "\\]")}]`;
       const tex = inline === "asciimath" ? asciimathTex(written, source, false) : written;
       if (tex === undefined) return base.convert(node, transform, opts);
-      const key = newKey({ tex, source, display: false });
+      const key = newKey({ tex, source, display: false, delimiters: DELIMITERS[inline] });
       return `\uE000${key}\uE001${converted}\uE002${key}\uE003`;
     }
     const block = name === "stem" ? node.style : undefined;
@@ -330,7 +358,7 @@ export async function createMathConverter(
       const source = `[${block}]\n++++\n${written}\n++++`;
       const tex = block === "asciimath" ? asciimathTex(written, source, true) : written;
       if (tex === undefined) return base.convert(node, transform, opts);
-      const formula: Formula = { tex, source, display: true };
+      const formula: Formula = { tex, source, display: true, delimiters: DELIMITERS[block] };
       const key = newKey(formula);
       const id = node.id ? ` id="${attribute(node.id)}"` : "";
       const role = node.role ? ` ${attribute(node.role)}` : "";
@@ -397,9 +425,9 @@ export async function createMathConverter(
 
   /**
    * A string with every marker this converter wrote written back as Asciidoctor writes the formula:
-   * a whole one as `\(` and `\)` around its text, as it stands (an attribute's value or a comment is
-   * already decoded); an end left alone, because the HTML around it broke the marker apart, as `\(` or
-   * `\)`, and the formula reported. Anything else is left as written.
+   * a whole one in its notation's delimiters (`\(` and `\)`, or `\$` for asciimath) around its text,
+   * as it stands (an attribute's value or a comment is already decoded); an end left alone, because
+   * the HTML around it broke the marker apart, as its delimiter, and the formula reported. Anything else is left as written.
    */
   const restore = (value: string): string => {
     if (!value.includes(OPEN) && !value.includes("\uE002") && !/[\uE010-\uE01F]/.test(value)) {
@@ -424,14 +452,15 @@ export async function createMathConverter(
       value = value.replace(pattern, (found) => replacements.get(found) ?? found);
     }
     return value
-      .replace(INLINE, (whole, key: string, converted: string) =>
-        formulas.has(key) ? `\\(${converted}\\)` : whole,
-      )
+      .replace(INLINE, (whole, key: string, converted: string) => {
+        const formula = formulas.get(key);
+        return formula ? `${formula.delimiters[0]}${converted}${formula.delimiters[1]}` : whole;
+      })
       .replace(END, (whole, open: string | undefined, close: string | undefined) => {
         const formula = formulas.get(open ?? close!);
         if (!formula) return whole;
         if (!broken.includes(formula.source)) broken.push(formula.source);
-        return open !== undefined ? "\\(" : "\\)";
+        return open !== undefined ? formula.delimiters[0] : formula.delimiters[1];
       });
   };
 

@@ -356,7 +356,7 @@ describe("AsciiDoc math", () => {
     const long = Array(6000).fill("a").join("+");
     const { html, result } = await build(
       `= T\n\n[asciimath]\n++++\n${long}\n++++\n\n` +
-        "asciimath:[text(undefined) + color red x] and asciimath:[bbsf_1(A)] and asciimath:[y]\n",
+        "asciimath:[undefined + color red x] and asciimath:[bbsf_1(A)] and asciimath:[y]\n",
     );
     const failed = result.warnings.filter((w) => w.code === "math/parse-failed");
     expect(failed.map((w) => w.message)).toEqual([
@@ -416,6 +416,23 @@ describe("AsciiDoc math", () => {
       '= T\n\n[subs=macros]\n++++\n<span data-monodocs-math="latexmath:[x]">Visible</span>\n++++\n',
     );
     expect(own.html).not.toMatch(/[\uE000-\uE01F]/);
+  });
+
+  it("writes an asciimath marker back in asciimath's own delimiters, as with math off", async () => {
+    const adoc =
+      "= T\n\n[subs=macros]\n++++\n" +
+      '<span title="asciimath:[x^2]">T</span>\n' +
+      "<!-- asciimath:[y] -->\n" +
+      '<script>window.label = "asciimath:[z]";</script>\n' +
+      "++++\n";
+    const on = await build(adoc);
+    const off = await build(adoc, "math:\n  enabled: false\n");
+    expect(on.html).not.toMatch(/[\uE000-\uE01F]/);
+    const titles = (html: string) => [...html.matchAll(/title="([^"]*)"/g)].map((m) => m[1]);
+    expect(titles(on.html)).toEqual(titles(off.html));
+    expect(on.html).toContain("<!-- \\$y\\$ -->");
+    expect(on.html).toContain('window.label = "\\$z\\$"');
+    expect(on.html).not.toContain("\\(");
   });
 
   it("writes markers back where no element can go, and in a template", async () => {
