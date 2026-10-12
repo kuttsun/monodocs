@@ -87,6 +87,8 @@ dist/
 - Make it usable as a GitHub Action
 - Provide a standalone binary
 - Make themes and layouts extensible
+- Output the difference from an earlier version as HTML and PDF that readers who never look at Git
+  can be handed (7.3)
 
 ---
 
@@ -995,6 +997,113 @@ PDF
 ```
 
 PDF output will be supported after HTML output stabilizes.
+
+### 7.3 Difference from an Earlier Version (1.x)
+
+When a revised specification is handed over, the first thing the receiving side wants to know is
+what changed since the last version. A document written in Word shows that with tracked changes.
+The difference between two versions of a monodocs document can be read with `git diff`, but what
+it shows is the difference in the Markdown and AsciiDoc sources, and only the author can read
+that. Customers, approvers, and people on site do not look at Git. So monodocs can output HTML and
+PDF with the difference from an earlier version (additions, deletions, changes) written into
+them. It does not replace `git diff`; it is for the readers `git diff` does not reach.
+
+```bash
+monodocs build ./docs -o ./dist/docs.html --diff-from v1.2
+monodocs build ./docs -o ./dist/docs.html --diff-from-dir ../docs-1.2
+```
+
+**core only accepts a source directory for the earlier version.** `--diff-from-dir` passes one
+directly. `--diff-from` takes a git ref; the CLI extracts that version's files into a temporary
+directory and passes it down the same path. core knows nothing about Git. The two options cannot
+be used together. A single option that treats its argument as a directory if it is one and as a
+ref otherwise is not adopted: with a directory named `v1.2` present, the same command line would
+mean either. The option exists on the CLI only, with no key in the config file. What to compare
+against changes with every release; it belongs to the build, not to the document. A key can be
+added when someone asks for one (12.4).
+
+Accepting already-built HTML as the earlier version is not adopted. That HTML mixes base64 images,
+Shiki spans, and section numbers into the content, and its structure differs with the monodocs
+version that produced it. Recovering blocks from it is fragile. The earlier version is built from
+its sources too, by the current monodocs. Both sides are built by the same version, so differences
+in Shiki classes or the template do not leak into the difference.
+
+**The earlier version is built with its own config.** Built with the new config, changes to
+`sources.include` or the sidebar would show up as differences in the content. But the earlier
+config only decides which pages exist and what they contain (`root`, `input`, `sources`,
+`sidebar`, `math`, and so on). How the output looks (`lang`, `html.*`, `pdf.*`, the theme) comes
+from the new config. There is one output, and if two configs competed over how it looks, the
+author could not tell which one wins. The earlier config is read from the same relative path as
+the new config file. If it has a key the current monodocs does not accept, that is an error, not
+something silently dropped (12.2).
+
+**A git ref yields the same files a checkout would.** Plain `git archive` drops files marked
+`export-ignore` in `.gitattributes`, and an earlier version built from that is not what the author
+saw in that version. Whether files stored in LFS come out as their content is checked during
+implementation.
+Extraction touches neither the repository's index, its working tree, nor its refs. Submodule
+contents are not extracted, and the documentation says so. A ref missing from the clone is an
+error, and in a shallow CI checkout the message names `fetch-depth`. 15.5 declined to generate
+aliases automatically because that would make the output depend on the clone's history. A
+difference may depend on history, because the author names the ref; in exchange, it does not
+carry on quietly when the history is not there.
+
+**Pages are matched by route.** A route present in both versions is the same page. A new page
+whose `aliases` (15.5) contain an old route is taken to have moved there. A page matched by
+neither was either added or deleted. Moves are not inferred from how similar the content is; as
+with aliases, a move is stated by a line the author wrote. A page whose route stays the same but
+whose position in the sidebar changes is not treated as changed in stage 1.
+
+**Within a page, blocks are compared as a sequence.** A block is a paragraph, a list item, a table
+row, a code block, a heading, a display formula, a Mermaid diagram, or an image. The sequence of
+blocks is taken from the post-processed HAST, and the old and new sequences are aligned by longest
+common subsequence. A block left unaligned was either added or deleted. What is compared is the
+text for a paragraph, the source text for code, the TeX source for a formula, the diagram source
+for Mermaid, and a hash of the bytes for an image. A nested list is compared item by item with the
+nested part left out; otherwise fixing one deep item would mark its parents as changed too.
+
+**Section numbers are not compared.** Inserting one section changes every number after it, and
+comparing numbers would show every untouched section as changed. Section numbers are labels, not
+addresses (19.1). The comparison leaves out `data-monodocs-section-number` elements, and the
+numbers displayed are the new version's. Element IDs and the prefixes derived from page IDs are
+left out of the comparison as well.
+
+**Deleted content has no address.** Element IDs in the single HTML must be globally unique, and
+old headings kept with their IDs could collide with new ones. Deleted blocks lose their IDs and
+anchors. Deleted headings do not appear in the in-page table of contents, or in the PDF outline
+and printed table of contents (24.9). Links inside deleted content become plain text and are left
+out of link checking: they point to places in the earlier version, which in the new one either
+do not exist or hold something else. The search index is built from the new version's text only;
+what readers search for is the content of the current document.
+
+**Deleted pages go into the list of changes.** When a difference is output, a page listing the
+changes is generated at the start of the document. It lists the pages that were added, deleted,
+moved, or changed, and links to those that still exist. Deleted pages have no route; their
+content appears on this page as deleted blocks. When both versions have `document.version`
+(13.5), its heading shows `1.2 → 1.3`.
+
+**Colour is not the only signal.** Additions are written as `<ins>` and deletions as `<del>`, so
+they stay distinguishable in black-and-white print and for readers who have trouble telling the
+colours apart. The HTML gets a toggle between showing the changes, the new version only, and the
+earlier version only, plus buttons that move to the previous and next change. The sidebar marks
+pages that changed. Their wording joins the label table (23.4) and follows `lang` and
+`html.labels`.
+
+**The PDF presentation is chosen at build time,** because paper has no toggle. There are two:
+added text in colour and deleted text struck through, or the new version alone with a bar in the
+margin beside changed lines. The latter does not show what was deleted, only marks where.
+
+**The same input gives the same bytes (12.4).** The input includes the earlier version's tree.
+The earlier version's images are embedded too, so the output grows; the size report in 20.5 shows
+what the difference added on a line of its own.
+
+**It arrives in three stages.** Stage 1 outputs the difference at the level of pages and blocks in
+HTML. Stage 2 outputs it in PDF. Stage 3 compares the inside of changed blocks word by word and
+character by character, and treats formulas, Mermaid, and tables individually. Japanese does not
+separate words with spaces, so it has to be compared by character or by morpheme, and that choice
+is made in stage 3. At every stage, a combination not yet handled is an error, not accepted and
+ignored (12.4). In stage 1, combining a difference with `--format pdf` is such a combination.
+`watch`, `serve`, and `validate` do not accept the difference options.
 
 ---
 
@@ -5420,6 +5529,86 @@ Completion criteria:
   enumeration no longer lists it
 - The enumeration's test passes, and the documentation is checked against the code in both
   languages as described above
+
+---
+
+## 1.x: Difference from an Earlier Version
+
+Purpose:
+
+Output HTML and PDF with the difference from an earlier version written into them (7.3). The
+readers are people who do not look at Git; this is not a substitute for `git diff`. It comes after
+1.0: 12.4 allows new options in a minor release, and the difference changes nothing about how
+existing documents build. It is not part of v0.16, which is the release for what has to be settled
+before 1.0. As 7.3 describes, it is split into three stages, each a minor release.
+
+Stage 1: page and block differences in HTML
+
+Implementation scope:
+
+- `--diff-from <ref>` and `--diff-from-dir <dir>` on the CLI, mutually exclusive. A ref is
+  extracted into a temporary directory as the same files a checkout would give, without touching
+  the repository
+- The earlier version built up to `Page[]` with its own config; how the output looks comes from
+  the new config
+- Matching pages by route and `aliases`, comparing sequences of HAST blocks, and the page listing
+  the changes
+- Stripping IDs, anchors, and links from deleted content, and building the search index from the
+  new version's text only
+- The three-way toggle, buttons for the previous and next change, and the sidebar marks, with
+  their wording added to the label table
+
+Completion criteria:
+
+- With a fixture containing added, deleted, moved (through `aliases`), and changed pages, tests
+  confirm the list of changes and the `<ins>` and `<del>` within pages, for both Markdown and
+  AsciiDoc
+- With a fixture where inserting one section renumbers every section after it, only the inserted
+  section shows as added
+- Deleted headings have no ID, do not appear in the in-page table of contents, and are not found
+  by search; every element ID in the output is unique
+- A tree extracted from a ref that contains files marked `export-ignore` matches a checkout of
+  that ref; in a shallow clone without the ref, the error names `fetch-depth`
+- With a ref containing files stored in LFS, whether the extracted files are their content or
+  pointers is checked, and the result and how it is handled are recorded in 7.3
+- An earlier config with a key the current monodocs does not accept is an error
+- Combining a difference with `--format pdf`, and specifying one to `watch`, `serve`, or
+  `validate`, are errors
+- Tests confirm that the same old and new inputs give the same HTML bytes; the size report in
+  20.5 shows the difference's share on a line of its own
+- The command reference and the single HTML invariants in architecture.md describe the
+  difference, in both languages
+- The "What 1.0 Freezes" page (12.4) lists the two options and the new `html.labels` keys, and
+  `surfaces.test.ts` passes
+
+Stage 2: differences in PDF
+
+Implementation scope:
+
+- The colour-and-strikethrough presentation and the margin change bar presentation, chosen at
+  build time; the shape of that option is decided in stage 2
+- Leaving deleted headings out of the PDF outline and the printed table of contents (24.9)
+
+Completion criteria:
+
+- PDFs in both presentations, made from two versions of `examples/ja`, are opened and checked on
+  Linux and Windows
+- Additions and deletions remain distinguishable when printed in black and white
+
+Stage 3: word and character differences
+
+Implementation scope:
+
+- Comparing the inside of changed blocks word by word. Whether Japanese is compared by character
+  or by morpheme is chosen against the size budget in 20.5 and the conditions CONTRIBUTING.md sets
+  for dependencies
+- Formulas and Mermaid shown old and new side by side as whole blocks; tables compared cell by cell
+
+Completion criteria:
+
+- In a paragraph mixing Japanese and English, a change to a single word shows as a difference in
+  that word only
+- The methods not chosen, and why, are recorded in 7.3
 
 ---
 
