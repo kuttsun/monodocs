@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-10-09
+Last updated: 2026-10-13
 
 ## Support Status
 
@@ -25,7 +25,7 @@ Last updated: 2026-10-09
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
-| Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | 🚧 Planned| v0.16 |
+| Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | 🚧 In progress| v0.16 |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -54,7 +54,15 @@ Windows checks a person has to make are still open, as for 0.14.0; v0.16 makes t
 instead.
 
 v0.16 clears what earlier milestones set aside and enumerates what 1.0 freezes, so that 1.0 is left with
-the removal of `sidebar.exclude` and a final check ([roadmap.md](roadmap.md)).
+the removal of `sidebar.exclude` and a final check ([roadmap.md](roadmap.md)). 0.16.0 has not been
+released yet. Its implementation has landed: AsciiDoc checklists drawn as Markdown's task list,
+the wide accents checked on Linux, asciimath rendered through KaTeX, search folding half-width
+katakana and matching okurigana and English inflections loosely, `figures.align` with AsciiDoc's
+`align=`, a clear button for the search box, and the frozen surfaces listed on one page. AsciiDoc
+checklists, search results, asciimath, and where figures sit change what existing documents build,
+so `0.16.0-beta.1` goes out under `next` first, and what the beta is for is still open below:
+verifying the published package on Linux and Windows through `verify-published.yml`, looking at the
+samples built with it, and checking the wide accents on Windows with Cambria Math.
 
 ## Completion Criteria Status
 
@@ -567,7 +575,7 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 
 **Tests**
 
-- [ ] [testing.md](testing.md) lists the new and inverted tests in English and Japanese
+- [x] [testing.md](testing.md) lists the new and inverted tests in English and Japanese — each change added its tests to both as it landed, the half-width katakana test among them, marked as inverted
 
 **Release**
 
