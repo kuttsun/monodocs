@@ -760,7 +760,7 @@ PDF は絞れる。PDF を描くのは常に monodocs 自身の Chromium で、�
 フォントだけだからである。PDF のビルドのときだけ 1 つの MATH フォントを読み込めば、どこでビルドしても
 同じ PDF になり、その組み合わせは CI がすでに確かめているものである。リポジトリには Latin Modern Math
 （`latinmodern-math.otf`、733,736 バイト、GUST Font License）があり、テストと
-`scripts/readme-pdf-sample.sh` がすでに読み込んでいる。Chromium は PDF が使う字形だけを埋め込むので、
+`scripts/site-pdf-sample.sh` がすでに読み込んでいる。Chromium は PDF が使う字形だけを埋め込むので、
 PDF はほとんど大きくならない。大きくなるのは CLI バンドルと単体バイナリである。既定にすると既存の PDF の
 見え方が変わり、12.4 はそれを 1.0 の前か、1.x ならキーの後ろでしか許さない。どちらにするかは、ライセンスと
 CONTRIBUTING.md の依存の条件を確かめたうえで、0.16.0 の後に決める。

@@ -837,7 +837,7 @@ be narrowed. The PDF can: it is always printed by monodocs's own Chromium, and o
 machine's math font varies. Loading one MATH font for the PDF build alone would make the PDF the
 same wherever it is built, and that pair is the one CI already checks. The repository carries
 Latin Modern Math (`latinmodern-math.otf`, 733,736 bytes, under the GUST Font License), which the
-tests and `scripts/readme-pdf-sample.sh` load already. Chromium embeds only the glyphs a PDF uses,
+tests and `scripts/site-pdf-sample.sh` load already. Chromium embeds only the glyphs a PDF uses,
 so the PDF hardly grows; the CLI bundle and the binary do. Made the default, it changes how
 existing PDFs look, which 12.4 allows only before 1.0, or in 1.x behind a key. Which of the two,
 with the licence and CONTRIBUTING.md's conditions for a dependency checked, is decided after 0.16.0.

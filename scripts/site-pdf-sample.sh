@@ -12,8 +12,8 @@
 # rely on a machine without one). The vendored Latin Modern Math is loaded for these builds only,
 # through a throwaway HOME whose ~/.fonts fontconfig reads, so nothing is installed anywhere. A build
 # that still reports a formula font without a MATH table fails here rather than publishing formulas
-# whose brackets do not stretch. (fontCheck: error cannot do this: the examples also use two symbols
-# no font in the dev image draws, which stay a warning.)
+# whose brackets do not stretch. It looks for that finding alone rather than setting fontCheck: error,
+# so that a glyph the build machine happens to lack elsewhere stays a warning, as in the HTML samples.
 #
 # The monodocs CLI must already be built (the caller runs pnpm build). It runs on its own too:
 #   scripts/app.sh pnpm build && scripts/site-pdf-sample.sh
