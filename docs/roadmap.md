@@ -816,8 +816,31 @@ looked at in Edge and the PDF in Acrobat and in Edge, on both pages:
 - in the PDF only, the `\bar` over `x` is short and low enough to touch the top of the letter, so at
   an ordinary zoom it reads as a plain `x`; zoomed to 400% it is there. In Edge's HTML it sits clear
   of the letter. The markup is 0.15.0's (`<mo>¯</mo>`, U+00AF), so this predates v0.16; the v0.15
-  record above does not say whether the PDF was looked at. It is recorded and left for a later
-  release, where drawing it as a line like `\overline` is one way.
+  record above does not say whether the PDF was looked at. It is recorded, under the rule below;
+- the radical does not join its bar: the `√` ends at its top in a short, thin stroke, and the
+  thicker bar starts just above it, in HTML and in the PDF, for `\sqrt` (formulas 1 and 3) and
+  `\sqrt[3]` in the text alike. In the PDF the `2` of `b^2` nearly touches the bar. The markup is a
+  plain `<msqrt>` the theme does not style, and with Latin Modern Math the same HTML joins cleanly.
+  Recorded, under the same rule.
+
+**What monodocs fixes in a formula, and what it records.** The browser lays the MathML out with
+the MATH font it finds, and the reader's browser and fonts are not monodocs's to choose, so how a
+formula looks varies with the pair. Chasing each pair with CSS has no end, and every such rule
+would be tuned to one font's metrics. So monodocs fixes what its own markup gets wrong — as with
+`mathvariant` (above), which no browser applies — and does not fix how a browser and a font set
+correct markup: the wide accents, the `\bar` and the radical on Windows above are of that kind.
+Those are recorded for the pairs measured (Chromium with Latin Modern Math on Linux, Edge with
+Cambria Math on Windows), and syntax.md names them.
+
+**Open: one math font for the PDF.** The HTML is drawn by the reader's browser, so its pairs cannot
+be narrowed. The PDF can: it is always printed by monodocs's own Chromium, and only the build
+machine's math font varies. Loading one MATH font for the PDF build alone would make the PDF the
+same wherever it is built, and that pair is the one CI already checks. The repository carries
+Latin Modern Math (`latinmodern-math.otf`, 733,736 bytes, under the GUST Font License), which the
+tests and `scripts/readme-pdf-sample.sh` load already. Chromium embeds only the glyphs a PDF uses,
+so the PDF hardly grows; the CLI bundle and the binary do. Made the default, it changes how
+existing PDFs look, which 12.4 allows only before 1.0, or in 1.x behind a key. Which of the two,
+with the licence and CONTRIBUTING.md's conditions for a dependency checked, is decided after 0.16.0.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
