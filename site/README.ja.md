@@ -16,8 +16,8 @@ site/
   docs/                  英語ドキュメント
   ja/docs/               日本語ドキュメント
   samples/density/       版面密度の比較のために monodocs 自身に組ませる原稿
-  samples/readme/        トップの README に載せる PDF 見本の原稿（scripts/readme-pdf-sample.sh）
   public/sample.html     monodocs 自身で生成する単一 HTML デモ（生成物・git 管理外）
+  public/sample.pdf      同じ examples を表紙・目次付きで PDF にしたもの（生成物・git 管理外）
   public/density/        同じ原稿を各 pdf.density で組んだ PDF とサムネイル（生成物・git 管理外）
 ```
 
@@ -42,11 +42,11 @@ scripts/site.sh npm run docs:build       # 本番ビルド -> site/.vitepress/di
 scripts/site.sh npm run docs:preview     # ビルド結果をプレビュー http://localhost:4173/
 ```
 
-monodocs 自身が生成する成果物（単一 HTML デモ `public/sample.html` と、版面密度の比較
-`public/density/`）も含めてまとめてビルドする:
+monodocs 自身が生成する成果物（単一 HTML デモ `public/sample.html`、PDF サンプル
+`public/sample.pdf`、版面密度の比較 `public/density/`）も含めてまとめてビルドする:
 
 ```bash
-scripts/site-build.sh                    # CLI ビルド -> デモ・密度サンプル生成 -> VitePress ビルド
+scripts/site-build.sh                    # CLI ビルド -> デモ・PDF・密度サンプル生成 -> VitePress ビルド
 scripts/site-build.sh preview            # ↑ + プレビュー起動
 ```
 
