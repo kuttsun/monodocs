@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
 
 ## Support Status
 
@@ -26,6 +26,7 @@ Last updated: 2026-10-13
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
 | Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | ✅ Done   | v0.16 |
+| One math font for the PDF, KaTeX 0.18, Mermaid 12.2 | 🚧 Planned| v0.17 |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -65,6 +66,9 @@ verified on Linux and Windows, the samples built with it and looked at, and the 
 on Windows with Cambria Math. 0.16.0 went out under `latest` with the CI guide pinned to it, and the
 published package, the release binaries, and the HTML they produce were verified after `latest`
 moved. The Windows host script and the Windows checks a person has to make are still open.
+
+v0.17 comes before 1.0: one math font for a PDF's formulas, so that a PDF sets them the same wherever
+it is built, and KaTeX 0.18 with Mermaid 12.2, past a security advisory ([roadmap.md](roadmap.md)).
 
 ## Completion Criteria Status
 
@@ -595,9 +599,45 @@ AsciiDoc checklists and search results change for existing documents, asciimath 
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with a watermark, `pdf.toc`, section numbering, and formulas opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
 - [x] Move the `next` dist-tag onto `0.16.0`, and confirm that the deployed CI guide pins `monodocs@0.16.0` in English and Japanese — `next` and `latest` both read `0.16.0`, and the deployed CI guide pins `monodocs@0.16.0` four times in each language
 
+### v0.17: One Math Font for the PDF, and KaTeX 0.18
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**One math font for the PDF** ([roadmap.md](roadmap.md) 6.4, 24.3.3)
+
+- [ ] Which font a PDF's formulas are set in is decided in the open, after its licence and its size in the CLI bundle and the standalone binary are checked and recorded in [roadmap.md](roadmap.md) 6.4; it is named in `THIRD-PARTY-NOTICES.txt` and the binary's notices
+- [ ] Whether a key lets an author set formulas in a font of their own, and its shape, is decided in the open; a key is in the reference and on the "What 1.0 Freezes" page in English and Japanese, and `surfaces.test.ts` passes
+- [ ] `examples/math`, built to PDF in the development image, which has no MATH font, embeds the carried font, sets every formula in it, and raises no font finding; a test asserts it
+- [ ] A document with no formula loads no font, and its PDF embeds the fonts it embedded before; the carried font adds nothing to any HTML; tests assert both
+- [ ] Built on Windows, the PDF sets formulas in the carried font, and the `\bar` and the radicals [roadmap.md](roadmap.md) 6.4 records are looked at again; 6.4 and [syntax.md](syntax.md) say what the carried font does, in English and Japanese
+
+**KaTeX 0.18 and Mermaid 12.2** ([roadmap.md](roadmap.md) 6.4, 21.3)
+
+- [ ] KaTeX is 0.18.11 and Mermaid 12.2.0, the runtime's notices are regenerated, the pinned CDN runtime moves with them, the test that keeps the two KaTeX versions in step passes, and the Dependabot alerts for KaTeX are closed
+- [ ] The MathML of the math fixture and of the sample pages is compared before and after the move, and what changed is recorded in [roadmap.md](roadmap.md) 6.4
+- [ ] Every diagram in `examples/en` and `examples/ja` is looked at under Mermaid 12.2.0
+
+**Documentation and tests**
+
+- [ ] [testing.md](testing.md) lists the new tests in English and Japanese
+
+**Release**
+
+Every PDF with a formula changes, so this release goes through a beta, as 0.16.0 did.
+
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.17.0` in the version change itself, before the `v0.17.0` tag is created
+- [ ] `verify-published.yml` gains a 0.17 gate and a step for the carried font, merged before anything below runs
+- [ ] Publish `0.17.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the 0.17 steps ran rather than being skipped
+- [ ] During the beta, build `examples/en`, `examples/ja`, `examples/math`, and the site samples with the beta and look at the formulas in the PDF and the diagrams; what no longer reads is fixed or recorded before `0.17.0` is cut
+- [ ] Publish `0.17.0` under the `latest` tag, with release notes stating how formulas in a PDF change and what the Mermaid and KaTeX move changes, and verify it the same way with `dist_tag: 0.17.0`
+- [ ] Verify the `v0.17.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.17.0` assets on a Linux x64 host without Node.js
+- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed
+- [ ] Move the `next` dist-tag onto `0.17.0`, and confirm that the deployed CI guide pins `monodocs@0.17.0` in English and Japanese
+
 ### 1.0
 
-[roadmap.md](roadmap.md) defines this release; it starts once v0.16 is released.
+[roadmap.md](roadmap.md) defines this release; it starts once v0.17 is released.
 
 - [ ] `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the enumeration no longer lists it
 - [ ] The enumeration's test passes, and the documentation is checked against the code in English and Japanese: no key in the reference that the schema does not have, and no behaviour in [architecture.md](architecture.md) that the code does not do
