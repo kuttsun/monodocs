@@ -25,7 +25,7 @@ Last updated: 2026-10-13
 | Output size and budget, watermark, cover, line breaks | ✅ Done   | v0.13      |
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
-| Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | 🚧 In progress| v0.16 |
+| Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | ✅ Done   | v0.16 |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -62,7 +62,8 @@ katakana and matching okurigana and English inflections loosely, `figures.align`
 checklists, search results, asciimath, and where figures sit change what existing documents build,
 so `0.16.0-beta.1` went out under `next` first, and what it was for is done: the published package
 verified on Linux and Windows, the samples built with it and looked at, and the wide accents checked
-on Windows with Cambria Math. 0.16.0 under `latest` comes next.
+on Windows with Cambria Math. 0.16.0 goes out under `latest` with the CI guide pinned to it, and the
+published package and the release binaries are verified after `latest` moves.
 
 ## Completion Criteria Status
 
@@ -581,7 +582,7 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 
 AsciiDoc checklists and search results change for existing documents, asciimath does if it is on by default, Markdown figures and diagrams move to the centre, and AsciiDoc image blocks in table cells to the left, so this release goes through a beta, as 0.15.0 did. The Windows checks a person has to make are made for 0.16.0; those left open above for 0.13.0 to 0.15.0 are superseded by them rather than made separately.
 
-- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.16.0` in the version change itself, before the `v0.16.0` tag is created
+- [x] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.16.0` in the version change itself, before the `v0.16.0` tag is created — `site/docs/ci.md` and `site/ja/docs/ci.md`, four pins each, in the change that bumps the CLI to 0.16.0
 - [x] `verify-published.yml` gains a 0.16 gate and steps for the checklist markup, the new search folding, and asciimath's new behaviour, with v0.15's asciimath steps kept for 0.15 only, merged before anything below runs; the unit tests that assert asciimath is left as text are rewritten — the unit tests were rewritten with the rendering itself; the workflow also checks figure alignment and the clear button's markup and label; search folding is driven in Chrome with the package's own puppeteer-core (half-width katakana, okurigana, an English inflection); stem and `asciimath:[...]` rendered with no diagnostic
 - [x] Publish `0.16.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the 0.16 steps ran rather than being skipped — published from CI on the `v0.16.0-beta.1` tag with provenance after the `npm` environment was approved, carrying `next` while `latest` stays on 0.15.0. The run with `dist_tag: next` logs `verifying monodocs 0.16.0-beta.1` on Linux x64 and Windows x64, and the four 0.16 steps (checklists, asciimath rendered, search folding, figures and the search clear button) ran and passed on both, v0.15's asciimath step skipped as gated. `verify-release-binaries.yml` passed on the tag on both platforms
 - [x] During the beta, build `examples/en`, `examples/ja`, `examples/math`, and the site samples with the beta and look at the checklists, the formulas, the figures, search, and the clear button, the button in Firefox too and in Safari if a Mac or an iPhone is at hand, the versions recorded and one not seen recorded as not seen; what no longer reads is fixed or recorded before `0.16.0` is cut — `examples/en`, `examples/ja`, `examples/math`, and the site samples (`site/samples/readme` and both density samples) built by the beta, `examples/*` compared with 0.15.0's in Chromium. Checklists are checkboxes in both formats, with no `❏`; Markdown figures and the Mermaid diagram moved from the left to the centre in the HTML and the PDF, and AsciiDoc's stayed in the centre; with Latin Modern Math available every PDF built with no font warning, and the wide accents sit as 6.4 records. The samples hold no asciimath, so a page of inline, `stem`, and block asciimath beside latexmath was built too: every formula rendered, the space around a stretched bracket slightly wide but readable. The queries the Search pages give were typed into the output. The clear button was looked at in Chromium and in Firefox 156.0.1 on Ubuntu 22.04: shown only with a query, alone, clearing the box, the results, and the marks with the focus kept in the box, reached by keyboard, in place in the narrow drawer, and not printed. Safari not seen. One thing no longer read: the Search pages of `examples/en` and `examples/ja` still said half-width katakana, okurigana, and English inflections do not match, fixed in this change
