@@ -580,7 +580,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 
 - [ ] ドキュメントサイトの CI ガイドが、英語・日本語とも、`v0.16.0` タグを作る前のバージョン変更そのものの中で `monodocs@0.16.0` に固定する
 - [x] `verify-published.yml` に 0.16 の判定と、チェックリストのマークアップ、新しい検索の畳み込み、asciimath の新しい挙動を確かめる手順を足し、v0.15 の asciimath の手順は 0.15 に限り、以下より前にマージする。asciimath が文字のまま残ることを確かめる単体テストは書き換える——単体テストは描画とともに書き換えた。ワークフローは、図の揃えとクリアボタンのマークアップとラベルも確かめる。検索の畳み込みは、パッケージ自身の puppeteer-core で Chrome を操作して確かめる（半角カタカナ、送り仮名、英語の語形変化）。stem と `asciimath:[...]` は診断なしに描かれる
-- [ ] `0.16.0-beta.1` を `next` タグで公開し、`dist_tag: next` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.16 の手順が飛ばされずに走ったことを確かめる
+- [x] `0.16.0-beta.1` を `next` タグで公開し、`dist_tag: next` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.16 の手順が飛ばされずに走ったことを確かめる——`npm` 環境の承認のあと、`v0.16.0-beta.1` タグから CI が provenance 付きで公開し、`next` が指す。`latest` は 0.15.0 のままである。`dist_tag: next` の実行は Linux x64 と Windows x64 で `verifying monodocs 0.16.0-beta.1` と記録し、0.16 の 4 つの手順（チェックリスト、asciimath の描画、検索の畳み込み、図と検索のクリアボタン）が両方で走って通った。v0.15 の asciimath の手順は版の切り替えどおり飛ばされた。`verify-release-binaries.yml` もタグに対して両方のプラットフォームで通った
 - [ ] ベータ中に `examples/en`、`examples/ja`、`examples/math`、サイトのサンプルをベータでビルドし、チェックリスト、数式、図、検索、クリアボタンを見る。ボタンは Firefox でも見て、Mac か iPhone が手元にあれば Safari でも見る。見たバージョンを記録し、見ていないものは見ていないと記録する。読めなくなったものは `0.16.0` を切る前に直すか記録する
 - [ ] `0.16.0` を `latest` タグで公開し、リリースノートに既存の文書で変わるものを書き、`dist_tag: 0.16.0` で同じように検証する
 - [ ] `v0.16.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する
