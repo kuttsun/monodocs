@@ -730,6 +730,19 @@ Linux で Latin Modern Math（Chromium 154）を使い、HTML と PDF の両方�
   括弧の箱は伸びた高さを持つので欠けない。この規則は、別行立ての数式のスクロールと同じく既定のテーマ
   のものなので、自前の `style.css` を持つテーマは同じ規則を持たなければ失う。
 
+Windows で Cambria Math を使い、`0.16.0-beta.1` でビルドすると、PDF は Cambria Math を埋め込む。HTML は
+Edge で、PDF は Acrobat と Edge で、両方のページを見た。
+
+- `\acute` と `\grave` は文字の上に来る
+- `\overrightarrow` は土台にわたり、`\overbrace` と `\underbrace` は項にわたる。`n` は括弧の上と下に付く
+- `\widehat`・`\widetilde`・`\widecheck`・`\utilde` は、Latin Modern Math と同じく 1 文字ほどの大きさの
+  まま、項の真ん中の上（`\utilde` は下）に付く。どちらのフォントでも広がらないので、受け入れる。項に
+  わたらせるには KaTeX が書く MathML の外で描くことになり、v0.16 の範囲を超える
+- PDF でだけ、`x` の上の `\bar` が短く、文字の頭に触れるほど低い。そのため普通の倍率ではただの `x` に
+  読める。400% に拡大すると横棒はある。Edge の HTML では文字から離れて付く。マークアップは 0.15.0 と
+  同じ（`<mo>¯</mo>`、U+00AF）なので、v0.16 より前からのものである。上の v0.15 の記録は、PDF を見たか
+  どうかを書いていない。ここに記録し、後のリリースに回す。`\overline` と同じく線で描くのが 1 つの手である
+
 - **依存としての KaTeX。** KaTeX 0.16.47 は MIT である。Mermaid のランタイムがすでに同梱している版と同じで、
   2 つが食い違うとテストが失敗するので、告知が名指す KaTeX は 1 つになる。告知では、バンドルのほかの
   パッケージとともに `THIRD-PARTY-NOTICES.txt` に、そしてランタイム自身の告知に現れる。追加したときに

@@ -803,6 +803,22 @@ Built on Linux with Latin Modern Math (Chromium 154), in HTML and in the PDF, on
   the shadows and without. A tall bracket's box has its stretched height, and is not cut. The rule is the default theme's, like the
   display formula's scroll, so a theme with its own `style.css` carries it too or loses it.
 
+On Windows with Cambria Math, built by `0.16.0-beta.1`, the PDF embeds Cambria Math; the HTML was
+looked at in Edge and the PDF in Acrobat and in Edge, on both pages:
+
+- `\acute` and `\grave` sit over their letter;
+- `\overrightarrow` spans its base, and `\overbrace` and `\underbrace` span the term, with `n` above
+  and below the brace;
+- `\widehat`, `\widetilde`, `\widecheck`, and `\utilde` keep about the size of a letter, centred over
+  (under, for `\utilde`) the middle of the term, as with Latin Modern Math. Neither font widens them,
+  so they are accepted: making them span would mean drawing them outside the MathML KaTeX writes,
+  which is beyond v0.16;
+- in the PDF only, the `\bar` over `x` is short and low enough to touch the top of the letter, so at
+  an ordinary zoom it reads as a plain `x`; zoomed to 400% it is there. In Edge's HTML it sits clear
+  of the letter. The markup is 0.15.0's (`<mo>¯</mo>`, U+00AF), so this predates v0.16; the v0.15
+  record above does not say whether the PDF was looked at. It is recorded and left for a later
+  release, where drawing it as a line like `\overline` is one way.
+
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
   `THIRD-PARTY-NOTICES.txt` with the bundle's other packages and in the runtime's own notices. Measured on
