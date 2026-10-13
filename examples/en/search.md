@@ -21,8 +21,9 @@ Matching is case-insensitive and works on substrings, so a query does not have t
 | `stall` | install | word boundaries |
 | `ＰＤＦ` | PDF | full-width against half-width |
 
-Japanese has more spelling to absorb than English does, and the search folds katakana against hiragana, the
-prolonged sound mark against the dash family, and the wave dash against the full-width tilde. The
+Japanese has more spelling to absorb than English does, and the search folds katakana against hiragana,
+half-width katakana against full-width, the prolonged sound mark against the dash family, and the wave dash
+against the full-width tilde. The
 [Japanese sample](https://kuttsun.github.io/monodocs/ja/sample.html) demonstrates those.
 
 ## Narrowing with several keywords
@@ -47,6 +48,9 @@ The results can be worked through without leaving the box.
 - `Enter`: open the selected result, or the top one when you have not moved yet.
 - `Escape`: clear the box.
 
+The × button at the right of the box clears it too, along with the results and the marks in the body, and
+leaves the cursor in the box.
+
 The cursor stays in the search box while you move, so you can keep typing to narrow the list. While an input
 method is composing, the keys are left to it, so selecting a conversion candidate still works.
 
@@ -55,13 +59,14 @@ method is composing, the keys are left to it, so selecting a conversion candidat
 Opening a result also marks the keywords in the page you land on. The marks stay while the search is open,
 so moving to another page does not lose them. Changing or clearing the query puts the body back as it was.
 
-## What is deliberately not folded
+## Loose matching
 
-- **Half-width katakana**: `ｲﾝｽﾄｰﾙ` does not find `インストール`.
-- **Okurigana variants**: `引渡し` does not find `引き渡し`.
-- **English stemming**: `installing` does not find a page that only says `install`. The reverse works,
-  because matching is substring-based.
+Some differences are matched by loosening the query rather than the text, with no dictionary.
 
-Each of these changes the length of the string. Highlight positions are shared with the original text, so a
-fold that changes length puts the marks in the wrong place. Unifying okurigana would also need a dictionary
-far too large to carry inside a single file.
+- **English inflections**: a word is matched by its stem from the start of a word. `installing` also finds
+  a page that only says `install`. A word whose stem is shorter than four letters is not loosened.
+- **Okurigana variants**: in Japanese, up to two kana between two kanji may be there or not, so `埋込み`
+  finds `埋め込み`. The Japanese sample demonstrates it.
+
+Pages that needed the loose match are ranked after those matched as typed. The marks in the body fall on the
+text as it is written in the page, not as you typed it.
