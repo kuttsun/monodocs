@@ -60,9 +60,9 @@ the wide accents checked on Linux, asciimath rendered through KaTeX, search fold
 katakana and matching okurigana and English inflections loosely, `figures.align` with AsciiDoc's
 `align=`, a clear button for the search box, and the frozen surfaces listed on one page. AsciiDoc
 checklists, search results, asciimath, and where figures sit change what existing documents build,
-so `0.16.0-beta.1` goes out under `next` first, and what the beta is for is still open below:
-verifying the published package on Linux and Windows through `verify-published.yml`, looking at the
-samples built with it, and checking the wide accents on Windows with Cambria Math.
+so `0.16.0-beta.1` went out under `next` first, and what it was for is done: the published package
+verified on Linux and Windows, the samples built with it and looked at, and the wide accents checked
+on Windows with Cambria Math. 0.16.0 under `latest` comes next.
 
 ## Completion Criteria Status
 
@@ -543,8 +543,8 @@ Every existing document with a diagram builds differently under mermaid 12, so u
 
 - [x] The math fixture contains `\acute`, `\grave`, `\widehat`, `\widetilde`, `\widecheck`, `\utilde`, `\overrightarrow`, and `\overbrace` with `\underbrace`, in Markdown and AsciiDoc — the inline `\acute{e},\ \grave{a}` and display formula 15 on both pages, 8 inline and 15 display formulas each (`build.math.test.ts`)
 - [x] Built to HTML and PDF on Linux with Latin Modern Math, what [roadmap.md](roadmap.md) 6.4 records is checked again on the fixture, and the accents it has no record for (`\grave`, `\overrightarrow`, `\overbrace`, `\underbrace`) are checked, any that does not sit over (or under) or span its base being recorded there — recorded in [roadmap.md](roadmap.md) 6.4 (v0.16): `\acute` and `\grave` over their letter, the four wide accents still a letter wide and accepted, `\overrightarrow` and the braces spanning the term. On screen, Chromium left part of a stretched brace unpainted, over and under, depending on where it fell on its raster tiles; two transparent shadows far to either side of `mo[stretchy="true"]` in the default theme fix it, in forced colors too, and `build.math-chromium.test.ts` checks it
-- [ ] Built on Windows with Cambria Math, to HTML and PDF, each accent sits over its base, or under it for `\utilde` and `\underbrace`, and each wide one spans it, or what does not is recorded in [roadmap.md](roadmap.md) 6.4
-- [ ] What is fixed or accepted is stated in [roadmap.md](roadmap.md) 6.4 and in [syntax.md](syntax.md) in English and Japanese — the Linux results are stated in both; what Windows shows is still to come
+- [x] Built on Windows with Cambria Math, to HTML and PDF, each accent sits over its base, or under it for `\utilde` and `\underbrace`, and each wide one spans it, or what does not is recorded in [roadmap.md](roadmap.md) 6.4 — built by `0.16.0-beta.1`, the PDF embedding Cambria Math, looked at in Edge and in Acrobat: `\acute`, `\grave`, `\overrightarrow`, and the braces as expected; `\widehat`, `\widetilde`, `\widecheck`, and `\utilde` a letter wide as on Linux, and accepted; in the PDF the `\bar` over `x` touches the letter and reads as `x` at an ordinary zoom, and every radical's sign does not join its bar, both unchanged since 0.15.0 and recorded, since 6.4 now records rather than fixes how a browser and a font set correct markup
+- [x] What is fixed or accepted is stated in [roadmap.md](roadmap.md) 6.4 and in [syntax.md](syntax.md) in English and Japanese — the Linux and Windows results are stated in both
 
 **asciimath** ([roadmap.md](roadmap.md) 6.4)
 
