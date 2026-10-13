@@ -31,7 +31,7 @@ Last updated: 2026-10-13
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
 disproportionate for a single maintainer, and the boundary between the extension and `@monodocs/core` is still
 undecided. The reasoning is recorded under v0.7 in [roadmap.md](roadmap.md). v0.8 was worked on in its place,
-and it, v0.9, v0.10, v0.11, v0.12, v0.13, v0.14, and v0.15 are released.
+and it, v0.9, v0.10, v0.11, v0.12, v0.13, v0.14, v0.15, and v0.16 are released.
 
 0.14.0 is released: section numbering (`numbering.sections`), the printed table of contents
 (`pdf.toc`), and the math measurement. Neither feature changes what an existing configuration
@@ -54,16 +54,17 @@ Windows checks a person has to make are still open, as for 0.14.0; v0.16 makes t
 instead.
 
 v0.16 clears what earlier milestones set aside and enumerates what 1.0 freezes, so that 1.0 is left with
-the removal of `sidebar.exclude` and a final check ([roadmap.md](roadmap.md)). 0.16.0 has not been
-released yet. Its implementation has landed: AsciiDoc checklists drawn as Markdown's task list,
+the removal of `sidebar.exclude` and a final check ([roadmap.md](roadmap.md)). 0.16.0 is released.
+It brings AsciiDoc checklists drawn as Markdown's task list,
 the wide accents checked on Linux, asciimath rendered through KaTeX, search folding half-width
 katakana and matching okurigana and English inflections loosely, `figures.align` with AsciiDoc's
 `align=`, a clear button for the search box, and the frozen surfaces listed on one page. AsciiDoc
 checklists, search results, asciimath, and where figures sit change what existing documents build,
 so `0.16.0-beta.1` went out under `next` first, and what it was for is done: the published package
 verified on Linux and Windows, the samples built with it and looked at, and the wide accents checked
-on Windows with Cambria Math. 0.16.0 goes out under `latest` with the CI guide pinned to it, and the
-published package and the release binaries are verified after `latest` moves.
+on Windows with Cambria Math. 0.16.0 went out under `latest` with the CI guide pinned to it, and the
+published package, the release binaries, and the HTML they produce were verified after `latest`
+moved. The Windows host script and the Windows checks a person has to make are still open.
 
 ## Completion Criteria Status
 
@@ -586,13 +587,13 @@ AsciiDoc checklists and search results change for existing documents, asciimath 
 - [x] `verify-published.yml` gains a 0.16 gate and steps for the checklist markup, the new search folding, and asciimath's new behaviour, with v0.15's asciimath steps kept for 0.15 only, merged before anything below runs; the unit tests that assert asciimath is left as text are rewritten — the unit tests were rewritten with the rendering itself; the workflow also checks figure alignment and the clear button's markup and label; search folding is driven in Chrome with the package's own puppeteer-core (half-width katakana, okurigana, an English inflection); stem and `asciimath:[...]` rendered with no diagnostic
 - [x] Publish `0.16.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the 0.16 steps ran rather than being skipped — published from CI on the `v0.16.0-beta.1` tag with provenance after the `npm` environment was approved, carrying `next` while `latest` stays on 0.15.0. The run with `dist_tag: next` logs `verifying monodocs 0.16.0-beta.1` on Linux x64 and Windows x64, and the four 0.16 steps (checklists, asciimath rendered, search folding, figures and the search clear button) ran and passed on both, v0.15's asciimath step skipped as gated. `verify-release-binaries.yml` passed on the tag on both platforms
 - [x] During the beta, build `examples/en`, `examples/ja`, `examples/math`, and the site samples with the beta and look at the checklists, the formulas, the figures, search, and the clear button, the button in Firefox too and in Safari if a Mac or an iPhone is at hand, the versions recorded and one not seen recorded as not seen; what no longer reads is fixed or recorded before `0.16.0` is cut — `examples/en`, `examples/ja`, `examples/math`, and the site samples (`site/samples/readme` and both density samples) built by the beta, `examples/*` compared with 0.15.0's in Chromium. Checklists are checkboxes in both formats, with no `❏`; Markdown figures and the Mermaid diagram moved from the left to the centre in the HTML and the PDF, and AsciiDoc's stayed in the centre; with Latin Modern Math available every PDF built with no font warning, and the wide accents sit as 6.4 records. The samples hold no asciimath, so a page of inline, `stem`, and block asciimath beside latexmath was built too: every formula rendered, the space around a stretched bracket slightly wide but readable. The queries the Search pages give were typed into the output. The clear button was looked at in Chromium and in Firefox 156.0.1 on Ubuntu 22.04: shown only with a query, alone, clearing the box, the results, and the marks with the focus kept in the box, reached by keyboard, in place in the narrow drawer, and not printed. Safari not seen. One thing no longer read: the Search pages of `examples/en` and `examples/ja` still said half-width katakana, okurigana, and English inflections do not match, fixed in this change
-- [ ] Publish `0.16.0` under the `latest` tag, with release notes stating what changes for existing documents, and verify it the same way with `dist_tag: 0.16.0`
-- [ ] Verify the `v0.16.0` release binaries through `verify-release-binaries.yml` on both platforms
-- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.16.0` assets on a Linux x64 host without Node.js
+- [x] Publish `0.16.0` under the `latest` tag, with release notes stating what changes for existing documents, and verify it the same way with `dist_tag: 0.16.0` — published from CI on the `v0.16.0` tag with provenance after the `npm` environment was approved, carrying `latest`, with the release notes stating what changes for existing documents. The tag was first created on #195's merge, before #178 had landed; it was deleted, with the release and the waiting Release run, before anything was published, and created again on #178's merge, so that the site deployed from it carries the PDF samples. The run with `dist_tag: 0.16.0` logs `verifying monodocs 0.16.0` on Linux x64 and Windows x64, and the four 0.16 steps ran and passed on both. The site deployed from the tag: `sample.pdf` and `ja/sample.pdf` answer 200 and read `monodocs v0.16.0`, and What 1.0 Freezes is on it
+- [x] Verify the `v0.16.0` release binaries through `verify-release-binaries.yml` on both platforms — run on publish, passing on Linux x64 and Windows x64
+- [x] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.16.0` assets on a Linux x64 host without Node.js — run in a `debian:stable-slim` container with no Node.js against the published `v0.16.0` assets: all sixteen checks pass
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.16.0` assets on a Windows 11 host
-- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the checklists, the new search folding, figure alignment, and the clear button
+- [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed, including the checklists, the new search folding, figure alignment, and the clear button — the published asset checked against its `.sha256`, run with a minimal environment and no Node.js on `examples/en`, `examples/ja`, and `examples/math`, no warning raised, and its output driven in Chromium 154 with Latin Modern Math through seventeen checks: the eleven of 0.15.0 (the sidebar's 22 links, a link navigating and marking the current page, next, a search for `mermaid` returning 4 results with 4 highlights in the page it opens, `Escape` clearing the box and the highlights, dark mode surviving a reload, the drawer at 375px opening and closing after a link, the footer reading `monodocs v0.16.0`, the diagram drawn with the `mermaid@12.1.0` notices in the source, 23 formulas drawn in Latin Modern Math, no script errors) and six new: AsciiDoc checklists as 7 disabled checkboxes with no `❏` or `✓`, a Markdown figure centred (272px either side), `ｲﾝｽﾄｰﾙ`, `埋込み`, and `installing` finding `インストール`, `埋め込み`, and `install`, and the clear button shown with a query, labelled 検索語を消去, clearing the box and the results with the focus kept in the box
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with a watermark, `pdf.toc`, section numbering, and formulas opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
-- [ ] Move the `next` dist-tag onto `0.16.0`, and confirm that the deployed CI guide pins `monodocs@0.16.0` in English and Japanese
+- [x] Move the `next` dist-tag onto `0.16.0`, and confirm that the deployed CI guide pins `monodocs@0.16.0` in English and Japanese — `next` and `latest` both read `0.16.0`, and the deployed CI guide pins `monodocs@0.16.0` four times in each language
 
 ### 1.0
 

@@ -30,7 +30,7 @@
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
 メンテナンス体制に対して重く、拡張と `@monodocs/core` の境界も未決定であるため。理由は
-[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9・v0.10・v0.11・v0.12・v0.13・v0.14・v0.15 は
+[roadmap.md](roadmap.md) の v0.7 に記録している。代わりに着手した v0.8 と、それに続く v0.9・v0.10・v0.11・v0.12・v0.13・v0.14・v0.15・v0.16 は
 いずれもリリース済みである。
 
 0.14.0 はリリース済みである——見出し番号（`numbering.sections`）、紙の目次（`pdf.toc`）、数式の実測。
@@ -52,15 +52,16 @@ mermaid 12 が描くことと、GitHub が描く Markdown の 4 つの数式の�
 0.16.0 について行うことで置き換える。
 
 v0.16 は、これまでのマイルストーンが先送りしたものを片付け、1.0 が凍結するものを列挙する。1.0 には
-`sidebar.exclude` の削除と最後の確認が残る（[roadmap.md](roadmap.md)）。0.16.0 はまだリリースして
-いない。実装は揃った——Markdown のタスクリストと同じ形で描く AsciiDoc のチェックリスト、Linux での幅の広い
+`sidebar.exclude` の削除と最後の確認が残る（[roadmap.md](roadmap.md)）。0.16.0 はリリースした。
+入ったのは、Markdown のタスクリストと同じ形で描く AsciiDoc のチェックリスト、Linux での幅の広い
 アクセントの確認、KaTeX で描く asciimath、半角カタカナの畳み込みと送り仮名・英語の語形変化の緩い照合、
-`figures.align` と AsciiDoc の `align=`、検索欄のクリアボタン、1 ページにまとめた凍結する表面。AsciiDoc の
+`figures.align` と AsciiDoc の `align=`、検索欄のクリアボタン、1 ページにまとめた凍結する表面である。AsciiDoc の
 チェックリスト、検索結果、asciimath、図の位置は既存の文書がビルドするものを変えるので、まずプレリリース
 （`0.16.0-beta.1`）を `next` に出した。プレリリースで確かめることは済んだ。Linux と Windows での公開
 パッケージの検証、プレリリースで組んだサンプルの目視、Cambria Math を使う Windows での幅の広いアクセントの
-確認である。0.16.0 は、CI ガイドをそれに固定して `latest` に出し、公開パッケージとリリースバイナリは
-`latest` を動かしたあとに検証する。
+確認である。0.16.0 は CI ガイドをそれに固定して `latest` に出し、公開パッケージ、リリースバイナリ、
+それらが生成する HTML を `latest` を動かしたあとに検証した。Windows ホストのスクリプトと、Windows で人が
+行う確認はまだ残っている。
 
 ## 完了条件の達成状況
 
@@ -583,13 +584,13 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [x] `verify-published.yml` に 0.16 の判定と、チェックリストのマークアップ、新しい検索の畳み込み、asciimath の新しい挙動を確かめる手順を足し、v0.15 の asciimath の手順は 0.15 に限り、以下より前にマージする。asciimath が文字のまま残ることを確かめる単体テストは書き換える——単体テストは描画とともに書き換えた。ワークフローは、図の揃えとクリアボタンのマークアップとラベルも確かめる。検索の畳み込みは、パッケージ自身の puppeteer-core で Chrome を操作して確かめる（半角カタカナ、送り仮名、英語の語形変化）。stem と `asciimath:[...]` は診断なしに描かれる
 - [x] `0.16.0-beta.1` を `next` タグで公開し、`dist_tag: next` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.16 の手順が飛ばされずに走ったことを確かめる——`npm` 環境の承認のあと、`v0.16.0-beta.1` タグから CI が provenance 付きで公開し、`next` が指す。`latest` は 0.15.0 のままである。`dist_tag: next` の実行は Linux x64 と Windows x64 で `verifying monodocs 0.16.0-beta.1` と記録し、0.16 の 4 つの手順（チェックリスト、asciimath の描画、検索の畳み込み、図と検索のクリアボタン）が両方で走って通った。v0.15 の asciimath の手順は版の切り替えどおり飛ばされた。`verify-release-binaries.yml` もタグに対して両方のプラットフォームで通った
 - [x] ベータ中に `examples/en`、`examples/ja`、`examples/math`、サイトのサンプルをベータでビルドし、チェックリスト、数式、図、検索、クリアボタンを見る。ボタンは Firefox でも見て、Mac か iPhone が手元にあれば Safari でも見る。見たバージョンを記録し、見ていないものは見ていないと記録する。読めなくなったものは `0.16.0` を切る前に直すか記録する——`examples/en`、`examples/ja`、`examples/math` とサイトのサンプル（`site/samples/readme` と 2 つの密度のサンプル）をベータでビルドし、`examples/*` は Chromium で 0.15.0 と比べた。チェックリストは両方の記法で checkbox になり、`❏` は無い。Markdown の図と Mermaid の図は、HTML でも PDF でも左から中央に移り、AsciiDoc の図は中央のままである。Latin Modern Math を使えるようにすると、どの PDF もフォントの警告なしにビルドでき、幅の広いアクセントは 6.4 の記録どおりに付く。サンプルには asciimath が無いので、インライン、`stem`、ブロックの asciimath を latexmath と並べたページもビルドした。どの式も描かれ、伸びる括弧のまわりの間隔はやや広いが読める。検索のページが挙げる語は、出力に実際に入力して確かめた。クリアボタンは Chromium と、Ubuntu 22.04 の Firefox 156.0.1 で見た。語があるときだけ 1 つだけ表示され、押すと欄、結果、印を消してフォーカスを欄に残し、キーボードで届き、狭い画面のドロワーでも位置がずれず、印刷されない。Safari は見ていない。読めなくなっていたものが 1 つあった。`examples/en` と `examples/ja` の検索のページが、半角カタカナ、送り仮名、英語の語形変化は当たらないと書いたままだったので、この変更で直した
-- [ ] `0.16.0` を `latest` タグで公開し、リリースノートに既存の文書で変わるものを書き、`dist_tag: 0.16.0` で同じように検証する
-- [ ] `v0.16.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する
-- [ ] Node.js の無い Linux x64 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
+- [x] `0.16.0` を `latest` タグで公開し、リリースノートに既存の文書で変わるものを書き、`dist_tag: 0.16.0` で同じように検証する——`npm` 環境の承認のあと、`v0.16.0` タグから CI が provenance 付きで公開し、`latest` が指す。リリースノートに既存の文書で変わるものを書いた。タグは最初、#178 が入る前の #195 のマージに作った。何も公開する前に、リリースと承認待ちの Release の実行とともに消し、#178 のマージに作り直した。そこからデプロイするサイトに PDF のサンプルを載せるためである。`dist_tag: 0.16.0` の実行は Linux x64 と Windows x64 で `verifying monodocs 0.16.0` と記録し、0.16 の 4 つの手順が両方で走って通った。タグからデプロイしたサイトでは、`sample.pdf` と `ja/sample.pdf` が 200 を返して `monodocs v0.16.0` と読め、「1.0 が凍結するもの」も載っている
+- [x] `v0.16.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する——公開時に走り、Linux x64 と Windows x64 で通った
+- [x] Node.js の無い Linux x64 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する——Node.js の無い `debian:stable-slim` コンテナで、公開した `v0.16.0` のアセットに対して実行した。16 の確認がすべて通る
 - [ ] Windows 11 ホストで、公開した `v0.16.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
-- [ ] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。チェックリスト、新しい検索の畳み込み、図の揃え、クリアボタンを含める
+- [x] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる。チェックリスト、新しい検索の畳み込み、図の揃え、クリアボタンを含める——公開したアセットを `.sha256` で確かめ、Node.js の無い最小の環境で `examples/en`、`examples/ja`、`examples/math` をビルドし、警告は出なかった。その出力を Latin Modern Math を入れた Chromium 154 で 17 の確認により操作した。0.15.0 の 11（サイドバーの 22 のリンク、リンクで移って現在のページに印が付く、次へ、`mermaid` の検索で 4 件と開いたページに 4 つのハイライト、`Escape` で欄とハイライトが消える、ダークモードが再読み込みで残る、375px でドロワーが開きリンクで閉じる、フッターが `monodocs v0.16.0`、図が描かれ `mermaid@12.1.0` の告知がソースにある、23 の数式が Latin Modern Math で描かれる、スクリプトのエラーが無い）と、新しい 6：AsciiDoc のチェックリストが `❏` も `✓` も無い 7 つの無効な checkbox になる、Markdown の図が中央に来る（左右 272px）、`ｲﾝｽﾄｰﾙ`・`埋込み`・`installing` が `インストール`・`埋め込み`・`install` に当たる、クリアボタンが語のあるときに出て「検索語を消去」と名付けられ、欄と結果を消してフォーカスを欄に残す
 - [ ] 人にしか答えられない Windows での確認。生成した HTML の Edge での見え方（とりわけ日本語と数式）、透かし、`pdf.toc`、見出し番号、数式を含む PDF を開いて印刷し、目次の番号がシートと一致すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットに対する Mark of the Web と SmartScreen
-- [ ] `next` の dist-tag を `0.16.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.16.0` に固定していることを確かめる
+- [x] `next` の dist-tag を `0.16.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.16.0` に固定していることを確かめる——`next` と `latest` はどちらも `0.16.0` を指し、デプロイされた CI ガイドは両言語とも 4 か所で `monodocs@0.16.0` に固定されている
 
 ### 1.0
 
