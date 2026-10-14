@@ -706,7 +706,7 @@ Nothing changes for an existing document, so this release goes to `latest` witho
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.18.0` assets on a Linux x64 host without Node.js
 - [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed: the three views, previous and next, the sidebar marks, and the list of changes
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.18.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, and how the generated HTML looks in Edge
+- [ ] What only a person can answer, on Windows: a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, how the generated HTML looks in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
 - [ ] Move the `next` dist-tag onto `0.18.0`, and confirm that the deployed CI guide pins `monodocs@0.18.0` in English and Japanese
 
 ### v0.19: The Difference on Paper
@@ -737,7 +737,7 @@ Nothing changes for a build without a difference, so this release goes to `lates
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.19.0` assets on a Linux x64 host without Node.js
 - [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, as for 0.18.0: the three views, previous and next, the sidebar marks, and the list of changes
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.19.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: what 0.18.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, and how the generated HTML looks in Edge — and a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
+- [ ] What only a person can answer, on Windows: what 0.18.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, how the generated HTML looks in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — and a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
 - [ ] Move the `next` dist-tag onto `0.19.0`, and confirm that the deployed CI guide pins `monodocs@0.19.0` in English and Japanese
 
 ### v0.20: Words and Characters Inside a Changed Block
@@ -769,7 +769,7 @@ It changes only what a build with a difference shows inside a changed block, and
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js
 - [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, reading changed paragraphs in Japanese and English in the three views
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: what 0.19.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, the generated HTML in Edge, and a `markup` and a `bars` PDF printed, the `markup` one in black and white — and how changed paragraphs in Japanese and English read, on screen and on paper
+- [ ] What only a person can answer, on Windows: what 0.19.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, the generated HTML in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser, and a `markup` and a `bars` PDF printed, the `markup` one in black and white — and how changed paragraphs in Japanese and English read, on screen and on paper
 - [ ] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese
 
 ### 1.0
