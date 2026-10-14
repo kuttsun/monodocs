@@ -1102,8 +1102,11 @@ with `--diff-from-dir`.
 - Files stored in LFS come out as their content when git-lfs is installed, through its smudge
   filter, as a checkout does. When the object is not in the local LFS store, the filter tries to
   download it, and a failed download fails the extraction (exit 128), leaving a log under
-  `.git/lfs/logs`. Without git-lfs, or with `GIT_LFS_SKIP_SMUDGE=1`, the file comes out as the
-  pointer
+  `.git/lfs/logs`. Without git-lfs and without its filter configured, or with
+  `GIT_LFS_SKIP_SMUDGE=1`, the file comes out as the pointer. With the filter still configured as
+  required (`filter.lfs.required=true`, which `git lfs install` writes) but the program gone, git
+  cannot run the filter and the extraction fails, which is `diff/git-failed`, as a checkout would
+  fail
 
 So the CLI resolves the repository from the current directory and the ref to a commit, fills a
 temporary index, and writes out only what the earlier version reads: its configuration file first,
@@ -1288,7 +1291,7 @@ container, which the tests check against both renderers' output.
 | Mermaid | The source |
 | Display formula | The TeX |
 | Image, figure | The image's hash (an external image's `src`) and `alt` |
-| Table row | The cells' texts |
+| Table row | Each cell's text, kind (`th` or `td`), and span (`colspan`, `rowspan`), since a merged cell decides which column a value applies to |
 
 So a change of link target, emphasis, or an inline element's class with the same text is not a
 difference. That is a
@@ -1315,7 +1318,10 @@ deleted list item stays in its list at its depth, a deleted row in its table, a 
 the table's one `caption`. In an ordered list a deleted item takes no number, and every other item
 shows the number it has in the new version, in every view — so deleting step 2 of three does not
 show the new step 2 as `3.`, and deleting a footnote leaves the references and the list of
-footnotes agreeing. The output is valid HTML: re-parsing it gives the same tree — nothing is
+footnotes agreeing. Likewise in a table, a deleted row never changes which columns and rows a cell
+of the new version covers: where it falls inside a cell's `rowspan`, the row is placed so that the
+new values stay in their columns in every view — whether by extending the span over it or by
+placing it after the spanned rows is decided in stage 1. The output is valid HTML: re-parsing it gives the same tree — nothing is
 moved by the parser, as an element inside a `tbody` would be — and no element sits where its
 parent's content model forbids it.
 
@@ -1504,9 +1510,9 @@ elements around it — so deleted bold text stays bold — stripped as in 7.3.4,
 
 - **Code** is compared by line, whether or not it was highlighted, and not further within a line;
   a reader of a code change reads the line
-- **Tables**: rows are aligned as blocks (7.3.3). A paired row with the same number of cells is
-  compared cell by cell, by position, with the text rules above. A row whose number of cells
-  changed stays a deleted row and an added row, so adding a column shows every row replaced, which
+- **Tables**: rows are aligned as blocks (7.3.3). A paired row whose cells match in number, kind,
+  and span is compared cell by cell, by position, with the text rules above. A row whose cells
+  changed in number or span stays a deleted row and an added row, so adding a column shows every row replaced, which
   is what happened to each
 - **Display formulas and Mermaid diagrams** are shown old and new whole, side by side on screen and
   one above the other on paper. A difference between two renderings is the reader's to see;
@@ -6002,7 +6008,9 @@ Completion criteria:
 - Changing a heading's level, or turning a paragraph into a heading with the same text, marks that
   block
 - `-f html --diff-from v1.2` builds; `diff.pdf` passed to core is `diff/unsupported`
-- Changing a table's frame, grid, stripes, or width, or a block's role, changes no block
+- Changing a table's frame, grid, stripes, or width, or a block's role, changes no block; moving a
+  cell's span (AsciiDoc `2+|a |b` to `|a 2+|b`) with the same texts changes that row; changing one
+  row under another cell's `rowspan` keeps every new value in its column in every view
 - An image outside the root, or missing, unchanged between the versions is not a difference with
   either `--diff-from` or `--diff-from-dir`
 - A change of link target or emphasis with the same text is not a difference; a paragraph moved
@@ -6043,8 +6051,9 @@ Completion criteria:
   without `-c`, an earlier version without a configuration file builds with the defaults, and one
   with a file the new version lacks builds with it
 - In a shallow clone without the ref, the error names `fetch-depth: 0`; an LFS file under the root
-  that a page reads, extracted without git-lfs, is `diff/lfs-pointer`; one the build does not read,
-  or one outside the root, is not
+  that a page reads, extracted without git-lfs and its filter, is `diff/lfs-pointer`; one the build
+  does not read, or one outside the root, is not; with the filter configured as required but
+  git-lfs missing, the extraction is `diff/git-failed`
 - An earlier configuration with a key the current monodocs does not accept is an error showing
   `label:path`; one using `sidebar.exclude` builds after 1.0 removed it
 - An AsciiDoc page using `{docdir}` unchanged between the versions is not a difference, its
