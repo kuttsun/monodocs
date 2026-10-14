@@ -117,6 +117,9 @@ Preserve these pre-render invariants:
 - Create the browser lazily and close it in `finally`. Do not start Chromium when there are no diagrams.
 - Keep `validateSite` browserless by overriding Mermaid processing to client mode.
 - The pre-rendered SVG theme is fixed at build time and does not follow the reader's theme toggle.
+- The HTML's SVG is laid out with the build machine's fonts. When a PDF is built too, a diagram with a formula in
+  a label is laid out a second time, in the carried math font, and swapped in, as a string, for its HTML copy in
+  the page the PDF is printed from (`pdfVariants`); the HTML written keeps its own.
 
 > [!IMPORTANT]
 > Pre-render and PDF output require the npm-installed CLI. They are unavailable in the single-file bundle and
@@ -318,8 +321,11 @@ alike. The latter bakes the build machine's fonts into the SVG, which is why the
 than under `pdf`.
 
 > [!IMPORTANT]
-> PDF output uses system fonts. The development image includes Noto CJK and Noto Color Emoji; other environments
-> must install fonts appropriate for their document content.
+> PDF output uses system fonts, apart from formulas, which it sets in the math font monodocs carries
+> ([`themes/mathFont.ts`](../app/packages/core/src/themes/mathFont.ts), roadmap 6.4). That font is put, through
+> `FontFace` at the top of `<head>`, into the page the PDF is printed from and only when the document has a
+> formula, never into the HTML written. The development image includes Noto CJK and Noto Color Emoji; other
+> environments must install fonts appropriate for their document content.
 
 ## Security Boundaries
 

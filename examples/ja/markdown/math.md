@@ -11,8 +11,10 @@ order: 8
 各項目は **ソース** を先に示し、その下に **表示（HTML 変換結果）** を並べます。
 
 > [!NOTE]
-> 数式はブラウザが OpenType MATH フォントで描きます。Windows なら Cambria Math、Debian / Ubuntu
-> なら Latin Modern Math（`fonts-lmodern`）です。無いと括弧や根号が伸びません。
+> 数式はブラウザが OpenType MATH フォントで描きます。PDF では、どのマシンでも monodocs が持っている
+> New Computer Modern Math で組みます。HTML では、読者のブラウザが読者のフォントを使います。Windows
+> なら Cambria Math、Debian / Ubuntu なら Latin Modern Math（`fonts-lmodern`）です。無いと括弧や
+> 根号が伸びません。
 
 ## 文中の数式
 

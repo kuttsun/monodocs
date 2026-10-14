@@ -2,7 +2,14 @@
   "bin": {
     "monodocs": "./dist/monodocs.cjs"
   },
-  "files": ["dist/monodocs.cjs", "LICENSE", "README.md", "README.ja.md", "THIRD-PARTY-NOTICES.txt"],
+  "files": [
+    "dist/monodocs.cjs",
+    "dist/fonts",
+    "LICENSE",
+    "README.md",
+    "README.ja.md",
+    "THIRD-PARTY-NOTICES.txt"
+  ],
   "engines": {
     "node": ">=22.12.0"
   },

@@ -11,8 +11,10 @@ own line. Formulas are rendered to MathML at build time, so the output needs no 
 Each item shows the **source** first, then the **rendered output (HTML)** below it.
 
 > [!NOTE]
-> The browser draws formulas with an OpenType MATH font: Cambria Math on Windows, or Latin Modern
-> Math (`fonts-lmodern`) on Debian and Ubuntu. Without one, brackets and radicals do not stretch.
+> The browser draws formulas with an OpenType MATH font. In the PDF, monodocs sets them in a font it
+> carries, New Computer Modern Math, on any machine. In the HTML, the reader's browser uses the
+> reader's fonts: Cambria Math on Windows, or Latin Modern Math (`fonts-lmodern`) on Debian and
+> Ubuntu. Without one, brackets and radicals do not stretch.
 
 ## Inline
 

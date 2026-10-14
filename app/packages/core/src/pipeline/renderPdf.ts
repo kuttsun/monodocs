@@ -19,6 +19,7 @@ import {
   type PdfToc,
 } from "./pdfToc.js";
 import { MonodocsError } from "../diagnostics.js";
+import { assertMathFontLoaded, htmlHasFormula, withMathFont } from "../themes/mathFont.js";
 import { t } from "../messages.js";
 
 /** {@link PdfGenerator.render} のオプション。 */
@@ -75,6 +76,12 @@ export type PdfRenderOptions = {
    * を投げ、豆腐入りの PDF を書き出させない。
    */
   fontCheck?: FontCheckMode;
+  /**
+   * What sets formulas in the carried math font ({@link file://../themes/mathFont.ts mathFontHead}),
+   * read only when the document has a formula. Omitted means formulas are set in whatever the
+   * machine has, which only a test asks for.
+   */
+  mathFont?: () => Promise<string>;
   /** 余白・フォントの検査で問題が出たときの通知先。ビルドの警告へ流す。 */
   onWarning?: (diagnostic: Diagnostic) => void;
 };
@@ -373,14 +380,21 @@ export function createPuppeteerPdfGenerator(): PdfGenerator {
   return {
     async render(html, options) {
       const b = await ensureBrowser();
+      // The font goes in before the page's own scripts run, since Mermaid lays out the labels of the
+      // page shown first as soon as it loads; the font check then measures formulas in it.
+      const mathFont =
+        options.mathFont && htmlHasFormula(html) ? await options.mathFont() : undefined;
       let page: PageLike;
       try {
         page = await b.newPage();
         // 画像は data URI 済みなので "load" で十分（ネットワーク待ちは不要）。
-        await page.setContent(html, { waitUntil: "load" });
+        await page.setContent(mathFont ? withMathFont(html, mathFont) : html, {
+          waitUntil: "load",
+        });
       } catch (error) {
         throw new BrowserSetupError(t("pdf.pageLoadFailed", { detail: (error as Error).message }));
       }
+      if (mathFont) await assertMathFontLoaded(page);
 
       if (options.waitForMermaid) {
         await page.evaluate(`(function(){${PREPARE_MERMAID}})()`);

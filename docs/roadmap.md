@@ -262,7 +262,9 @@ measurement sets:
    `𝐄`, `\mathbb{R}` → `ℝ`), since the browser will not apply it.
 3. A MATH font is a stated requirement of monodocs for math, on the machine that prints and in the
    reader's browser — Cambria Math ships with Windows; Linux needs a package such as `fonts-lmodern` —
-   documented where the CI guide documents the CJK and emoji fonts (24.3.3).
+   documented where the CI guide documents the CJK and emoji fonts (24.3.3). Since v0.17 it is a
+   requirement in the reader's browser alone: a PDF sets its formulas in the font monodocs carries
+   (below).
 4. What a reader copies and what search indexes are designed and verified before math ships. The
    notation has to agree with them, but it does not settle them: the copy measured above is
    a browser's selection of MathML, which no choice of delimiter changes.
@@ -727,8 +729,9 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
 
 **The fixture (v0.15).** `examples/math` holds the formulas v0.14 measured, in Markdown and in
 AsciiDoc, so that what follows can be checked on any machine (`monodocs build examples/math --format
-both`). Built in the development image as it is, with no math font, its PDF is reported: the letters
-as Chromium draws them (`font/missing`) and the missing MATH table (`font/no-math-table`). Built on
+both`). Built in the development image as it is, with no math font, its PDF was reported up to v0.16:
+the letters as Chromium draws them (`font/missing`) and the missing MATH table (`font/no-math-table`).
+Since v0.17 it sets its formulas in the font monodocs carries there too, and nothing is reported. Built on
 Linux with Latin Modern Math installed (`fonts-lmodern`, Chromium 151), nothing is reported, and:
 
 - no variable or Greek letter is tofu, and `\mathbb` and `\mathbf` (ℝ, ℕ, 𝐄, 𝐁) are told apart from a
@@ -843,6 +846,69 @@ existing PDFs look, which 12.4 allows before 1.0, and after it only in a major r
 behind a key. It is made the
 default, before 1.0, in v0.17, where the font, its licence, and any key are decided in the open;
 Latin Modern Math is the first candidate, not the choice.
+
+**Settled in v0.17: New Computer Modern Math, Book weight.** Nine MATH fonts were compared, each set
+as the only math font in Chromium 154 on the math fixture and on a page of brackets, accents, and
+inline formulas in Japanese text: Latin Modern Math, New Computer Modern Math (Book and Regular), STIX
+Two Math, Libertinus Math, TeX Gyre Pagella Math and Termes Math, Noto Sans Math, and Fira Math.
+
+- Left out: STIX Two Math, whose arrow under `\xrightarrow` does not stretch and whose overbrace stops
+  short of what it covers; TeX Gyre Pagella and Termes Math, whose arrows are short, and whose
+  overbrace, in Termes, reaches over `a+b` alone; Noto Sans Math, which has none of `¯`, `˙`, `¨`, and
+  `‾`, which KaTeX writes for `\bar`, `\dot`, `\ddot`, and `\overline`'s kin; and Fira Math, which has
+  no script, fraktur, or sans-serif letters and no `⋮` or `⋱`.
+- Latin Modern Math, the first candidate, sets brackets, arrows, and braces as well as any, but has
+  not been released since 1.959 (2014): it lacks lowercase script letters, `∛`, and `‾`, and its
+  strokes are light beside the default theme's sans-serif and Japanese text.
+- New Computer Modern Math continues Computer Modern, the look KaTeX and LaTeX give formulas, as Latin
+  Modern Math does, and is maintained (8.1.1, 2026-06-22). It has every character the comparison
+  looked for, sets brackets, arrows, and braces as Latin Modern Math does, and its Book weight sits
+  best beside the default theme's text. `\vec` sits left of its letter, as with Latin Modern Math. It
+  is the one chosen. It is twice Latin Modern Math's size, and a later version can change how
+  formulas set, so its version is pinned and moving it is a change of how PDFs look.
+- None of the nine fixes `\bar` touching its letter: KaTeX writes `<mo>¯</mo>` (U+00AF), which
+  Chromium does not stretch, and every font set it on or against the letter's top. That is a matter
+  of the markup, not of the font, and is left as it is. On Linux the radical joined its bar in every
+  font. Both are looked at again on Windows before 0.17.0.
+
+The file is `NewCMMath-Book.otf` from the CTAN package `newcomputermodern` 8.1.1, by Antonis
+Tsolomitis, unmodified (SHA-256 `2ea09ebc…becd95`), under the GUST Font License 1.0, which is the LaTeX
+Project Public License 1.3c with a request, not a requirement, that a modified font be renamed. Being
+one file of the package, it is a Derived Work under LPPL clause 2 and is distributed under clause 6:
+`app/packages/core/src/themes/fonts/README.md` says what was taken and where the whole package is,
+the GUST and LPPL texts are beside it, and it is not converted, subset, or renamed. Chromium embeds the
+glyphs a PDF uses as a Type 3 font whose descriptor keeps the name `NewCMMath-Book`, which is how the
+tests and `scripts/site-pdf-sample.sh` tell that a PDF carries it.
+
+It is not in the CLI bundle or the standalone binary. Only a PDF build reads it, which the binary
+cannot run (it has no headless browser), so it would be dead weight there; the npm package carries it
+beside the bundle, in `dist/fonts/` with its notice and licence texts, and `THIRD-PARTY-NOTICES.txt`
+names it in a section of its own. Measured on Linux x64 against 0.16's code: the bundle grows by the
+code alone (21,266,461 to 21,271,024 bytes), the binary keeps its 146,148,544 bytes, and the npm
+package grows from 4,443,625 to 5,413,698 bytes packed and from 21,595,319 to 23,054,637 unpacked. A PDF
+grows by the glyphs it uses: the math fixture's from 217,671 bytes with Latin Modern Math to 225,118,
+and `examples/en`'s from 558,110 to 561,534.
+
+How it is loaded. A PDF build whose document has a formula — a `<math>`, a pre-rendered label's
+included, or a diagram whose source has a `$$…$$` label — gets the font as data through `FontFace` at
+the top of `<head>`, before any script of the page runs: Chromium has it loaded when the constructor
+returns, so the labels Mermaid lays out as the page loads are laid out in it. A stylesheet's
+`@font-face` would load only once something asked for it, after that first layout. A document with no
+formula gets nothing and embeds what it did before, and the HTML gets nothing at all. The rule is
+`:where(math) { font-family: <the carried font>, math }`, which has no specificity: it replaces only
+the browser's own `math { font-family: math }`, so a theme that names its own font for `math` keeps it
+in the PDF too. That is how an author sets formulas in another font; no key is added for it.
+
+- With `mermaid.mode: pre-render`, the SVG the HTML carries is laid out at build time with the build
+  machine's fonts as before, since the reader's browser draws it with the reader's: laying it out in
+  the carried font would size a label's box for a font the reader does not have. A diagram with a
+  formula in a label is laid out a second time, in the carried font, for the PDF, which prints that
+  copy; a PDF-only build lays every diagram out in it once.
+- The font check measures formulas in the font they are set in. With the carried font nothing is
+  reported of them on any machine; under a theme's own font, as before. `font/no-math-table` stays:
+  it can still occur under a theme's own `font-family` on `math`, and its message now says so. The
+  pre-render check still reports a label's formula whose letters this machine cannot draw, which
+  concerns the HTML's SVG, and its message says that the PDF's formulas are set in the carried font.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
@@ -3599,6 +3665,9 @@ The values reach the generated stylesheet, so they are validated as plainly a nu
 The rules are `@media print`, which is what makes one artifact serve both readings: the same HTML
 stays as it was on screen and is set tighter on paper. `--format pdf` goes through the print
 stylesheet, so it gets the same treatment, and so does a reader printing the HTML from a browser.
+What the print stylesheet does not bring is the math font a PDF's formulas are set in (6.4, v0.17):
+monodocs puts that into the page it prints, not into the HTML, so a reader printing the HTML gets the
+formulas in the browser's own fonts.
 
 **The documentation site shows the four rather than describing them.** A page count is the claim, and
 a table of numbers is a poor way to make it. `site/samples/density/` holds one short document per

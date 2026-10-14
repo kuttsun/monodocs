@@ -294,10 +294,11 @@ PDF 出力（`--format pdf` / `both`）と Mermaid pre-render はヘッドレス
 （`fontCheck: warn | error | off`、既定 `warn`。[roadmap.md](roadmap.md) 24.3.3）。
 
 > [!NOTE]
-> 同梱のサンプル文書が開発イメージでこの警告に引っかかるのは、数式についてだけである。開発イメージには意図して
-> 数式用のフォントを入れていないので、`examples/en`、`examples/ja`、`examples/math` は数式の文字と、OpenType の
-> MATH テーブルを持たないフォントを報告する。数式用のフォントを入れれば何も報告しない。これは
-> `build.fontcheck.test.ts` が確かめている。
+> 開発イメージには意図して数式用のフォントを入れていないが、同梱のサンプル文書はそこで何も報告しない。PDF の数式は、
+> マシンのフォントではなく monodocs が持っている数式用のフォント（`app/packages/core/src/themes/fonts/`、roadmap 6.4）で
+> 組むからである。v0.16 までは、`examples/en`、`examples/ja`、`examples/math` がここで数式の文字と、OpenType の MATH
+> テーブルを持たないフォントを報告していた。`build.fontcheck.test.ts` は、いまは何も報告しないことと、テーマが持っている
+> フォントから外した数式はこれまでどおり報告されることの両方を確かめている。
 
 ## 入力の前提（セキュリティ）
 

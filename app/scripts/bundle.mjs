@@ -11,7 +11,7 @@
 import { build } from "esbuild";
 import { bundleExternals } from "./externals.mjs";
 import { createRequire } from "node:module";
-import { chmod, copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { chmod, copyFile, cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -45,6 +45,12 @@ const assets = {
   mermaidInline,
   mermaidNotices,
 };
+
+// The math font a PDF's formulas are set in (roadmap 6.4) is not embedded: only a PDF build reads
+// it, which the single executable cannot run, so it would be dead weight there. It is copied beside
+// the bundle instead, with its licence texts, where themes/mathFont.ts looks for it, and the npm
+// package carries that directory.
+const mathFontDir = resolve(coreSrc, "themes/fonts");
 
 await mkdir(dirname(outfile), { recursive: true });
 
@@ -225,6 +231,25 @@ const header = [
     : []),
 ].join("\n");
 
+// The carried math font ships beside the bundle, not in it, with its own notice and licence texts.
+// Named here so that this file accounts for everything the npm package distributes; the standalone
+// binary does not carry it.
+const besideSection = [
+  "#".repeat(80),
+  "Files distributed beside the bundle",
+  "#".repeat(80),
+  "",
+  "The npm package carries, beside dist/monodocs.cjs and not inside it, the math font a PDF's",
+  "formulas are set in. The standalone binary, which cannot write a PDF, does not carry it.",
+  "",
+  "  dist/fonts/NewCMMath-Book.otf  New Computer Modern Math, Book weight, by Antonis Tsolomitis,",
+  "    unmodified from the CTAN package newcomputermodern 8.1.1",
+  "    (https://ctan.org/pkg/newcomputermodern), under the GUST Font License, an instance of the",
+  "    LaTeX Project Public License 1.3c. dist/fonts/README.md says what was taken and where the",
+  "    whole package is; both licence texts are beside it.",
+  "",
+].join("\n");
+
 const body = notices
   .map((n) => {
     const meta = [`${n.name}@${n.version}  —  ${n.license}`, n.url].filter(Boolean).join("\n");
@@ -245,12 +270,16 @@ const runtimeSection = [
     "$1 embedded in dist/monodocs.cjs and the standalone binary.",
   ),
 ].join("\n");
-await writeFile(noticesFile, `${header}\n${body}\n${runtimeSection}`, "utf8");
+await writeFile(noticesFile, `${header}\n${body}\n${besideSection}\n${runtimeSection}`, "utf8");
 console.log(`notices: ${noticesFile} (${notices.length} components)`);
 
 // Keep the existing development/SEA entry point available while the published
 // npm artifact is assembled from packages/cli.
 await mkdir(legacyDistDir, { recursive: true });
 await copyFile(outfile, resolve(legacyDistDir, "monodocs.cjs"));
+// Beside both copies of the bundle, so that either builds a PDF with it.
+for (const dist of [packageDistDir, legacyDistDir]) {
+  await cp(mathFontDir, resolve(dist, "fonts"), { recursive: true });
+}
 await chmod(resolve(legacyDistDir, "monodocs.cjs"), 0o755);
 await copyFile(noticesFile, resolve(legacyDistDir, "THIRD-PARTY-NOTICES.txt"));

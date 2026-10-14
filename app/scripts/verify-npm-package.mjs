@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -12,6 +13,25 @@ const stageDir = resolve(appRoot, "dist/npm/monodocs");
 const fixtureDir = resolve(appRoot, "../examples/en");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const temporaryRoot = await mkdtemp(join(tmpdir(), "monodocs-npm-smoke-"));
+
+/**
+ * The fonts a PDF embeds, by the name in each font descriptor, subset tag removed. Chromium embeds a
+ * font with CFF outlines as a Type 3 font, which pdffonts lists unnamed; its descriptor keeps the
+ * name. pdf-lib is the workspace's own (packages/core reads PDFs with it), not the package's.
+ */
+async function pdfFontNames(file) {
+  const require = createRequire(resolve(appRoot, "packages/core/package.json"));
+  const { PDFDocument, PDFDict, PDFName } = require("pdf-lib");
+  const doc = await PDFDocument.load(await readFile(file));
+  const names = new Set();
+  for (const [, object] of doc.context.enumerateIndirectObjects()) {
+    if (!(object instanceof PDFDict)) continue;
+    if (object.get(PDFName.of("Type"))?.toString() !== "/FontDescriptor") continue;
+    const name = object.get(PDFName.of("FontName"))?.toString() ?? "";
+    names.add(name.replace(/^\/([A-Z]{6}\+)?/, ""));
+  }
+  return [...names];
+}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -95,6 +115,10 @@ try {
     "README.ja.md",
     "THIRD-PARTY-NOTICES.txt",
     "dist/monodocs.cjs",
+    "dist/fonts/GUST-FONT-LICENSE.txt",
+    "dist/fonts/NewCMMath-Book.otf",
+    "dist/fonts/README.md",
+    "dist/fonts/lppl-1-3c.txt",
     "package.json",
   ];
   const actualFiles = packResult.files.map(({ path }) => path).sort();
@@ -167,6 +191,11 @@ try {
 
   const pdfHeader = (await readFile(pdfOutput)).subarray(0, 5).toString("latin1");
   if (pdfHeader !== "%PDF-") throw new Error(`Invalid PDF header: ${pdfHeader}`);
+  // examples/en has a page of formulas, which the installed package sets in the math font it
+  // carries beside the bundle (roadmap 6.4): the PDF names it in a font descriptor.
+  if (!(await pdfFontNames(pdfOutput)).includes("NewCMMath-Book")) {
+    throw new Error("The PDF does not embed the carried math font, NewCMMath-Book");
+  }
   const prerenderedHtml = await readFile(prerenderOutput, "utf8");
   // Attributes may follow the class: 0.16 marks a diagram with its alignment (roadmap 20.6).
   if (!/<figure class="mermaid"[^>]*><svg/.test(prerenderedHtml)) {

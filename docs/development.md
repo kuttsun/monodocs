@@ -342,10 +342,11 @@ The build checks the characters the document contains against what the machine c
 them and an example font (`fontCheck: warn | error | off`, default `warn`; see [roadmap.md](roadmap.md) 24.3.3).
 
 > [!NOTE]
-> The sample documents trip this check in the development image only for their formulas: it has no math font
-> on purpose, so `examples/en`, `examples/ja`, and `examples/math` report the letters of their formulas and a
-> font without an OpenType MATH table. With a math font installed they report nothing, which
-> `build.fontcheck.test.ts` checks.
+> The development image has no math font on purpose, and the sample documents report nothing there: a PDF sets
+> its formulas in the math font monodocs carries (`app/packages/core/src/themes/fonts/`, roadmap 6.4), not in the
+> machine's. Up to v0.16 `examples/en`, `examples/ja`, and `examples/math` reported the letters of their formulas
+> and a font without an OpenType MATH table here. `build.fontcheck.test.ts` checks both that they are now silent and
+> that formulas a theme takes out of the carried font are still reported.
 
 ## Input Assumptions (Security)
 
