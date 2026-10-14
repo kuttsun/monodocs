@@ -732,9 +732,9 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] `0.19.0` を `latest` タグで公開し、リリースノートに `--diff-pdf` を紹介し、`dist_tag: 0.19.0` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.19 の手順が飛ばされずに走ったことを確かめる
 - [ ] `v0.19.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する
 - [ ] Node.js の無い Linux x64 ホストで、公開した `v0.19.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
-- [ ] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる
+- [ ] リリースした Linux バイナリが組んだ差分を、0.18.0 と同じく目視ではなく操作して確かめる。3 つの表示、前後の移動、サイドバーの印、変更の一覧である
 - [ ] Windows 11 ホストで、公開した `v0.19.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
-- [ ] 人にしか答えられない Windows での確認。`markup` と `bars` の PDF を開いて印刷すること。`markup` は白黒でも印刷する
+- [ ] 人にしか答えられない Windows での確認。0.18.0 で確かめたこと——空白と日本語を含むパスにあり、`core.autocrlf` を設定し、LFS のファイルを持つリポジトリで `--diff-from` を使って組んだ差分と、生成した HTML の Edge での見え方——に加え、`markup` と `bars` の PDF を開いて印刷すること。`markup` は白黒でも印刷する
 - [ ] `next` の dist-tag を `0.19.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.19.0` に固定していることを確かめる
 
 ### v0.20: 変更されたブロックの中の語と文字
@@ -766,7 +766,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] Node.js の無い Linux x64 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
 - [ ] リリースした Linux バイナリが組んだ差分を、目視ではなく操作して確かめる。変更された日本語と英語の段落を 3 つの表示で読む
 - [ ] Windows 11 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
-- [ ] 人にしか答えられない Windows での確認。変更された日本語と英語の段落の、Edge の画面と印刷での見え方
+- [ ] 人にしか答えられない Windows での確認。0.19.0 で確かめたこと——空白と日本語を含むパスにあり、`core.autocrlf` を設定し、LFS のファイルを持つリポジトリで `--diff-from` を使って組んだ差分、生成した HTML の Edge での見え方、`markup` と `bars` の PDF の印刷（`markup` は白黒でも）——に加え、変更された日本語と英語の段落が画面と紙でどう読めるか
 - [ ] `next` の dist-tag を `0.20.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.20.0` に固定していることを確かめる
 
 ### 1.0

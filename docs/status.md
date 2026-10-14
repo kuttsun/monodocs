@@ -735,9 +735,9 @@ Nothing changes for a build without a difference, so this release goes to `lates
 - [ ] Publish `0.19.0` under the `latest` tag, with release notes introducing `--diff-pdf`, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.19.0`, confirming that the 0.19 steps ran rather than being skipped
 - [ ] Verify the `v0.19.0` release binaries through `verify-release-binaries.yml` on both platforms
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.19.0` assets on a Linux x64 host without Node.js
-- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed
+- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, as for 0.18.0: the three views, previous and next, the sidebar marks, and the list of changes
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.19.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
+- [ ] What only a person can answer, on Windows: what 0.18.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, and how the generated HTML looks in Edge — and a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
 - [ ] Move the `next` dist-tag onto `0.19.0`, and confirm that the deployed CI guide pins `monodocs@0.19.0` in English and Japanese
 
 ### v0.20: Words and Characters Inside a Changed Block
@@ -769,7 +769,7 @@ It changes only what a build with a difference shows inside a changed block, and
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js
 - [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, reading changed paragraphs in Japanese and English in the three views
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: how changed paragraphs in Japanese and English look in Edge, on screen and printed
+- [ ] What only a person can answer, on Windows: what 0.19.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, the generated HTML in Edge, and a `markup` and a `bars` PDF printed, the `markup` one in black and white — and how changed paragraphs in Japanese and English read, on screen and on paper
 - [ ] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese
 
 ### 1.0
