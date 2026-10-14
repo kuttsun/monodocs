@@ -74,8 +74,9 @@ v0.17 comes before 1.0: one math font for a PDF's formulas, so that a PDF sets t
 it is built, and KaTeX 0.18 with Mermaid 12.2, past a security advisory ([roadmap.md](roadmap.md)).
 
 v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an earlier version written
-into them, for readers who do not look at Git, in three releases, because what they add is a surface
-1.0 freezes ([roadmap.md](roadmap.md) 7.3).
+into them, for readers who do not look at Git, in three releases. 12.4 would allow them in 1.x; they
+come first because what they add is a surface 1.0 freezes, cheap to change before the number and
+expensive after it ([roadmap.md](roadmap.md) 7.3, 12.4).
 
 ## Completion Criteria Status
 
@@ -675,7 +676,7 @@ Every PDF with a formula changes, so this release goes through a beta, as 0.16.0
 - [ ] A page including an example of an LFS pointer's first line is not `diff/lfs-pointer`
 - [ ] A document's own `~~struck~~` text and raw `<ins>` are shown in every view
 - [ ] A tree extracted from a ref matches a checkout of that ref for the files under the earlier root, including files marked `export-ignore` and a `.gitattributes` changed since; nothing outside the root is written but the configuration file; the repository's `git status` is the same before and after; the build works from a subdirectory of the repository and with a directory whose name contains `[`
-- [ ] An input argument that is a file, a `-c` that names a file the earlier version lacks, and a `-c` or root that leaves the repository each behave as 7.3.1 states, none falling back to defaults; without `-c`, an earlier version without a configuration file builds with the defaults, and one with a file the new version lacks builds with it
+- [ ] An input argument that is a file, a `-c` that names a file the earlier version lacks, and a `-c` or root that leaves the repository each behave as [roadmap.md](roadmap.md) 7.3.1 states, none falling back to defaults; without `-c`, an earlier version without a configuration file builds with the defaults, and one with a file the new version lacks builds with it
 - [ ] In a shallow clone without the ref, the error names `fetch-depth: 0`; an LFS file under the root that a page reads, extracted without git-lfs and its filter, is `diff/lfs-pointer`; one the build does not read, or one outside the root, is not; with the filter configured as required but git-lfs missing, the extraction is `diff/git-failed`
 - [ ] An earlier configuration with a key the current monodocs does not accept is an error showing `label:path`; one using `sidebar.exclude` builds, and the translation table maps it to `sources.exclude` ready for 1.0's removal
 - [ ] An AsciiDoc page using `{docdir}` unchanged between the versions is not a difference, its includes and images still come from the earlier version — including an include and an image whose target is written with `{docdir}`, with no line of the earlier page silently dropped — and two builds from the same ref give the same bytes; a page using `{doctime}` or `{localtime}` unchanged between the versions is not a difference, and with `SOURCE_DATE_EPOCH` set, two builds with a difference give the same bytes
@@ -687,10 +688,26 @@ Every PDF with a formula changes, so this release goes through a beta, as 0.16.0
 - [ ] The list of changes gets a page ID that collides with neither a page named `diff-changes.md` nor a heading whose ID matches the article's, and is in neither search nor the previous/next navigation; the bar's navigation lands on each change after the page has been shown
 - [ ] The default theme's `app.js` is byte for byte what it was before the feature, and a search term found on a page is not left highlighted inside its deleted content
 - [ ] A custom theme with its own `template.html`, `style.css`, and `app.js` gets the bar, the marks, and the navigation
-- [ ] The command reference and the single HTML invariants in architecture.md describe the difference, in both languages
-- [ ] The "What 1.0 Freezes" page (12.4) lists the two options, the new diagnostic codes, the new `html.labels` keys, `//changes` and how the list of changes gets its page ID among the addresses, and the `data-monodocs-diff`, `data-monodocs-diff-block`, and `data-monodocs-diff-page` attributes, and `surfaces.test.ts` passes
-- [ ] testing.md lists the new tests in both languages
-- [ ] Nothing changes for an existing document, so 0.18.0 goes to `latest` without a beta, as 0.13.0 and 0.14.0 did, with the verification 0.16.0 had: the published package on Linux x64 and Windows x64 through `verify-published.yml` with steps that build a difference from a tag of a fixture repository and from a directory, the release binaries, a driven browser pass over a difference the released Linux binary builds — the three views, previous and next, the sidebar marks, the list of changes — `verify-windows-binary.ps1` on Windows 11 and the Windows checks a person has to make, git on Windows included (paths with spaces and Japanese characters, `core.autocrlf`, LFS), and the CI guide pinned to the release. The release notes introduce the two options and say that nothing changes for a build without them
+- [ ] The command reference and the single HTML invariants in [architecture.md](architecture.md) describe the difference, in English and Japanese
+- [ ] The "What 1.0 Freezes" page ([roadmap.md](roadmap.md) 12.4) lists the two options, the new diagnostic codes, the new `html.labels` keys, `//changes` and how the list of changes gets its page ID among the addresses, and the `data-monodocs-diff`, `data-monodocs-diff-block`, and `data-monodocs-diff-page` attributes, and `surfaces.test.ts` passes
+
+**Documentation and tests**
+
+- [ ] [testing.md](testing.md) lists the new tests in English and Japanese
+
+**Release**
+
+Nothing changes for an existing document, so this release goes to `latest` without a beta, as 0.13.0 and 0.14.0 did.
+
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.18.0` in the version change itself, before the `v0.18.0` tag is created
+- [ ] `verify-published.yml` gains a 0.18 gate and steps that build a difference from a tag of a fixture repository and from a directory, merged before anything below runs
+- [ ] Publish `0.18.0` under the `latest` tag, with release notes introducing `--diff-from` and `--diff-from-dir` and stating that nothing changes for a build without them, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.18.0` — not the default `next`, which still points at 0.17.0 and would skip every 0.18 step while passing — confirming that the 0.18 steps ran rather than being skipped
+- [ ] Verify the `v0.18.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.18.0` assets on a Linux x64 host without Node.js
+- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed: the three views, previous and next, the sidebar marks, and the list of changes
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.18.0` assets on a Windows 11 host
+- [ ] What only a person can answer, on Windows: a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, and how the generated HTML looks in Edge
+- [ ] Move the `next` dist-tag onto `0.18.0`, and confirm that the deployed CI guide pins `monodocs@0.18.0` in English and Japanese
 
 ### v0.19: The Difference on Paper
 
@@ -703,15 +720,31 @@ Every PDF with a formula changes, so this release goes through a beta, as 0.16.0
 - [ ] In `markup`, a deleted image appears even when the HTML configuration would not embed it; in `bars`, the list of changes names deleted pages without their content, and every block of an added page carries a bar
 - [ ] Deleted headings are in neither the outline nor the printed table of contents
 - [ ] `--diff-pdf` given without a PDF output is `diff/pdf-without-pdf`
-- [ ] The command reference and the "What 1.0 Freezes" page list `--diff-pdf` with its default, `markup`, and `diff/pdf-without-pdf`, in both languages, and `surfaces.test.ts` passes
-- [ ] testing.md lists the new tests in both languages
-- [ ] 0.19.0 goes to `latest` without a beta, nothing changing for a build without a difference, with the verification 0.18.0 had, its steps building both presentations, and a person printing a `markup` and a `bars` PDF on Windows, the first in black and white
+- [ ] The command reference and the "What 1.0 Freezes" page list `--diff-pdf` with its default, `markup`, and `diff/pdf-without-pdf`, in English and Japanese, and `surfaces.test.ts` passes
+
+**Documentation and tests**
+
+- [ ] [testing.md](testing.md) lists the new tests in English and Japanese
+
+**Release**
+
+Nothing changes for a build without a difference, so this release goes to `latest` without a beta, as 0.18.0 did.
+
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.19.0` in the version change itself, before the `v0.19.0` tag is created
+- [ ] `verify-published.yml` gains a 0.19 gate and steps that build a difference to PDF in both presentations, merged before anything below runs
+- [ ] Publish `0.19.0` under the `latest` tag, with release notes introducing `--diff-pdf`, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.19.0`, confirming that the 0.19 steps ran rather than being skipped
+- [ ] Verify the `v0.19.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.19.0` assets on a Linux x64 host without Node.js
+- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.19.0` assets on a Windows 11 host
+- [ ] What only a person can answer, on Windows: a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
+- [ ] Move the `next` dist-tag onto `0.19.0`, and confirm that the deployed CI guide pins `monodocs@0.19.0` in English and Japanese
 
 ### v0.20: Words and Characters Inside a Changed Block
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
-- [ ] The examples measured in 7.3.6 come out as recorded there, and a test pins them
+- [ ] The examples measured in [roadmap.md](roadmap.md) 7.3.6 come out as recorded there, and a test pins them
 - [ ] In a paragraph mixing Japanese and English, a change to a single word shows as a difference in that word only
 - [ ] An emoji joined by ZWJ and a flag are never split, and the script and cluster table is generated from one Unicode version, with a test that fails when the table and its data file disagree
 - [ ] A paired heading whose generated number changed shows no difference in the number
@@ -719,9 +752,25 @@ Every PDF with a formula changes, so this release goes through a beta, as 0.16.0
 - [ ] A changed line in a code block without a language, and with `highlight.enabled: false`, is marked by line
 - [ ] The earlier-version view of a changed paragraph reads as the earlier paragraph
 - [ ] The same old and new inputs, including a character assigned in a Unicode version newer than the older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two Node versions with different ICU and Unicode versions
-- [ ] The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in both languages
-- [ ] testing.md lists the new tests in both languages
-- [ ] 0.20.0 changes what a build with a difference shows inside a changed block, which no released document depends on yet, so it goes to `latest` without a beta, with the verification 0.19.0 had, its browser pass reading changed paragraphs in Japanese and English in the three views; the release notes say how a changed block now reads
+- [ ] The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in English and Japanese
+
+**Documentation and tests**
+
+- [ ] [testing.md](testing.md) lists the new tests in English and Japanese
+
+**Release**
+
+It changes only what a build with a difference shows inside a changed block, and 12.4 promises no output that stays the same across versions before 1.0, so this release goes to `latest` without a beta, as 0.19.0 did.
+
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.20.0` in the version change itself, before the `v0.20.0` tag is created
+- [ ] `verify-published.yml` gains a 0.20 gate and a step that builds a difference with a paragraph changed by one word, merged before anything below runs
+- [ ] Publish `0.20.0` under the `latest` tag, with release notes stating how a changed block now reads, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.20.0`, confirming that the 0.20 steps ran rather than being skipped
+- [ ] Verify the `v0.20.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js
+- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, reading changed paragraphs in Japanese and English in the three views
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host
+- [ ] What only a person can answer, on Windows: how changed paragraphs in Japanese and English look in Edge, on screen and printed
+- [ ] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese
 
 ### 1.0
 
