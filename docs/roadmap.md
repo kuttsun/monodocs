@@ -87,6 +87,8 @@ dist/
 - Make it usable as a GitHub Action
 - Provide a standalone binary
 - Make themes and layouts extensible
+- Output the difference from an earlier version as HTML and PDF that readers who never look at Git
+  can be handed (7.3)
 
 ---
 
@@ -996,6 +998,547 @@ PDF
 
 PDF output will be supported after HTML output stabilizes.
 
+### 7.3 Difference from an Earlier Version (v0.18–v0.20)
+
+When a revised specification is handed over, the first thing the receiving side wants to know is
+what changed since the last version. A document written in Word shows that with tracked changes. The
+difference between two versions of a monodocs document can be read with `git diff`, but what it
+shows is the difference in the Markdown and AsciiDoc sources, and only the author can read that.
+Customers, approvers, and people on site do not look at Git. So monodocs can output HTML and PDF
+with the difference from an earlier version (additions, deletions, changes) written into them. It
+does not replace `git diff`; it is for the readers `git diff` does not reach.
+
+```bash
+monodocs build ./docs -o ./dist/docs.html --diff-from v1.2
+monodocs build ./docs -o ./dist/docs.html --diff-from-dir ../project-1.2
+monodocs build ./docs -f pdf -o ./dist/docs.pdf --diff-from v1.2 --diff-pdf bars
+```
+
+It arrives in three stages, each a release before 1.0. Stage 1, in v0.18, outputs the difference at
+the level of pages and blocks in HTML. Stage 2, in v0.19, outputs it in PDF. Stage 3, in v0.20,
+compares the inside of changed blocks — words, and characters for Japanese — and treats tables cell
+by cell. 12.4 would allow all three as additions in 1.x minor releases; they come before 1.0 instead
+because what they add is a surface 1.0 freezes, which 12.4 makes cheap to change before the number
+and expensive after it, so each is used in a release before 1.0 claims it. At every stage, a
+combination not yet handled is an error, not accepted and ignored (12.4).
+
+**What this section decides, and what it leaves to the implementation.** The subsections below fix
+the interfaces, the rules a reader or a script can observe, the invariants the output keeps, and the
+facts measured on 2026-10-14. How a rule is reached in the HAST, in CSS, or through Asciidoctor's
+API is decided when each stage is implemented, against the completion criteria of the v0.18, v0.19,
+and v0.20 milestones, which name the cases a review of this design found — a nested list, a table's
+`colgroup`, a code block's padding, Asciidoctor's own numbers, and so on. What the implementation
+decides is recorded here when that stage lands, as 6.4 records what v0.15 measured. A rule this
+section states and the code cannot keep is a change to this section, made in the open, not a quiet
+difference between the two.
+
+### 7.3.1 Naming the Earlier Version
+
+**core only accepts a source directory for the earlier version.** `--diff-from-dir` passes one
+directly. `--diff-from` takes a git ref; the CLI extracts that version's files into a temporary
+directory and passes it down the same path. core knows nothing about Git, and `BuildOptions` gains
+one field:
+
+```ts
+type BuildOptions = {
+  // ...existing fields
+  /** The earlier version to compare against (7.3). Unset, the build is as before. */
+  diff?: {
+    /** The earlier version's counterpart of the current directory. */
+    dir: string;
+    /** What the earlier version may read; every path it resolves stays inside. Defaults to dir. */
+    tree?: string;
+    /** The earlier version's name in messages, and in the output when it has no document.version. */
+    label?: string;
+    /** Stage 2: the PDF presentation (7.3.5). Only with a PDF output; diff/unsupported before. */
+    pdf?: "markup" | "bars";
+  };
+};
+```
+
+**The two options cannot be used together.** A single option that treats its argument as a directory
+if it is one and as a ref otherwise is not adopted: with a directory named `v1.2` present, the same
+command line would mean either. The options exist on `build` only, with no key in the config file.
+What to compare against changes with every release; it belongs to the build, not to the document. A
+key can be added when someone asks for one (12.4). `watch`, `serve`, and `validate` do not declare
+the options, so Commander rejects them as unknown there. `watchSite`, `serveSite`, and
+`validateSite` take the same `BuildOptions` in core; given `diff`, they report `diff/unsupported`
+rather than ignore it — `validateSite` as a diagnostic, the way it reports every error it meets.
+
+**One directory stands for another.** `diff.dir` is the earlier version's counterpart of the current
+directory, and every path the command line names — the input argument, `-c` — is mapped through it.
+The earlier configuration is then found by the rule `loadConfig` applies to the new one, applied
+afresh to the mapped paths, so whether the new version has a configuration file does not change what
+the command line means for the earlier one. Every path the earlier version resolves — its
+configuration, `input`, `root` — stays inside `diff.tree`; one that leaves it is
+`diff/outside-version`, since what it would read is not the earlier version, and a mapped path the
+earlier version does not have is an error naming it, never a silent fall back to defaults.
+`--diff-from-dir ../project-1.2` names the earlier version's counterpart of the current directory,
+not of the input: run from a project's root with `./docs` as the input, it reads
+`../project-1.2/docs`. Its label is `../project-1.2`, the argument as written; the label appears in
+the output, so the documentation recommends a relative path or a `document.version`. Because the
+input is mapped and not named separately, a version whose document directory was later renamed
+(`docs` to `documentation`) is `diff/outside-version` rather than compared with the wrong files; the
+documentation says so, and that a copy of the earlier version laid out as the new one is passed with
+`--diff-from-dir`.
+
+**A git ref yields the same files a checkout would.** Measured with git 2.34 and git-lfs 3.0:
+
+- `git archive` drops files marked `export-ignore` in `.gitattributes`. An earlier version built
+  from it is not what the author saw in that version, so it is not used
+- A temporary index (`GIT_INDEX_FILE` in the temporary directory), filled by
+  `git read-tree <commit>` and written out by `git checkout-index -f`, yields `export-ignore` files
+  and applies `eol` conversion. The repository's index, working tree, and refs are untouched, and
+  `git status` reads the same before and after
+- With the work tree left at the repository, `checkout-index` reads `.gitattributes` from the
+  current working tree, so a version whose attributes have since changed comes out with today's line
+  endings. With `GIT_WORK_TREE` set to the empty temporary directory, git falls back to the
+  `.gitattributes` in the index — the earlier version's — and both a root `eol=crlf` and a
+  subdirectory's `-text` from that version were applied
+- Given paths, or `--stdin` fed by `git ls-files -z`, `checkout-index` writes only those files, with
+  the same attributes. A path not in the index fails it (`is not in the cache`, exit 1). With
+  `GIT_WORK_TREE` pointing elsewhere, a relative pathspec loses the subdirectory it was meant in —
+  run from one, `ls-files -- .` listed the whole repository — so the commands run with
+  `-C <repository>`, root-relative paths, and `--literal-pathspecs`, which also keeps a directory
+  named with `[` or `*` from being read as a glob
+- Files stored in LFS come out as their content when git-lfs is installed, through its smudge
+  filter, as a checkout does. When the object is not in the local LFS store, the filter tries to
+  download it, and a failed download fails the extraction (exit 128), leaving a log under
+  `.git/lfs/logs`. Without git-lfs and without its filter configured, or with
+  `GIT_LFS_SKIP_SMUDGE=1`, the file comes out as the pointer. With the filter still configured as
+  required (`filter.lfs.required=true`, which `git lfs install` writes) but the program gone, git
+  cannot run the filter and the extraction fails, which is `diff/git-failed`, as a checkout would
+  fail
+
+So the CLI resolves the repository from the current directory and the ref to a commit, fills a
+temporary index, and writes out only what the earlier version reads: its configuration file first,
+then the files under its root. The decisions an extraction has to make before those files exist —
+whether the mapped input is a file, whether the configuration is there — are made against the
+temporary index, not the file system. A documentation directory often shares its repository with
+code, and writing out the whole tree would download every LFS object in it and fail on any one that
+is missing. The temporary directory is removed when the build ends, whether it succeeded or not, and
+on `SIGINT`.
+
+A file the earlier build reads — a page, an included file, an image — that is still an LFS pointer
+(a small file in the pointer format: the `version https://git-lfs.github.com/spec/v1` line, an
+`oid sha256:` line, and a `size` line, with only the `ext-` lines the LFS specification allows
+between them) is `diff/lfs-pointer`, naming the file and saying that git-lfs is needed: built from a
+pointer, an image would appear deleted and replaced by a broken one. A pointer the build never
+reads, such as an archive offered for download, is left as it is. With git-lfs installed, though,
+writing out the root runs the smudge filter on every LFS file under it, and one whose object cannot
+be fetched fails the extraction as it would fail a checkout; that strictness is deliberate, since
+the earlier version is the one a checkout gives, and the message says which file it was. Submodule
+contents are not extracted; a submodule appears as an empty directory, as in a checkout without
+`--recurse-submodules`, and the documentation says so.
+
+**Failures name the cause.**
+
+| Situation | Code |
+|---|---|
+| `git` is not on `PATH` | `diff/git-unavailable` |
+| The current directory is not inside a git work tree | `diff/not-a-repository` |
+| The ref does not name a commit; in a shallow clone, the message names `fetch-depth: 0` | `diff/ref-not-found` |
+| A git command fails otherwise, a failed smudge included; git's stderr is quoted | `diff/git-failed` |
+| A file came out as an LFS pointer | `diff/lfs-pointer` |
+| `--diff-from-dir` does not exist or is not a directory | `diff/dir-not-found` |
+| Both options are given | `diff/conflicting-options` |
+| A path of the earlier version leaves `diff.tree`, or a mapped path is missing from it | `diff/outside-version` |
+| A difference is asked of what does not output one yet: a PDF in stage 1, from `-f` or `output.format`; `watchSite`, `serveSite`, or `validateSite` | `diff/unsupported` |
+
+15.5 declined to generate aliases automatically because that would make the output depend on the
+clone's history. A difference may depend on history, because the author names the ref; in exchange,
+it does not carry on quietly when the history is not there.
+
+### 7.3.2 Building Both Versions
+
+**Accepting already-built HTML as the earlier version is not adopted.** That HTML mixes base64
+images, Shiki spans, and section numbers into the content, and its structure differs with the
+monodocs version that produced it. Recovering blocks from it is fragile. The earlier version is
+built from its sources too, by the current monodocs. Both sides are built by the same version, so
+differences in Shiki classes or the template do not leak into the difference.
+
+**The earlier version is built with its own configuration for what the document contains, and with
+the new one for how it looks.** Built with the new configuration, a change to `sources.include` or
+the sidebar would show up as differences in the content. But there is one output, and if two
+configurations competed over how it looks, the author could not tell which one wins. The
+configuration the earlier version is built with is the new one with these fields taken from the
+earlier one:
+
+| Taken from the earlier configuration | Why |
+|---|---|
+| `input`, `root`, `sources.*` (include, exclude, extensions, `lineBreak`, AsciiDoc attributes) | Which files are pages and how their text reads |
+| `sidebar.mode`, `sidebar.items`, `sidebar.titleFrom`, `sidebar.titleTransform`, `sidebar.flattenSingleChild` | Page titles and the order deleted pages are listed in |
+| `math.enabled`, `mermaid.enabled` | Whether `$5` is a formula and a `mermaid` block a diagram is what the text means |
+
+Everything else — `title`, `document.*`, `lang`, `output.*`, `html.*`, `pdf.*`, `figures.align`,
+`toc.maxLevel`, `sidebar.collapseDepth`, `mermaid.mode`, `mermaid.runtime`, `highlight.enabled`,
+`assets.*`, `fontCheck` — comes from the new configuration, with three adjustments for the earlier
+build: `numbering.sections` is off, because the earlier version's numbers are never shown and
+numbering would refuse an earlier AsciiDoc document that numbered itself with `:sectnums:` (19.1);
+`assets.onLargeImage: error` is read as `warn`, because an image too large for the new rules is the
+past's; and what PDF output forces on images (embedding) is forced on the earlier build too. The
+earlier `document.version`, which names the earlier version, is read on its own. The split is a
+table in code over every field of `ResolvedConfig`, so a field added there does not compile until
+someone decides where it belongs.
+
+**Keys a major release removed are read as their replacements.** An earlier configuration with a key
+the current monodocs does not know is an error, not something silently dropped (12.2) — with one
+allowance. A key a major release removed after deprecating it, as 1.0 will remove `sidebar.exclude`
+for `sources.exclude` (12.4), is read in an earlier configuration as its replacement, without a
+warning: every 0.x version that used it would otherwise be impossible to compare against, and its
+author cannot rewrite a released configuration. The translations are a table kept beside the
+deprecations; a key in neither the schema nor that table remains an error. The message says that the
+file is the earlier version's and shows its path as `label:path` — `v1.2:monodocs.config.yml` — not
+the temporary directory.
+
+**Warnings from the earlier build are not reported** (a broken link, a missing `alt`): the author
+cannot fix a released version, and a report doubled by the past hides what can be fixed now. A hard
+error in the earlier build stops the build, with the same path rewriting.
+
+**What the output does not show is kept for comparison without being written.** Comparison needs
+what the serialised HTML has lost — a code block's source under Shiki's spans, a pre-rendered
+diagram's source, an image's bytes. `postprocessPages` gains an option that returns each page's HAST
+with these recorded on the nodes' `data`, which `hast-util-to-html` does not write, as
+`data.monodocsMath` already relies on. An image's bytes are hashed whether or not it is embedded, so
+an image replaced under the same name is a difference. An image the build does not read — an
+external URL, which is never fetched, one outside the root, which the build refuses, or one that is
+missing — is compared by its `src`, so whether its file happens to exist where the earlier version
+was extracted to makes no difference. The option is unset in a build without a difference, and no
+node it records on is written differently.
+
+**Neither version's output depends on where or when the earlier one was built.** The earlier files
+sit in a temporary directory that changes on every run, so anything the build derives from a file's
+location must come out as it would at the new version's location, and anything it derives from the
+clock must be the same in both builds: the two read one instant — `SOURCE_DATE_EPOCH` when it is
+set, which Asciidoctor already honours, otherwise the time taken once when the build starts — so a
+page using `{doctime}` that did not change is not a difference because the earlier build ran a
+second later, and with `SOURCE_DATE_EPOCH` set, a build with a difference gives the same bytes on
+every run, as one without does — on machines whose `TZ` agrees (12.4). A document's own `:docdate:`
+is left as it wrote it. That a build reading the clock without `SOURCE_DATE_EPOCH` gives different
+bytes on every run is true already without a difference (12.4), and this section does not change it.
+Measured on 2026-10-14, monodocs hands Asciidoctor each file's text with `base_dir`, which leaves
+`{docfile}` unset, gives `{docdate}` and `{doctime}` the time of the build in any build, and makes
+`{docdir}` the absolute `base_dir` — and a `docdir` passed as an attribute is overwritten by it.
+Where `{docdir}` is text, the earlier build shows the new location; where it is part of an include
+or image target, it still leads to the earlier version's own files, which are what that version
+included. How the earlier build reaches both is decided in stage 1; the completion criteria hold it
+to the result.
+
+**Generated numbers are not content.** Inserting one section renumbers every section after it;
+inserting one figure, every later caption; one footnote, every later reference. Compared as text,
+each would show untouched blocks as changed. The numbers `numbering.sections` writes are already
+elements of their own (`[data-monodocs-section-number]`, 19.1). Those Asciidoctor writes —
+`:sectnums:` headings, `Figure 1.` captions, the letters of appendices (`Appendix A:`, which
+Asciidoctor writes whether or not `:sectnums:` is set), footnote numbers, cross-reference text such
+as `Section 2.3` or `Appendix B` — and GFM's footnote numbers are text. In a build with a
+difference, both builds mark them so that comparison leaves them out, and a build without a
+difference writes nothing new. How each is reached, in every configuration the renderers have, is
+decided in stage 1.
+
+**IDs the build generates are kept apart.** Pre-rendered diagrams number their SVG IDs `mermaid-N`
+from a counter that restarts in every call, so the earlier build uses a prefix of its own. A page ID
+and a heading could still produce the same string, as `mermaid-N` already risks today; that is not
+new, and is left as it is. Whether the pre-renderer and the client runtime are needed is decided
+over both versions, so an earlier diagram is drawn even when the new version has none, or has
+Mermaid off. Diagrams unchanged between the versions are rendered twice; that costs time, not
+correctness, and is not optimised in stage 1.
+
+### 7.3.3 Matching Pages and Comparing Blocks
+
+**Pages are matched by route.** A route present in both versions is the same page. A new page whose
+`aliases` (15.5) contain an old route that no new route matched is taken to have moved there; a
+route match comes first. When a page's aliases name several old routes — pages merged into one — it
+is compared with its route match if it has one, else with the first of them as written, and the
+other pages are listed as deleted, each with a note naming the page that took its route. A page
+matched by neither was either added or deleted. Moves are not inferred from how similar the content
+is; as with aliases, a move is stated by a line the author wrote. A page whose position in the
+sidebar changes is not changed. A matched page is changed when any block differs — its heading is a
+block — or the title its author wrote in front matter (`title`, `:sd-title:`) does; such a page is
+listed with its earlier title, and its note says the title changed and shows the earlier one. When
+no block changed, the navigation counts that note as the page's one change (7.3.4); when blocks
+changed too, it counts the blocks, and the note sits at the top of a page the navigation already
+brings the reader to. A title the sidebar derives (`sidebar.titleFrom`, `sidebar.titleTransform`) is
+a display label (architecture.md), so a change in those settings is not a change of any page, as a
+change in the sidebar's order is not.
+
+**A block is the smallest unit a reader would point at:** a paragraph, a heading, a list item, a
+table row, a code block, a display formula, a diagram, an image, a caption, a block title.
+Containers — lists, tables, quotations, admonitions, sections, AsciiDoc's wrappers — are not blocks;
+they are walked, and each block carries its **chain**: the element name and classes of each
+container around it, and nothing else — leaving out the classes a renderer adds to say what a
+container holds rather than what it is, GFM's `contains-task-list` and AsciiDoc's `checklist`, so
+that turning one item of a list into a task changes that item alone, and the classes that only set
+how a container looks — AsciiDoc's table `frame-*`, `grid-*`, `stripes-*`, `stretch`, `fit-content`,
+and a block's role — so that redrawing a table's frame changes no row; and leaving out sections and
+the wrappers of a section's body (AsciiDoc's `div.sectN` and `div.sectionbody`), whose structure the
+reader reads through the headings, which are blocks themselves — so splitting a section with a new
+subheading adds that heading and moves nothing. Two blocks are the same only if their kinds — the
+element, a heading's level — and their chains agree, so a heading moved from level 2 to level 3 is a
+change of that heading, and a paragraph moved into a note is a deletion and an addition, and so is
+every paragraph of a note turned into a warning — the kind of an admonition is something the reader
+reads. A list item is compared by its own text, without the lists or blocks nested in it, and the
+same whether that text is wrapped in a paragraph or not, so adding a second paragraph to one item —
+which turns a tight Markdown list loose and wraps every item's text in `<p>` — changes only that
+item, and a nested item added or deleted leaves its parent unmarked. A caption and a block title are
+blocks of their own, so fixing a typo in a figure's caption changes the caption, not the figure. The
+classification of elements is a table in code. Text that is only whitespace is never a block, and an
+element that is neither (`col`, `colgroup`) is part of its container, which the tests check against
+both renderers' output.
+
+**A block is compared by what it reads as, not by its markup:**
+
+| Block | Compared |
+|---|---|
+| Text blocks | The text, generated numbers left out (7.3.2), inline formulas as their TeX (as `Page.text` reads them), inline images as their hash and `alt`, a task list's checkbox as its state, whitespace runs collapsed |
+| Code | The source and the language |
+| Mermaid | The source |
+| Display formula | The TeX |
+| Image, figure | The image's hash (an external image's `src`) and `alt` |
+| Table row | Each cell's text, kind (`th` or `td`), and span (`colspan`, `rowspan`), since a merged cell decides which column a value applies to |
+
+So a change of link target, emphasis, or an inline element's class with the same text is not a
+difference. That is a choice for the readers this is for: they read what the document says, and a
+link re-pointed because its target page moved is not a change to the specification. Element IDs and
+the page-ID prefixes are not compared either. A checkbox is compared because ticking one changes
+what the document says. Numbers are labels, not addresses (19.1); the numbers displayed are the new
+version's.
+
+**The two sequences are aligned by Myers' algorithm,** the O(ND) shortest edit script, written in
+core rather than taken from a package: which of two equally short scripts wins decides the output
+bytes, so the choice belongs to what monodocs promises. A deletion is taken before an insertion, so
+a replaced block shows the old one first; the full tie-break is fixed in the code, and tests pin its
+output on sequences with several shortest scripts. A block left unaligned was added or deleted. A
+block that moved within the page is a deletion and an addition; inferring moves would need a
+similarity threshold, and a wrong threshold silently hides a change.
+
+### 7.3.4 Writing the Difference into the HTML
+
+**The new version's tree is the frame.** Unchanged and added blocks are the new version's elements,
+untouched apart from their mark. A deleted block is cloned from the earlier tree and appears where
+it stood relative to its unchanged neighbours, inside the containers it had: a deleted list item
+stays in its list at its depth, a deleted row in its table, a deleted caption in the table's one
+`caption`. In an ordered list a deleted item takes no number, and every other item shows the number
+it has in the new version, in every view — so deleting step 2 of three does not show the new step 2
+as `3.`, and deleting a footnote leaves the references and the list of footnotes agreeing. Likewise
+in a table, a deleted row never changes which columns and rows a cell of the new version covers:
+where it falls inside a cell's `rowspan`, the row is placed so that the new values stay in their
+columns in every view — whether by extending the span over it or by placing it after the spanned
+rows is decided in stage 1. The output is valid HTML: re-parsing it gives the same tree — nothing is
+moved by the parser, as an element inside a `tbody` would be — and no element sits where its
+parent's content model forbids it.
+
+**The mark is an attribute and an element.** Every added or deleted block carries
+`data-monodocs-diff-block="ins"` or `"del"`, and its content is wrapped in `<ins>` or `<del>`, so
+the change is in the document's semantics, survives black-and-white printing and copying into a
+mail, and reaches readers who cannot tell the colours apart. Every `<ins>` and `<del>` monodocs
+writes carries `data-monodocs-diff`, and the stylesheet, the script, and the highlight act on those
+alone: a document's own `~~struck~~` text, which GFM writes as `<del>`, or a raw `<ins>`, is left as
+it is in every view.
+
+**Deleted content has no address.** Element IDs in the single HTML must be globally unique, and old
+elements kept with their IDs could collide with new ones. A deleted clone keeps no ID — except
+inside an SVG, a pre-rendered diagram or one an AsciiDoc document writes inline, whose references
+need them — `url(#…)`, `href="#…"`, `#id` selectors in its `<style>`, and attributes such as
+`aria-labelledby` that name IDs: there every ID and every reference to it is renamed with a prefix
+only the earlier version's clones use; no link, since it points into the earlier version — its text
+stays; and no generated number — section, caption, appendix, or footnote — since beside the new
+version's numbers it would read as one of them. A cross-reference's text inside deleted content
+stays as the earlier version wrote it, struck through with the rest. An image the new configuration
+embeds keeps its data URI; one it would leave as an external file is shown as its `alt` and path,
+because the file is in the earlier version — for `--diff-from`, a directory that no longer exists.
+After merging, the build fails with `internal/unexpected` if an ID from the earlier tree survived
+without being renamed, inside an SVG or outside one.
+
+**What the reader navigates by is the new version's.** The in-page table of contents, search, and
+the printed table of contents (24.9) are built from `Page.headings` and `Page.text`, which are the
+new version's and are not touched; the PDF outline is built from the sidebar and lists pages only. A
+deleted heading is therefore in none of them. The in-body search highlight (22.5) does not stay in
+deleted content, so the highlight agrees with the index about what the document contains.
+
+**The list of changes is the first page.** It is generated, not read from a file, and the document
+opens on it. Its route is `//changes`: a route built from a path never has an empty segment (15.1),
+and an alias loses its leading slashes, so no alias can take it, and no source file can but one
+whose name begins with a backslash on a system that allows it, which `toRoute` reads as a separator;
+that page and the list of changes are reported as `page/duplicate-route`. Its page ID is allocated
+against the page IDs and element IDs the document contains, as the search results' option IDs are
+(22.4), so it collides with neither a page called `diff-changes.md` nor a heading whose ID happens
+to match, and the same input gives the same ID. Its title is `labels.diffChanges` followed by
+`from → to` (13.5): `from` is the earlier `document.version`, or `diff.label`; `to` is the new
+`document.version`. Whichever is missing is left out with the arrow, and with neither, the title is
+the label alone. It lists, in the new sidebar's order followed by pages with no place in it (hidden
+pages, pages a custom sidebar leaves out):
+
+- added, moved (old route → new route), and changed pages, each linking to the page, a changed page
+  with the number of blocks added and deleted
+- deleted pages, in the earlier version's order by the same rule, each under its title with its
+  blocks marked deleted
+- the number of unchanged pages, and `labels.diffNoChanges` when nothing changed
+
+It is in the sidebar, first and unnumbered — no page's number shifts because it is there — and in
+neither search nor the previous/next navigation: its entry in `siteDataJson` is `hidden`, which
+takes it out of both, because the default theme builds the two from one list of pages. Its text is
+the titles of pages that are searchable themselves, or deleted content, and the sidebar and the bar
+reach it.
+
+**Pages and the sidebar carry their state.** An added page is marked once — its article carries
+`data-monodocs-diff-page="added"` and starts with a note, `labels.diffPageAdded` — rather than
+marking every block, which would underline every word of a new chapter. A moved page carries
+`"moved"` whether or not its blocks changed, and its note names the route it had; a page changed in
+place carries `"changed"`. The blocks carry their own marks either way. The sidebar marks pages that
+changed with a symbol (`+` added, `→` moved, `•` changed) hidden from assistive technology and a
+visually hidden label, so the mark is not colour alone.
+
+**Three views and a way through the changes.** A bar prepended to `{{pages}}` holds three buttons —
+changes, the new version, the earlier version — and previous/next buttons with a count, `3 / 17`.
+The view is not stored: the next person to open the file starts on the changes. The changes are, in
+reading order, the marked blocks, the added pages, and the pages whose change no block carries — a
+front-matter title, or a move with no block changed — each of the last two counted once at its note,
+and the navigation reaches each without an ID on deleted content. The earlier-version view is the
+new document with additions hidden, not a rebuild of the earlier one: its page order, numbers, and
+table of contents are the new version's, an added page shows only its note, and the documentation
+says so.
+
+**What the difference adds reaches every theme and no build without it.** The rules and the script
+come from core, through tokens every template is required to have (`{{style}}`, `{{bodyScripts}}`,
+`{{pages}}`, 23.3), so a custom theme gets them without carrying them. The default theme's `app.js`
+does not change: it is written into every build, so a change to it would change the bytes of builds
+without a difference. What the theme would otherwise have to learn, the difference's own script does
+— it takes the marks the highlight puts inside deleted content back out — and the list of changes
+stays out of search through `hidden`, which the default theme's `app.js` already honours. A custom
+`app.js` is not held to it (23.4: delivery, not application). `siteDataJson` gains the pages' states
+only when there is a difference.
+
+**The wording joins the label table (23.4)** and follows `lang` and `html.labels`: `diffChanges`,
+`diffAddedPages`, `diffMovedPages`, `diffChangedPages`, `diffDeletedPages`, `diffUnchangedPages`,
+`diffNoChanges`, `diffPageAdded`, `diffPageMoved`, `diffViewChanges`, `diffViewCurrent`,
+`diffViewEarlier`, `diffPrevious`, `diffNext`, `diffAdded`, `diffDeleted`, `diffChanged`,
+`diffMoved` (the sidebar's mark), `diffTitleChanged` (the note of a page whose title changed), and
+`diffMergedInto` (the note of a page another took over through its aliases). They are a table of
+their own beside `LABEL_KEYS`: `siteDataJson` carries every resolved label, so a key added to the
+main table would change the bytes of every build. They join `siteDataJson` only with a difference;
+`html.labels` accepts them in any configuration, as it accepts every label whatever the
+configuration uses. Counts and routes are put next to a label by code, since labels hold no
+placeholders.
+
+**The same input gives the same bytes (12.4).** The input includes the earlier version's tree and
+the argument naming it as written — the ref, or the `--diff-from-dir` path — which the list of
+changes shows when the earlier version has no `document.version`. The size report (20.5) gains a
+line, `difference`, for what the difference added, and its lines still add up to the file: an image
+is counted once under `images`, whichever version it came from, and nothing is counted on two lines.
+
+### 7.3.5 The Difference on Paper (stage 2)
+
+**The presentation is chosen at build time,** because paper has no toggle:
+`--diff-pdf <markup|bars>`, passed to core as `diff.pdf` only when it is given; core reads its
+absence as `markup` when it outputs a PDF, so `--help` names the default in the description rather
+than through a value the CLI always passes. It is an option, not a key, for the reason the
+difference itself is (7.3.1). It is `diff/pdf-without-pdf` without `--diff-from` or
+`--diff-from-dir`, or when no PDF is output. The choice is written into the HTML, through
+`{{style}}`, not as an attribute of `<body>`, which a template may leave without `{{bodyAttrs}}`:
+the PDF is this HTML printed, as the density is (24.6), so the HTML of `-f both --diff-pdf bars`
+printed from a browser gives the bars too, while on screen it keeps its toggle.
+
+- **`markup`**: the changes view, printed. Added text is underlined and coloured, deleted text
+  struck through and coloured, and a whole added or deleted figure, formula, or diagram is framed
+  with `labels.diffAdded` or `labels.diffDeleted` beside it. Underline, strike-through, and the
+  frame's style tell additions from deletions in black and white; colour only helps
+- **`bars`**: the new version alone, as the change bars of a printed standard. Deleted content is
+  not printed; where a block was deleted, a short mark sits in the margin, and the list of changes
+  names deleted pages by title without their content. A changed or added block — every block of an
+  added page included, since paper has no page note to stand for them — gets a bar in the left
+  margin, beside the block and not inside its container, that does not move its text, follows it
+  across a page break, and is per block, not per line — lines exist only after layout. How the bar
+  is drawn is decided in stage 2 and measured: the default theme gives code blocks padding,
+  quotations and admonitions their own borders, and tables collapsed borders, and each is a case the
+  bar has to hold in
+
+The screen's bar, the page notes, and the sidebar marks are not printed; an added page's note is.
+The list of changes comes after the cover and the printed table of contents, and is the first entry
+of the outline and of the printed table of contents. The cover, when on, shows `from → to` under the
+version by the rule of the list's title. The PDF stays outside the byte promise, as 12.4 records.
+
+### 7.3.6 Inside a Changed Block (stage 3)
+
+**Deletions and additions next to each other are paired.** In a run of consecutive deleted and added
+blocks, the i-th deleted is paired with the i-th added when their kinds and chains agree. A pair is
+shown as one block with the difference inside it, marked `data-monodocs-diff-block="changed"` and
+counted as one change; the rest stay whole, as in stage 1.
+
+**Text is split into tokens by script, deterministically.** A token is one Han character (with `々`,
+`〆`, `ヵ`, `ヶ`), one hiragana, or one katakana (with `ー`); a run of letters, digits, and `_` in
+any other script; a run of whitespace; or any other character, where a character is a grapheme
+cluster — combining marks, an emoji joined by ZWJ, a flag's two regional indicators — and is never
+split. Which script a character belongs to and where a cluster ends are read from a table generated
+into the code from one Unicode version, as `sources/eastAsianWidth.ts` is, not from the
+regular-expression engine or `Intl.Segmenter`: both follow the Node that runs the build. A character
+assigned in a Unicode version newer than an older Node knows is not a letter there, so `\p{L}` would
+end a word at it on one Node and not on another; and the cluster rules have changed even for
+characters that already existed — Unicode 15.1 added a rule that keeps a Devanagari conjunct such as
+`क्ष` together, which Node 22.23.2 with ICU 78.2 does and an older ICU does not. The prototype below
+used the regular-expression classes, and split an emoji joined by ZWJ; the table is what stage 3
+builds. Generated numbers are left out, as in 7.3.2. The tokens of the old and new text are aligned
+with the same Myers implementation and tie-break, and then cleaned: an equal run shorter than two
+characters between two changes, or made only of whitespace and punctuation, becomes part of the
+change. When what is equal is less than half of the longer text, counted in grapheme clusters with
+generated numbers left out, the pair is shown whole, as a deleted block and an added one: a
+rewritten paragraph read as confetti is harder to read than the two versions.
+
+Measured on 2026-10-14 in the development image, with a prototype of these rules:
+
+```text
+設定ファイルの[-既定-]{+初期+}値を変更した。
+The build embeds no [-timestamp-]{+date+} of its own.
+Set the output [-directory-]{+folder+} before [-running-]{+starting+} the build.
+出力を書き出さずに{+、ビルド時と同じ処理で+}検証する
+[-設定-]{+入力+}を読[-み込-]んで出力[-先を決-]{+の形式を定+}める
+```
+
+In the last line the cleanup absorbed the `を` between two changes. A paragraph rewritten from
+`旧版の設定で組み、新版の見た目で出す。` to `新版の設定で組み直し、旧版と比べる。` keeps less than
+half of itself and is shown whole.
+
+**What is not text is a token of its own.** An inline formula is one token keyed by its TeX, an
+inline image by its hash and `alt`, a line break and a footnote reference by their kind. A changed
+inline formula is shown as the old one deleted and the new one added, never as a difference inside
+MathML.
+
+**The difference is written into the new block.** Added tokens are wrapped in
+`<ins data-monodocs-diff>`; each run of deleted tokens is cloned from the old block with the inline
+elements around it — so deleted bold text stays bold — stripped as in 7.3.4, wrapped in
+`<del data-monodocs-diff>`, and placed before the next equal token.
+
+**Each kind of block is compared in its own unit:**
+
+- **Code** is compared by line, whether or not it was highlighted, and not further within a line; a
+  reader of a code change reads the line
+- **Tables**: rows are aligned as blocks (7.3.3). A paired row whose cells match in number, kind,
+  and span is compared cell by cell, by position, with the text rules above. A row whose cells
+  changed in number or span stays a deleted row and an added row, so adding a column shows every row
+  replaced, which is what happened to each
+- **Display formulas and Mermaid diagrams** are shown old and new whole, side by side on screen and
+  one above the other on paper. A difference between two renderings is the reader's to see;
+  computing one inside MathML or SVG would show coordinates
+
+**The methods not chosen, and why:**
+
+- **`Intl.Segmenter`**, built into Node and costing nothing to bundle, splits Japanese into words
+  with ICU's dictionary, and splits it well — measured on Node 22.23.2 with ICU 78.2,
+  `設定|ファイル|の|既定|値`, though also `ビル|ド`. But the boundaries come from the ICU of the
+  Node that runs the build, and the npm package runs on the user's Node, so one input, one
+  configuration, and one monodocs version would stop giving one set of bytes (12.4) — the same
+  reason 20.5 gives for not re-encoding images. The build already leans on ICU in one place, the
+  `localeCompare` that orders pages, but there it decides the order of pages whose names collate
+  differently between ICU versions; here it would decide the boundaries in every changed Japanese
+  paragraph
+- **A morphological analyser** (kuromoji and the like) carries a dictionary that the single CJS
+  bundle and the SEA binary (8.5) would both have to carry, for a gain over characters that the
+  cleanup above mostly recovers
+- **Runs of one script as words** (`既定値` as one token), measured with the same alignment and
+  cleanup, read well but widen every change to the whole compound: `[-既定値-]{+初期値+}` where
+  `既定` alone changed
+- **Characters for every script**, measured the same way, split English words where they share
+  letters: `before [-runn-]{+start+}ing the build`
+
 ---
 
 ## 8. Delivery Forms
@@ -1688,7 +2231,13 @@ What 1.0 does not do:
   bytes**, which is what makes a committed artifact reviewable in a diff — and the reason the build
   embeds no timestamp of its own (13.5). The PDF is outside that promise, measured: Chromium writes
   its own creation and modification dates into the file, and monodocs neither adds a date nor
-  removes Chromium's
+  removes Chromium's. So is an AsciiDoc document that reads the clock, unless
+  `SOURCE_DATE_EPOCH` is set: monodocs hands Asciidoctor each file's text, so `{docdate}`,
+  `{doctime}`, `{localdate}`, and the other date and time attributes are the time of the build, and
+  a document using them gives new bytes on every run. Asciidoctor reads `SOURCE_DATE_EPOCH`, and
+  with it set they are that instant — written in the machine's time zone, so two machines agree only
+  when `TZ` agrees too, `TZ=UTC` for one (all measured 2026-10-14). The build adds no time of its own; it
+  does not take away the one the document asked for
 
 **Deprecation has a shape.** `sidebar.exclude` moved to `sources.exclude` and still builds while
 saying where it went (12.3), which is the pattern: the old spelling keeps working, warns, names its
@@ -5121,8 +5670,8 @@ Completion criteria:
 Purpose:
 
 Clear what earlier milestones set aside, and enumerate what 1.0 will freeze, so that 1.0 is left
-with nothing but the removal 12.4 reserves for a major release and a final check. (v0.17, defined
-after 0.16.0, now sits between it and 1.0.) Most items here
+with nothing but the removal 12.4 reserves for a major release and a final check. (v0.17 to v0.20,
+defined after 0.16.0, now sit between it and 1.0.) Most items here
 change what an existing document builds or add a surface 1.0 enumerates, which 12.4 makes cheap
 before the number and expensive after it; the rest are checks 1.0 should not be claimed without.
 
@@ -5397,6 +5946,218 @@ Completion criteria:
 
 ---
 
+## v0.18: The Difference from an Earlier Version, in HTML
+
+Purpose:
+
+Output HTML with the difference from an earlier version written into it (7.3, stage 1). The readers
+are people who do not look at Git; this is not a substitute for `git diff`. It comes before 1.0,
+with the PDF in v0.19 and the comparison inside changed blocks in v0.20, because everything it adds
+— two options, diagnostic codes, labels, the attributes a theme or a script reads, the address of
+the list of changes — is a surface 1.0 freezes, and 12.4 makes a surface cheap to change before the
+number and expensive after it. Each surface is used in a release before 1.0 claims it. A build
+without a difference produces the output it did before, apart from the version the generated HTML
+names (12.4), so nothing changes for an existing document. v0.17 comes first; 1.0 now starts once
+v0.20 is released. Each of the three releases records in 7.3 what its implementation decided (7.3,
+"What this section decides").
+
+Implementation scope:
+
+- `--diff-from <ref>` and `--diff-from-dir <dir>` on `build`, `BuildOptions.diff` in core, the
+  extraction through a temporary index, and the diagnostics of 7.3.1
+- Building the earlier version with the configuration split, the translation of removed keys, and
+  the adjustments of 7.3.2; keeping what comparison needs on the HAST; marking generated numbers;
+  keeping generated IDs apart; deciding Mermaid over both versions
+- Matching pages, classifying blocks, and the Myers alignment of 7.3.3
+- Writing the difference, the list of changes, the page and sidebar marks, the bar, the labels, and
+  the size line of 7.3.4
+
+Completion criteria:
+
+- With a fixture containing added, deleted, moved (through `aliases`), merged, and changed pages,
+  tests confirm the list of changes and the marks within pages, for both Markdown and AsciiDoc; a
+  route match takes precedence over an alias; a page whose only change is its front-matter title is
+  listed
+- Generated numbers are not differences: inserting one section, figure, or footnote shows only that
+  one as added — with `numbering.sections`, with `:sectnums:` in both versions, with numbered
+  captions, with AsciiDoc appendices, with GFM and AsciiDoc footnotes, and with AsciiDoc
+  cross-references written as `Section 2.3` or `Appendix B` — with `math.enabled` on and off; and a
+  deleted figure or appendix shows no number beside the new ones
+- Changing a heading's level, or turning a paragraph into a heading with the same text, marks that
+  block
+- `-f html --diff-from v1.2` builds; `diff.pdf` passed to core is `diff/unsupported`
+- Changing a table's frame, grid, stripes, or width, or a block's role, changes no block; moving a
+  cell's span (AsciiDoc `2+|a |b` to `|a 2+|b`) with the same texts changes that row; changing one
+  row under another cell's `rowspan` keeps every new value in its column in every view
+- An image outside the root, or missing, unchanged between the versions is not a difference with
+  either `--diff-from` or `--diff-from-dir`
+- A change of link target or emphasis with the same text is not a difference; a paragraph moved into
+  an admonition is a deletion and an addition; ticking a task list's checkbox is a difference; an
+  image replaced under the same name is a difference with `assets.embedImages: false` too
+- Adding a second paragraph to one item of a tight Markdown list changes only that item, and adding
+  or deleting a nested item leaves its parent unmarked
+- Turning one item of a list into a task, in Markdown and in AsciiDoc, changes that item alone
+- Splitting an AsciiDoc section with a new subheading, and changing a heading's level, adds or
+  changes that heading alone
+- In the earlier-version view, an added page shows only its note
+- Fixing a figure's caption changes the caption alone, and the figure is not shown twice
+- Changing `sidebar.titleTransform` or `sidebar.titleFrom` alone produces no change; changing a
+  page's front-matter `title` lists that page
+- Whitespace between elements is never a block or a change, and the bar's count of changes equals
+  the number of marked blocks, added pages, and pages changed only in their front-matter title or
+  moved without a block changed, each of which the navigation reaches
+- Deleting an item of an ordered list, and deleting a footnote, leaves every new item and footnote
+  showing its new number in every view, and references and footnotes agreeing
+- The output for fixtures covering a nested list with an item deleted at each depth, a table with a
+  changed caption, header row, and `colgroup` (AsciiDoc), a deleted anonymous block, and a deleted
+  `div.title` and `summary`, re-parses to the same tree and violates no content model; a deleted
+  nested item appears at its own depth
+- Deleted headings have no ID, do not appear in the in-page table of contents, and are not found by
+  search or highlighted; no ID from the earlier tree survives without being renamed, and fixtures
+  with pre-rendered diagrams in both versions and with an inline SVG carrying IDs moved within an
+  AsciiDoc page have no duplicate ID, and every renamed reference — `url(#…)`, `href`, a `<style>`
+  selector, an ID-naming attribute — still resolves inside its SVG
+- A page including an example of an LFS pointer's first line is not `diff/lfs-pointer`
+- A document's own `~~struck~~` text and raw `<ins>` are shown in every view
+- A tree extracted from a ref matches a checkout of that ref for the files under the earlier root,
+  including files marked `export-ignore` and a `.gitattributes` changed since; nothing outside the
+  root is written but the configuration file; the repository's `git status` is the same before and
+  after; the build works from a subdirectory of the repository and with a directory whose name
+  contains `[`
+- An input argument that is a file, a `-c` that names a file the earlier version lacks, and a `-c`
+  or root that leaves the repository each behave as 7.3.1 states, none falling back to defaults;
+  without `-c`, an earlier version without a configuration file builds with the defaults, and one
+  with a file the new version lacks builds with it
+- In a shallow clone without the ref, the error names `fetch-depth: 0`; an LFS file under the root
+  that a page reads, extracted without git-lfs and its filter, is `diff/lfs-pointer`; one the build
+  does not read, or one outside the root, is not; with the filter configured as required but git-lfs
+  missing, the extraction is `diff/git-failed`
+- An earlier configuration with a key the current monodocs does not accept is an error showing
+  `label:path`; one using `sidebar.exclude` builds, and the translation table maps it to
+  `sources.exclude` ready for 1.0's removal
+- An AsciiDoc page using `{docdir}` unchanged between the versions is not a difference, its includes
+  and images still come from the earlier version — including an include and an image whose target is
+  written with `{docdir}`, with no line of the earlier page silently dropped — and two builds from
+  the same ref give the same bytes; a page using `{doctime}` or `{localtime}` unchanged between the
+  versions is not a difference, and with `SOURCE_DATE_EPOCH` set, two builds with a difference give
+  the same bytes
+- An earlier AsciiDoc version with `:sectnums:` builds against a new one with `numbering.sections`,
+  and no deleted heading carries a number
+- A diagram deleted along with the new version's last one is drawn in `client` mode, and an earlier
+  version with diagrams against a new one with Mermaid off builds in `pre-render` mode
+- A difference with a PDF output is `diff/unsupported`, whether the PDF comes from `-f pdf`,
+  `-f both`, or `output.format`; `watch`, `serve`, and `validate` reject the options as unknown, and
+  `watchSite`, `serveSite`, and `validateSite` reject `diff`
+- Tests confirm that the same old and new inputs give the same HTML bytes, and that a build without
+  a difference gives the bytes it gave before the feature, labels in `siteDataJson` included; the
+  size report's lines add up to the file, with an image shared by both versions and the same block
+  deleted on two pages
+- With `numbering.sections` on, every number shown is the number the same page gets in a build
+  without a difference
+- The list of changes gets a page ID that collides with neither a page named `diff-changes.md` nor a
+  heading whose ID matches the article's, and is in neither search nor the previous/next navigation;
+  the bar's navigation lands on each change after the page has been shown
+- The default theme's `app.js` is byte for byte what it was before the feature, and a search term
+  found on a page is not left highlighted inside its deleted content
+- A custom theme with its own `template.html`, `style.css`, and `app.js` gets the bar, the marks,
+  and the navigation
+- The command reference and the single HTML invariants in architecture.md describe the difference,
+  in both languages
+- The "What 1.0 Freezes" page (12.4) lists the two options, the new diagnostic codes, the new
+  `html.labels` keys, `//changes` and how the list of changes gets its page ID among the addresses,
+  and the `data-monodocs-diff`, `data-monodocs-diff-block`, and `data-monodocs-diff-page`
+  attributes, and `surfaces.test.ts` passes
+- testing.md lists the new tests in both languages
+- Nothing changes for an existing document, so 0.18.0 goes to `latest` without a beta, as 0.13.0 and
+  0.14.0 did, with the verification 0.16.0 had: the published package on Linux x64 and Windows x64
+  through `verify-published.yml` with steps that build a difference from a tag of a fixture
+  repository and from a directory, the release binaries, a driven browser pass over a difference the
+  released Linux binary builds — the three views, previous and next, the sidebar marks, the list of
+  changes — `verify-windows-binary.ps1` on Windows 11 and the Windows checks a person has to make,
+  git on Windows included (paths with spaces and Japanese characters, `core.autocrlf`, LFS), and the
+  CI guide pinned to the release. Without a beta, `next` still points at 0.17.0, so the published
+  package is verified with `dist_tag: 0.18.0`, as 0.13.0 was, and `next` is moved onto 0.18.0
+  afterwards. The release notes introduce the two options and say that nothing changes for a build
+  without them
+
+---
+
+## v0.19: The Difference on Paper
+
+Purpose:
+
+Output the difference in PDF (7.3, stage 2), in the two presentations 7.3.5 describes, so that the
+option choosing between them, and its default, are used in a release before 1.0 freezes them.
+
+Implementation scope:
+
+- `--diff-pdf <markup|bars>`, `BuildOptions.diff.pdf`, and `diff/pdf-without-pdf`, the print rules
+  of both presentations written through `{{style}}`, the list of changes in the outline and the
+  printed table of contents, and `from → to` on the cover (7.3.5)
+
+Completion criteria:
+
+- PDFs in both presentations, made from two versions of `examples/ja`, are opened and checked on
+  Linux and Windows
+- Additions and deletions remain distinguishable when the `markup` PDF is rendered in greyscale
+- In `bars`, a changed paragraph, code block, list item, table row, and a block inside a quotation
+  and an admonition each carry a bar in the margin, outside their container, and their lines break
+  and sit horizontally where they do in a PDF without a difference; a changed block that breaks
+  across a page carries its bar on both pages
+- The HTML of `-f both --diff-pdf bars`, printed from Chromium, gives the bars, including with a
+  custom template that has no `{{bodyAttrs}}`
+- In `markup`, a deleted image appears even when the HTML configuration would not embed it; in
+  `bars`, the list of changes names deleted pages without their content, and every block of an added
+  page carries a bar
+- Deleted headings are in neither the outline nor the printed table of contents
+- `--diff-pdf` given without a PDF output is `diff/pdf-without-pdf`
+- The command reference and the "What 1.0 Freezes" page list `--diff-pdf` with its default,
+  `markup`, and `diff/pdf-without-pdf`, in both languages, and `surfaces.test.ts` passes
+- testing.md lists the new tests in both languages
+- 0.19.0 goes to `latest` without a beta, nothing changing for a build without a difference, with
+  the verification 0.18.0 had, its steps building both presentations, and a person printing a
+  `markup` and a `bars` PDF on Windows, the first in black and white
+
+---
+
+## v0.20: Words and Characters Inside a Changed Block
+
+Purpose:
+
+Compare the inside of changed blocks word by word, and Japanese character by character (7.3, stage
+3), so that what a reader sees of a changed paragraph, and the attribute value that marks it, are
+settled before 1.0.
+
+Implementation scope:
+
+- Pairing deleted and added blocks, the script-based tokens over grapheme clusters, the cleanup, and
+  the whole-block fallback below half (7.3.6)
+- Code by line, highlighted or not; table cells by position; formulas and Mermaid side by side
+
+Completion criteria:
+
+- The examples measured in 7.3.6 come out as recorded there, and a test pins them
+- In a paragraph mixing Japanese and English, a change to a single word shows as a difference in
+  that word only
+- An emoji joined by ZWJ and a flag are never split, and the script and cluster table is generated
+  from one Unicode version, with a test that fails when the table and its data file disagree
+- A paired heading whose generated number changed shows no difference in the number
+- A deleted run inside bold text is bold inside its `<del>`, and carries no ID or link
+- A changed line in a code block without a language, and with `highlight.enabled: false`, is marked
+  by line
+- The earlier-version view of a changed paragraph reads as the earlier paragraph
+- The same old and new inputs, including a character assigned in a Unicode version newer than the
+  older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two
+  Node versions with different ICU and Unicode versions
+- The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in both languages
+- testing.md lists the new tests in both languages
+- 0.20.0 changes what a build with a difference shows inside a changed block, and nothing else; it
+  goes to `latest` without a beta, since before 1.0 12.4 promises no output that stays the same
+  across versions, with the verification 0.19.0 had, its browser pass reading changed paragraphs in
+  Japanese and English in the three views; the release notes say how a changed block now reads
+
+---
+
 ## 1.0
 
 Purpose:
@@ -5418,6 +6179,8 @@ Completion criteria:
 
 - `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the
   enumeration no longer lists it
+- An earlier version whose configuration uses `sidebar.exclude` is still compared against with
+  `--diff-from`, the key read as `sources.exclude` (7.3.2)
 - The enumeration's test passes, and the documentation is checked against the code in both
   languages as described above
 
