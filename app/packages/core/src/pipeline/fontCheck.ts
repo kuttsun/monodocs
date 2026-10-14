@@ -20,9 +20,10 @@ export type FontCheckMode = (typeof FONT_CHECK_MODES)[number];
 /**
  * Which rendering context was measured. The finding is the same either way, but what the reader
  * does about it is not: a PDF is fixed at build time, and a pre-rendered diagram bakes the same
- * failure into the SVG that the HTML then carries.
+ * failure into the SVG that the output then carries. `prerender-pdf` is a diagram with a formula in
+ * a label laid out in the carried math font, which only the PDF carries (v0.17).
  */
-export type FontCheckContext = "pdf" | "prerender";
+export type FontCheckContext = "pdf" | "prerender" | "prerender-pdf";
 
 /** Thrown for `fontCheck: error`, which stops the build and exits non-zero. */
 export class FontCheckError extends MonodocsError {
@@ -559,7 +560,13 @@ export function describeFontCheck(
   if (rest > 0) {
     samples.push(t("fontCheck.more", { count: outcome.truncated ? `${rest}+` : rest }));
   }
-  return t(context === "prerender" ? "fontCheck.missingPrerender" : "fontCheck.missingPdf", {
+  const key =
+    context === "prerender"
+      ? "fontCheck.missingPrerender"
+      : context === "prerender-pdf"
+        ? "fontCheck.missingPrerenderPdf"
+        : "fontCheck.missingPdf";
+  return t(key, {
     count: outcome.truncated ? `${outcome.clusters.length}+` : outcome.clusters.length,
     samples: samples.join("; "),
   });
@@ -572,7 +579,7 @@ export function describeMathTable(
 ): string | undefined {
   // A pre-rendered diagram's formulas are drawn again by the reader's browser, and a PDF build
   // measures the same diagram in the body, so the finding is the PDF's alone.
-  if (context === "prerender" || outcome.status === "unmeasurable") return undefined;
+  if (context !== "pdf" || outcome.status === "unmeasurable") return undefined;
   const fonts = outcome.noMathTable;
   if (fonts === undefined || fonts.length === 0) return undefined;
   return t("fontCheck.noMathTable", { fonts: fonts.join("; ") });

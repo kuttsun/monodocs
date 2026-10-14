@@ -1,6 +1,11 @@
 import type { ColorScheme } from "../config.js";
 import type { Diagnostic } from "../diagnostics.js";
-import { assertMathFontLoaded, mermaidHasFormula, withMathFont } from "../themes/mathFont.js";
+import {
+  MATH_FONT_RULE,
+  assertMathFontLoaded,
+  mermaidHasFormula,
+  withMathFont,
+} from "../themes/mathFont.js";
 import { loadMermaidInline } from "../themes/mermaid.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
 import { runFontCheck, type FontCheckMode } from "./fontCheck.js";
@@ -36,7 +41,8 @@ export interface MermaidPrerenderer {
  * at build time against the font it will be drawn in, so the HTML, which a reader's browser draws in
  * the reader's fonts, keeps the machine's layout, and the PDF gets its own:
  *
- * - `only`: no HTML is written, so every diagram is laid out in the carried font;
+ * - `only`: no HTML is written, so a diagram with a formula in a label is laid out in the carried
+ *   font, once;
  * - `variant`: the HTML's SVG is laid out as before, and a diagram with a formula in a label is laid
  *   out a second time, in the carried font, for the PDF ({@link MermaidPrerenderer.pdfVariants}).
  */
@@ -82,15 +88,17 @@ export function createPuppeteerPrerenderer(options: {
   const theme = mermaidThemeFor(options.colorScheme);
   const mathFont = options.mathFont;
   let browser: BrowserLike | undefined;
+  // The page that draws in the machine's fonts, and the one that draws in the carried math font:
+  // each opened for the first diagram that needs it, so a document with no formula never reads the
+  // font.
   let page: PageLike | undefined;
-  // The page that draws the PDF's variants, in the carried font; opened for the first diagram that
-  // needs one.
-  let variantPage: PageLike | undefined;
+  let carriedPage: PageLike | undefined;
   const variants = new Map<string, string>();
   // 生成した SVG を保持し、フォント検査でこのページへ差し戻して測る。図の文字がどのフォントへ
   // 解決されるかを決めるのは SVG 自身が持つ <style> なので、それを描いたページの中で測れば
-  // 同じ解決を再現できる。
+  // 同じ解決を再現できる。PDF のためだけの写しは HTML 用と同じ文字なので測らない。
   const rendered: string[] = [];
+  const renderedCarried: string[] = [];
 
   async function openPage(carried: boolean): Promise<PageLike> {
     try {
@@ -133,14 +141,22 @@ export function createPuppeteerPrerenderer(options: {
 
   return {
     async render(id, code) {
-      page ??= await openPage(mathFont?.mode === "only");
+      const formula = mathFont !== undefined && mermaidHasFormula(code);
+      if (formula && mathFont.mode === "only") {
+        // No HTML is written: the PDF's copy is the only one.
+        carriedPage ??= await openPage(true);
+        const svg = await draw(carriedPage, id, code);
+        renderedCarried.push(svg);
+        return svg;
+      }
+      page ??= await openPage(false);
       const svg = await draw(page, id, code);
       rendered.push(svg);
-      if (mathFont?.mode === "variant" && mermaidHasFormula(code)) {
-        variantPage ??= await openPage(true);
-        // The same source drew once already; should the second draw fail, the PDF keeps the first.
-        const variant = await draw(variantPage, id, code).catch(() => undefined);
-        if (variant !== undefined) variants.set(svg, variant);
+      if (formula) {
+        carriedPage ??= await openPage(true);
+        // The same source drew once already. Should the second draw fail, it fails as the first
+        // would, rather than leave the PDF a label laid out for other fonts without a word.
+        variants.set(svg, await draw(carriedPage, id, code));
       }
       return svg;
     },
@@ -149,15 +165,26 @@ export function createPuppeteerPrerenderer(options: {
     },
     async checkFonts({ mode, onWarning }) {
       // 図が 1 つも無ければブラウザすら起動していない。測る対象も無い。
-      if (mode === "off" || page === undefined || rendered.length === 0) return;
-      await runFontCheck(page, { mode, context: "prerender", onWarning, probes: rendered });
+      if (mode === "off") return;
+      if (page !== undefined && rendered.length > 0) {
+        await runFontCheck(page, { mode, context: "prerender", onWarning, probes: rendered });
+      }
+      // The probes are measured in a shadow tree, which the page's rule does not reach.
+      if (carriedPage !== undefined && renderedCarried.length > 0) {
+        await runFontCheck(carriedPage, {
+          mode,
+          context: "prerender-pdf",
+          onWarning,
+          probes: renderedCarried.map((svg) => MATH_FONT_RULE + svg),
+        });
+      }
     },
     async close() {
       if (browser) {
         await browser.close();
         browser = undefined;
         page = undefined;
-        variantPage = undefined;
+        carriedPage = undefined;
       }
     },
   };

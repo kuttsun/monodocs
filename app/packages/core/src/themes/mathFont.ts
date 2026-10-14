@@ -71,9 +71,16 @@ export function mathFontHead(base64: string): string {
     `for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);` +
     `var f=new FontFace(${JSON.stringify(MATH_FONT_FAMILY)},u);document.fonts.add(f);` +
     `window.__monodocsMathFont=f.status;}catch(e){window.__monodocsMathFont="error";}})();</script>` +
-    `<style>:where(math){font-family:"${MATH_FONT_FAMILY}",math;}</style>`
+    MATH_FONT_RULE
   );
 }
+
+/**
+ * The rule that sets formulas in the carried font, as a `<style>` element. A document's stylesheet
+ * does not reach into a shadow tree, while a font the document has added does, so markup measured in
+ * one (the font check's probes) carries the rule with it.
+ */
+export const MATH_FONT_RULE = `<style>:where(math){font-family:"${MATH_FONT_FAMILY}",math;}</style>`;
 
 /** Puts {@link mathFontHead} first in the document's `<head>`, or first in the document without one. */
 export function withMathFont(html: string, head: string): string {
@@ -93,6 +100,6 @@ export async function assertMathFontLoaded(page: {
   evaluate(script: string): Promise<unknown>;
 }): Promise<void> {
   if ((await page.evaluate("window.__monodocsMathFont")) !== "loaded") {
-    throw new BrowserSetupError(t("pdf.mathFontFailed", { file: MATH_FONT_FILE }));
+    throw new BrowserSetupError(t("pdf.mathFontNotLoaded", { file: MATH_FONT_FILE }));
   }
 }

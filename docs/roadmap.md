@@ -903,12 +903,17 @@ in the PDF too. That is how an author sets formulas in another font; no key is a
   machine's fonts as before, since the reader's browser draws it with the reader's: laying it out in
   the carried font would size a label's box for a font the reader does not have. A diagram with a
   formula in a label is laid out a second time, in the carried font, for the PDF, which prints that
-  copy; a PDF-only build lays every diagram out in it once.
+  copy; a PDF-only build lays such a diagram out in it once, and the others as before. The copy is
+  laid out in the carried font even under a theme that names its own font for `math`, which then
+  draws it: the box fits the carried font, as it fitted the machine's math font before v0.17.
 - The font check measures formulas in the font they are set in. With the carried font nothing is
   reported of them on any machine; under a theme's own font, as before. `font/no-math-table` stays:
   it can still occur under a theme's own `font-family` on `math`, and its message now says so. The
-  pre-render check still reports a label's formula whose letters this machine cannot draw, which
-  concerns the HTML's SVG, and its message says that the PDF's formulas are set in the carried font.
+  pre-render check measures the copy in the machine's fonts where it was laid out, and still reports
+  a label's formula whose letters this machine cannot draw, as before. Of the PDF's copy, only what
+  the carried font lacks too, such as Japanese in `\text{}`, can be reported: by the pre-render check
+  in a message of its own when the build writes a PDF alone, and otherwise by the PDF's own check of
+  the page it prints.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in

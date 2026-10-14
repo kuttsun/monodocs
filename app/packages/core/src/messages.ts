@@ -208,6 +208,10 @@ const EN = {
 
   // ---- PDF ----
   "pdf.pageLoadFailed": "Failed to load the page for PDF output: {detail}",
+  "pdf.mathFontNotLoaded":
+    "The browser did not load the math font monodocs carries for formulas ({file}), so no PDF was " +
+    "written: its formulas would have been set in whatever this machine has. If " +
+    "PUPPETEER_EXECUTABLE_PATH names a browser, check that it is a current Chromium.",
   "pdf.mathFontFailed":
     "The math font monodocs carries for formulas ({file}) could not be loaded, so no PDF was " +
     "written: its formulas would have been set in whatever this machine has. Reinstall monodocs.",
@@ -232,10 +236,14 @@ const EN = {
   "fontCheck.missingPrerender":
     "No font on the machine running this build draws {count} character(s) used in the Mermaid " +
     "diagrams, so they come out as tofu (□ / ☒) in the SVG that mermaid.mode: pre-render bakes " +
-    "into the output: in the HTML, and in the PDF too unless they are in a formula, which a PDF " +
-    "sets in the math font monodocs carries. At risk: {samples}. Install a font that " +
-    "covers them (the package that supplies one differs by platform), or set fontCheck: off to " +
-    "accept it.",
+    "into the output. At risk: {samples}. Install a font that covers them (the package that " +
+    "supplies one differs by platform), or set fontCheck: off to accept it.",
+  "fontCheck.missingPrerenderPdf":
+    "No font on the machine running this build draws {count} character(s) used in the Mermaid " +
+    "diagrams with a formula in a label, so they come out as tofu (□ / ☒) in the SVG that " +
+    "mermaid.mode: pre-render lays out for the PDF in the math font monodocs carries. At risk: " +
+    "{samples}. Install a font that covers them (the package that supplies one differs by " +
+    "platform), or set fontCheck: off to accept it.",
   "fontCheck.incomplete":
     "The font check stopped after {count} distinct characters and did not reach the end of this " +
     "document, so it found nothing rather than confirming there is nothing to find. It says so " +
@@ -533,6 +541,10 @@ const JA: Record<MessageKey, string> = {
     "`pnpm add puppeteer-core` を実行してください。",
 
   "pdf.pageLoadFailed": "PDF 用ページの読み込みに失敗しました: {detail}",
+  "pdf.mathFontNotLoaded":
+    "monodocs が数式のために持っているフォント（{file}）をブラウザが読み込まなかったため、PDF は" +
+    "書き出していません。書き出せば、数式はこのマシンにあるフォントで組まれていました。" +
+    "PUPPETEER_EXECUTABLE_PATH でブラウザを指定しているなら、新しい Chromium かを確かめてください。",
   "pdf.mathFontFailed":
     "monodocs が数式のために持っているフォント（{file}）を読み込めなかったため、PDF は書き出して" +
     "いません。書き出せば、数式はこのマシンにあるフォントで組まれていました。monodocs を" +
@@ -555,10 +567,14 @@ const JA: Record<MessageKey, string> = {
     "fontCheck: off で許容してください。",
   "fontCheck.missingPrerender":
     "Mermaid の図が使う {count} 文字を描けるフォントが、ビルドを走らせているマシンにありません。" +
-    "mermaid.mode: pre-render が焼き込む SVG の中で豆腐（□ / ☒）になります。HTML ではそのままで、" +
-    "PDF でも、数式の中の文字でなければそのままです（PDF の数式は monodocs が持っている数式用の" +
-    "フォントで組みます）。該当: {samples}。それらを含むフォントを入れる（提供するパッケージ名は" +
+    "mermaid.mode: pre-render が出力に焼き込む SVG の中で豆腐（□ / ☒）になります。" +
+    "該当: {samples}。それらを含むフォントを入れる（提供するパッケージ名は" +
     "プラットフォームごとに違います）か、fontCheck: off で許容してください。",
+  "fontCheck.missingPrerenderPdf":
+    "ラベルに数式を含む Mermaid の図が使う {count} 文字を描けるフォントが、ビルドを走らせている" +
+    "マシンにありません。mermaid.mode: pre-render が PDF のために monodocs の数式用のフォントで" +
+    "組む SVG の中で豆腐（□ / ☒）になります。該当: {samples}。それらを含むフォントを入れる" +
+    "（提供するパッケージ名はプラットフォームごとに違います）か、fontCheck: off で許容してください。",
   "fontCheck.incomplete":
     "フォント検査は異なる文字 {count} 個で打ち切られ、この文書の最後までは到達しませんでした。" +
     "「無かった」ではなく「そこまでは見つからなかった」という結果です。打ち切られた検査は" +

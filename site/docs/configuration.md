@@ -335,7 +335,9 @@ What it does and does not see:
   which brackets, braces and radicals do not stretch, is reported as `font/no-math-table`, under the
   same `warn`, `error` and `off`. Under `mermaid.mode: pre-render`, a label's formula in the SVG the
   HTML carries is laid out in this machine's fonts, so its letters are reported as before; the PDF
-  gets a copy of the diagram laid out in the carried font.
+  gets a copy of the diagram laid out in the carried font, of which only what that font lacks too,
+  such as Japanese in `\text{}`, is reported: in a message that says it is the PDF's when the build
+  writes a PDF alone, and otherwise by the PDF's own check.
 
 ### `output`
 
@@ -781,7 +783,9 @@ fonts and images as data URIs in `style.css`.
 A theme's own `font-family` on `math` applies in the PDF too: the math font monodocs carries only
 replaces the browser's default for formulas, so a theme can set them in a font of its choosing. Give
 it an OpenType MATH table; a font without one is reported as `font/no-math-table` (see
-[`fontCheck`](#font-check)). `monodocs watch` and `monodocs serve` also watch the
+[`fontCheck`](#font-check)). Under `mermaid.mode: pre-render` a label's formula is still laid out at
+build time in the carried font for the PDF (in the machine's fonts for the HTML), so its box is
+sized for that font while the theme's draws it. `monodocs watch` and `monodocs serve` also watch the
 theme directory, so edits show up in the preview (the directory must exist when watching starts; one
 created later is picked up at the next source or config change).
 

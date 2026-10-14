@@ -9,7 +9,7 @@ import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildSite } from "./build";
 import type { Diagnostic } from "./diagnostics";
-import type { MermaidPrerenderer } from "./pipeline/mermaidPrerender";
+import { createPuppeteerPrerenderer, type MermaidPrerenderer } from "./pipeline/mermaidPrerender";
 import { createPuppeteerPdfGenerator, type PdfGenerator } from "./pipeline/renderPdf";
 import {
   MATH_FONT_FAMILY,
@@ -340,16 +340,34 @@ describe.skipIf(!chromium)("a PDF's formulas in a real browser", () => {
     );
   }, 120_000);
 
-  for (const mode of ["client", "pre-render"] as const) {
-    it(`sets a Mermaid label's formula in the carried font and fits it in its box (${mode})`, async () => {
+  // `both` with pre-render is the path that draws a diagram twice: once for the HTML, once in the
+  // carried font for the PDF, swapped into the page the PDF is printed from.
+  const LABEL_CASES = [
+    { mode: "client", format: "pdf" },
+    { mode: "pre-render", format: "pdf" },
+    { mode: "pre-render", format: "both" },
+  ] as const;
+  for (const { mode, format } of LABEL_CASES) {
+    it(`sets a Mermaid label's formula in the carried font and fits it in its box (${mode}, ${format})`, async () => {
       const page =
         '# D\n\n```mermaid\ngraph LR\n  A["$$\\int_0^1 f(x)\\,dx + \\sqrt{y}$$"] --> B[plain]\n```\n';
       const config = `mermaid:\n  mode: ${mode}\n`;
-      const pdf = await buildPdf(`label-${mode}`, config, undefined, page);
-      expect(await embeddedFonts(pdf.out)).toContain(CARRIED);
-      expect(
-        fontWarnings(pdf.result.warnings).filter((w) => !/pre-render/.test(w.message)),
-      ).toEqual([]);
+      const pdf = await buildPdf(`label-${mode}-${format}`, config, undefined, page);
+      if (format === "both") {
+        const both = join(pdf.root, "both");
+        await buildSite({
+          inputDir: join(pdf.root, "docs"),
+          configFile: join(pdf.root, "monodocs.config.yml"),
+          outputFile: both,
+          format: "both",
+        });
+        expect(await embeddedFonts(join(both, "docs.pdf"))).toContain(CARRIED);
+      } else {
+        expect(await embeddedFonts(pdf.out)).toContain(CARRIED);
+      }
+      // The PDF-only build lays the label out in the carried font and measures it there, so nothing
+      // is reported of it, on a machine with no math font too.
+      expect(fontWarnings(pdf.result.warnings)).toEqual([]);
 
       // The page the PDF is printed from, as the generator is handed it (the pre-rendered SVG the
       // one drawn for the PDF), laid out as it lays it out: the font first, then the diagrams. The
@@ -359,12 +377,21 @@ describe.skipIf(!chromium)("a PDF's formulas in a real browser", () => {
         {
           inputDir: join(pdf.root, "docs"),
           configFile: join(pdf.root, "monodocs.config.yml"),
-          outputFile: join(pdf.root, "recorded.pdf"),
-          format: "pdf",
+          outputFile: join(pdf.root, "recorded"),
+          format,
         },
         { pdfGenerator: generator },
       );
       const printed = calls[0]!.html;
+      if (format === "both") {
+        // The PDF prints the copy drawn in the carried font; the HTML keeps the one drawn for it.
+        const written = await readFile(join(pdf.root, "recorded", "docs.html"), "utf8");
+        const svgOf = (html: string) => /<svg id="mermaid-0"[\s\S]*?<\/svg>/.exec(html)?.[0];
+        expect(svgOf(written)).toBeDefined();
+        expect(svgOf(printed)).toBeDefined();
+        expect(svgOf(printed)).not.toBe(svgOf(written));
+        expect(written).not.toContain(svgOf(printed)!);
+      }
       const puppeteer = await import("puppeteer-core");
       const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
       try {
@@ -395,6 +422,52 @@ describe.skipIf(!chromium)("a PDF's formulas in a real browser", () => {
       }
     }, 240_000);
   }
+
+  it("reports a character the carried font lacks in a pre-rendered label as the PDF's", async () => {
+    // A code point no font draws, as text inside a label's formula: the carried font has no glyph
+    // for it either, so the PDF's copy carries the tofu, and the warning says so.
+    const page = '# D\n\n```mermaid\ngraph LR\n  A["$$x + \\text{\u{50000}}$$"]\n```\n';
+    const { result } = await buildPdf(
+      "label-tofu",
+      "mermaid:\n  mode: pre-render\n",
+      undefined,
+      page,
+    );
+    const warnings = fontWarnings(result.warnings);
+    expect(warnings.every((w) => w.code === "font/missing")).toBe(true);
+    // The pre-render check speaks of the PDF's copy, and nothing of an HTML this build does not
+    // write; the PDF's own check measures the same label on the page it prints.
+    const prerender = warnings.filter((w) => /pre-render/.test(w.message));
+    expect(prerender).toHaveLength(1);
+    expect(prerender[0]!.message).toMatch(/lays out for the PDF/);
+    for (const w of warnings) {
+      expect(w.message).toContain("U+50000");
+      // The formula's letter is not among them: the carried font draws it.
+      expect(w.message).not.toContain("U+1D465");
+    }
+  }, 120_000);
+
+  it("reads no font for a pre-rendered diagram without a formula", async () => {
+    let read = 0;
+    const prerenderer = createPuppeteerPrerenderer({
+      colorScheme: "light",
+      mathFont: {
+        head: async () => {
+          read++;
+          return mathFontHead(await loadMathFont());
+        },
+        mode: "only",
+      },
+    });
+    try {
+      expect(await prerenderer.render("mermaid-0", "graph LR\n  A --> B")).toContain("<svg");
+      expect(read).toBe(0);
+      expect(await prerenderer.render("mermaid-1", 'graph LR\n  A["$$x$$"]')).toContain("<math");
+      expect(read).toBe(1);
+    } finally {
+      await prerenderer.close();
+    }
+  }, 120_000);
 
   it("adds nothing to the HTML", async () => {
     const root = join(dir, "html");

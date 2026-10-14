@@ -76,8 +76,13 @@ describe("font check reporting", () => {
 
   it("gives the pre-render finding its own wording", () => {
     const outcome: FontCheckOutcome = { status: "missing", clusters: ["日"], truncated: false };
-    expect(describeFontCheck(outcome, "prerender")).toMatch(/pre-render/);
+    expect(describeFontCheck(outcome, "prerender")).toMatch(/pre-render bakes into the output/);
     expect(describeFontCheck(outcome, "pdf")).not.toMatch(/pre-render/);
+    // The copy laid out in the carried math font says it is the PDF's (v0.17).
+    expect(describeFontCheck(outcome, "prerender-pdf")).toMatch(/lays out for the PDF/);
+    expect(
+      describeMathTable({ status: "ok", noMathTable: ["math"] }, "prerender-pdf"),
+    ).toBeUndefined();
   });
 
   it("counts what it did not list instead of dropping it silently", () => {
