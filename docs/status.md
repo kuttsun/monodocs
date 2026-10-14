@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
 
 ## Support Status
 
@@ -26,6 +26,7 @@ Last updated: 2026-10-13
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
 | Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | ✅ Done   | v0.16 |
+| One math font for the PDF, KaTeX 0.18, Mermaid 12.2 | 🚧 Planned| v0.17 |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -65,6 +66,9 @@ verified on Linux and Windows, the samples built with it and looked at, and the 
 on Windows with Cambria Math. 0.16.0 went out under `latest` with the CI guide pinned to it, and the
 published package, the release binaries, and the HTML they produce were verified after `latest`
 moved. The Windows host script and the Windows checks a person has to make are still open.
+
+v0.17 comes before 1.0: one math font for a PDF's formulas, so that a PDF sets them the same wherever
+it is built, and KaTeX 0.18 with Mermaid 12.2, past a security advisory ([roadmap.md](roadmap.md)).
 
 ## Completion Criteria Status
 
@@ -595,9 +599,54 @@ AsciiDoc checklists and search results change for existing documents, asciimath 
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with a watermark, `pdf.toc`, section numbering, and formulas opened and printed, with the table's numbers matching the sheets, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
 - [x] Move the `next` dist-tag onto `0.16.0`, and confirm that the deployed CI guide pins `monodocs@0.16.0` in English and Japanese — `next` and `latest` both read `0.16.0`, and the deployed CI guide pins `monodocs@0.16.0` four times in each language
 
+### v0.17: One Math Font for the PDF, and KaTeX 0.18
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+**One math font for the PDF** ([roadmap.md](roadmap.md) 6.4, 24.3.3)
+
+- [ ] Which font a PDF's formulas are set in is decided in the open, after its licence and its size in the CLI bundle and the standalone binary are checked and recorded in [roadmap.md](roadmap.md) 6.4; it is named in `THIRD-PARTY-NOTICES.txt` and the binary's notices
+- [ ] Whether a key lets an author set formulas in a font of their own, and its shape, is decided in the open; a key, or a retired or reworded `font/no-math-table`, is in the reference and on the "What 1.0 Freezes" page in English and Japanese, and `surfaces.test.ts` passes
+- [ ] `examples/math`, built to PDF in the development image, which has no MATH font, embeds the carried font, draws every formula's mathematical letters and stretched symbols from it and its MATH table (text in `\text{}` falls back to a text font as before), and raises no font finding; a test asserts it
+- [ ] A formula in a Mermaid label drawn in the browser (`mermaid.mode: client`) is set in the carried font in the PDF and fits its box, the font loaded before Mermaid measures the label; under `mermaid.mode: pre-render`, whichever way was chosen, a label's formula fits its box in the PDF, and in the HTML too if the carried font is loaded there, measured in a browser whose MATH font is not the carried one (the Windows runner, with Cambria Math); a document with no formula, in its pages or its diagrams, loads no font, and its PDF embeds the fonts it embedded before; the carried font adds nothing to any HTML, apart from a pre-rendered SVG if that is the way chosen; tests assert each
+- [ ] On a machine with a MATH font of its own, other than the carried one, the PDF's formulas are still set in the carried font; a test asserts it in CI, on the Windows runner, which has Cambria Math, or with a second MATH font the test supplies, not only in the development image
+- [ ] Whether the carried font is loaded where `mermaid.mode: pre-render` lays out a label, which changes the SVG in the HTML too, or pre-rendered diagrams are left out of it and documented as such, is chosen during implementation
+- [ ] What becomes of `font/no-math-table` (dropped only if its condition can no longer occur anywhere: under a key, in pre-rendered labels left out, or under a theme's own `font-family`), and whether a theme's own `font-family` on `math` still applies in the PDF, is decided, the latter stated under `html.theme` in the configuration reference in English and Japanese and asserted by a test, the code under [roadmap.md](roadmap.md) 27.3's promise; if pre-rendered diagrams are left out of the carried font, the check still reports a pre-rendered label's formula on a machine without a MATH font
+- [ ] The documents that say the machine printing a PDF needs a MATH font say what the carried font changes, in English and Japanese: [roadmap.md](roadmap.md) 6.4's third condition and its paragraph on the fixture in the development image, the CI guide, the configuration reference's `fontCheck` and its note under `math`, [development.md](development.md)'s note that the samples report their formulas in the development image, [syntax.md](syntax.md), the sample math pages and `examples/math`'s own page, the `font/no-math-table` message if the code stays, and a note to add in [roadmap.md](roadmap.md) 24.6, beside its claim that one artifact serves both readings, that a reader printing the HTML gets the browser's fonts; `scripts/site-pdf-sample.sh` stops copying Latin Modern Math, and the script still fails when the carried font is not picked up, by checking that each PDF embeds it rather than reading a message
+- [ ] Built on Windows, the PDF embeds the carried font, sets every formula in it, and raises no font finding, and the `\bar` and the radicals [roadmap.md](roadmap.md) 6.4 records are looked at again; 6.4 and [syntax.md](syntax.md) say what the carried font does, in English and Japanese
+
+**KaTeX 0.18 and Mermaid 12.2** ([roadmap.md](roadmap.md) 6.4, 21.3)
+
+- [ ] KaTeX is 0.18.11 and Mermaid 12.2.0, the runtime's notices are regenerated, the pinned CDN runtime moves with them, the test that keeps the two KaTeX versions in step passes, the Dependabot alerts for KaTeX are closed, and the advisory's exemption is removed from `auditConfig.ignoreGhsas` in `app/pnpm-workspace.yaml`, with [development.md](development.md)'s section on it, the audit passing without it
+- [ ] A test ties the CDN runtime's version to the Mermaid installed
+- [ ] What [roadmap.md](roadmap.md) 21.3 and 6.4 measured on Mermaid 12.1.0 and KaTeX 0.16.47 is taken again on the versions adopted and recorded: the runtime's bundled packages and their notices, the CDN line, the inline runtime's size raw and gzip with what it adds to the CLI bundle, and KaTeX's licence and its size in the CLI bundle and the standalone binary
+- [ ] The MathML of the math fixture and of the sample pages is compared before and after the move, and what changed is recorded in [roadmap.md](roadmap.md) 6.4
+- [ ] What monodocs reads of KaTeX's internals still holds under 0.18: the private parse tree `parseTreeLosses` walks, and the MathML class `mml-eqn-num` the numbered-formula detection reads; their tests pass
+- [ ] Every diagram in `examples/en` and `examples/ja` is looked at under Mermaid 12.2.0
+
+**Documentation and tests**
+
+- [ ] [testing.md](testing.md) lists the new and inverted tests in English and Japanese, among them the test in `build.fontcheck.test.ts` that expects only the formulas' findings in the development image
+
+**Release**
+
+Every PDF with a formula changes, so this release goes through a beta, as 0.16.0 did.
+
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.17.0` in the version change itself, before the `v0.17.0` tag is created
+- [ ] `verify-published.yml` gains a 0.17 gate and a step for the carried font, merged before anything below runs
+- [ ] Publish `0.17.0-beta.1` under the `next` tag and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: next`, confirming that the 0.17 steps ran rather than being skipped
+- [ ] During the beta, build `examples/en`, `examples/ja`, `examples/math`, and the site samples with the beta and look at the formulas in the PDF and the diagrams; what no longer reads is fixed or recorded before `0.17.0` is cut
+- [ ] Publish `0.17.0` under the `latest` tag, with release notes stating how formulas in a PDF change and what the Mermaid and KaTeX move changes, and verify it the same way with `dist_tag: 0.17.0`
+- [ ] Verify the `v0.17.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.17.0` assets on a Linux x64 host without Node.js
+- [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.17.0` assets on a Windows 11 host
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
+- [ ] Move the `next` dist-tag onto `0.17.0`, and confirm that the deployed CI guide pins `monodocs@0.17.0` in English and Japanese
+
 ### 1.0
 
-[roadmap.md](roadmap.md) defines this release; it starts once v0.16 is released.
+[roadmap.md](roadmap.md) defines this release; it starts once v0.17 is released.
 
 - [ ] `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the enumeration no longer lists it
 - [ ] The enumeration's test passes, and the documentation is checked against the code in English and Japanese: no key in the reference that the schema does not have, and no behaviour in [architecture.md](architecture.md) that the code does not do

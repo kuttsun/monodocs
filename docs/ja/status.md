@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-10-13
+最終更新: 2026-10-14
 
 ## 対応状況
 
@@ -26,6 +26,7 @@
 | 見出し番号 / 紙の目次               | ✅ 完了   | v0.14          |
 | Mermaid ランタイムの表記 / Mermaid 12 / 数式 | ✅ 完了   | v0.15          |
 | チェックリスト / 幅の広いアクセント / asciimath / 検索の畳み込み / 図の揃え / 検索のクリアボタン / 表面の列挙 | ✅ 完了   | v0.16 |
+| PDF の数式のフォントを 1 つに / KaTeX 0.18 / Mermaid 12.2 | 🚧 予定   | v0.17 |
 | `sidebar.exclude` の削除 / 表面の凍結 | 🚧 予定   | 1.0            |
 
 VS Code 拡張は凍結しており、着手予定はない。需要が分からず、リリースと Marketplace の運用が単独
@@ -62,6 +63,10 @@ v0.16 は、これまでのマイルストーンが先送りしたものを片�
 確認である。0.16.0 は CI ガイドをそれに固定して `latest` に出し、公開パッケージ、リリースバイナリ、
 それらが生成する HTML を `latest` を動かしたあとに検証した。Windows ホストのスクリプトと、Windows で人が
 行う確認はまだ残っている。
+
+1.0 の前に v0.17 を置く。PDF の数式を 1 つのフォントで組み、どこでビルドしても同じ PDF にすることと、
+セキュリティ勧告の対象から外れるよう KaTeX を 0.18 に、Mermaid を 12.2 に上げることである
+（[roadmap.md](roadmap.md)）。
 
 ## 完了条件の達成状況
 
@@ -592,9 +597,54 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] 人にしか答えられない Windows での確認。生成した HTML の Edge での見え方（とりわけ日本語と数式）、透かし、`pdf.toc`、見出し番号、数式を含む PDF を開いて印刷し、目次の番号がシートと一致すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットに対する Mark of the Web と SmartScreen
 - [x] `next` の dist-tag を `0.16.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.16.0` に固定していることを確かめる——`next` と `latest` はどちらも `0.16.0` を指し、デプロイされた CI ガイドは両言語とも 4 か所で `monodocs@0.16.0` に固定されている
 
+### v0.17: PDF の数式のフォントを 1 つにし、KaTeX を 0.18 に上げる
+
+このマイルストーンは [roadmap.md](roadmap.md) が定義し、下の一覧で追う。
+
+**PDF の数式のフォント**（[roadmap.md](roadmap.md) 6.4、24.3.3）
+
+- [ ] PDF の数式を組むフォントを、ライセンスと CLI バンドル・単体バイナリでの大きさを確かめて [roadmap.md](roadmap.md) 6.4 に記録したうえで、公開の場で決める。`THIRD-PARTY-NOTICES.txt` とバイナリの告知に名前を載せる
+- [ ] 書き手が自分のフォントで数式を組めるキーを設けるか、設けるならその形を、公開の場で決める。キーを設けるか、`font/no-math-table` を廃止するか改めるなら、英語・日本語のリファレンスと「1.0 が凍結するもの」のページがそれを書き、`surfaces.test.ts` が通る
+- [ ] MATH フォントを持たない開発イメージで `examples/math` を PDF にビルドすると、持っているフォントを埋め込み、すべての数式の数学の文字と伸びる記号をそれとその MATH テーブルで描き（`\text{}` の中の文字はこれまでどおり本文のフォントに落ちる）、フォントの指摘は出ない。テストが確かめる
+- [ ] ブラウザで描く図（`mermaid.mode: client`）のラベルの数式は、PDF では持っているフォントで組み、ラベルの箱に収まる。Mermaid がラベルを測る前に、そのフォントを読み込んでおく。`mermaid.mode: pre-render` では、どちらを選んでも、ラベルの数式が PDF でラベルの箱に収まり、そこでも持っているフォントを読み込むなら HTML でも収まる。MATH フォントが持っているフォントではないブラウザ（Cambria Math を持つ Windows のランナー）で測って確かめる。ページにも図にも数式の無い文書はフォントを読み込まず、その PDF は以前と同じフォントを埋め込む。持っているフォントはどの HTML にも何も足さない（そちらを選んだ場合の pre-render の SVG を除く）。テストがそれぞれを確かめる
+- [ ] 持っているフォントとは別の MATH フォントを持つマシンでも、PDF の数式は持っているフォントで組む。開発イメージだけでなく、CI で、Cambria Math を持つ Windows のランナーか、テストが用意する 2 つ目の MATH フォントでテストが確かめる
+- [ ] `mermaid.mode: pre-render` がラベルを組む場所でも持っているフォントを読み込むか（HTML の SVG も変わる）、pre-render の図は対象から外してそう書くかを、実装のときに選ぶ
+- [ ] `font/no-math-table` をどうするか（キー、対象から外した pre-render のラベル、テーマ自身の `font-family` のどこでも条件が起きなくなるときだけ落とす）と、テーマ自身が `math` に指定した `font-family` が PDF でも効くかを決める。後者は英語・日本語の設定リファレンスの `html.theme` に書き、テストが確かめる。コードについては [roadmap.md](roadmap.md) 27.3 の約束に従う。pre-render の図を対象から外すなら、MATH フォントの無いマシンでは、検査はこれまでどおり pre-render のラベルの数式を報告する
+- [ ] PDF を印刷するマシンに MATH フォントが要ると書いている文書が、持っているフォントで何が変わるかを英語・日本語で書く。[roadmap.md](roadmap.md) 6.4 の 3 番目の条件と開発イメージでのフィクスチャの段落、CI ガイド、設定リファレンスの `fontCheck` と `math` の注記、開発イメージではサンプルが数式を報告するという [development.md](development.md) の注記、[syntax.md](syntax.md)、サンプルの数式のページと `examples/math` 自身のページ、コードを残すなら `font/no-math-table` のメッセージ、1 つの成果物で両方の読み方を賄うと書く [roadmap.md](roadmap.md) 24.6 に足す、HTML をブラウザで印刷する読者にはブラウザのフォントが使われるという注記である。`scripts/site-pdf-sample.sh` は Latin Modern Math を写すのをやめ、持っているフォントが使われないときは、メッセージを読むのではなく各 PDF がそのフォントを埋め込んでいるかを確かめて、これまでどおり失敗する
+- [ ] Windows でビルドした PDF が持っているフォントを埋め込み、すべての数式をそれで組み、フォントの指摘が出ない。[roadmap.md](roadmap.md) 6.4 が記録した `\bar` と根号をもう一度見る。持っているフォントでどうなるかを 6.4 と英語・日本語の [syntax.md](syntax.md) に書く
+
+**KaTeX 0.18 と Mermaid 12.2**（[roadmap.md](roadmap.md) 6.4、21.3）
+
+- [ ] KaTeX を 0.18.11、Mermaid を 12.2.0 にし、ランタイムの告知を作り直し、固定している CDN のランタイムもそれに合わせて動かす。2 つの KaTeX の版を揃えるテストが通り、KaTeX の Dependabot の警告が閉じる。`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` からこの勧告を消し、それを説明する [development.md](development.md) の節も消し、それでも監査が通る
+- [ ] テストが CDN のランタイムの版を、インストールした Mermaid と結び付ける
+- [ ] [roadmap.md](roadmap.md) 21.3 と 6.4 が Mermaid 12.1.0 と KaTeX 0.16.47 で測ったものを、採用する版で測り直して記録する。ランタイムが同梱するパッケージとその告知、CDN の行、インラインのランタイムの大きさ（素と gzip）と CLI バンドルへの上乗せ、KaTeX のライセンスと CLI バンドル・単体バイナリでの大きさである
+- [ ] 数式のフィクスチャとサンプルのページの MathML を上げる前後で比べ、変わったものを [roadmap.md](roadmap.md) 6.4 に記録する
+- [ ] monodocs が読む KaTeX の内部が 0.18 でも保たれる。`parseTreeLosses` がたどる非公開の構文木と、番号付きの数式の検出が読む MathML のクラス `mml-eqn-num` である。それらのテストが通る
+- [ ] `examples/en` と `examples/ja` のすべての図を Mermaid 12.2.0 で見る
+
+**ドキュメントとテスト**
+
+- [ ] [testing.md](testing.md) が、新しいテストと反転したテストを英語と日本語で載せる。開発イメージでは数式の指摘だけが残ると期待する `build.fontcheck.test.ts` のテストもその 1 つである
+
+**リリース**
+
+数式を含むすべての PDF が変わるので、0.16.0 と同じくベータを通す。
+
+- [ ] ドキュメントサイトの CI ガイドが、英語・日本語とも、`v0.17.0` タグを作る前のバージョン変更そのものの中で `monodocs@0.17.0` に固定する
+- [ ] `verify-published.yml` に 0.17 の判定と、持っているフォントを確かめる手順を足し、以下より前にマージする
+- [ ] `0.17.0-beta.1` を `next` タグで公開し、`dist_tag: next` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.17 の手順が飛ばされずに走ったことを確かめる
+- [ ] ベータ中に `examples/en`、`examples/ja`、`examples/math`、サイトのサンプルをベータでビルドし、PDF の数式と図を見る。読めなくなったものは、`0.17.0` を出す前に直すか記録する
+- [ ] `0.17.0` を `latest` タグで公開し、リリースノートに PDF の数式がどう変わるかと、Mermaid と KaTeX を上げて変わるものを書き、`dist_tag: 0.17.0` で同じように検証する
+- [ ] `v0.17.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する
+- [ ] Node.js の無い Linux x64 ホストで、公開した `v0.17.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
+- [ ] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる
+- [ ] Windows 11 ホストで、公開した `v0.17.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
+- [ ] 人にしか答えられない Windows での確認。生成した HTML の Edge での見え方（とりわけ日本語と数式）、数式を含む PDF を開いて印刷すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットの Mark of the Web と SmartScreen
+- [ ] `next` の dist-tag を `0.17.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.17.0` に固定していることを確かめる
+
 ### 1.0
 
-このリリースは [roadmap.md](roadmap.md) が定義し、v0.16 のリリース後に始める。
+このリリースは [roadmap.md](roadmap.md) が定義し、v0.17 のリリース後に始める。
 
 - [ ] `sidebar.exclude` が、`sources.exclude` を名指すメッセージとともに未知のキーとして拒否され、列挙から消える
 - [ ] 列挙のテストが通り、ドキュメントを英語と日本語でコードと突き合わせる。リファレンスにスキーマの持たないキーは無く、[architecture.md](architecture.md) にコードのしない挙動は無い
