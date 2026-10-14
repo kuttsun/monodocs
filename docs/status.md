@@ -27,6 +27,9 @@ Last updated: 2026-10-14
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
 | Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | ✅ Done   | v0.16 |
 | One math font for the PDF, KaTeX 0.18, Mermaid 12.2 | 🚧 Planned| v0.17 |
+| Difference from an earlier version in HTML        | 🚧 Planned| v0.18          |
+| Difference from an earlier version in PDF         | 🚧 Planned| v0.19          |
+| Word and character differences inside a block     | 🚧 Planned| v0.20          |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -69,6 +72,10 @@ moved. The Windows host script and the Windows checks a person has to make are s
 
 v0.17 comes before 1.0: one math font for a PDF's formulas, so that a PDF sets them the same wherever
 it is built, and KaTeX 0.18 with Mermaid 12.2, past a security advisory ([roadmap.md](roadmap.md)).
+
+v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an earlier version written
+into them, for readers who do not look at Git, in three releases, because what they add is a surface
+1.0 freezes ([roadmap.md](roadmap.md) 7.3).
 
 ## Completion Criteria Status
 
@@ -644,11 +651,84 @@ Every PDF with a formula changes, so this release goes through a beta, as 0.16.0
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
 - [ ] Move the `next` dist-tag onto `0.17.0`, and confirm that the deployed CI guide pins `monodocs@0.17.0` in English and Japanese
 
+### v0.18: The Difference from an Earlier Version, in HTML
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+- [ ] With a fixture containing added, deleted, moved (through `aliases`), merged, and changed pages, tests confirm the list of changes and the marks within pages, for both Markdown and AsciiDoc; a route match takes precedence over an alias; a page whose only change is its front-matter title is listed
+- [ ] Generated numbers are not differences: inserting one section, figure, or footnote shows only that one as added — with `numbering.sections`, with `:sectnums:` in both versions, with numbered captions, with AsciiDoc appendices, with GFM and AsciiDoc footnotes, and with AsciiDoc cross-references written as `Section 2.3` or `Appendix B` — with `math.enabled` on and off; and a deleted figure or appendix shows no number beside the new ones
+- [ ] Changing a heading's level, or turning a paragraph into a heading with the same text, marks that block
+- [ ] `-f html --diff-from v1.2` builds; `diff.pdf` passed to core is `diff/unsupported`
+- [ ] Changing a table's frame, grid, stripes, or width, or a block's role, changes no block; moving a cell's span (AsciiDoc `2+|a |b` to `|a 2+|b`) with the same texts changes that row; changing one row under another cell's `rowspan` keeps every new value in its column in every view
+- [ ] An image outside the root, or missing, unchanged between the versions is not a difference with either `--diff-from` or `--diff-from-dir`
+- [ ] A change of link target or emphasis with the same text is not a difference; a paragraph moved into an admonition is a deletion and an addition; ticking a task list's checkbox is a difference; an image replaced under the same name is a difference with `assets.embedImages: false` too
+- [ ] Adding a second paragraph to one item of a tight Markdown list changes only that item, and adding or deleting a nested item leaves its parent unmarked
+- [ ] Turning one item of a list into a task, in Markdown and in AsciiDoc, changes that item alone
+- [ ] Splitting an AsciiDoc section with a new subheading, and changing a heading's level, adds or changes that heading alone
+- [ ] In the earlier-version view, an added page shows only its note
+- [ ] Fixing a figure's caption changes the caption alone, and the figure is not shown twice
+- [ ] Changing `sidebar.titleTransform` or `sidebar.titleFrom` alone produces no change; changing a page's front-matter `title` lists that page
+- [ ] Whitespace between elements is never a block or a change, and the bar's count of changes equals the number of marked blocks, added pages, and pages changed only in their front-matter title or moved without a block changed, each of which the navigation reaches
+- [ ] Deleting an item of an ordered list, and deleting a footnote, leaves every new item and footnote showing its new number in every view, and references and footnotes agreeing
+- [ ] The output for fixtures covering a nested list with an item deleted at each depth, a table with a changed caption, header row, and `colgroup` (AsciiDoc), a deleted anonymous block, and a deleted `div.title` and `summary`, re-parses to the same tree and violates no content model; a deleted nested item appears at its own depth
+- [ ] Deleted headings have no ID, do not appear in the in-page table of contents, and are not found by search or highlighted; no ID from the earlier tree survives without being renamed, and fixtures with pre-rendered diagrams in both versions and with an inline SVG carrying IDs moved within an AsciiDoc page have no duplicate ID, and every renamed reference — `url(#…)`, `href`, a `<style>` selector, an ID-naming attribute — still resolves inside its SVG
+- [ ] A page including an example of an LFS pointer's first line is not `diff/lfs-pointer`
+- [ ] A document's own `~~struck~~` text and raw `<ins>` are shown in every view
+- [ ] A tree extracted from a ref matches a checkout of that ref for the files under the earlier root, including files marked `export-ignore` and a `.gitattributes` changed since; nothing outside the root is written but the configuration file; the repository's `git status` is the same before and after; the build works from a subdirectory of the repository and with a directory whose name contains `[`
+- [ ] An input argument that is a file, a `-c` that names a file the earlier version lacks, and a `-c` or root that leaves the repository each behave as 7.3.1 states, none falling back to defaults; without `-c`, an earlier version without a configuration file builds with the defaults, and one with a file the new version lacks builds with it
+- [ ] In a shallow clone without the ref, the error names `fetch-depth: 0`; an LFS file under the root that a page reads, extracted without git-lfs and its filter, is `diff/lfs-pointer`; one the build does not read, or one outside the root, is not; with the filter configured as required but git-lfs missing, the extraction is `diff/git-failed`
+- [ ] An earlier configuration with a key the current monodocs does not accept is an error showing `label:path`; one using `sidebar.exclude` builds, and the translation table maps it to `sources.exclude` ready for 1.0's removal
+- [ ] An AsciiDoc page using `{docdir}` unchanged between the versions is not a difference, its includes and images still come from the earlier version — including an include and an image whose target is written with `{docdir}`, with no line of the earlier page silently dropped — and two builds from the same ref give the same bytes; a page using `{doctime}` or `{localtime}` unchanged between the versions is not a difference, and with `SOURCE_DATE_EPOCH` set, two builds with a difference give the same bytes
+- [ ] An earlier AsciiDoc version with `:sectnums:` builds against a new one with `numbering.sections`, and no deleted heading carries a number
+- [ ] A diagram deleted along with the new version's last one is drawn in `client` mode, and an earlier version with diagrams against a new one with Mermaid off builds in `pre-render` mode
+- [ ] A difference with a PDF output is `diff/unsupported`, whether the PDF comes from `-f pdf`, `-f both`, or `output.format`; `watch`, `serve`, and `validate` reject the options as unknown, and `watchSite`, `serveSite`, and `validateSite` reject `diff`
+- [ ] Tests confirm that the same old and new inputs give the same HTML bytes, and that a build without a difference gives the bytes it gave before the feature, labels in `siteDataJson` included; the size report's lines add up to the file, with an image shared by both versions and the same block deleted on two pages
+- [ ] With `numbering.sections` on, every number shown is the number the same page gets in a build without a difference
+- [ ] The list of changes gets a page ID that collides with neither a page named `diff-changes.md` nor a heading whose ID matches the article's, and is in neither search nor the previous/next navigation; the bar's navigation lands on each change after the page has been shown
+- [ ] The default theme's `app.js` is byte for byte what it was before the feature, and a search term found on a page is not left highlighted inside its deleted content
+- [ ] A custom theme with its own `template.html`, `style.css`, and `app.js` gets the bar, the marks, and the navigation
+- [ ] The command reference and the single HTML invariants in architecture.md describe the difference, in both languages
+- [ ] The "What 1.0 Freezes" page (12.4) lists the two options, the new diagnostic codes, the new `html.labels` keys, `//changes` and how the list of changes gets its page ID among the addresses, and the `data-monodocs-diff`, `data-monodocs-diff-block`, and `data-monodocs-diff-page` attributes, and `surfaces.test.ts` passes
+- [ ] testing.md lists the new tests in both languages
+- [ ] Nothing changes for an existing document, so 0.18.0 goes to `latest` without a beta, as 0.13.0 and 0.14.0 did, with the verification 0.16.0 had: the published package on Linux x64 and Windows x64 through `verify-published.yml` with steps that build a difference from a tag of a fixture repository and from a directory, the release binaries, a driven browser pass over a difference the released Linux binary builds — the three views, previous and next, the sidebar marks, the list of changes — `verify-windows-binary.ps1` on Windows 11 and the Windows checks a person has to make, git on Windows included (paths with spaces and Japanese characters, `core.autocrlf`, LFS), and the CI guide pinned to the release. The release notes introduce the two options and say that nothing changes for a build without them
+
+### v0.19: The Difference on Paper
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+- [ ] PDFs in both presentations, made from two versions of `examples/ja`, are opened and checked on Linux and Windows
+- [ ] Additions and deletions remain distinguishable when the `markup` PDF is rendered in greyscale
+- [ ] In `bars`, a changed paragraph, code block, list item, table row, and a block inside a quotation and an admonition each carry a bar in the margin, outside their container, and their lines break and sit horizontally where they do in a PDF without a difference; a changed block that breaks across a page carries its bar on both pages
+- [ ] The HTML of `-f both --diff-pdf bars`, printed from Chromium, gives the bars, including with a custom template that has no `{{bodyAttrs}}`
+- [ ] In `markup`, a deleted image appears even when the HTML configuration would not embed it; in `bars`, the list of changes names deleted pages without their content, and every block of an added page carries a bar
+- [ ] Deleted headings are in neither the outline nor the printed table of contents
+- [ ] `--diff-pdf` given without a PDF output is `diff/pdf-without-pdf`
+- [ ] The command reference and the "What 1.0 Freezes" page list `--diff-pdf` with its default, `markup`, and `diff/pdf-without-pdf`, in both languages, and `surfaces.test.ts` passes
+- [ ] testing.md lists the new tests in both languages
+- [ ] 0.19.0 goes to `latest` without a beta, nothing changing for a build without a difference, with the verification 0.18.0 had, its steps building both presentations, and a person printing a `markup` and a `bars` PDF on Windows, the first in black and white
+
+### v0.20: Words and Characters Inside a Changed Block
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+- [ ] The examples measured in 7.3.6 come out as recorded there, and a test pins them
+- [ ] In a paragraph mixing Japanese and English, a change to a single word shows as a difference in that word only
+- [ ] An emoji joined by ZWJ and a flag are never split, and the script and cluster table is generated from one Unicode version, with a test that fails when the table and its data file disagree
+- [ ] A paired heading whose generated number changed shows no difference in the number
+- [ ] A deleted run inside bold text is bold inside its `<del>`, and carries no ID or link
+- [ ] A changed line in a code block without a language, and with `highlight.enabled: false`, is marked by line
+- [ ] The earlier-version view of a changed paragraph reads as the earlier paragraph
+- [ ] The same old and new inputs, including a character assigned in a Unicode version newer than the older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two Node versions with different ICU and Unicode versions
+- [ ] The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in both languages
+- [ ] testing.md lists the new tests in both languages
+- [ ] 0.20.0 changes what a build with a difference shows inside a changed block, which no released document depends on yet, so it goes to `latest` without a beta, with the verification 0.19.0 had, its browser pass reading changed paragraphs in Japanese and English in the three views; the release notes say how a changed block now reads
+
 ### 1.0
 
-[roadmap.md](roadmap.md) defines this release; it starts once v0.17 is released.
+[roadmap.md](roadmap.md) defines this release; it starts once v0.20 is released.
 
 - [ ] `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the enumeration no longer lists it
+- [ ] An earlier version whose configuration uses `sidebar.exclude` is still compared against with `--diff-from`, the key read as `sources.exclude` ([roadmap.md](roadmap.md) 7.3.2)
 - [ ] The enumeration's test passes, and the documentation is checked against the code in English and Japanese: no key in the reference that the schema does not have, and no behaviour in [architecture.md](architecture.md) that the code does not do
 
 ## Supported Syntax

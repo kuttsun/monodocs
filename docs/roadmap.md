@@ -998,7 +998,7 @@ PDF
 
 PDF output will be supported after HTML output stabilizes.
 
-### 7.3 Difference from an Earlier Version (1.x)
+### 7.3 Difference from an Earlier Version (v0.18–v0.20)
 
 When a revised specification is handed over, the first thing the receiving side wants to know is
 what changed since the last version. A document written in Word shows that with tracked changes.
@@ -1014,16 +1014,17 @@ monodocs build ./docs -o ./dist/docs.html --diff-from-dir ../project-1.2
 monodocs build ./docs -f pdf -o ./dist/docs.pdf --diff-from v1.2 --diff-pdf bars
 ```
 
-It arrives in three stages, each a minor release. Stage 1 outputs the difference at the level of
-pages and blocks in HTML. Stage 2 outputs it in PDF. Stage 3 compares the inside of changed
-blocks — words, and characters for Japanese — and treats tables cell by cell. At every stage, a
-combination not yet handled is an error, not accepted and ignored (12.4).
+It arrives in three stages, each a release before 1.0. Stage 1, in v0.18, outputs the difference
+at the level of pages and blocks in HTML. Stage 2, in v0.19, outputs it in PDF. Stage 3, in v0.20,
+compares the inside of changed blocks — words, and characters for Japanese — and treats tables cell
+by cell. All three come before 1.0 because what they add is a surface 1.0 freezes (12.4). At every
+stage, a combination not yet handled is an error, not accepted and ignored (12.4).
 
 **What this section decides, and what it leaves to the implementation.** The subsections below fix
 the interfaces, the rules a reader or a script can observe, the invariants the output keeps, and
 the facts measured on 2026-10-14. How a rule is reached in the HAST, in CSS, or through
 Asciidoctor's API is decided when each stage is implemented, against the completion criteria of
-the 1.x milestone, which name the cases a review of this design found — a nested list, a table's
+the v0.18, v0.19, and v0.20 milestones, which name the cases a review of this design found — a nested list, a table's
 `colgroup`, a code block's padding, Asciidoctor's own numbers, and so on. What the implementation
 decides is recorded here when that stage lands, as 6.4 records what v0.15 measured. A rule this
 section states and the code cannot keep is a change to this section, made in the open, not a
@@ -1181,7 +1182,7 @@ someone decides where it belongs.
 
 **Keys a major release removed are read as their replacements.** An earlier configuration with a
 key the current monodocs does not know is an error, not something silently dropped (12.2) — with
-one allowance. A key a major release removed after deprecating it, as 1.0 removes `sidebar.exclude`
+one allowance. A key a major release removed after deprecating it, as 1.0 will remove `sidebar.exclude`
 for `sources.exclude` (12.4), is read in an earlier configuration as its replacement, without a
 warning: every 0.x version that used it would otherwise be impossible to compare against, and its
 author cannot rewrite a released configuration. The translations are a table kept beside the
@@ -5945,44 +5946,19 @@ Completion criteria:
 
 ---
 
-## 1.0
+## v0.18: The Difference from an Earlier Version, in HTML
 
 Purpose:
 
-Claim the number, on the terms 12.4 wrote down. 1.0 is not a feature milestone: it is the release
-that says the surfaces are stable, which is only worth saying once everything that would have
-changed them has been done.
-
-What it contains:
-
-- `sidebar.exclude` — deprecated since v0.10 — removed, as the first exercise of the deprecation
-  shape 12.4 defines
-- The enumeration of the frozen surfaces, written in v0.16, checked again against the code
-- Documentation, in both languages, that describes the tool as it is: no key in the reference that
-  the schema does not have, and no behaviour in architecture.md that the code does not do. v0.11
-  makes this true; 1.0 is where it is checked again, because that is what the number claims
-
-Completion criteria:
-
-- `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the
-  enumeration no longer lists it
-- The enumeration's test passes, and the documentation is checked against the code in both
-  languages as described above
-
----
-
-## 1.x: Difference from an Earlier Version
-
-Purpose:
-
-Output HTML and PDF with the difference from an earlier version written into them (7.3). The
-readers are people who do not look at Git; this is not a substitute for `git diff`. It comes after
-1.0: 12.4 allows new options in a minor release, and the difference changes nothing about how
-existing documents build. It is not part of v0.16, which is the release for what has to be settled
-before 1.0. As 7.3 describes, it is split into three stages, each a minor release. Each stage
-records in 7.3 what its implementation decided (7.3, "What this section decides").
-
-Stage 1: page and block differences in HTML
+Output HTML with the difference from an earlier version written into it (7.3, stage 1). The readers
+are people who do not look at Git; this is not a substitute for `git diff`. It comes before 1.0,
+with the PDF in v0.19 and the comparison inside changed blocks in v0.20, because everything it adds
+— two options, diagnostic codes, labels, the attributes a theme or a script reads, the address of
+the list of changes — is a surface 1.0 freezes, and 12.4 makes a surface cheap to change before the
+number and expensive after it. Each surface is used in a release before 1.0 claims it. A build
+without a difference produces the bytes it did before, so nothing changes for an existing document.
+v0.17 comes first; 1.0 now starts once v0.20 is released. Each of the three releases records in 7.3
+what its implementation decided (7.3, "What this section decides").
 
 Implementation scope:
 
@@ -6055,7 +6031,8 @@ Completion criteria:
   does not read, or one outside the root, is not; with the filter configured as required but
   git-lfs missing, the extraction is `diff/git-failed`
 - An earlier configuration with a key the current monodocs does not accept is an error showing
-  `label:path`; one using `sidebar.exclude` builds after 1.0 removed it
+  `label:path`; one using `sidebar.exclude` builds, and the translation table maps it to
+  `sources.exclude` ready for 1.0's removal
 - An AsciiDoc page using `{docdir}` unchanged between the versions is not a difference, its
   includes and images still come from the earlier version — including an include and an image
   whose target is written with `{docdir}`, with no line of the earlier page silently dropped — and two builds from the same ref give
@@ -6087,8 +6064,25 @@ Completion criteria:
   `html.labels` keys, `//changes` and how the list of changes gets its page ID among the addresses,
   and the `data-monodocs-diff`, `data-monodocs-diff-block`, and `data-monodocs-diff-page`
   attributes, and `surfaces.test.ts` passes
+- testing.md lists the new tests in both languages
+- Nothing changes for an existing document, so 0.18.0 goes to `latest` without a beta, as 0.13.0
+  and 0.14.0 did, with the verification 0.16.0 had: the published package on Linux x64 and Windows
+  x64 through `verify-published.yml` with steps that build a difference from a tag of a fixture
+  repository and from a directory, the release binaries, a driven browser pass over a difference
+  the released Linux binary builds — the three views, previous and next, the sidebar marks, the list
+  of changes — `verify-windows-binary.ps1` on Windows 11 and the Windows checks a person has to make,
+  git on Windows included (paths with spaces and Japanese characters, `core.autocrlf`, LFS), and the
+  CI guide pinned to the release. The release notes introduce the two options and say that nothing
+  changes for a build without them
 
-Stage 2: differences in PDF
+---
+
+## v0.19: The Difference on Paper
+
+Purpose:
+
+Output the difference in PDF (7.3, stage 2), in the two presentations 7.3.5 describes, so that the
+option that chooses between them and its default are surfaces 1.0 freezes having been used.
 
 Implementation scope:
 
@@ -6114,8 +6108,20 @@ Completion criteria:
 - `--diff-pdf` given without a PDF output is `diff/pdf-without-pdf`
 - The command reference and the "What 1.0 Freezes" page list `--diff-pdf` with its default,
   `markup`, and `diff/pdf-without-pdf`, in both languages, and `surfaces.test.ts` passes
+- testing.md lists the new tests in both languages
+- 0.19.0 goes to `latest` without a beta, nothing changing for a build without a difference, with
+  the verification 0.18.0 had, its steps building both presentations, and a person printing a
+  `markup` and a `bars` PDF on Windows, the first in black and white
 
-Stage 3: word and character differences
+---
+
+## v0.20: Words and Characters Inside a Changed Block
+
+Purpose:
+
+Compare the inside of changed blocks word by word, and Japanese character by character (7.3,
+stage 3), so that what a reader sees of a changed paragraph, and the attribute value that marks it,
+are settled before 1.0.
 
 Implementation scope:
 
@@ -6139,6 +6145,39 @@ Completion criteria:
   older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two
   Node versions with different ICU and Unicode versions
 - The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in both languages
+- testing.md lists the new tests in both languages
+- 0.20.0 changes what a build with a difference shows inside a changed block, which no released
+  document depends on yet, so it goes to `latest` without a beta, with the verification 0.19.0 had,
+  its browser pass reading changed paragraphs in Japanese and English in the three views; the
+  release notes say how a changed block now reads
+
+---
+
+## 1.0
+
+Purpose:
+
+Claim the number, on the terms 12.4 wrote down. 1.0 is not a feature milestone: it is the release
+that says the surfaces are stable, which is only worth saying once everything that would have
+changed them has been done.
+
+What it contains:
+
+- `sidebar.exclude` — deprecated since v0.10 — removed, as the first exercise of the deprecation
+  shape 12.4 defines
+- The enumeration of the frozen surfaces, written in v0.16, checked again against the code
+- Documentation, in both languages, that describes the tool as it is: no key in the reference that
+  the schema does not have, and no behaviour in architecture.md that the code does not do. v0.11
+  makes this true; 1.0 is where it is checked again, because that is what the number claims
+
+Completion criteria:
+
+- `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the
+  enumeration no longer lists it
+- An earlier version whose configuration uses `sidebar.exclude` is still compared against with
+  `--diff-from`, the key read as `sources.exclude` (7.3.2)
+- The enumeration's test passes, and the documentation is checked against the code in both
+  languages as described above
 
 ---
 
