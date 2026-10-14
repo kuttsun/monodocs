@@ -525,7 +525,7 @@ formula as `$TeX$`, copying, search, and diagnostics.
 - **On by default.** asciimath is what `stem` means unless `:stem:` says otherwise — Asciidoctor's own
   default, which its HTML renders with MathJax — so an author who wrote `stem:[x^2]` meant a formula,
   and printing `\$x^2\$` was never what they wanted; v0.15 already warned on every such formula; and
-  12.4 makes this the last release in which the default can still be chosen. `math.enabled: false`
+  after 1.0, 12.4 lets a default change only in a major release, and v0.16 chose it before. `math.enabled: false`
   turns asciimath off with latexmath. It changes an existing document's output, which is one reason
   0.16.0 goes through a beta.
 - **Its source and its TeX.** A copy gives `asciimath:[...]` inline, `]` escaped, and an `[asciimath]`
@@ -832,15 +832,17 @@ correct markup: the wide accents, the `\bar` and the radical on Windows above ar
 Those are recorded for the pairs measured (Chromium with Latin Modern Math on Linux, Edge with
 Cambria Math on Windows), and syntax.md names them.
 
-**One math font for the PDF (decided after 0.16.0: v0.17).** The HTML is drawn by the reader's browser, so its pairs cannot
+**One math font for the PDF (after 0.16.0: made the default in v0.17; the font itself is chosen there).** The HTML is drawn by the reader's browser, so its pairs cannot
 be narrowed. The PDF can: it is always printed by monodocs's own Chromium, and only the build
 machine's math font varies. Loading one MATH font for the PDF build alone would make the PDF the
 same wherever it is built, and that pair is the one CI already checks. The repository carries
 Latin Modern Math (`latinmodern-math.otf`, 733,736 bytes, under the GUST Font License), which the
 tests and `scripts/site-pdf-sample.sh` load already. Chromium embeds only the glyphs a PDF uses,
 so the PDF hardly grows; the CLI bundle and the binary do. Made the default, it changes how
-existing PDFs look, which 12.4 allows only before 1.0, or in 1.x behind a key. It is made the
-default, before 1.0, in v0.17.
+existing PDFs look, which 12.4 allows before 1.0, and after it only in a major release or in 1.x
+behind a key. It is made the
+default, before 1.0, in v0.17, where the font, its licence, and any key are decided in the open;
+Latin Modern Math is the first candidate, not the choice.
 
 - **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
   bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
@@ -5045,7 +5047,8 @@ Completion criteria:
 Purpose:
 
 Clear what earlier milestones set aside, and enumerate what 1.0 will freeze, so that 1.0 is left
-with nothing but the removal 12.4 reserves for a major release and a final check. Most items here
+with nothing but the removal 12.4 reserves for a major release and a final check. (v0.17, defined
+after 0.16.0, now sits between it and 1.0.) Most items here
 change what an existing document builds or add a surface 1.0 enumerates, which 12.4 makes cheap
 before the number and expensive after it; the rest are checks 1.0 should not be claimed without.
 
@@ -5211,18 +5214,23 @@ Purpose:
 
 Make a PDF's formulas the same wherever the PDF is built, and move KaTeX past a security advisory with
 the Mermaid runtime in step. Both change what existing documents build: the first how every formula
-in a PDF looks, the second possibly the MathML of some formulas and the diagrams' runtime. 12.4 makes
-such a change cheap before 1.0 and costly after it, so v0.17 comes before 1.0.
+in a PDF looks, the second possibly the MathML of some formulas and the diagrams' runtime. The first
+is a change of default, which 12.4 allows after 1.0 only in a major release, or in 1.x behind a key;
+to make it the default, v0.17 comes before 1.0. The second
+could come in any release, since 12.4 does not promise the same output across versions; it comes
+here so that 1.0 starts on dependencies outside the advisory, with one beta for both.
 
 - **A PDF's formulas depend on the build machine's math font** (6.4). The same document built on
   Linux with Latin Modern Math and on Windows with Cambria Math gives two PDFs that set formulas
   differently: on Windows the `\bar` over a letter touches it and reads as the letter alone, and a
   radical's sign does not join its bar. A machine with no MATH font gives a PDF whose brackets do not
-  stretch, with a warning. 6.4 decided not to chase a browser and a font with CSS, and left one
+  stretch and whose variables come out as tofu unless another font has the mathematical letters, with
+  a warning. 6.4 decided not to chase a browser and a font with CSS, and left one
   font for the PDF open; this is where it is settled. The HTML is not touched: the reader's browser
   draws it, with the reader's fonts
 - **KaTeX 0.16.47 is inside an advisory** (GHSA-238p-pmpm-9mq7, low, fixed in 0.18.2): monodocs
-  renders with it, and the Mermaid 12.1.0 runtime that HTML with a diagram embeds carries the same
+  renders with it, and the Mermaid 12.1.0 runtime, which HTML with a diagram embeds or loads from the
+  CDN, and which pre-render runs at build time, carries the same
   version, which a test keeps in step so that the notices name one KaTeX. Mermaid 12.2.0's runtime
   carries KaTeX 0.18.11. Moving monodocs's own KaTeX alone would leave the runtime's copy where it
   is and break the test
@@ -5230,39 +5238,87 @@ such a change cheap before 1.0 and costly after it, so v0.17 comes before 1.0.
 Implementation scope:
 
 - Set the formulas of a PDF in one MATH font that monodocs carries, loaded for the PDF build alone,
-  so that neither the build machine's fonts nor their absence decide how a formula looks in it.
-  Which font, after checking its licence and its size in the CLI bundle and the standalone binary as
+  so that neither the build machine's fonts nor their absence decide how a formula looks in it. A
+  formula is every `<math>` the PDF draws, a Mermaid label's formula included, since Mermaid renders
+  it to MathML as well. With `mermaid.mode: pre-render`, a label's box is laid out at build time with
+  the build machine's fonts and baked into an SVG the HTML shares. Whether the carried font is loaded
+  there too, which changes that SVG in the HTML as well, or pre-rendered diagrams are left out of the
+  carried font and documented as such, is chosen during implementation; the criteria below hold
+  either way. Which font, after checking its licence and its size in the CLI bundle and the standalone binary as
   CONTRIBUTING.md requires of a dependency, is decided in the open; Latin Modern Math, which the
   repository already carries for the tests and the site's PDF samples (733,736 bytes, GUST Font
   License), is the first candidate. Whether a key lets an author set formulas in a font of their
   own instead, and its shape, is decided in the open too; a key joins the enumeration (12.4)
 - The font check (24.3.3) measures a PDF's formulas against the carried font, so a machine with no
-  MATH font raises no math finding, and the text outside formulas is checked as before
+  MATH font raises no math finding for the formulas set in it, and the text outside formulas is checked
+  as before. If pre-rendered diagrams are left out of the carried font, the check still reports a
+  pre-rendered label's formula on a machine without a MATH font. What becomes
+  of `font/no-math-table` is decided under 27.3's promise about codes: the carried font removes its
+  condition for the formulas set in it, but it can still occur where a formula is not, under a key, in
+  pre-rendered labels left out of the carried font, or under a theme's own `font-family` that still
+  applies, so the code is dropped only if none of those remains. Whether a theme's own `font-family` on `math`
+  still applies in the PDF is decided as well
 - Move Mermaid to 12.2.0 and KaTeX to 0.18.11 together, regenerate the runtime's notices, and move
-  the pinned CDN runtime (`mermaid.runtime: cdn`) with them
+  the pinned CDN runtime (`mermaid.runtime: cdn`) with them. The advisory's exemption from the audit
+  (`auditConfig.ignoreGhsas` in `app/pnpm-workspace.yaml`) is removed, and development.md's section on
+  it with it
 
 Completion criteria:
 
 - `examples/math`, built to PDF in the development image, which has no MATH font, and on Windows,
-  embeds the carried font, sets every formula in it, and raises no font finding; a test asserts it
+  embeds the carried font, draws every formula's mathematical letters and stretched symbols from it and
+  from its MATH table (text in `\text{}`, such as `\text{速度}`, falls back to a text font as before),
+  and raises no font finding; a test asserts it
   for the image. On Windows, the `\bar` and the radicals 6.4 records are looked at again in the PDF,
   and 6.4 and syntax.md say what the carried font does, in both languages
-- A document with no formula loads no font, and its PDF embeds the fonts it embedded before; the
-  carried font adds nothing to any HTML; tests assert both
+- A formula in a Mermaid label drawn in the browser (`mermaid.mode: client`) is set in the carried font
+  in the PDF and fits its box, the font loaded before Mermaid measures the label. Under
+  `mermaid.mode: pre-render`, whichever way was chosen, a label's formula fits its box in the PDF, and in the HTML too if the carried font is loaded there, measured in a browser whose
+  MATH font is not the carried one (the Windows runner, with Cambria Math), rather than looked at. A document with no formula, in its pages or its diagrams, loads no font, and its PDF embeds the
+  fonts it embedded before; the carried font adds nothing to any HTML, apart from a pre-rendered SVG
+  if that is the way chosen. Tests assert each of these
+- On a machine that has a MATH font of its own, other than the carried one, the PDF's formulas are
+  still set in the carried font; a test asserts it in CI, on the Windows runner, which has Cambria
+  Math, or with a second MATH font the test supplies, not only in the development image, which has none
 - The font's licence and its size in the CLI bundle and the standalone binary are recorded in 6.4
   before it is added, and it is named in `THIRD-PARTY-NOTICES.txt` and the binary's notices
-- If a key is added, it is in the reference and on the "What 1.0 Freezes" page in both languages, and
-  `surfaces.test.ts` passes
-- KaTeX is 0.18.11 and Mermaid 12.2.0, the test that keeps them in step passes, and the Dependabot
-  alerts for KaTeX are closed. The MathML of the math fixture and of the sample pages is compared
+- Whether a theme's own `font-family` on `math` still applies in the PDF is stated under `html.theme`
+  in the configuration reference in both languages, and a test asserts it
+- If a key is added, or `font/no-math-table` is retired or reworded, the reference and the "What 1.0
+  Freezes" page say so in both languages, and `surfaces.test.ts` passes
+- KaTeX is 0.18.11 and Mermaid 12.2.0, the test that keeps them in step passes, the Dependabot
+  alerts for KaTeX are closed, and the audit passes with the advisory's exemption removed. The MathML of the math fixture and of the sample pages is compared
   before and after the move, and what changed is recorded in 6.4; every diagram in `examples/en`
   and `examples/ja` is looked at under Mermaid 12.2.0
-- testing.md lists the new tests in both languages
+- The documents that say the machine printing a PDF needs a MATH font say what the carried font
+  changes, in both languages: 6.4's third condition and its paragraph on the fixture built in the
+  development image, the CI guide (its font install step and its note on PDF fonts), the configuration
+  reference's `fontCheck` and its note under `math`, development.md's note that the sample documents
+  report their formulas in the development image, syntax.md, the sample math pages and the math fixture's own page (`examples/math`),
+  and the `font/no-math-table` message if the code stays. A reader's browser still needs one for the
+  HTML, and a reader printing the HTML from a browser gets the browser's fonts, not the carried one,
+  which 24.6's print stylesheet says alongside its claim that one artifact serves both readings.
+  `scripts/site-pdf-sample.sh` stops copying Latin Modern Math into a throwaway home, so that the
+  site's PDF samples show what the carried font does, and the script still fails when the carried font is
+  not picked up, by checking that each PDF embeds it rather than reading a message, whose wording 12.4
+  does not freeze and which `build` prints with no code
+- The CDN runtime (`mermaid.runtime: cdn`) loads `mermaid@12.2.0`, and a test ties its version to the
+  Mermaid installed, so that the two cannot drift apart again
+- What 21.3 and 6.4 measured on Mermaid 12.1.0 and KaTeX 0.16.47 is taken again on the versions
+  adopted and recorded: the runtime's bundled packages and their notices, the CDN line, the inline
+  runtime's size raw and gzip with what it adds to the CLI bundle, and KaTeX's licence and its size
+  in the CLI bundle and the standalone binary
+- What monodocs reads of KaTeX's internals still holds under 0.18 (`sources/mathRender.ts`): the
+  private parse tree `parseTreeLosses` walks, and the MathML class `mml-eqn-num` the numbered-formula
+  detection reads; their tests pass
+- testing.md lists the new and inverted tests in both languages, among them the test in
+  `build.fontcheck.test.ts` that expects only the formulas' findings in the development image
 - Because every PDF with a formula changes, 0.17.0 goes through a beta before `latest`, with the
   verification 0.16.0 had: the published package on Linux x64 and Windows x64 through
   `verify-published.yml` with steps for the carried font, the release binaries, a driven browser
-  pass over what the released Linux binary builds, the samples built and looked at during the beta,
-  and the CI guide pinned to the release. The release notes say how formulas in a PDF change, and
+  pass over what the released Linux binary builds, `verify-windows-binary.ps1` on Windows 11 and the
+  Windows checks a person has to make, the samples built and looked at during the beta, and the CI
+  guide pinned to the release. The release notes say how formulas in a PDF change, and
   what the Mermaid and KaTeX move changes
 
 ---

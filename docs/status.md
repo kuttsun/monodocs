@@ -606,20 +606,27 @@ AsciiDoc checklists and search results change for existing documents, asciimath 
 **One math font for the PDF** ([roadmap.md](roadmap.md) 6.4, 24.3.3)
 
 - [ ] Which font a PDF's formulas are set in is decided in the open, after its licence and its size in the CLI bundle and the standalone binary are checked and recorded in [roadmap.md](roadmap.md) 6.4; it is named in `THIRD-PARTY-NOTICES.txt` and the binary's notices
-- [ ] Whether a key lets an author set formulas in a font of their own, and its shape, is decided in the open; a key is in the reference and on the "What 1.0 Freezes" page in English and Japanese, and `surfaces.test.ts` passes
-- [ ] `examples/math`, built to PDF in the development image, which has no MATH font, embeds the carried font, sets every formula in it, and raises no font finding; a test asserts it
-- [ ] A document with no formula loads no font, and its PDF embeds the fonts it embedded before; the carried font adds nothing to any HTML; tests assert both
-- [ ] Built on Windows, the PDF sets formulas in the carried font, and the `\bar` and the radicals [roadmap.md](roadmap.md) 6.4 records are looked at again; 6.4 and [syntax.md](syntax.md) say what the carried font does, in English and Japanese
+- [ ] Whether a key lets an author set formulas in a font of their own, and its shape, is decided in the open; a key, or a retired or reworded `font/no-math-table`, is in the reference and on the "What 1.0 Freezes" page in English and Japanese, and `surfaces.test.ts` passes
+- [ ] `examples/math`, built to PDF in the development image, which has no MATH font, embeds the carried font, draws every formula's mathematical letters and stretched symbols from it and its MATH table (text in `\text{}` falls back to a text font as before), and raises no font finding; a test asserts it
+- [ ] A formula in a Mermaid label drawn in the browser (`mermaid.mode: client`) is set in the carried font in the PDF and fits its box, the font loaded before Mermaid measures the label; under `mermaid.mode: pre-render`, whichever way was chosen, a label's formula fits its box in the PDF, and in the HTML too if the carried font is loaded there, measured in a browser whose MATH font is not the carried one (the Windows runner, with Cambria Math); a document with no formula, in its pages or its diagrams, loads no font, and its PDF embeds the fonts it embedded before; the carried font adds nothing to any HTML, apart from a pre-rendered SVG if that is the way chosen; tests assert each
+- [ ] On a machine with a MATH font of its own, other than the carried one, the PDF's formulas are still set in the carried font; a test asserts it in CI, on the Windows runner, which has Cambria Math, or with a second MATH font the test supplies, not only in the development image
+- [ ] Whether the carried font is loaded where `mermaid.mode: pre-render` lays out a label, which changes the SVG in the HTML too, or pre-rendered diagrams are left out of it and documented as such, is chosen during implementation
+- [ ] What becomes of `font/no-math-table` (dropped only if its condition can no longer occur anywhere: under a key, in pre-rendered labels left out, or under a theme's own `font-family`), and whether a theme's own `font-family` on `math` still applies in the PDF, is decided, the latter stated under `html.theme` in the configuration reference in English and Japanese and asserted by a test, the code under [roadmap.md](roadmap.md) 27.3's promise; if pre-rendered diagrams are left out of the carried font, the check still reports a pre-rendered label's formula on a machine without a MATH font
+- [ ] The documents that say the machine printing a PDF needs a MATH font say what the carried font changes, in English and Japanese: [roadmap.md](roadmap.md) 6.4's third condition and its paragraph on the fixture in the development image, the CI guide, the configuration reference's `fontCheck` and its note under `math`, [development.md](development.md)'s note that the samples report their formulas in the development image, [syntax.md](syntax.md), the sample math pages and `examples/math`'s own page, the `font/no-math-table` message if the code stays, and a note to add in [roadmap.md](roadmap.md) 24.6, beside its claim that one artifact serves both readings, that a reader printing the HTML gets the browser's fonts; `scripts/site-pdf-sample.sh` stops copying Latin Modern Math, and the script still fails when the carried font is not picked up, by checking that each PDF embeds it rather than reading a message
+- [ ] Built on Windows, the PDF embeds the carried font, sets every formula in it, and raises no font finding, and the `\bar` and the radicals [roadmap.md](roadmap.md) 6.4 records are looked at again; 6.4 and [syntax.md](syntax.md) say what the carried font does, in English and Japanese
 
 **KaTeX 0.18 and Mermaid 12.2** ([roadmap.md](roadmap.md) 6.4, 21.3)
 
-- [ ] KaTeX is 0.18.11 and Mermaid 12.2.0, the runtime's notices are regenerated, the pinned CDN runtime moves with them, the test that keeps the two KaTeX versions in step passes, and the Dependabot alerts for KaTeX are closed
+- [ ] KaTeX is 0.18.11 and Mermaid 12.2.0, the runtime's notices are regenerated, the pinned CDN runtime moves with them, the test that keeps the two KaTeX versions in step passes, the Dependabot alerts for KaTeX are closed, and the advisory's exemption is removed from `auditConfig.ignoreGhsas` in `app/pnpm-workspace.yaml`, with [development.md](development.md)'s section on it, the audit passing without it
+- [ ] A test ties the CDN runtime's version to the Mermaid installed
+- [ ] What [roadmap.md](roadmap.md) 21.3 and 6.4 measured on Mermaid 12.1.0 and KaTeX 0.16.47 is taken again on the versions adopted and recorded: the runtime's bundled packages and their notices, the CDN line, the inline runtime's size raw and gzip with what it adds to the CLI bundle, and KaTeX's licence and its size in the CLI bundle and the standalone binary
 - [ ] The MathML of the math fixture and of the sample pages is compared before and after the move, and what changed is recorded in [roadmap.md](roadmap.md) 6.4
+- [ ] What monodocs reads of KaTeX's internals still holds under 0.18: the private parse tree `parseTreeLosses` walks, and the MathML class `mml-eqn-num` the numbered-formula detection reads; their tests pass
 - [ ] Every diagram in `examples/en` and `examples/ja` is looked at under Mermaid 12.2.0
 
 **Documentation and tests**
 
-- [ ] [testing.md](testing.md) lists the new tests in English and Japanese
+- [ ] [testing.md](testing.md) lists the new and inverted tests in English and Japanese, among them the test in `build.fontcheck.test.ts` that expects only the formulas' findings in the development image
 
 **Release**
 
@@ -633,6 +640,8 @@ Every PDF with a formula changes, so this release goes through a beta, as 0.16.0
 - [ ] Verify the `v0.17.0` release binaries through `verify-release-binaries.yml` on both platforms
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.17.0` assets on a Linux x64 host without Node.js
 - [ ] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.17.0` assets on a Windows 11 host
+- [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
 - [ ] Move the `next` dist-tag onto `0.17.0`, and confirm that the deployed CI guide pins `monodocs@0.17.0` in English and Japanese
 
 ### 1.0
