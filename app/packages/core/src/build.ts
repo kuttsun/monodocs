@@ -42,6 +42,7 @@ import {
   type OutputSize,
 } from "./pipeline/outputSize.js";
 import { mermaidRuntimeScript } from "./themes/mermaid.js";
+import { loadMathFont, mathFontHead } from "./themes/mathFont.js";
 import { t } from "./messages.js";
 
 /** {@link preparePages} のオプション（テスト時のレンダラ注入・validate の mode 上書き用）。 */
@@ -239,11 +240,21 @@ export async function buildSite(
 
   // pre-render mode では各図をビルド時に SVG 化する。レンダラは lazy 起動なので
   // 図が 0 個なら Chromium は起動しない。注入時（テスト）は close も呼び出し側が管理する。
+  // The carried math font, read once and only if a PDF has a formula (roadmap 6.4).
+  let mathFontStyle: Promise<string> | undefined;
+  const mathFont = () => (mathFontStyle ??= loadMathFont().then(mathFontHead));
+
   const ownPrerenderer = internals.mermaidPrerenderer === undefined;
   const prerenderer =
     internals.mermaidPrerenderer ??
     (config.mermaidEnabled && config.mermaidMode === "pre-render"
-      ? createPuppeteerPrerenderer({ colorScheme: config.colorScheme })
+      ? createPuppeteerPrerenderer({
+          colorScheme: config.colorScheme,
+          // A PDF's labels are laid out in the font the PDF sets them in; the HTML's are not.
+          mathFont: needsPdf
+            ? { head: mathFont, mode: config.format === "pdf" ? "only" : "variant" }
+            : undefined,
+        })
       : undefined);
 
   let prepared: PreparedSite;
@@ -323,7 +334,7 @@ export async function buildSite(
     const ownGenerator = internals.pdfGenerator === undefined;
     const generator = internals.pdfGenerator ?? createPuppeteerPdfGenerator();
     try {
-      const pdf = await generator.render(html, {
+      const pdf = await generator.render(withPdfVariants(html, prerenderer?.pdfVariants?.()), {
         pageSize: config.pdfPageSize,
         margin: config.pdfMargin,
         printBackground: config.pdfPrintBackground,
@@ -352,6 +363,7 @@ export async function buildSite(
         footer: config.pdfFooter,
         fontCheck: config.fontCheck,
         watermark: config.pdfWatermark,
+        mathFont,
         onWarning: (message) => warnings.push(message),
       });
       await mkdir(dirname(outputs.pdf), { recursive: true });
@@ -366,6 +378,21 @@ export async function buildSite(
   }
 
   return { outputs: written, pages: pages.length, warnings, sizes };
+}
+
+/**
+ * The HTML the PDF is printed from: the document, with each pre-rendered diagram that has a formula
+ * in a label swapped for the one laid out in the carried math font. The SVG is in the document
+ * verbatim and carries an id no other element has, so it is replaced as a string, once.
+ */
+function withPdfVariants(html: string, variants: ReadonlyMap<string, string> | undefined): string {
+  if (variants === undefined || variants.size === 0) return html;
+  let out = html;
+  for (const [svg, variant] of variants) {
+    const at = out.indexOf(svg);
+    if (at !== -1) out = out.slice(0, at) + variant + out.slice(at + svg.length);
+  }
+  return out;
 }
 
 /** {@link validateSite} の結果。 */

@@ -64,6 +64,7 @@ const requiredArtifacts = [
   resolve(cliDir, "README.md"),
   resolve(cliDir, "README.ja.md"),
   resolve(cliDir, "THIRD-PARTY-NOTICES.txt"),
+  resolve(cliDir, "dist/fonts/NewCMMath-Book.otf"),
 ];
 
 for (const artifact of requiredArtifacts) {
@@ -79,6 +80,8 @@ await mkdir(resolve(stageDir, "dist"), { recursive: true });
 
 await Promise.all([
   cp(resolve(cliDir, "dist/monodocs.cjs"), resolve(stageDir, "dist/monodocs.cjs")),
+  // The math font a PDF's formulas are set in, with its notice and licence texts (roadmap 6.4).
+  cp(resolve(cliDir, "dist/fonts"), resolve(stageDir, "dist/fonts"), { recursive: true }),
   cp(resolve(cliDir, "LICENSE"), resolve(stageDir, "LICENSE")),
   cp(resolve(cliDir, "README.md"), resolve(stageDir, "README.md")),
   cp(resolve(cliDir, "README.ja.md"), resolve(stageDir, "README.ja.md")),

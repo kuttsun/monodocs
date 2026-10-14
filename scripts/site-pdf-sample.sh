@@ -8,12 +8,10 @@
 # Each is the same source as sample.html, printed with a cover and a printed table of contents;
 # every body sheet carries the default page-number footer.
 #
-# Formulas need an OpenType MATH font, which the dev image deliberately lacks (the font-check tests
-# rely on a machine without one). The vendored Latin Modern Math is loaded for these builds only,
-# through a throwaway HOME whose ~/.fonts fontconfig reads, so nothing is installed anywhere. A build
-# that still reports a formula font without a MATH table fails here rather than publishing formulas
-# whose brackets do not stretch. It looks for that finding alone rather than setting fontCheck: error,
-# so that a glyph the build machine happens to lack elsewhere stays a warning, as in the HTML samples.
+# Formulas are set in the math font monodocs carries (roadmap 6.4), which the dev image, with no math
+# font of its own, shows as a reader of the samples gets it. Each PDF must embed that font, read off
+# its font descriptors, or the script fails rather than publishing formulas set in whatever the
+# machine had. A message would say less: its wording is not frozen, and build prints it with no code.
 #
 # The monodocs CLI must already be built (the caller runs pnpm build). It runs on its own too:
 #   scripts/app.sh pnpm build && scripts/site-pdf-sample.sh
@@ -39,8 +37,7 @@ run() {
 # tmp/ is ignored by git.
 WORK="$ROOT/tmp/site-pdf-sample"
 rm -rf "$WORK"
-mkdir -p "$WORK/home/.fonts" "$ROOT/site/public/ja"
-cp "$ROOT/app/packages/core/test-fixtures/fonts/lm-math/opentype/latinmodern-math.otf" "$WORK/home/.fonts/"
+mkdir -p "$WORK" "$ROOT/site/public/ja"
 
 printf 'title: "monodocs Sample"\nlang: en\npdf:\n  cover:\n    enabled: true\n  toc:\n    enabled: true\n' \
   > "$WORK/en.yml"
@@ -50,13 +47,10 @@ printf 'title: "monodocs サンプル"\nlang: ja\npdf:\n  cover:\n    enabled: t
 for lang in en ja; do
   out="site/public/sample.pdf"
   if [ "$lang" = "ja" ]; then out="site/public/ja/sample.pdf"; fi
-  # The check below reads the message text, so the CLI speaks English whatever MONODOCS_LANG says.
-  log="$WORK/$lang.log"
-  run env HOME=../tmp/site-pdf-sample/home node packages/cli/dist/index.js --lang en \
-    build "../examples/$lang" -c "../tmp/site-pdf-sample/$lang.yml" -f pdf -o "../$out" 2>&1 \
-    | tee "$log"
-  if grep -q "no OpenType MATH table" "$log"; then
-    echo "[site-pdf-sample] the math font was not picked up for $out" >&2
+  run node packages/cli/dist/index.js \
+    build "../examples/$lang" -c "../tmp/site-pdf-sample/$lang.yml" -f pdf -o "../$out"
+  if ! run node ../scripts/assert-pdf-fonts.mjs "../$out" --embeds NewCMMath-Book; then
+    echo "[site-pdf-sample] the carried math font was not picked up for $out" >&2
     exit 1
   fi
 done

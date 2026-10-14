@@ -208,6 +208,13 @@ const EN = {
 
   // ---- PDF ----
   "pdf.pageLoadFailed": "Failed to load the page for PDF output: {detail}",
+  "pdf.mathFontNotLoaded":
+    "The browser did not load the math font monodocs carries for formulas ({file}), so no PDF was " +
+    "written: its formulas would have been set in whatever this machine has. If " +
+    "PUPPETEER_EXECUTABLE_PATH names a browser, check that it is a current Chromium.",
+  "pdf.mathFontFailed":
+    "The math font monodocs carries for formulas ({file}) could not be loaded, so no PDF was " +
+    "written: its formulas would have been set in whatever this machine has. Reinstall monodocs.",
   "pdf.tocNotConverged":
     "The table of contents did not settle within {passes} prints: filling in its page numbers " +
     "kept moving a section to another sheet. No PDF was written, because a page number that is " +
@@ -229,9 +236,14 @@ const EN = {
   "fontCheck.missingPrerender":
     "No font on the machine running this build draws {count} character(s) used in the Mermaid " +
     "diagrams, so they come out as tofu (□ / ☒) in the SVG that mermaid.mode: pre-render bakes " +
-    "into the output — in the HTML as much as in the PDF. At risk: {samples}. Install a font that " +
-    "covers them (the package that supplies one differs by platform), or set fontCheck: off to " +
-    "accept it.",
+    "into the output. At risk: {samples}. Install a font that covers them (the package that " +
+    "supplies one differs by platform), or set fontCheck: off to accept it.",
+  "fontCheck.missingPrerenderPdf":
+    "No font on the machine running this build draws {count} character(s) used in the Mermaid " +
+    "diagrams with a formula in a label, so they come out as tofu (□ / ☒) in the SVG that " +
+    "mermaid.mode: pre-render lays out for the PDF in the math font monodocs carries. At risk: " +
+    "{samples}. Install a font that covers them (the package that supplies one differs by " +
+    "platform), or set fontCheck: off to accept it.",
   "fontCheck.incomplete":
     "The font check stopped after {count} distinct characters and did not reach the end of this " +
     "document, so it found nothing rather than confirming there is nothing to find. It says so " +
@@ -241,10 +253,10 @@ const EN = {
   "fontCheck.sampleWithExample": "{cluster} ({codepoints}, e.g. {font})",
   "fontCheck.more": "and {count} more",
   "fontCheck.noMathTable":
-    "The font this build draws formulas in (font-family: {fonts}) has no OpenType MATH table, so " +
-    "in the PDF brackets, braces and radicals do not stretch to what they enclose. Install a math " +
-    "font — Cambria Math ships with Windows; on Debian and Ubuntu, fonts-lmodern supplies Latin " +
-    "Modern Math — or set fontCheck: off to accept it.",
+    "The font the theme sets formulas in (font-family: {fonts}) has no OpenType MATH table, so " +
+    "in the PDF brackets, braces and radicals do not stretch to what they enclose. Name a math " +
+    "font there, or leave font-family on math to monodocs, which sets a PDF's formulas in the " +
+    "math font it carries — or set fontCheck: off to accept it.",
   "fontCheck.unusable":
     "The font check did not run: this machine draws private-use characters, which the check uses " +
     "as its reference for a missing glyph, so it cannot tell a drawn character from an undrawn " +
@@ -529,6 +541,14 @@ const JA: Record<MessageKey, string> = {
     "`pnpm add puppeteer-core` を実行してください。",
 
   "pdf.pageLoadFailed": "PDF 用ページの読み込みに失敗しました: {detail}",
+  "pdf.mathFontNotLoaded":
+    "monodocs が数式のために持っているフォント（{file}）をブラウザが読み込まなかったため、PDF は" +
+    "書き出していません。書き出せば、数式はこのマシンにあるフォントで組まれていました。" +
+    "PUPPETEER_EXECUTABLE_PATH でブラウザを指定しているなら、新しい Chromium かを確かめてください。",
+  "pdf.mathFontFailed":
+    "monodocs が数式のために持っているフォント（{file}）を読み込めなかったため、PDF は書き出して" +
+    "いません。書き出せば、数式はこのマシンにあるフォントで組まれていました。monodocs を" +
+    "入れ直してください。",
   "pdf.tocNotConverged":
     "目次が {passes} 回の印刷で定まりませんでした。ページ番号を書き込むたびに、節が別の紙へ" +
     "移ります。たいてい正しいページ番号は無いより悪いので、PDF は書き出していません。" +
@@ -547,9 +567,14 @@ const JA: Record<MessageKey, string> = {
     "fontCheck: off で許容してください。",
   "fontCheck.missingPrerender":
     "Mermaid の図が使う {count} 文字を描けるフォントが、ビルドを走らせているマシンにありません。" +
-    "mermaid.mode: pre-render が焼き込む SVG の中で豆腐（□ / ☒）になり、PDF だけでなく HTML でも" +
-    "そのままです。該当: {samples}。それらを含むフォントを入れる（提供するパッケージ名は" +
+    "mermaid.mode: pre-render が出力に焼き込む SVG の中で豆腐（□ / ☒）になります。" +
+    "該当: {samples}。それらを含むフォントを入れる（提供するパッケージ名は" +
     "プラットフォームごとに違います）か、fontCheck: off で許容してください。",
+  "fontCheck.missingPrerenderPdf":
+    "ラベルに数式を含む Mermaid の図が使う {count} 文字を描けるフォントが、ビルドを走らせている" +
+    "マシンにありません。mermaid.mode: pre-render が PDF のために monodocs の数式用のフォントで" +
+    "組む SVG の中で豆腐（□ / ☒）になります。該当: {samples}。それらを含むフォントを入れる" +
+    "（提供するパッケージ名はプラットフォームごとに違います）か、fontCheck: off で許容してください。",
   "fontCheck.incomplete":
     "フォント検査は異なる文字 {count} 個で打ち切られ、この文書の最後までは到達しませんでした。" +
     "「無かった」ではなく「そこまでは見つからなかった」という結果です。打ち切られた検査は" +
@@ -558,10 +583,10 @@ const JA: Record<MessageKey, string> = {
   "fontCheck.sampleWithExample": "{cluster}（{codepoints}、例: {font}）",
   "fontCheck.more": "ほか {count} 件",
   "fontCheck.noMathTable":
-    "このビルドが数式を描くフォント（font-family: {fonts}）には OpenType MATH テーブルがありません。" +
-    "PDF では、括弧・波括弧・根号が中身に合わせて伸びません。数式用のフォントを入れる" +
-    "（Windows には Cambria Math が付属し、Debian と Ubuntu では fonts-lmodern が Latin Modern " +
-    "Math を提供します）か、fontCheck: off で許容してください。",
+    "テーマが数式に指定したフォント（font-family: {fonts}）には OpenType MATH テーブルがありません。" +
+    "PDF では、括弧・波括弧・根号が中身に合わせて伸びません。そこで数式用のフォントを指定するか、" +
+    "math の font-family を monodocs に任せる（PDF の数式は monodocs が持っている数式用のフォントで" +
+    "組みます）か、fontCheck: off で許容してください。",
   "fontCheck.unusable":
     "フォント検査は実行しませんでした: このマシンは私用領域の文字を描画します。検査はそれを" +
     "「グリフが無い」ことの基準に使うため、描けた文字と描けなかった文字を区別できません。" +

@@ -1,5 +1,11 @@
 import type { ColorScheme } from "../config.js";
 import type { Diagnostic } from "../diagnostics.js";
+import {
+  MATH_FONT_RULE,
+  assertMathFontLoaded,
+  mermaidHasFormula,
+  withMathFont,
+} from "../themes/mathFont.js";
 import { loadMermaidInline } from "../themes/mermaid.js";
 import { BrowserSetupError, launchBrowser, type BrowserLike, type PageLike } from "./browser.js";
 import { runFontCheck, type FontCheckMode } from "./fontCheck.js";
@@ -21,8 +27,26 @@ export interface MermaidPrerenderer {
     mode: FontCheckMode;
     onWarning: (diagnostic: Diagnostic) => void;
   }): Promise<void>;
+  /**
+   * The SVGs drawn again for the PDF, in the carried math font, keyed by the SVG {@link render}
+   * returned for the HTML: one for each diagram with a formula in a label, when the build asked for
+   * them. Optional (the tests' fake renderer has none).
+   */
+  pdfVariants?(): ReadonlyMap<string, string>;
   close(): Promise<void>;
 }
+
+/**
+ * Where the carried math font goes in a pre-render (roadmap 6.4, v0.17). A label's box is laid out
+ * at build time against the font it will be drawn in, so the HTML, which a reader's browser draws in
+ * the reader's fonts, keeps the machine's layout, and the PDF gets its own:
+ *
+ * - `only`: no HTML is written, so a diagram with a formula in a label is laid out in the carried
+ *   font, once;
+ * - `variant`: the HTML's SVG is laid out as before, and a diagram with a formula in a label is laid
+ *   out a second time, in the carried font, for the PDF ({@link MermaidPrerenderer.pdfVariants}).
+ */
+export type PrerenderMathFont = { head: () => Promise<string>; mode: "only" | "variant" };
 
 /**
  * Mermaid pre-render の**環境／セットアップ**エラー（Chromium / puppeteer-core 不在・
@@ -59,22 +83,33 @@ function mermaidThemeFor(colorScheme: ColorScheme): "redux-dark-color" | undefin
  */
 export function createPuppeteerPrerenderer(options: {
   colorScheme: ColorScheme;
+  mathFont?: PrerenderMathFont;
 }): MermaidPrerenderer {
   const theme = mermaidThemeFor(options.colorScheme);
+  const mathFont = options.mathFont;
   let browser: BrowserLike | undefined;
+  // The page that draws in the machine's fonts, and the one that draws in the carried math font:
+  // each opened for the first diagram that needs it, so a document with no formula never reads the
+  // font.
   let page: PageLike | undefined;
+  let carriedPage: PageLike | undefined;
+  const variants = new Map<string, string>();
   // 生成した SVG を保持し、フォント検査でこのページへ差し戻して測る。図の文字がどのフォントへ
   // 解決されるかを決めるのは SVG 自身が持つ <style> なので、それを描いたページの中で測れば
-  // 同じ解決を再現できる。
+  // 同じ解決を再現できる。PDF のためだけの写しは HTML 用と同じ文字なので測らない。
   const rendered: string[] = [];
+  const renderedCarried: string[] = [];
 
-  async function ensurePage(): Promise<PageLike> {
-    if (page) return page;
+  async function openPage(carried: boolean): Promise<PageLike> {
     try {
       // launchBrowser は BrowserSetupError を投げる（puppeteer-core / Chromium 不在・起動失敗）。
-      browser = await launchBrowser();
+      browser ??= await launchBrowser();
       const p = await browser.newPage();
-      await p.setContent("<!doctype html><html><body></body></html>");
+      const blank = "<!doctype html><html><head></head><body></body></html>";
+      // Before mermaid measures anything against it.
+      const head = carried && mathFont ? await mathFont.head() : undefined;
+      await p.setContent(head ? withMathFont(blank, head) : blank);
+      if (head) await assertMathFontLoaded(p);
       await p.addScriptTag({ content: await loadMermaidInline() });
       await p.evaluate(
         `(function(){${RESOLVE_MERMAID}window.__sdMermaid=m;m.initialize(${JSON.stringify({
@@ -82,7 +117,6 @@ export function createPuppeteerPrerenderer(options: {
           ...(theme ? { theme } : {}),
         })});})()`,
       );
-      page = p;
       return p;
     } catch (error) {
       // 起動・ページ初期化の失敗はすべて MermaidPrerenderSetupError 型に揃える（fail fast）。
@@ -96,27 +130,61 @@ export function createPuppeteerPrerenderer(options: {
     }
   }
 
+  async function draw(p: PageLike, id: string, code: string): Promise<string> {
+    const svg = await p.evaluate(
+      `(async function(){var r=await window.__sdMermaid.render(${JSON.stringify(
+        id,
+      )},${JSON.stringify(code)});return r.svg;})()`,
+    );
+    return String(svg);
+  }
+
   return {
     async render(id, code) {
-      const p = await ensurePage();
-      const svg = await p.evaluate(
-        `(async function(){var r=await window.__sdMermaid.render(${JSON.stringify(
-          id,
-        )},${JSON.stringify(code)});return r.svg;})()`,
-      );
-      rendered.push(String(svg));
-      return String(svg);
+      const formula = mathFont !== undefined && mermaidHasFormula(code);
+      if (formula && mathFont.mode === "only") {
+        // No HTML is written: the PDF's copy is the only one.
+        carriedPage ??= await openPage(true);
+        const svg = await draw(carriedPage, id, code);
+        renderedCarried.push(svg);
+        return svg;
+      }
+      page ??= await openPage(false);
+      const svg = await draw(page, id, code);
+      rendered.push(svg);
+      if (formula) {
+        carriedPage ??= await openPage(true);
+        // The same source drew once already. Should the second draw fail, it fails as the first
+        // would, rather than leave the PDF a label laid out for other fonts without a word.
+        variants.set(svg, await draw(carriedPage, id, code));
+      }
+      return svg;
+    },
+    pdfVariants() {
+      return variants;
     },
     async checkFonts({ mode, onWarning }) {
       // 図が 1 つも無ければブラウザすら起動していない。測る対象も無い。
-      if (mode === "off" || page === undefined || rendered.length === 0) return;
-      await runFontCheck(page, { mode, context: "prerender", onWarning, probes: rendered });
+      if (mode === "off") return;
+      if (page !== undefined && rendered.length > 0) {
+        await runFontCheck(page, { mode, context: "prerender", onWarning, probes: rendered });
+      }
+      // The probes are measured in a shadow tree, which the page's rule does not reach.
+      if (carriedPage !== undefined && renderedCarried.length > 0) {
+        await runFontCheck(carriedPage, {
+          mode,
+          context: "prerender-pdf",
+          onWarning,
+          probes: renderedCarried.map((svg) => MATH_FONT_RULE + svg),
+        });
+      }
     },
     async close() {
       if (browser) {
         await browser.close();
         browser = undefined;
         page = undefined;
+        carriedPage = undefined;
       }
     },
   };

@@ -327,12 +327,17 @@ What it does and does not see:
   document before the end, it says so rather than reporting a clean result.
 - **The default page-number footer is measured too.** A replacement `pdf.header` / `pdf.footer`
   fragment is not: it is arbitrary HTML that brings a font of its own.
-- **Formulas are measured as drawn.** A single-letter variable is drawn as a mathematical italic
-  letter (`x` as `𝑥`, U+1D465), so a machine with no math font reports it although `x` itself draws.
-  The formula font must also have an OpenType MATH table, without which brackets, braces and radicals
-  do not stretch; a formula font without one is reported as `font/no-math-table`, under the same
-  `warn`, `error` and `off`. Cambria Math ships with Windows; on Debian and Ubuntu, `fonts-lmodern`
-  supplies Latin Modern Math.
+- **Formulas are measured as drawn.** A PDF sets them in the math font monodocs carries (see
+  [`math`](#math)), so a machine without a math font of its own reports nothing of them. A theme
+  that names its own font for `math` sets them in that font instead, and then: a single-letter
+  variable is drawn as a mathematical italic letter (`x` as `𝑥`, U+1D465), so a font without those
+  letters is reported although `x` itself draws; and a font without an OpenType MATH table, without
+  which brackets, braces and radicals do not stretch, is reported as `font/no-math-table`, under the
+  same `warn`, `error` and `off`. Under `mermaid.mode: pre-render`, a label's formula in the SVG the
+  HTML carries is laid out in this machine's fonts, so its letters are reported as before; the PDF
+  gets a copy of the diagram laid out in the carried font, of which only what that font lacks too,
+  such as Japanese in `\text{}`, is reported: in a message that says it is the PDF's when the build
+  writes a PDF alone, and otherwise by the PDF's own check.
 
 ### `output`
 
@@ -638,7 +643,7 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 `pre-render` needs Chromium at build time, so it is not the default. A missing Chromium fails the build (environment errors fail fast); only a per-diagram syntax error warns and falls back to the source. Point at a local Chromium with `PUPPETEER_EXECUTABLE_PATH` (bundled in the dev Docker image). `pre-render` is unavailable in the bundled CLI (single `.cjs` / single-executable), which ships without `node_modules`; use a package install instead.
 
 > [!WARNING]
-> `pre-render` measures and positions text with the fonts of **the machine running the build** and bakes the result into the SVG. Diagrams with non-Latin labels (e.g. Japanese) render as boxes or wrap incorrectly if that machine lacks the font (e.g. Noto CJK); when installed via npm, monodocs cannot supply it. `client` uses the reader's fonts and is not affected. [`fontCheck`](#font-check) warns when a diagram needs a font this machine does not have.
+> `pre-render` measures and positions text with the fonts of **the machine running the build** and bakes the result into the SVG. Diagrams with non-Latin labels (e.g. Japanese) render as boxes or wrap incorrectly if that machine lacks the font (e.g. Noto CJK); when installed via npm, monodocs cannot supply it. `client` uses the reader's fonts and is not affected. A formula in a label is set apart in the PDF: a diagram with one is laid out a second time for the PDF, in the math font monodocs carries (see [`math`](#math)), while the HTML keeps the one laid out in this machine's fonts. [`fontCheck`](#font-check) warns when a diagram needs a font this machine does not have.
 
 ### `highlight`
 
@@ -658,7 +663,7 @@ A formula is rendered by KaTeX to MathML only: no script or stylesheet is added 
 - Each of these is reported, and the formula is rendered without it: a style Unicode has no characters for (`math/style-unsupported`, e.g. `\mathit{123}`), an automatic equation number (`math/numbering-unsupported`, e.g. an unstarred `equation`), an enclosure CSS cannot draw (`math/notation-unsupported`, e.g. `\phase`), and a construct the browser cannot draw as written (`math/construct-unsupported`, e.g. `\vcenter`).
 
 > [!IMPORTANT]
-> The browser draws formulas with an OpenType MATH font, needed on the machine that prints the PDF and in the reader's browser for the HTML. Cambria Math ships with Windows; on Linux, install one such as Latin Modern Math (`fonts-lmodern` on Debian and Ubuntu). Without one, brackets do not stretch, and variables come out as tofu unless another font has the mathematical letters. For the PDF, [`fontCheck`](#font-check) reports both.
+> The browser draws formulas with an OpenType MATH font. **In the PDF**, monodocs sets them in a font it carries, New Computer Modern Math (Book weight), whatever fonts the machine that prints it has, so a PDF sets its formulas the same wherever it is built; the machine needs no math font, and a document with no formula does not load it. A theme that names its own font for `math` keeps it (see [`html.theme`](#html-theme-custom-theme)). **In the HTML**, the reader's browser draws formulas with the reader's fonts: Cambria Math ships with Windows; on Linux, a reader needs one such as Latin Modern Math (`fonts-lmodern` on Debian and Ubuntu). Without one, brackets do not stretch, and variables come out as tofu unless another font has the mathematical letters. Printing the HTML from a browser uses the browser's fonts as well, not the carried one.
 
 ### `html`
 
@@ -773,7 +778,14 @@ The rest are optional; dropping one drops the feature it carries:
 ```
 
 A theme cannot reference external assets, because the output is a single self-contained file. Inline
-fonts and images as data URIs in `style.css`. `monodocs watch` and `monodocs serve` also watch the
+fonts and images as data URIs in `style.css`.
+
+A theme's own `font-family` on `math` applies in the PDF too: the math font monodocs carries only
+replaces the browser's default for formulas, so a theme can set them in a font of its choosing. Give
+it an OpenType MATH table; a font without one is reported as `font/no-math-table` (see
+[`fontCheck`](#font-check)). Under `mermaid.mode: pre-render` a label's formula is still laid out at
+build time in the carried font for the PDF (in the machine's fonts for the HTML), so its box is
+sized for that font while the theme's draws it. `monodocs watch` and `monodocs serve` also watch the
 theme directory, so edits show up in the preview (the directory must exist when watching starts; one
 created later is picked up at the next source or config change).
 

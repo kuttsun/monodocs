@@ -76,8 +76,13 @@ describe("font check reporting", () => {
 
   it("gives the pre-render finding its own wording", () => {
     const outcome: FontCheckOutcome = { status: "missing", clusters: ["日"], truncated: false };
-    expect(describeFontCheck(outcome, "prerender")).toMatch(/pre-render/);
+    expect(describeFontCheck(outcome, "prerender")).toMatch(/pre-render bakes into the output/);
     expect(describeFontCheck(outcome, "pdf")).not.toMatch(/pre-render/);
+    // The copy laid out in the carried math font says it is the PDF's (v0.17).
+    expect(describeFontCheck(outcome, "prerender-pdf")).toMatch(/lays out for the PDF/);
+    expect(
+      describeMathTable({ status: "ok", noMathTable: ["math"] }, "prerender-pdf"),
+    ).toBeUndefined();
   });
 
   it("counts what it did not list instead of dropping it silently", () => {
@@ -379,8 +384,11 @@ const FORMULAS_ONLY =
   "#content article * { visibility: hidden; }\n" +
   "#content article math, #content article math * { visibility: visible; }\n";
 
-/** The inverse of `FORMULAS_ONLY`: the formulas hidden, everything else measured. */
-const FORMULAS_HIDDEN = "#content article math, #content article math * { visibility: hidden; }\n";
+/**
+ * Formulas set in the machine's math font rather than the one monodocs carries: a theme's own
+ * `font-family` on `math` wins over it (v0.17), and `math` is the browser's own.
+ */
+const MACHINE_MATH = "math { font-family: math; }\n";
 
 /** Latin Modern Math, a font with an OpenType MATH table, kept for these tests (GUST Font License). */
 const MATH_FONT = new URL(
@@ -510,10 +518,17 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
   }, 120_000);
 
   // 開発イメージには数式用のフォントが無い（v0.14 の実測）。それがある機械ではこの所見は出ない。
+  // A PDF sets formulas in the font monodocs carries (v0.17), so these take them out of it the one
+  // way left, a theme naming its own font for `math`, here the browser's own `math`.
   it.runIf(noMathFont)(
     "reports a formula's letters as Chromium draws them, and a font with no MATH table",
     async () => {
-      const result = await buildPdf("real-math-missing", "# Home\n\n$x + \\alpha$ and $\\sin$\n");
+      await writeMathTheme(join(dir, "real-math-missing", "my-theme"), MACHINE_MATH, false);
+      const result = await buildPdf(
+        "real-math-missing",
+        "# Home\n\n$x + \\alpha$ and $\\sin$\n",
+        'html:\n  theme: "./my-theme"\n',
+      );
       const warnings = fontWarnings(result);
       const missing = warnings.find((w) => w.code === "font/missing");
       // x is drawn as 𝑥 (U+1D465), α as 𝛼 (U+1D6FC); the letters as written are drawn.
@@ -535,7 +550,12 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
       const tofu = Array.from({ length: 45 }, (_, n) => String.fromCodePoint(0x50000 + n)).join(
         " ",
       );
-      const result = await buildPdf("real-math-cut", `# Home\n\n${tofu}\n\n$x$\n`);
+      await writeMathTheme(join(dir, "real-math-cut", "my-theme"), MACHINE_MATH, false);
+      const result = await buildPdf(
+        "real-math-cut",
+        `# Home\n\n${tofu}\n\n$x$\n`,
+        'html:\n  theme: "./my-theme"\n',
+      );
       const warnings = fontWarnings(result);
       expect(warnings.find((w) => w.code === "font/missing")?.message).toMatch(/\d\+/);
       expect(warnings.some((w) => w.code === "font/no-math-table")).toBe(true);
@@ -562,10 +582,10 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
   const MATH_FIXTURE = fileURLToPath(new URL("../../../../examples/math", import.meta.url));
 
   it.runIf(noMathFont)(
-    "reports the math fixture built where no math font is installed",
+    "reports the math fixture built where no math font is installed, set in the machine's fonts",
     async () => {
       const root = join(dir, "real-math-fixture");
-      await writeMathTheme(join(root, "my-theme"), FORMULAS_ONLY, false);
+      await writeMathTheme(join(root, "my-theme"), FORMULAS_ONLY + MACHINE_MATH, false);
       const configFile = join(root, "monodocs.config.yml");
       await writeFile(configFile, 'lang: "ja"\nhtml:\n  theme: "./my-theme"\n');
       const result = await buildSite({
@@ -648,25 +668,27 @@ describe.skipIf(!chromium)("font check（実 Chromium）", () => {
     );
 
     it.runIf(hasCjkAndEmoji && noMathFont)(
-      `reports only the formulas of examples/${sample.name} where no math font is installed`,
+      `reports nothing of examples/${sample.name} where no math font is installed`,
       async () => {
-        // As it is: the missing MATH table, and letters as a formula draws them. The message names
-        // only the first few letters, so a second build hides the formulas and has to be clean.
+        // The default theme leaves formulas to the font monodocs carries (v0.17), which this
+        // machine's lack of a math font does not reach. Up to v0.16 this reported the formulas.
         const name = `real-sample-${sample.name}-nomath`;
         const asIs = fontWarnings(await buildSample(sample, name, "default"));
-        expect(asIs.some((w) => w.code === "font/no-math-table")).toBe(true);
-        for (const w of asIs.filter((w) => w.code !== "font/no-math-table")) {
+        expect(asIs.map((w) => w.message)).toEqual([]);
+
+        // Taken out of the carried font, the formulas are reported again, and only they: the
+        // missing MATH table, and letters as a formula draws them.
+        const root = join(dir, `${name}-machine`);
+        await writeMathTheme(join(root, "my-theme"), MACHINE_MATH, false);
+        const machine = fontWarnings(await buildSample(sample, `${name}-machine`, "./my-theme"));
+        expect(machine.some((w) => w.code === "font/no-math-table")).toBe(true);
+        for (const w of machine.filter((w) => w.code !== "font/no-math-table")) {
           expect(w.code).toBe("font/missing");
           const named = [...w.message.matchAll(/U\+([0-9A-F]{4,6})/g)].map((m) =>
             parseInt(m[1]!, 16),
           );
           expect(named.filter((cp) => cp < 0x1d400 || cp > 0x1d7ff)).toEqual([]);
         }
-
-        const root = join(dir, `${name}-hidden`);
-        await writeMathTheme(join(root, "my-theme"), FORMULAS_HIDDEN, false);
-        const hidden = fontWarnings(await buildSample(sample, `${name}-hidden`, "./my-theme"));
-        expect(hidden.map((w) => w.message)).toEqual([]);
       },
       240_000,
     );

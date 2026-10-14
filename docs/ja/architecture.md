@@ -79,6 +79,7 @@ pre-render の次の不変条件を守ってください。
 - ブラウザは遅延生成し、`finally` で閉じます。図がなければ Chromium を起動しません。
 - `validateSite` は Mermaid を client mode に上書きし、ブラウザを必要としません。
 - pre-render SVG のテーマはビルド時に固定され、閲覧者のテーマ切替には追従しません。
+- HTML の SVG はビルドするマシンのフォントで組みます。PDF も作るときは、ラベルに数式を含む図をもう一度、持っている数式用のフォントで組み、PDF を印刷するページの中で HTML 用の写しと文字列として差し替えます（`pdfVariants`）。書き出す HTML は自分のものを持ちます。
 
 > [!IMPORTANT]
 > pre-render と PDF は npm インストール版 CLI が必要です。`puppeteer-core` を外部依存に保つため、単一ファイル bundle と standalone executable では利用できません。
@@ -182,7 +183,7 @@ PDF は Chromium の印刷レイアウトで単一 HTML を展開します。次
 v0.10 からは、文書が必要とするものとそのマシンが描けるものの差をビルドが実測して報告します（`fontCheck`、既定 `warn`）。測るのは、PDF 出力でも Mermaid pre-render でも、そのためにすでに開いているブラウザの中です。後者はビルドマシンのフォントを SVG に焼き込むため、この設定は `pdf` の下ではなくトップレベルにあります。
 
 > [!IMPORTANT]
-> PDF はシステムフォントを使います。開発イメージには Noto CJK と Noto Color Emoji が含まれます。他の環境では文書に必要なフォントを導入してください。
+> PDF はシステムフォントを使います。数式だけは、monodocs が持っている数式用のフォントで組みます（[`themes/mathFont.ts`](../../app/packages/core/src/themes/mathFont.ts)、roadmap 6.4）。このフォントは、文書に数式があるときだけ、PDF を印刷するページの `<head>` の先頭に `FontFace` で入れ、書き出す HTML には入れません。開発イメージには Noto CJK と Noto Color Emoji が含まれます。他の環境では文書に必要なフォントを導入してください。
 
 ## セキュリティ境界
 
