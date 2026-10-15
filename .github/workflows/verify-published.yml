@@ -62,8 +62,9 @@ jobs:
       # the diagnostics JSON and `document` in 0.11, and `root` / `sources.include`, route aliases,
       # `sources.asciidoc.attributes`, and the include boundary in 0.12, `sources.lineBreak`, the
       # size report and `assets.budget`, and `pdf.watermark` in 0.13, `numbering.sections` and
-      # `pdf.toc` in 0.14, the inline Mermaid runtime's notices and math in 0.15, and checklists,
-      # asciimath rendered, search folding, figure alignment, and the search clear button in 0.16.
+      # `pdf.toc` in 0.14, the inline Mermaid runtime's notices and math in 0.15, checklists,
+      # asciimath rendered, search folding, figure alignment, and the search clear button in 0.16,
+      # and, in 0.17, the math font a PDF's formulas are set in.
       # Verifying an older release must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
@@ -77,7 +78,7 @@ jobs:
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
             const major = Number(m[1]), minor = Number(m[2]);
             const atLeast = (n) => major > 0 || minor >= n;
-            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16)].map(String).join(' '));
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16), atLeast(17)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
@@ -87,6 +88,7 @@ jobs:
           echo "SUPPORTS_V014=$(echo "$gate" | cut -d' ' -f5)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V015=$(echo "$gate" | cut -d' ' -f6)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V016=$(echo "$gate" | cut -d' ' -f7)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V017=$(echo "$gate" | cut -d' ' -f8)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -646,7 +648,8 @@ jobs:
 
       # v0.15. The inline Mermaid runtime carries the third-party notices of what its bundle holds,
       # once, in a comment inside its script, and only where that runtime is emitted: not for the CDN
-      # runtime, not for pre-render, and not for a page without a diagram (21.3). They name mermaid 12.
+      # runtime, not for pre-render, and not for a page without a diagram (21.3). They name mermaid 12,
+      # and from 0.17 the CDN runtime loads the version they name.
       - name: Mermaid runtime notices
         if: env.SUPPORTS_V015 == 'true'
         run: |
@@ -692,14 +695,20 @@ jobs:
             // The builds without notices are what they are meant to be, so that their silence counts.
             if (!read('cdn.html').includes('cdn.jsdelivr.net/npm/mermaid@12.')) fail('the CDN build loads no mermaid 12');
             if (!/<figure class=\"mermaid\"[^>]*><svg/.test(read('prerender.html'))) fail('pre-render drew no SVG');
+            // v0.17: the CDN runtime loads the version the inline runtime embeds, as its notices name it.
+            if (process.env.SUPPORTS_V017 === 'true') {
+              const runtime = /Third-party notices for the Mermaid runtime \(mermaid@([^)]+)\)/.exec(inline)?.[1];
+              const cdn = /cdn\.jsdelivr\.net\/npm\/mermaid@([^/]+)\//.exec(read('cdn.html'))?.[1];
+              if (!runtime || runtime !== cdn) fail('the CDN runtime loads mermaid@' + cdn + ', the inline one is mermaid@' + runtime);
+            }
           "
 
       # v0.15. Formulas render at build time to MathML only: Markdown's $...$ and fenced math block,
       # AsciiDoc's latexmath and stem when it means latexmath (6.4). No KaTeX class or stylesheet
       # reaches the output, \mathbb becomes its own letter, and math.enabled: false gives no MathML.
       # What asciimath does is the next steps', since 0.16 changed it. The PDF is built, not checked
-      # for fonts: whether this runner has a math font is the runner's (the font check is the CI
-      # guide's to set up).
+      # for fonts: up to 0.16 its formulas took whatever math font this runner had, if any, and from
+      # 0.17 the step for the carried font checks the font, on the math fixture.
       - name: Math
         if: env.SUPPORTS_V015 == 'true'
         run: |
@@ -934,3 +943,70 @@ jobs:
               }
             })().catch((e) => { console.error(e); process.exit(1); });
           "
+
+      # v0.17. A PDF sets its formulas in New Computer Modern Math, which monodocs carries, whatever
+      # math font the machine has (6.4): Cambria Math on Windows, and Latin Modern Math on Linux, as
+      # build.mathfont.test.ts gives it there (through ~/.fonts; here system-wide), each checked to be
+      # there. The math fixture is built with fontCheck: error, so a finding fails the build; its prose
+      # is Japanese, so Noto CJK is installed on Linux, and Windows is asked for the Japanese fonts it
+      # ships. Its PDF must embed the carried font and no other math font (named as that test names them).
+      # A PDF without a formula is checked only for not embedding it; the font not being loaded at all
+      # is the unit tests'. Each runner's fixture PDF is kept, if the build got that far, for a person
+      # to look at the \bar and the radicals 6.4 records on Windows.
+      - name: Carried math font (0.17)
+        if: env.SUPPORTS_V017 == 'true'
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends fonts-noto-cjk fonts-lmodern
+            fc-list | grep -i 'Latin Modern Math' || { echo "::error::Latin Modern Math is not visible to fontconfig"; exit 1; }
+          else
+            # Windows ships Japanese fonts, but no runner image promises them, and a font installed
+            # here would not be the one the default theme's fallback reaches. Name what is there, and
+            # fail plainly where none is, rather than on the fixture's prose.
+            found="$(ls /c/Windows/Fonts | grep -iE '^(YuGoth|meiryo|msgothic)' || true)"
+            echo "Japanese fonts: $(echo $found)"
+            if [ -z "$found" ]; then
+              echo "::error::the Windows runner has none of Yu Gothic, Meiryo, or MS Gothic"
+              exit 1
+            fi
+            ls /c/Windows/Fonts | grep -ix 'cambria.ttc' || { echo "::error::the Windows runner has no Cambria Math"; exit 1; }
+          fi
+          mkdir -p mathfont/plain
+          cp examples/math/monodocs.config.yml mathfont/config.yml
+          printf 'fontCheck: error\n' >> mathfont/config.yml
+          monodocs build examples/math -c mathfont/config.yml --format pdf -o "mathfont/math-$RUNNER_OS.pdf"
+          printf '# Plain\n\nNo formula.\n' > mathfont/plain/index.md
+          monodocs build mathfont/plain --format pdf -o mathfont/plain.pdf
+          npm install --no-save --no-package-lock pdf-lib@1
+          node scripts/assert-pdf-fonts.mjs "mathfont/math-$RUNNER_OS.pdf" --embeds NewCMMath-Book
+          node -e "
+            const fs = require('node:fs');
+            const { PDFDocument, PDFDict, PDFName } = require('pdf-lib');
+            const fontsOf = async (file) => {
+              const doc = await PDFDocument.load(fs.readFileSync(file));
+              const names = new Set();
+              for (const [, object] of doc.context.enumerateIndirectObjects()) {
+                if (!(object instanceof PDFDict)) continue;
+                if (object.get(PDFName.of('Type'))?.toString() !== '/FontDescriptor') continue;
+                names.add((object.get(PDFName.of('FontName'))?.toString() ?? '').replace(/^\/([A-Z]{6}\+)?/, ''));
+              }
+              return [...names].sort();
+            };
+            (async () => {
+              const math = await fontsOf(process.argv[1]);
+              console.log('fonts: ' + math.join(', '));
+              const others = math.filter((n) => (/math/i.test(n) || /cambria/i.test(n)) && n !== 'NewCMMath-Book');
+              if (others.length > 0) throw new Error('the PDF embeds another math font: ' + others.join(', '));
+              if ((await fontsOf(process.argv[2])).includes('NewCMMath-Book')) throw new Error('a PDF without a formula embeds the carried font');
+            })().catch((e) => { console.error(e.message); process.exit(1); });
+          " "mathfont/math-$RUNNER_OS.pdf" mathfont/plain.pdf
+
+      - name: Keep the math fixture's PDF (0.17)
+        if: ${{ !cancelled() && env.SUPPORTS_V017 == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: math-pdf-${{ matrix.name }}
+          path: mathfont/math-*.pdf
+          if-no-files-found: warn
+          retention-days: 14
