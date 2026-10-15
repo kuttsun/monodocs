@@ -839,12 +839,14 @@ would be tuned to one font's metrics. So monodocs fixes what its own markup gets
 `mathvariant` (above), which no browser applies — and does not fix how a browser and a font set
 correct markup: the wide accents, the `\bar` and the radical on Windows above are of that kind.
 Those are recorded for the pairs measured (Chromium with Latin Modern Math on Linux, Edge with
-Cambria Math on Windows), and syntax.md names them.
+Cambria Math on Windows, and from 0.17.0 Chromium with New Computer Modern Math in the PDF on both),
+and syntax.md names them.
 
 **One math font for the PDF (after 0.16.0: made the default in v0.17; the font itself is chosen there).** The HTML is drawn by the reader's browser, so its pairs cannot
-be narrowed. The PDF can: it is always printed by monodocs's own Chromium, and only the build
-machine's math font varies. Loading one MATH font for the PDF build alone would make the PDF the
-same wherever it is built, and that pair is the one CI already checks. The repository carries
+be narrowed. The PDF can: it is always printed by monodocs's own Chromium, so the math font it
+loads can be fixed by monodocs. Loading one MATH font for the PDF build alone would make the PDF's
+math font the same wherever it is built (0.17.0's verification still found the accents placed
+differently on Linux and Windows; see the paragraph on Windows below), and that pair is the one CI already checks. The repository carries
 Latin Modern Math (`latinmodern-math.otf`, 733,736 bytes, under the GUST Font License), which the
 tests and `scripts/site-pdf-sample.sh` load already. Chromium embeds only the glyphs a PDF uses,
 so the PDF hardly grows; the CLI bundle and the binary do. Made the default, it changes how
@@ -872,11 +874,27 @@ Two Math, Libertinus Math, TeX Gyre Pagella Math and Termes Math, Noto Sans Math
   best beside the default theme's text. `\vec` sits left of its letter, as with Latin Modern Math. It
   is the one chosen. It is twice Latin Modern Math's size, and a later version can change how
   formulas set, so its version is pinned and moving it is a change of how PDFs look.
-- None of the nine fixes `\bar` touching its letter: KaTeX writes `<mo>¯</mo>` (U+00AF), which
-  Chromium does not stretch, and every font set it on or against the letter's top. That is a matter
-  of the markup, not of the font, and is left as it is. On Linux the radical joined its bar in every
-  font. Both are looked at again on Windows, in the PDF `verify-published.yml` keeps for 0.17.0;
-  anything that needs a fix goes into 0.17.1.
+- In this comparison, `\bar` looked set on or against the letter's top in every one of the nine.
+  KaTeX writes it as `<mo>¯</mo>` (U+00AF), which Chromium does not stretch. This was first put down to the markup, not the font, and left as it is. That cause is
+  withdrawn: 0.17.0's PDFs, looked at in the next paragraph, show a gap on Linux and none on
+  Windows with the same markup. On Linux the radical joined its bar in every font. Both were to be
+  looked at again on Windows, in the PDF `verify-published.yml` keeps for 0.17.0, and that is
+  recorded there.
+
+**On Windows, in the carried font (0.17.0).** The PDF `verify-published.yml` built from the published
+0.17.0 on its Windows runner, which has Cambria Math, Yu Gothic, and MS Gothic, embeds
+`NewCMMath-Book` and no Cambria Math, with `fontCheck: error` raising nothing. Rasterized at 900 dpi
+beside the Linux runner's: the radicals join their bars, which with Cambria Math they did not, and
+`\hat` and `\vec` sit above their letters (`\vec` to the left, as on Linux). The comparison above,
+not at this resolution, saw `\bar` on or against the letter's top. At 900 dpi the two runners differ:
+Linux leaves a hairline under `\bar`, `\dot`, `\acute`, and `\grave`, and Windows none, the accents
+touching the letter. Rasterized at 96 dpi, the Windows PDF's `x̄` and `ẋ` read as `x`. The math font and the markup are the
+same on both runners, and the PDFs still differ; what in Chromium, the platform, or their meeting
+with the font makes the difference is not identified. (In 0.16, Edge's HTML with Cambria Math set
+`\bar` clear of the letter, a different pair.) The markup is left unchanged in 0.17,
+and syntax.md records what was seen. So the Windows `\bar` the v0.17
+plan cites remains: in the 0.17.0 Windows runner's PDF the radicals joined their bars, but `\bar`
+still touched its letter.
 
 The file is `NewCMMath-Book.otf` from the CTAN package `newcomputermodern` 8.1.1, by Antonis
 Tsolomitis, unmodified (SHA-256 `2ea09ebc…becd95`), under the GUST Font License 1.0, which is the LaTeX

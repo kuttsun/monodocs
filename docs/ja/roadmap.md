@@ -759,12 +759,14 @@ Edge で、PDF は Acrobat と Edge で、両方のページを見た。
 なる。そこで monodocs は、自分のマークアップが誤っているものを直す。どのブラウザも適用しない
 `mathvariant`（上）がそれにあたる。正しいマークアップをブラウザとフォントがどう組むかは直さない。上の
 幅の広いアクセント、Windows での `\bar` と根号がそれにあたる。これらは測った組み合わせ（Linux の
-Chromium と Latin Modern Math、Windows の Edge と Cambria Math）ごとに記録し、syntax.md が名指す。
+Chromium と Latin Modern Math、Windows の Edge と Cambria Math、0.17.0 からは Linux と Windows の PDF での Chromium と
+New Computer Modern Math）ごとに記録し、syntax.md が名指す。
 
 **PDF の数式のフォントを 1 つにする（0.16.0 の後に、v0.17 で既定にすると決めた。フォントそのものはそこで選ぶ）。** HTML は読者のブラウザが描くので、組み合わせは絞れない。
-PDF は絞れる。PDF を描くのは常に monodocs 自身の Chromium で、変わるのはビルドするマシンの数式の
-フォントだけだからである。PDF のビルドのときだけ 1 つの MATH フォントを読み込めば、どこでビルドしても
-同じ PDF になり、その組み合わせは CI がすでに確かめているものである。リポジトリには Latin Modern Math
+PDF は絞れる。PDF を描くのは常に monodocs 自身の Chromium なので、読み込む数式の
+フォントを monodocs の側で固定できる。PDF のビルドのときだけ 1 つの MATH フォントを読み込めば、ビルドするマシンに
+よらず数式のフォントが同じになり（ただし 0.17.0 の検証では、アクセントの位置に Linux と Windows で差が
+あった。後の Windows の段落を参照）、その組み合わせは CI がすでに確かめているものである。リポジトリには Latin Modern Math
 （`latinmodern-math.otf`、733,736 バイト、GUST Font License）があり、テストと
 `scripts/site-pdf-sample.sh` がすでに読み込んでいる。Chromium は PDF が使う字形だけを埋め込むので、
 PDF はほとんど大きくならない。大きくなるのは CLI バンドルと単体バイナリである。既定にすると既存の PDF の
@@ -788,10 +790,25 @@ Math と Termes Math、Noto Sans Math、Fira Math である。
   組み、Book の太さが既定のテーマの本文といちばんなじむ。`\vec` が文字の左に寄るのは Latin Modern Math と同じで
   ある。これを選んだ。大きさは Latin Modern Math の 2 倍あり、版が変わると数式の組み方が変わりうるので、版を固定し、
   上げることは PDF の見え方の変更として扱う。
-- 9 つのどれも、`\bar` が文字に触れるのを直さない。KaTeX は `<mo>¯</mo>`（U+00AF）を書き、Chromium はこれを伸ばさ
-  ないので、どのフォントでも横棒は文字の上端に乗るか重なった。これはフォントではなくマークアップの問題で、そのままに
-  する。Linux では、根号はどのフォントでも横棒とつながった。どちらも、`verify-published.yml` が 0.17.0 を検証
-  したときに残す PDF で、Windows でもう一度見る。直すものがあれば 0.17.1 に入れる。
+- この比較では、9 つのどのフォントでも `\bar` の横棒が文字の上端に乗るか重なるように見えた。KaTeX は
+  これを `<mo>¯</mo>`（U+00AF）と書き、Chromium はこれを伸ばさない。当初はフォントではなく
+  マークアップの問題と判断し、そのままにした。この原因の判断は撤回する。0.17.0 の PDF では、同じ
+  マークアップで Linux に隙間があり Windows には無いからである。Linux では、根号はどのフォントでも横線と
+  つながった。横棒と根号について、0.17.0 の Windows の PDF で再確認した結果を次の段落に記す。
+
+**Windows で、monodocs が持っているフォントで組んだ結果（0.17.0）。** `verify-published.yml` が、公開した 0.17.0 から
+Windows のランナー（Cambria Math、Yu Gothic、MS Gothic がある）で組んだ PDF は、`NewCMMath-Book` を埋め込み、
+Cambria Math は埋め込まない。`fontCheck: error` でも何も報告しない。Linux のランナーのものと並べて 900 dpi で
+画像にすると、根号は横線とつながり（Cambria Math ではつながらなかった）、`\hat` と `\vec` は文字の上に来る
+（`\vec` が左に寄るのは Linux と同じ）。先の 9 フォントの比較では、900 dpi より粗い画像を見て、`\bar` が文字の上端に乗るか
+重なっていると判断した。900 dpi で見ると Linux と Windows で違いがあり、`\bar`・`\dot`・`\acute`・`\grave` の下に、Linux では
+わずかな隙間があるが、Windows では隙間が無く、文字に触れる。96 dpi で画像に
+すると、Windows の PDF の `x̄` と `ẋ` は `x` に読める。数式フォントもマークアップも両方のランナーで同じだが、
+PDF には差がある。差を生むのが Chromium か、プラットフォームか、それらとフォントとの組み合わせかは特定して
+いない（0.16 では、Edge と Cambria Math の HTML で横棒が文字から離れていた。これは別の組み合わせである）。
+0.17 ではマークアップを変えず、見たものを syntax.md に記録する。
+したがって、v0.17 の計画が挙げた Windows の `\bar` は残る。0.17.0 の Windows のランナーの PDF では、根号は横線と
+つながったが、横棒は文字から離れなかった。
 
 ファイルは CTAN のパッケージ `newcomputermodern` 8.1.1 の `NewCMMath-Book.otf`（Antonis Tsolomitis 作）を改変せずに
 使う（SHA-256 `2ea09ebc…becd95`）。GUST Font License 1.0 で、これは LaTeX Project Public License 1.3c に、改変した
