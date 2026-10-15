@@ -73,9 +73,9 @@ moved. The Windows host script and the Windows checks a person has to make are s
 v0.17 comes before 1.0: one math font for a PDF's formulas, wherever the PDF is
 built, and KaTeX 0.18 with Mermaid 12.2, past a security advisory ([roadmap.md](roadmap.md)).
 0.17.0 went out under `latest` without a beta, with the CI guide pinned to it. After `latest` moved,
-the published package and the release binaries were verified, and the samples and the PDF built on
-Windows looked at. The Windows host script, the Windows checks a person has to make, and moving
-`next` are still open.
+the published package and the release binaries were verified, the samples and the PDF built on
+Windows looked at, and `next` moved onto 0.17.0. The Windows host script and the Windows checks a
+person has to make are still open.
 
 v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an earlier version written
 into them, for readers who do not look at Git, in three releases. 12.4 would allow them in 1.x; they
@@ -653,7 +653,7 @@ Every PDF with a formula changes, but this release skips the beta 0.15.0 and 0.1
 - [x] The browser pass over the HTML the released Linux binary produced, driven rather than eyeballed — the published asset checked against its `.sha256`, run without Node.js on `examples/en`, `examples/ja`, and `examples/math` with no warning, and its output served over HTTP and driven in Chromium 154 with Latin Modern Math through 0.16.0's checks: 21 sidebar links, a link navigating and marking the current page, next, `mermaid` finding 4 results with 4 highlights, `Escape` clearing both, dark mode surviving a reload, the drawer at 375px, the footer reading `monodocs v0.17.0`, the runtime's notices naming `mermaid@12.2.0` once and `katex@0.18.11`, a diagram drawn, 7 disabled checkboxes with no `❏` or `✓`, a Markdown figure centred (272px each side), `ｲﾝｽﾄｰﾙ`, `埋込み`, and `installing` finding their pages, the clear button named (`Clear search`, `検索語を消去`) and clearing with focus kept, 23 formulas in Latin Modern Math, and no script error (the only failed request being the browser's own `favicon.ico`)
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.17.0` assets on a Windows 11 host
 - [ ] What only a person can answer, on Windows: how the generated HTML looks in Edge (Japanese text and formulas above all), a PDF with formulas opened and printed, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser
-- [ ] Move the `next` dist-tag onto `0.17.0`, and confirm that the deployed CI guide pins `monodocs@0.17.0` in English and Japanese
+- [x] Move the `next` dist-tag onto `0.17.0`, and confirm that the deployed CI guide pins `monodocs@0.17.0` in English and Japanese — `next` and `latest` both read `0.17.0`, and the deployed CI guide pins `monodocs@0.17.0` four times in each language, with no other version left
 
 ### v0.18: The Difference from an Earlier Version, in HTML
 
