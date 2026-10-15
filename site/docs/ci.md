@@ -59,9 +59,9 @@ jobs:
         with:
           node-version: 22
 
-      # Only needed for PDFs containing Japanese text, emoji, or formulas.
+      # Only needed for PDFs containing Japanese text or emoji. Add fonts-lmodern for a formula in a diagram label pre-rendered for the HTML.
       - name: Install fonts
-        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk fonts-noto-color-emoji fonts-lmodern
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk fonts-noto-color-emoji
 
       - name: Build HTML and PDF
         run: npx --yes monodocs@0.16.0 build ./docs --format both -o ./dist
@@ -104,7 +104,7 @@ The `node` images contain no browser, so add Chromium and the fonts when the job
 ```yaml
   before_script:
     - apt-get update
-    - apt-get install -y chromium fonts-noto-cjk fonts-noto-color-emoji fonts-lmodern
+    - apt-get install -y chromium fonts-noto-cjk fonts-noto-color-emoji
   variables:
     PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
 ```
@@ -112,7 +112,7 @@ The `node` images contain no browser, so add Chromium and the fonts when the job
 ## Notes
 
 - **Chromium discovery.** `PUPPETEER_EXECUTABLE_PATH` always wins. Without it, monodocs searches the standard install locations on Linux and Windows (Chromium-based Microsoft Edge is a Windows fallback). Set the variable explicitly in container images and on macOS.
-- **PDF fonts come from the runner.** A character with no installed font renders as tofu (□) in the PDF. Japanese needs `fonts-noto-cjk`, emoji need `fonts-noto-color-emoji`, and formulas need a font with an OpenType MATH table, such as Latin Modern Math from `fonts-lmodern` (without one, brackets do not stretch and letters can come out as tofu). HTML uses the reader's fonts and is unaffected. The build warns on a character the runner cannot draw or a formula font with no MATH table (`font/no-math-table`); [`fontCheck: error`](/docs/configuration#font-check) turns that warning into a failed job.
+- **Fonts come from the runner, apart from a PDF's formulas.** A character with no installed font renders as tofu (□) in the PDF. Japanese needs `fonts-noto-cjk` and emoji need `fonts-noto-color-emoji`. monodocs sets a PDF's formulas in a math font it carries, so the runner needs none for them. A theme that names its own font for `math` must embed it, or the runner must have it (see [`math`](/docs/configuration#math)). Under `mermaid.mode: pre-render`, a build that writes HTML lays out every diagram label in the HTML's SVG in the runner's fonts, a formula included, so a formula in a label needs a math font on the runner, such as Latin Modern Math from `fonts-lmodern`. The rest of the HTML uses the reader's fonts and is unaffected. The build warns on a character the runner cannot draw or on a theme's math font with no OpenType MATH table (`font/no-math-table`); [`fontCheck: error`](/docs/configuration#font-check) turns that warning into a failed job.
 - **Offline builds.** `mermaid.mode: client` defaults to loading the runtime from a CDN. Use `inline` or `pre-render` when the runner has no outbound network access.
 - **Warnings do not fail `build` or `validate`.** Broken links and missing titles are reported and the output is still produced. Add [`--strict`](/docs/commands#validate) to make a warning fail `validate` too.
 
