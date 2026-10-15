@@ -26,7 +26,7 @@ Last updated: 2026-10-14
 | Section numbering, printed table of contents      | ✅ Done   | v0.14          |
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
 | Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | ✅ Done   | v0.16 |
-| One math font for the PDF, KaTeX 0.18, Mermaid 12.2 | 🚧 Planned| v0.17 |
+| One math font for the PDF, KaTeX 0.18, Mermaid 12.2 | ✅ Done   | v0.17 |
 | Difference from an earlier version in HTML        | 🚧 Planned| v0.18          |
 | Difference from an earlier version in PDF         | 🚧 Planned| v0.19          |
 | Word and character differences inside a block     | 🚧 Planned| v0.20          |
@@ -72,6 +72,9 @@ moved. The Windows host script and the Windows checks a person has to make are s
 
 v0.17 comes before 1.0: one math font for a PDF's formulas, so that a PDF sets them the same wherever
 it is built, and KaTeX 0.18 with Mermaid 12.2, past a security advisory ([roadmap.md](roadmap.md)).
+0.17.0 goes out under `latest` without a beta, with the CI guide pinned to it. The published package
+and the release binaries are verified, and the samples and the PDF built on Windows looked at, after
+`latest` moves.
 
 v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an earlier version written
 into them, for readers who do not look at Git, in three releases. 12.4 would allow them in 1.x; they
@@ -640,7 +643,7 @@ AsciiDoc checklists and search results change for existing documents, asciimath 
 
 Every PDF with a formula changes, but this release skips the beta 0.15.0 and 0.16.0 had, which the plan first called for. PR CI already installs the packed package on Linux and Windows and checks that its PDF embeds the carried font (`package:verify`), and the published package's verification and the look at the samples come after `0.17.0` is published, a fix going into `0.17.1`.
 
-- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.17.0` in the version change itself, before the `v0.17.0` tag is created
+- [x] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.17.0` in the version change itself, before the `v0.17.0` tag is created — `site/docs/ci.md` and `site/ja/docs/ci.md`, four pins each, in the change that bumps the CLI to 0.17.0
 - [x] `verify-published.yml` gains a 0.17 gate and a step for the carried font, merged before anything below runs — `SUPPORTS_V017`, and a step that builds `examples/math` to PDF with `fontCheck: error`, asserts that it embeds `NewCMMath-Book` and no other font whose name matches `/math|cambria/i`, and that a PDF without a formula does not embed it. Each runner's PDF, once the build wrote it, is kept as an artifact for 14 days even when a later check fails, for looking at the `\bar` and the radicals on Windows. For the fixture's Japanese prose, Linux gets Noto CJK, and Windows names the Japanese fonts it ships (Yu Gothic, Meiryo, MS Gothic) in the log. So that the carried font has a math font to win over, Linux gets Latin Modern Math and checks that fontconfig sees it, and Windows checks for Cambria Math (`cambria.ttc`). The step fails plainly where the math font, or on Windows a Japanese font, is missing. From 0.17 the 0.15 notices step also asserts that the CDN runtime loads the Mermaid version the inline runtime's notices name. What was run: the step's commands, apart from installing and checking those fonts and the Windows branch, passed in the development image, which has no math font and has Noto CJK, together with the notices step run with `SUPPORTS_V017=true`; `scripts/assert-pdf-fonts.mjs` passed when run, as in the workflow, from a directory laid out like the repository root (no `packages/core`) with `pdf-lib` installed there; and on Debian, `fonts-lmodern` makes Latin Modern Math visible to fontconfig. The Linux run with Latin Modern Math present and the Windows branch first run in the verification of `0.17.0`
 - [ ] Publish `0.17.0` under the `latest` tag, with release notes stating how formulas in a PDF change and what the Mermaid and KaTeX move changes, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.17.0` — not the default `next`, which still points at 0.16.0 until it is moved below and would skip every 0.17 step while passing — confirming that the 0.17 steps ran rather than being skipped
 - [ ] Build `examples/en`, `examples/ja`, `examples/math`, and the site samples with `0.17.0` and look at the formulas in the PDF and the diagrams; what no longer reads is fixed in `0.17.1` or recorded
