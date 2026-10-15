@@ -41,16 +41,6 @@ monodocs/
 イメージは Node 22 に pnpm（`app/package.json` の `packageManager` と同じ版）を焼き込んであり、
 corepack による pnpm の都度ダウンロードが発生しない。
 
-### 監査から除外しているアプリ依存関係の advisory
-
-`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` に GHSA-238p-pmpm-9mq7 を挙げ、`pnpm audit` がこれで失敗しないようにしています。0.18.2 で修正された低深刻度の KaTeX の advisory で、すでに汚染された `Object.prototype` から継承した `trust` などのオプションを、アプリケーションが設定したかのように扱うというものです。
-
-- **届く場所**: monodocs が使う 1 つの版の mermaid の 2 つのバンドルです。inline ランタイムと pre-render が埋め込む `mermaid.min.js` と、`mermaid.runtime: cdn` がその同じ版を指定して jsDelivr から読み込む ESM バンドルで、どちらも KaTeX 0.16.47 を持ちます。
-- **override しない理由**: このリポジトリの KaTeX を override してもどちらのバンドルにも届かず、mermaid 11 も 12 も `katex ^0.16.47` を要求します。出荷物を変えずに監査だけを黙らせることになります。
-- **ビルド時の KaTeX**: `@monodocs/core` が直接依存して数式を描きます。版は同じ 0.16.47 で、告知が 1 つの KaTeX を名指し、MathML の書き換え（roadmap 6.4）が測ったものと一致するよう、Mermaid が同梱する版と揃えています。`trust` はすべてのコマンドを拒む関数として明示的に設定しているので、継承された `trust` が信頼の必要なコマンドを有効にすることはありません。ほかのオプションは継承されえますが、それにもやはり `Object.prototype` をすでに汚染したコードが必要です。
-- **受け入れたリスク（低）**: 悪用には、すでに `Object.prototype` を汚染したコードと攻撃者が制御する数式の両方が要り、mermaid は出力を DOMPurify に通します。
-- **削除の条件**: monodocs が使う mermaid が修正済みの KaTeX を持つようになったら項目を削除し、ビルド時の KaTeX もその版に上げ、その MathML を MathML Core に照らして調べ直します。2026-10-06 時点の再点検では、mermaid 12.1.0 も `katex ^0.16.47` を要求しています。
-
 ### アプリ依存関係のセキュリティ override（削除済み）
 
 `app/` は以前、`postcss` を pnpm `overrides`（`pnpm-workspace.yaml`）で `^8.5.18` に固定していました。`postcss <= 8.5.17` は高深刻度の path traversal advisory（GHSA-r28c-9q8g-f849）を持ち、`vitest -> vite` 経由で dev/test 専用の依存ツリーに入っていたためです。2026-10-01、lockfile が自前で `postcss: ^8.5.28` を宣言する `vite` 8.3.1 を解決するようになった時点で削除しました。

@@ -628,13 +628,15 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   `\includegraphics`, `\htmlClass`, `\htmlId`, `\htmlStyle`, `\htmlData` — are not trusted: a formula
   using one is reported as `math/command-not-allowed` and shown as written, rather than as the red
   command name KaTeX would put in its place. Automatic equation numbers (`equation`, `align`, `gather`,
-  unstarred) are drawn by KaTeX's stylesheet with a CSS counter, so without it they are not there; a
-  numbered formula is reported as `math/numbering-unsupported` and rendered without its number. A
-  `\tag{}` at the top level of a display formula, after a starred environment for one, is rendered, but
-  not at the right margin: KaTeX places it with `width` attributes MathML Core ignores. Inside a numbered
-  environment KaTeX drops a `\tag{}` altogether, so the warning points at the starred form. Every length is written in a unit CSS has: KaTeX keeps TeX's units (`bp`,
-  `dd`, `sp`, `mu`, its own `px`), which MathML Core would ignore. A unit CSS has stays, so that an
-  absolute length stays absolute under `\Huge`; `mu` becomes em, and TeX's other units points. A length
+  `alignat`, unstarred) are drawn by KaTeX's stylesheet with a CSS counter, so without it they are not
+  there; a numbered formula is reported as `math/numbering-unsupported` and rendered without its
+  number. A `\tag{}` at the top level of a display formula, after a starred environment for one, is
+  rendered and set at the right margin: KaTeX places it with `width` attributes MathML Core ignores,
+  so monodocs rewrites them (below). Inside `equation`, `align`, `gather`, or `alignat`, starred or
+  not, KaTeX drops a `\tag{}` altogether, so the warning points at a starred environment with the
+  `\tag{}` after it. Every length is written in a unit CSS has: KaTeX keeps TeX's units (`bp`, `dd`,
+  `sp`, `mu`, its own `px`), which MathML Core would ignore. A unit CSS has stays, so that an absolute
+  length stays absolute under `\Huge`; `mu` becomes em, and TeX's other units points. A length
   beyond 100em (`\rule`, `\kern`, `\hspace`, `\raisebox`) is clamped to 100em, since KaTeX's own
   `maxSize` does not reach every size it writes into MathML. Three `mpadded` forms MathML Core reads
   otherwise than KaTeX means them are rewritten: the box grown around `\colorbox` and `\fcolorbox` by
@@ -689,9 +691,10 @@ and the formula, and is shown as written in a `span.math-error`, not as KaTeX's 
   text "undefined" and monodocs as a line over or under the term; a line break inside part of a formula; and `\boldsymbol` on a relation, a bracket, or punctuation
   (`\boldsymbol{\rightarrow}`), which KaTeX writes into MathML only for letters, digits, and binary
   operators; `\\[2em]` between the rows of an environment, whose room KaTeX's MathML leaves out (both
-  found in KaTeX's parse tree, since the MathML no longer shows them); a negative `\\[...]` and an `\arraystretch`
-  below 1, which padding cannot give. The parse tree is read after macros are expanded, and only its
-  MathML branch. Accepted as
+  found in KaTeX's parse tree, since the MathML no longer shows them); `\reflectbox` and
+  `\mathreflectbox` (KaTeX 0.18.7, v0.17), whose content KaTeX's MathML writes unreflected, read from
+  the parse tree as well; a negative `\\[...]` and an `\arraystretch` below 1, which padding cannot
+  give. The parse tree is read after macros are expanded, and only its MathML branch. Accepted as
   KaTeX's own and not detected: a dashed frame around an array is drawn solid, `\xrightequilibrium` and
   `\xleftequilibrium` are drawn as ordinary harpoons, and nested size commands compound.
 - **AsciiDoc.** The converter's output for latexmath is replaced through a converter that wraps
@@ -918,12 +921,43 @@ in the PDF too. That is how an author sets formulas in another font; no key is a
   in a message of its own when the build writes a PDF alone, and otherwise by the PDF's own check of
   the page it prints.
 
-- **KaTeX, as a dependency.** KaTeX 0.16.47 is MIT. It is the version the Mermaid runtime already
-  bundles, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
+- **KaTeX, as a dependency.** When it was added, KaTeX 0.16.47, under MIT, was the version the
+  Mermaid runtime already bundled, and a test fails when the two differ, so that the notices name one KaTeX: it appears in
   `THIRD-PARTY-NOTICES.txt` with the bundle's other packages and in the runtime's own notices. Measured on
   Linux x64 when it was added, it makes the CLI bundle 0.50 MiB larger (20,626,667 to 21,150,252 bytes)
   and the standalone binary 0.50 MiB larger (145,493,184 to 146,017,472 bytes). The HTML output does not
   grow by KaTeX itself, only by the formulas' MathML.
+
+  **Moved to 0.18.11 (v0.17)**, with Mermaid 12.2.0, whose runtime carries that version; it is MIT, and
+  GHSA-238p-pmpm-9mq7, which 0.16.47 was subject to, is fixed (0.18.2). npm marks 0.18.11 deprecated
+  ("Accidentally published with breaking changes. Use 0.19.0 instead."): it changed `strict` in a patch
+  release, and 0.19.0 republished it 21 minutes later. The two packages differ in nothing but the
+  version string, and 0.18.11 is taken because the runtime carries it. KaTeX's code in the CLI bundle
+  is 493,624 bytes (from 492,274), the bundle 21,276,571 bytes (from 21,273,546), and the standalone
+  binary keeps its 146,148,544 bytes, all measured on Linux x64. What changed since 0.16.47 reaches
+  monodocs's output only where a formula uses it. Formulas KaTeX rejected now render: a braced
+  delimiter after `\big` and the like (`\big{(}`, 0.18.3), `\mapsfrom` (0.18.7), and `\char"10FFFF`,
+  the last code point, which 0.16.47 refused (0.18.5). `\reflectbox` and `\mathreflectbox` (0.18.7)
+  render too, but their MathML is not reflected, so monodocs reports them (above). A `\\` that ends a
+  numbered `align`, `gather`, or `alignat` now leaves an empty row (0.18.8); monodocs already reports
+  those environments and draws no number, so what reaches the output is the empty row's height. An
+  empty last row with a `\tag`, which 0.16.47 dropped with its tag, is now kept (0.18.6), in a starred
+  environment too, so such a formula is now reported as `math/numbering-unsupported`. A formula in a
+  Mermaid label is drawn by the runtime's own KaTeX, which monodocs does not check, so the same
+  commands render there, and `\reflectbox` there is neither reflected nor reported. 0.18.4 changes only
+  the wording of `math/parse-failed` for an invalid environment name (`\begin{a b}` now says "No such
+  environment: a b"). A column count for `alignat` or `alignedat` that is not a positive integer
+  (`\begin{alignat}{0}`, `{1.5}`), which 0.16.47 drew, is now refused, so such a formula is shown as
+  written and reported as `math/parse-failed`; the changelog does not say so. The rest does not reach
+  the output: 0.18.0 prefixes KaTeX's CSS classes, which only its HTML output carries; 0.18.1 allows
+  an escaped comma in `\htmlData`, which monodocs does not trust; 0.18.9 adds type declarations; 0.18.10 changes the font fallback of KaTeX's stylesheet; 0.18.11
+  reports a character without metrics through `strict`, which monodocs sets to `"ignore"`
+  (`\text{速度}` raises nothing); 0.17.0 changes the internal `__defineFunction`, which monodocs does not
+  call. The element and attribute names KaTeX's MathML builder writes are the set 0.16.47 wrote, so the
+  survey of what MathML Core reads otherwise (above) stands, and `parseTreeLosses` and the detection of
+  `mml-eqn-num` keep passing their tests. Before and after the move, the MathML of the math fixture's 46
+  formulas and of the samples' 6 in each language is byte-identical, as is the whole HTML apart from the
+  embedded Mermaid runtime.
 - **`mathvariant`.** MathML Core applies only `mathvariant="normal"`, so every other value is resolved at
   build time into Unicode's Mathematical Alphanumeric Symbols (U+1D400–U+1D7FF) and the Letterlike
   Symbols that fill its holes (`ℎ`, `ℬ`, `ℭ`, `ℝ`, and the rest), and the attribute is removed. This
@@ -3461,6 +3495,22 @@ and do not block the bump.
   Xerces and are also under the Apache
   Software License 1.1, so its notice and the acknowledgement it asks for are carried too.
 - The CDN runtime loads `mermaid@12.1.0`, the version `inline` and `pre-render` embed.
+
+**Measured again on 12.2.0 (v0.17), with KaTeX 0.18.11.**
+
+- Components: the runtime's 88 are those of 12.1.0 at the same versions, apart from mermaid itself and
+  KaTeX, which moves from 0.16.47 to 0.18.11, and the notices change only in those two names, apart
+  from the generator and digest lines in their header. ELK is still `elkjs@0.9.3`. No source of
+  mermaid's own that changed between the two cites code from elsewhere, and KaTeX's `dist/katex.mjs`
+  carries the same code from React as before, so the generator's audit tables move to the new
+  versions unchanged.
+- Size: the inline runtime is 5,494,801 bytes raw and 1,568,811 gzip (from 5,493,176 and 1,567,303), and
+  adds 5,670,460 bytes to the CLI bundle as the string it is embedded as (from 5,668,787). Its notices
+  are 152,681 bytes raw, 24,967 gzip.
+- The CDN runtime loads `mermaid@12.2.0`, and `themes/mermaid.test.ts` fails when the URL names a
+  version other than the Mermaid installed.
+- Every diagram in `examples/en` and `examples/ja`, three in each, drawn by the inline runtime in
+  Chromium 154, is pixel-identical to its drawing under 12.1.0.
 
 **Code whose source states no licence (v0.15).** Generating the notices meant reading every source the
 runtime is made of, and four pieces of code in it come from places that state no licence: Michael

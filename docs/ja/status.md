@@ -622,16 +622,16 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 
 **KaTeX 0.18 と Mermaid 12.2**（[roadmap.md](roadmap.md) 6.4、21.3）
 
-- [ ] KaTeX を 0.18.11、Mermaid を 12.2.0 にし、ランタイムの告知を作り直し、固定している CDN のランタイムもそれに合わせて動かす。2 つの KaTeX の版を揃えるテストが通り、KaTeX の Dependabot の警告が閉じる。`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` からこの勧告を消し、それを説明する [development.md](development.md) の節も消し、それでも監査が通る
-- [ ] テストが CDN のランタイムの版を、インストールした Mermaid と結び付ける
-- [ ] [roadmap.md](roadmap.md) 21.3 と 6.4 が Mermaid 12.1.0 と KaTeX 0.16.47 で測ったものを、採用する版で測り直して記録する。ランタイムが同梱するパッケージとその告知、CDN の行、インラインのランタイムの大きさ（素と gzip）と CLI バンドルへの上乗せ、KaTeX のライセンスと CLI バンドル・単体バイナリでの大きさである
-- [ ] 数式のフィクスチャとサンプルのページの MathML を上げる前後で比べ、変わったものを [roadmap.md](roadmap.md) 6.4 に記録する
-- [ ] monodocs が読む KaTeX の内部が 0.18 でも保たれる。`parseTreeLosses` がたどる非公開の構文木と、番号付きの数式の検出が読む MathML のクラス `mml-eqn-num` である。それらのテストが通る
-- [ ] `examples/en` と `examples/ja` のすべての図を Mermaid 12.2.0 で見る
+- [ ] KaTeX を 0.18.11、Mermaid を 12.2.0 にし、ランタイムの告知を作り直し、固定している CDN のランタイムもそれに合わせて動かす。2 つの KaTeX の版を揃えるテストが通り、KaTeX の Dependabot の警告が閉じる。`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` からこの勧告を消し、それを説明する [development.md](development.md) の節も消し、それでも監査が通る——`@monodocs/core` は `katex@0.18.11` と `mermaid@^12.2.0` に依存する。後者のランタイムが持つのも KaTeX 0.18.11 である。生成スクリプトの監査の表とランタイムの告知は 2 つの版に移った。表記がインストールした KaTeX を名指すことを確かめる `mathRender.test.ts` のテストも通る。除外と development.md の節を消しても監査は通る。Dependabot の警告は main の lockfile に対するものなので、マージしたあと閉じたのを見るまでは未完了とする
+- [x] テストが CDN のランタイムの版を、インストールした Mermaid と結び付ける——`themes/mermaid.test.ts` はインストールした `mermaid/package.json` から版を読み、URL を動かす前は 12.1.0 の URL に対して失敗した
+- [x] [roadmap.md](roadmap.md) 21.3 と 6.4 が Mermaid 12.1.0 と KaTeX 0.16.47 で測ったものを、採用する版で測り直して記録する。ランタイムが同梱するパッケージとその告知、CDN の行、インラインのランタイムの大きさ（素と gzip）と CLI バンドルへの上乗せ、KaTeX のライセンスと CLI バンドル・単体バイナリでの大きさである——21.3（「12.2.0 と KaTeX 0.18.11 での測り直し」）と 6.4（「0.18.11 に移した」）に記録した。ランタイムの 88 の構成要素は、mermaid と KaTeX を除いて版が変わらない。inline ランタイムは無圧縮で 5,494,801 バイト、gzip で 1,568,811 バイトで、CLI バンドルに 5,670,460 バイトを加える。KaTeX は MIT で、21,276,571 バイトのバンドルのうち 493,624 バイトがそのコードであり、バイナリは 146,148,544 バイトのまま変わらない。npm は 0.18.11 を非推奨としているが、版の文字列を除けば 0.19.0 と同じパッケージである
+- [x] 数式のフィクスチャとサンプルのページの MathML を上げる前後で比べ、変わったものを [roadmap.md](roadmap.md) 6.4 に記録する——バイト単位で同じだった。`examples/math` の 46 の数式と、`examples/en` と `examples/ja` の 6 つずつの数式、そして埋め込むランタイムを除いた HTML 全体である。6.4 は、KaTeX で何が変わったかとともにこれを記録する。その変化とは、KaTeX が拒んでいて描かれるようになった数式、番号付きの `align`・`gather`・`alignat` を終える `\\` が残すようになった空の行、残るようになったので星付きの環境でも `math/numbering-unsupported` として報告される `\tag` 付きの空の最後の行、MathML では左右反転しないので monodocs が `math/construct-unsupported` として報告するようにした `\reflectbox` と `\mathreflectbox`、そしてランタイムの KaTeX が同じコマンドを検査されずに描く Mermaid のラベルである
+- [x] monodocs が読む KaTeX の内部が 0.18 でも保たれる。`parseTreeLosses` がたどる非公開の構文木と、番号付きの数式の検出が読む MathML のクラス `mml-eqn-num` である。それらのテストが通る——`parseTreeLosses` と `mml-eqn-num` の検出はテストを通り、KaTeX の MathML の組み立てが書く要素と属性の名前は 0.16.47 と同じ集合である
+- [x] `examples/en` と `examples/ja` のすべての図を Mermaid 12.2.0 で見る——それぞれの 3 つを Chromium 154 で inline ランタイムに描かせてスクリーンショットを撮り、12.1.0 で描いたものとピクセル単位で同じだった
 
 **ドキュメントとテスト**
 
-- [x] [testing.md](testing.md) が、新しいテストと反転したテストを英語と日本語で載せる。開発イメージでは数式の指摘だけが残ると期待する `build.fontcheck.test.ts` のテストもその 1 つである——`build.mathfont.test.ts` と、`build.fontcheck.test.ts` の反転したサンプルのテスト
+- [x] [testing.md](testing.md) が、新しいテストと反転したテストを英語と日本語で載せる。開発イメージでは数式の指摘だけが残ると期待する `build.fontcheck.test.ts` のテストもその 1 つである——`build.mathfont.test.ts` と、`build.fontcheck.test.ts` の反転したサンプルのテスト。KaTeX 0.18 とともに、`themes/mermaid.test.ts` と、`mathRender.test.ts` の、`\reflectbox` と `\mathreflectbox` を報告するテストと `align*` の `\tag` 付きの空の最後の行を番号付きとするテストを載せた
 
 **リリース**
 

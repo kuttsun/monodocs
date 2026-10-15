@@ -282,8 +282,9 @@ export function renderFormula(
 
 /**
  * Remove the classes KaTeX puts in its MathML, which only its stylesheet gives a meaning to, and say
- * whether one of them was an equation number: KaTeX draws `equation`, `align`, and `gather` numbers
- * with a CSS counter on `mml-eqn-num`, so without the stylesheet the number is not there.
+ * whether one of them was an equation number: KaTeX draws `equation`, `align`, `gather`, and `alignat`
+ * numbers with a CSS counter on `mml-eqn-num`, so without the stylesheet the number is not there. A
+ * `\\tag` inside one of them, starred or not, leaves the same empty cell, its content dropped.
  */
 function dropClasses(math: Element): boolean {
   let numbered = false;
@@ -304,7 +305,9 @@ function dropClasses(math: Element): boolean {
  * - the room `\\\\[2em]` asks for between the rows of an environment, which KaTeX's MathML leaves out;
  * - the branch of `\\mathchoice` (written directly, or through `\\bmod` and the like) inside a script or
  *   a fraction: KaTeX picks it by a style it does not carry into scripts and fractions, so it can be
- *   the wrong one.
+ *   the wrong one;
+ * - `\\reflectbox` and `\\mathreflectbox` (KaTeX 0.18.7): KaTeX's MathML writes their content
+ *   unreflected, the reflection being in its stylesheet.
  */
 function parseTreeLosses(tex: string, display: boolean): string[] {
   let tree: unknown;
@@ -332,6 +335,11 @@ function parseTreeLosses(tex: string, display: boolean): string[] {
     // Only the branch that reaches MathML counts (`\\html@mathml{...}{...}`).
     if (record.type === "htmlmathml") return walk(record.mathml, bold, smaller);
     if (record.type === "mathchoice" && smaller) losses.add("\\mathchoice");
+    // \\reflectbox takes a text box as its argument, \\mathreflectbox a math one.
+    if (record.type === "reflectbox") {
+      const text = (record.body as { type?: unknown } | undefined)?.type === "styling";
+      losses.add(text ? "\\reflectbox" : "\\mathreflectbox");
+    }
     // A script, or a fraction's numerator or denominator, is set in a smaller style.
     const scripts =
       record.type === "supsub"

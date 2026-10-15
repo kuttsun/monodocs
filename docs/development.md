@@ -40,28 +40,6 @@ monodocs/
 Develop, build, and test inside the dedicated image **`monodocs-dev`**, not on the host. It bakes pnpm (the
 version in `packageManager` of `app/package.json`) into Node 22, so corepack does not download pnpm each time.
 
-### App Dependency Advisory Ignored in the Audit
-
-`app/pnpm-workspace.yaml` lists GHSA-238p-pmpm-9mq7 under `auditConfig.ignoreGhsas`, so `pnpm audit` does not
-fail on it. It is a low-severity KaTeX advisory, patched in 0.18.2: KaTeX can treat options inherited from an
-already-polluted `Object.prototype`, such as `trust`, as if the application had set them.
-
-- **Where it ships**: in the two bundles of the one mermaid version monodocs uses — `mermaid.min.js` (embedded
-  by the inline runtime and pre-render) and the ESM bundle that `mermaid.runtime: cdn` loads from jsDelivr at
-  that exact version. Both carry KaTeX 0.16.47.
-- **Why no override**: overriding this repository's KaTeX reaches neither bundle, and mermaid 11 and 12 both
-  require `katex ^0.16.47`; it would silence the audit without changing what ships.
-- **Build-time KaTeX**: `@monodocs/core` depends on KaTeX directly to render formulas, at the same 0.16.47,
-  kept in step with Mermaid's so the notices name one KaTeX and the MathML rewrites (roadmap 6.4) match what
-  was measured. It sets `trust` explicitly to a function that refuses every command, so an inherited `trust`
-  cannot enable the gated commands; other options can still be inherited, which again needs code that has
-  already polluted `Object.prototype`.
-- **Accepted risk (low)**: exploiting it needs both code that has already polluted `Object.prototype` and
-  attacker-controlled formulas, and mermaid passes its output through DOMPurify.
-- **Removal**: when the mermaid monodocs uses carries a patched KaTeX, remove the entry, move the build-time
-  KaTeX to that version, and survey its MathML against MathML Core again. Last checked 2026-10-06: mermaid
-  12.1.0 still requires `katex ^0.16.47`.
-
 ### App Dependency Security Override (Removed)
 
 `app/` used to pin `postcss` to `^8.5.18` via pnpm `overrides` in `pnpm-workspace.yaml`, because

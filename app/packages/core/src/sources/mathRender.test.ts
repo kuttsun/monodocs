@@ -47,6 +47,17 @@ describe("renderFormula", () => {
     expect(numbered("\\begin{align} a &= b \\end{align}")).toBe(true);
     expect(numbered("\\begin{equation*} x \\end{equation*}")).toBe(false);
     expect(numbered("x \\tag{1}")).toBe(false);
+    // A \\tag inside equation, align, gather, or alignat is dropped, starred or not; KaTeX 0.18.6
+    // keeps an empty last row with one, which 0.16.47 dropped with it.
+    expect(numbered("\\begin{equation} x \\tag{1} \\end{equation}")).toBe(true);
+    expect(numbered("\\begin{equation*} x \\tag{1} \\end{equation*}")).toBe(true);
+    expect(numbered("\\begin{align*} a &= b \\tag{1} \\end{align*}")).toBe(true);
+    expect(numbered("\\begin{gather*} x \\tag{1} \\end{gather*}")).toBe(true);
+    expect(numbered("\\begin{alignat*}{1} a &= b \\tag{1} \\end{alignat*}")).toBe(true);
+    expect(numbered("\\begin{align*} a &= b \\\\ \\tag{2} \\end{align*}")).toBe(true);
+    // Elsewhere a \\tag is drawn: inside aligned, and after a starred environment.
+    expect(numbered("\\begin{aligned} a &= b \\tag{1} \\end{aligned}")).toBe(false);
+    expect(numbered("\\begin{align*} a &= b \\end{align*} \\tag{1}")).toBe(false);
   });
 
   it("does not render links, images, or HTML attributes, and names the commands", () => {
@@ -205,6 +216,10 @@ describe("renderFormula", () => {
     expect(constructs("x^{a\\bmod b}")).toEqual(["\\mathchoice"]);
     expect(constructs("\\frac{\\mathchoice{D}{T}{S}{SS}}{2}")).toEqual(["\\mathchoice"]);
     expect(constructs("\\html@mathml{x^{\\mathchoice{D}{T}{S}{SS}}}{x}")).toEqual([]);
+    // \\reflectbox's content reaches MathML unreflected; \\mapsfrom's MathML is its own character.
+    expect(constructs("\\reflectbox{x}")).toEqual(["\\reflectbox"]);
+    expect(constructs("\\mathreflectbox{x}")).toEqual(["\\mathreflectbox"]);
+    expect(constructs("a \\mapsfrom b")).toEqual([]);
     expect(constructs("\\overlinesegment{AB}")).toEqual([
       expect.stringContaining("\\overlinesegment"),
     ]);
