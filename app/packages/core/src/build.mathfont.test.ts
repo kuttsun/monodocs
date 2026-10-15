@@ -210,13 +210,18 @@ describe.skipIf(!chromium)("a PDF's formulas in a real browser", () => {
     expect(fonts).toContain(CARRIED);
     expect(otherMathFonts(fonts)).toEqual([]);
     expect(fontWarnings(result.warnings).filter((w) => w.code !== "font/missing")).toEqual([]);
-    // `\text{速度}` is text, set in a text font, which a machine without CJK fonts lacks; nothing
-    // else may be reported.
+    // The fixture's prose and `\text{速度}` are Japanese, set in a text font, which a machine without
+    // CJK fonts lacks (the GitHub Linux runner as it comes); nothing else may be reported. There the
+    // prose fills the check's 40 findings before the formulas are reached, so this shows only that
+    // what was named is Japanese; the formulas are checked where CJK fonts are installed (the
+    // development image, pr-ci.yml, release.yml, so no CI run takes this path) and by the glyphs read
+    // below. U+00B7, which Script_Extensions counts as Han, is a math character here (`\cdotp`).
+    const japanese = /(?!\u00B7)[\p{scx=Han}\p{scx=Hira}\p{scx=Kana}\uFF01-\uFF60]/u;
     for (const w of fontWarnings(result.warnings)) {
       const named = [...w.message.matchAll(/U\+([0-9A-F]{4,6})/g)].map((m) =>
         String.fromCodePoint(parseInt(m[1]!, 16)),
       );
-      expect(named.filter((c) => !/\p{Script=Han}/u.test(c))).toEqual([]);
+      expect(named.filter((c) => !japanese.test(c))).toEqual([]);
     }
 
     // Every glyph of every formula, read off the page the PDF is printed from: from the carried

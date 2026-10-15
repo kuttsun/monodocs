@@ -69,8 +69,18 @@ jobs:
 
           echo "npm_tag=$npm_tag" >> "$GITHUB_OUTPUT"
 
+      # The fonts PR CI's Linux job installs, so that the checks run here as they ran on the pull
+      # request; without them the font tests meet an environment no pull request saw.
+      - name: Install CJK and emoji fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk fonts-noto-color-emoji
+
       - name: Run application checks
         run: pnpm ci:check
+        env:
+          MONODOCS_TEST_SAMPLE_FONTS: "1"
+          VITEST_MAX_WORKERS: "4"
 
       - name: Verify installable npm package
         run: pnpm package:verify
