@@ -67,11 +67,11 @@ v0.16 は、これまでのマイルストーンが先送りしたものを片�
 それらが生成する HTML を `latest` を動かしたあとに検証した。Windows ホストのスクリプトと、Windows で人が
 行う確認はまだ残っている。
 
-1.0 の前に v0.17 を置く。PDF の数式を 1 つのフォントで組み、どこでビルドしても同じ PDF にすることと、
+1.0 の前に v0.17 を置く。PDF の数式を、どこでビルドしても 1 つのフォントで組むことと、
 セキュリティ勧告の対象から外れるよう KaTeX を 0.18 に、Mermaid を 12.2 に上げることである
-（[roadmap.md](roadmap.md)）。0.17.0 はベータを通さず、CI ガイドをそれに固定して `latest` に出す。
-公開パッケージとリリースバイナリの検証、サンプルと Windows でビルドした PDF の目視は、`latest` を
-動かしたあとに行う。
+（[roadmap.md](roadmap.md)）。0.17.0 はベータを通さず、CI ガイドをそれに固定して `latest` に出した。
+`latest` を動かしたあとに、公開パッケージとリリースバイナリを検証し、サンプルと Windows でビルドした
+PDF を見た。Windows ホストのスクリプト、Windows で人が行う確認、`next` の移動はまだ残っている。
 
 v0.18〜v0.20 も 1.0 の前に置く。Git を見ない読み手のために、旧版との差分を書き込んだ HTML と PDF を
 3 つのリリースで出す。12.4 は 1.x でも許すが、先に入れる。足すものは 1.0 が凍結する表面であり、それを
@@ -620,7 +620,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [x] `mermaid.mode: pre-render` がラベルを組む場所でも持っているフォントを読み込むか（HTML の SVG も変わる）、pre-render の図は対象から外してそう書くかを、実装のときに選ぶ——書かれたどちらでもない形にした。HTML の SVG はこれまでどおりマシンのフォントで組み、ラベルに数式を含む図は PDF のためにもう一度、持っているフォントで組む
 - [x] `font/no-math-table` をどうするか（キー、対象から外した pre-render のラベル、テーマ自身の `font-family` のどこでも条件が起きなくなるときだけ落とす）と、テーマ自身が `math` に指定した `font-family` が PDF でも効くかを決める。後者は英語・日本語の設定リファレンスの `html.theme` に書き、テストが確かめる。コードについては [roadmap.md](roadmap.md) 27.3 の約束に従う。pre-render の図を対象から外すなら、MATH フォントの無いマシンでは、検査はこれまでどおり pre-render のラベルの数式を報告する——コードは残す。テーマが `math` に指定した `font-family` は PDF でも使われるからで、そのことを `html.theme` の下に両言語で書き、`build.mathfont.test.ts` で確かめる。pre-render のラベルは対象から外さないので、最後の条件は起きない
 - [x] PDF を印刷するマシンに MATH フォントが要ると書いている文書が、持っているフォントで何が変わるかを英語・日本語で書く。[roadmap.md](roadmap.md) 6.4 の 3 番目の条件と開発イメージでのフィクスチャの段落、CI ガイド、設定リファレンスの `fontCheck` と `math` の注記、開発イメージではサンプルが数式を報告するという [development.md](development.md) の注記、[syntax.md](syntax.md)、サンプルの数式のページと `examples/math` 自身のページ、コードを残すなら `font/no-math-table` のメッセージ、1 つの成果物で両方の読み方を賄うと書く [roadmap.md](roadmap.md) 24.6 に足す、HTML をブラウザで印刷する読者にはブラウザのフォントが使われるという注記である。`scripts/site-pdf-sample.sh` は Latin Modern Math を写すのをやめ、持っているフォントが使われないときは、メッセージを読むのではなく各 PDF がそのフォントを埋め込んでいるかを確かめて、これまでどおり失敗する——24.6、設定リファレンス、development.md、サンプルの数式のページ、`examples/math`、メッセージ、`site-pdf-sample.sh` はフォントと一緒に変えた。6.4 の 3 番目の条件には pre-render の図のラベルという例外を足した。CI ガイドは `fonts-lmodern` を入れるのをやめ、PDF の数式のためのフォントはランナーに要らないこと、HTML を書き出すビルドで pre-render した図のラベルにある数式には要ること（HTML の SVG はラベルをランナーのフォントで組む）を書く。版を変えるまでは `monodocs@0.16.0` に固定したままである。syntax.md は、HTML を印刷するときはブラウザのフォントが使われることと、`examples/math` でブラウザのフォントや PDF のフォントを確かめられること、テーマが `math` に自分のフォントを指定すると、フォント検査はそのフォントでもマシンのほかのフォントでも描けない文字を報告することを書く。`examples/math` と設定リファレンスの `fontCheck` も `font/missing` について同じことを書く
-- [ ] Windows でビルドした PDF が持っているフォントを埋め込み、すべての数式をそれで組み、フォントの指摘が出ない。[roadmap.md](roadmap.md) 6.4 が記録した `\bar` と根号をもう一度見る。持っているフォントでどうなるかを 6.4 と英語・日本語の [syntax.md](syntax.md) に書く。見る PDF は、`0.17.0` の検証が Windows のランナーから残すもので、14 日のうちに見るか、ワークフローを走らせ直して得る
+- [x] Windows でビルドした PDF が持っているフォントを埋め込み、すべての数式をそれで組み、フォントの指摘が出ない。[roadmap.md](roadmap.md) 6.4 が記録した `\bar` と根号をもう一度見る。持っているフォントでどうなるかを 6.4 と英語・日本語の [syntax.md](syntax.md) に書く。見る PDF は、`0.17.0` の検証が Windows のランナーから残すもので、14 日のうちに見るか、ワークフローを走らせ直して得る——公開した 0.17.0 から `verify-published.yml` が Windows のランナー（Cambria Math、Yu Gothic、MS Gothic がある）で組んだ PDF（run 38699613396）は、`NewCMMath-Book` を埋め込み、Cambria Math は埋め込まず、`fontCheck: error` でも何も報告しない。Linux のランナーのものと並べて見ると、根号は横線とつながる。`\bar`・`\dot`・`\acute`・`\grave` は Windows では文字の上端に触れ、900 dpi で見ると Linux ではわずかに離れる。96 dpi で画像にすると Windows の `x̄` と `ẋ` が `x` に読める。数式フォントもマークアップも同じで、何が差を生むかは特定していない。6.4 と syntax.md に英日で記録した
 
 **KaTeX 0.18 と Mermaid 12.2**（[roadmap.md](roadmap.md) 6.4、21.3）
 
@@ -641,11 +641,11 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 
 - [x] ドキュメントサイトの CI ガイドが、英語・日本語とも、`v0.17.0` タグを作る前のバージョン変更そのものの中で `monodocs@0.17.0` に固定する——`site/docs/ci.md` と `site/ja/docs/ci.md` の 4 か所ずつを、CLI を 0.17.0 に上げる変更の中で固定した
 - [x] `verify-published.yml` に 0.17 の判定と、持っているフォントを確かめる手順を足し、以下より前にマージする——`SUPPORTS_V017` と、`examples/math` を `fontCheck: error` で PDF にする手順を足した。手順は、PDF が `NewCMMath-Book` を埋め込み、名前が `/math|cambria/i` に当たるほかのフォントを埋め込まないこと、数式の無い PDF はそれを埋め込まないことを確かめる。各ランナーでビルドが書き出した PDF は、その後の検査が失敗しても成果物として 14 日残し、Windows で `\bar` と根号を見るのに使う。フィクスチャの日本語の本文のために、Linux では Noto CJK を入れ、Windows では付属の日本語フォント（Yu Gothic・Meiryo・MS Gothic）をログに名指す。同梱のフォントがマシンの数式フォントより先に使われることを確かめるため、Linux では Latin Modern Math を入れて fontconfig から見えることを確かめ、Windows では Cambria Math（`cambria.ttc`）があることを確かめる。数式フォント（Windows では日本語フォントも）が無ければ、その旨で失敗する。0.15 の告知の手順は、0.17 からは、CDN のランタイムが inline のランタイムの告知が名指す Mermaid の版を読み込むことも確かめる。走らせたもの：フォントを入れて確かめる部分と Windows の分岐を除いた手順のコマンドは、`SUPPORTS_V017=true` にした告知の手順とともに、数式フォントが無く Noto CJK のある開発イメージで通った。`scripts/assert-pdf-fonts.mjs` は、ワークフローと同じく、`packages/core` の無いリポジトリのルートと同じ配置のディレクトリに `pdf-lib` を入れ、そこから走らせて通った。Debian では、`fonts-lmodern` を入れると fontconfig から Latin Modern Math が見える。Latin Modern Math を入れた Linux で手順全体を走らせるのと Windows の分岐は、`0.17.0` の検証が初めてになる
-- [ ] `0.17.0` を `latest` タグで公開し、リリースノートに PDF の数式がどう変わるかと、Mermaid と KaTeX を上げて変わるものを書き、`dist_tag: 0.17.0` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。既定の `next` は下で移すまで 0.16.0 を指したままで、0.17 の手順をすべて飛ばしたまま通ってしまうので使わない。0.17 の手順が飛ばされずに走ったことを確かめる
-- [ ] `0.17.0` で `examples/en`、`examples/ja`、`examples/math`、サイトのサンプルをビルドし、PDF の数式と図を見る。読めなくなったものは `0.17.1` で直すか記録する
-- [ ] `v0.17.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する
-- [ ] Node.js の無い Linux x64 ホストで、公開した `v0.17.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
-- [ ] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる
+- [x] `0.17.0` を `latest` タグで公開し、リリースノートに PDF の数式がどう変わるかと、Mermaid と KaTeX を上げて変わるものを書き、`dist_tag: 0.17.0` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。既定の `next` は下で移すまで 0.16.0 を指したままで、0.17 の手順をすべて飛ばしたまま通ってしまうので使わない。0.17 の手順が飛ばされずに走ったことを確かめる——Release のワークフローが npm の provenance 付きで公開し、`latest` は 0.17.0 を指す。最初の実行は、CJK フォントの無いランナーでテストに落ち、`npm publish` の前で止まった。#203 で公開ジョブに PR の CI と同じフォントを入れ、そのマージの後に Release とタグを作り直した。`dist_tag: 0.17.0` で走らせた `verify-published.yml` は Linux x64 と Windows x64 で通り、どちらも `verifying monodocs 0.17.0` と記録し、0.17 の手順（monodocs が持っているフォント、CDN の版）を飛ばさずに走らせた
+- [x] `0.17.0` で `examples/en`、`examples/ja`、`examples/math`、サイトのサンプルをビルドし、PDF の数式と図を見る。読めなくなったものは `0.17.1` で直すか記録する——公開したパッケージで、数式フォントの無い開発イメージからビルドし、警告は出なかった。リリースからデプロイしたサイトのサンプル（サイト自身のビルドが組んだもの）を含め、どの PDF も `NewCMMath-Book` を埋め込む。数式のページ（伸びる括弧と積分記号、つながる根号、揃えた式）と図は意図どおりに読め、0.17.1 で直すものは無い
+- [x] `v0.17.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する——リリースを公開したときに走り、両プラットフォームで通った
+- [x] Node.js の無い Linux x64 ホストで、公開した `v0.17.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する——Node.js の無い `debian:stable-slim` コンテナで、公開した `v0.17.0` のアセットに対して実行した。16 の確認がすべて通った
+- [x] リリースした Linux バイナリが生成した HTML を、目視ではなく操作して確かめる——公開したアセットを `.sha256` で確かめ、Node.js 無しで `examples/en`、`examples/ja`、`examples/math` をビルドし、警告は出なかった。その出力を HTTP で配り、Latin Modern Math を入れた Chromium 154 で、0.16.0 と同じ確認項目で操作した。ナビゲーション：サイドバーに 21 のリンクが出て、リンクで移ると現在のページに印が付き、「次へ」で次のページに移った。375px ではドロワーが開き、リンクで閉じた。検索：`mermaid` で 4 件が出て、開いたページに 4 つのハイライトが付き、`Escape` で欄とハイライトが消えた。`ｲﾝｽﾄｰﾙ`・`埋込み`・`installing` はそれぞれのページに当たった。クリアボタンにはラベル（英語は「Clear search」、日本語は「検索語を消去」）があり、押すと語を消してフォーカスを欄に残した。表示：ダークモードが再読み込みで残り、フッターは `monodocs v0.17.0` で、図が描かれ、ランタイムの告知は `mermaid@12.2.0` を 1 回と `katex@0.18.11` を名指した。AsciiDoc のチェックリストは `❏` も `✓` も無い 7 つの無効な checkbox になり、Markdown の図は中央（左右 272px）に来た。23 の数式は Latin Modern Math で描かれた。スクリプトのエラーは無く、失敗した要求はブラウザ自身の `favicon.ico` だけだった
 - [ ] Windows 11 ホストで、公開した `v0.17.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
 - [ ] 人にしか答えられない Windows での確認。生成した HTML の Edge での見え方（とりわけ日本語と数式）、数式を含む PDF を開いて印刷すること、`serve --open` が既定のブラウザを開くこと、ブラウザでダウンロードしたアセットの Mark of the Web と SmartScreen
 - [ ] `next` の dist-tag を `0.17.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.17.0` に固定していることを確かめる

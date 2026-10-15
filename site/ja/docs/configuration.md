@@ -616,7 +616,7 @@ figures:
 - 次のものはそれぞれ報告し、その部分なしで数式を描く。Unicode に文字の無い書体（`math/style-unsupported`、例：`\mathit{123}`）、描かれない数式番号（`math/numbering-unsupported`、例：星の無い `equation` や、`align*` の中に書いた `\tag{}`。星付きの環境の後ろなど、数式の最上位に書いた `\tag{}` は描く）、CSS で描けない囲み（`math/notation-unsupported`、例：`\phase`）、ブラウザが書かれたとおりに描けない構文（`math/construct-unsupported`、例：`\vcenter`）。
 
 > [!IMPORTANT]
-> 数式はブラウザが OpenType MATH フォントで描く。**PDF では**、印刷するマシンにどのフォントがあっても、monodocs が持っているフォント New Computer Modern Math（Book）で組む。そのため PDF の数式は、どこでビルドしても同じに組まれる。マシンに数式用のフォントは要らず、数式の無い文書はこのフォントを読み込まない。テーマが `math` に自分のフォントを指定していれば、そちらが使われる（[`html.theme`](#html-theme-カスタムテーマ) を参照）。**HTML では**、読者のブラウザが読者のフォントで数式を描く。Windows には Cambria Math が付属し、Linux では Latin Modern Math などが要る（Debian と Ubuntu では `fonts-lmodern`）。無いと括弧が伸びず、数学用の文字を持つフォントがほかに無ければ変数が tofu になる。HTML をブラウザから印刷するときも、使われるのはブラウザのフォントで、monodocs が持っているフォントではない。
+> 数式はブラウザが OpenType MATH フォントで描く。**PDF では**、印刷するマシンにどのフォントがあっても、monodocs が持っているフォント New Computer Modern Math（Book）で組む。そのため PDF の数式は、どこでビルドしても同じフォントで組まれる（0.17.0 の検証では、同じフォントでも、Windows のランナーの PDF で `\bar` などいくつかのアクセントが Linux のランナーのものより低く付き、文字に触れた）。マシンに数式用のフォントは要らず、数式の無い文書はこのフォントを読み込まない。テーマが `math` に自分のフォントを指定していれば、そちらが使われる（[`html.theme`](#html-theme-カスタムテーマ) を参照）。**HTML では**、読者のブラウザが読者のフォントで数式を描く。Windows には Cambria Math が付属し、Linux では Latin Modern Math などが要る（Debian と Ubuntu では `fonts-lmodern`）。無いと括弧が伸びず、数学用の文字を持つフォントがほかに無ければ変数が tofu になる。HTML をブラウザから印刷するときも、使われるのはブラウザのフォントで、monodocs が持っているフォントではない。
 
 ### `html`
 
