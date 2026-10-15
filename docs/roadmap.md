@@ -875,7 +875,8 @@ Two Math, Libertinus Math, TeX Gyre Pagella Math and Termes Math, Noto Sans Math
 - None of the nine fixes `\bar` touching its letter: KaTeX writes `<mo>¯</mo>` (U+00AF), which
   Chromium does not stretch, and every font set it on or against the letter's top. That is a matter
   of the markup, not of the font, and is left as it is. On Linux the radical joined its bar in every
-  font. Both are looked at again on Windows before 0.17.0.
+  font. Both are looked at again on Windows, in the PDF `verify-published.yml` keeps for 0.17.0;
+  anything that needs a fix goes into 0.17.1.
 
 The file is `NewCMMath-Book.otf` from the CTAN package `newcomputermodern` 8.1.1, by Antonis
 Tsolomitis, unmodified (SHA-256 `2ea09ebc…becd95`), under the GUST Font License 1.0, which is the LaTeX
@@ -5890,9 +5891,10 @@ Make a PDF's formulas the same wherever the PDF is built, and move KaTeX past a 
 the Mermaid runtime in step. Both change what existing documents build: the first how every formula
 in a PDF looks, the second possibly the MathML of some formulas and the diagrams' runtime. The first
 is a change of default, which 12.4 allows after 1.0 only in a major release, or in 1.x behind a key;
-to make it the default, v0.17 comes before 1.0. The second
-could come in any release, since 12.4 does not promise the same output across versions; it comes
-here so that 1.0 starts on dependencies outside the advisory, with one beta for both.
+to make it the default, v0.17 comes before 1.0. The second could come in any release, since 12.4
+does not promise the same output across versions; it comes here so that 1.0 starts on dependencies
+outside the advisory, and so that what existing documents build changes in one release rather than
+two.
 
 - **A PDF's formulas depend on the build machine's math font** (6.4). The same document built on
   Linux with Latin Modern Math and on Windows with Cambria Math gives two PDFs that set formulas
@@ -5987,13 +5989,19 @@ Completion criteria:
   detection reads; their tests pass
 - testing.md lists the new and inverted tests in both languages, among them the test in
   `build.fontcheck.test.ts` that expects only the formulas' findings in the development image
-- Because every PDF with a formula changes, 0.17.0 goes through a beta before `latest`, with the
-  verification 0.16.0 had: the published package on Linux x64 and Windows x64 through
-  `verify-published.yml` with steps for the carried font, the release binaries, a driven browser
-  pass over what the released Linux binary builds, `verify-windows-binary.ps1` on Windows 11 and the
-  Windows checks a person has to make, the samples built and looked at during the beta, and the CI
-  guide pinned to the release. The release notes say how formulas in a PDF change, and
-  what the Mermaid and KaTeX move changes
+- Every PDF with a formula changes, but 0.17.0 goes to `latest` without the beta 0.15.0 and 0.16.0
+  had, which this plan first called for: PR CI already installs the packed package on Linux and
+  Windows and checks that its PDF embeds the carried font (`package:verify`), and the published
+  package's verification and the look at the samples come after 0.17.0 is published, a fix going
+  into 0.17.1. It has the rest of the
+  verification
+  0.16.0 had: the published package on Linux x64 and Windows x64 through `verify-published.yml` with
+  steps for the carried font, the release binaries, a driven browser pass over what the released
+  Linux binary builds, `verify-windows-binary.ps1` on Windows 11 and the Windows checks a person has
+  to make, the samples built with 0.17.0 and looked at, and the CI guide pinned to the release.
+  Without a beta, `next` still points at 0.16.0, so the published package is verified with
+  `dist_tag: 0.17.0`, as 0.13.0 was, and `next` is moved onto 0.17.0 afterwards. The release notes
+  say how formulas in a PDF change, and what the Mermaid and KaTeX move changes
 
 ---
 
