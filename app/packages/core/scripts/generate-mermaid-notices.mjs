@@ -242,7 +242,7 @@ const PREBUILT_AUDITED = {
     licenceTexts: ["EPL-1.0.txt", "Xerces-ASL-1.1.txt"],
     apache: true,
   },
-  "katex@0.16.47": {
+  "katex@0.18.11": {
     vendored: [
       "dist/katex.mjs also contains hyphenate and escape, adapted from Facebook's React under the",
       "Apache License, Version 2.0 (Copyright Facebook, Inc.), whose full text is reproduced in this",
@@ -289,7 +289,7 @@ const PREBUILT_AUDITED = {
     apache: true,
   },
   "marked@16.3.0": {},
-  "mermaid@12.1.0": {
+  "mermaid@12.2.0": {
     vendored: [
       "src/diagrams/gantt/ganttRenderer.js contains checkUnique, adapted from a Stack Overflow answer",
       "by Justin Johnson (https://stackoverflow.com/a/1890233), posted 2009-12-12 and so licensed",

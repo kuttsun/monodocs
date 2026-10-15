@@ -613,7 +613,7 @@ figures:
 数式は KaTeX が MathML だけに描き、出力にスクリプトもスタイルシートも加えない。報告されるものは次のとおり。
 
 - KaTeX が解析できない数式（`math/parse-failed`）や、`\href` などのリンクや HTML のコマンドを使う数式（`math/command-not-allowed`）は、書かれたとおりに示す。
-- 次のものはそれぞれ報告し、その部分なしで数式を描く。Unicode に文字の無い書体（`math/style-unsupported`、例：`\mathit{123}`）、自動の数式番号（`math/numbering-unsupported`、例：星の無い `equation`）、CSS で描けない囲み（`math/notation-unsupported`、例：`\phase`）、ブラウザが書かれたとおりに描けない構文（`math/construct-unsupported`、例：`\vcenter`）。
+- 次のものはそれぞれ報告し、その部分なしで数式を描く。Unicode に文字の無い書体（`math/style-unsupported`、例：`\mathit{123}`）、描かれない数式番号（`math/numbering-unsupported`、例：星の無い `equation` や、`align*` の中に書いた `\tag{}`。星付きの環境の後ろなど、数式の最上位に書いた `\tag{}` は描く）、CSS で描けない囲み（`math/notation-unsupported`、例：`\phase`）、ブラウザが書かれたとおりに描けない構文（`math/construct-unsupported`、例：`\vcenter`）。
 
 > [!IMPORTANT]
 > 数式はブラウザが OpenType MATH フォントで描く。**PDF では**、印刷するマシンにどのフォントがあっても、monodocs が持っているフォント New Computer Modern Math（Book）で組む。そのため PDF の数式は、どこでビルドしても同じに組まれる。マシンに数式用のフォントは要らず、数式の無い文書はこのフォントを読み込まない。テーマが `math` に自分のフォントを指定していれば、そちらが使われる（[`html.theme`](#html-theme-カスタムテーマ) を参照）。**HTML では**、読者のブラウザが読者のフォントで数式を描く。Windows には Cambria Math が付属し、Linux では Latin Modern Math などが要る（Debian と Ubuntu では `fonts-lmodern`）。無いと括弧が伸びず、数学用の文字を持つフォントがほかに無ければ変数が tofu になる。HTML をブラウザから印刷するときも、使われるのはブラウザのフォントで、monodocs が持っているフォントではない。
