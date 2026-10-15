@@ -266,7 +266,8 @@ measurement sets:
    reader's browser — Cambria Math ships with Windows; Linux needs a package such as `fonts-lmodern` —
    documented where the CI guide documents the CJK and emoji fonts (24.3.3). Since v0.17 it is a
    requirement in the reader's browser alone: a PDF sets its formulas in the font monodocs carries
-   (below).
+   (below). The exception is a formula in a label of a diagram `mermaid.mode: pre-render` draws for
+   the HTML: the machine that builds lays it out in its own fonts.
 4. What a reader copies and what search indexes are designed and verified before math ships. The
    notation has to agree with them, but it does not settle them: the copy measured above is
    a browser's selection of MathML, which no choice of delimiter changes.

@@ -330,8 +330,9 @@ What it does and does not see:
 - **Formulas are measured as drawn.** A PDF sets them in the math font monodocs carries (see
   [`math`](#math)), so a machine without a math font of its own reports nothing of them. A theme
   that names its own font for `math` sets them in that font instead, and then: a single-letter
-  variable is drawn as a mathematical italic letter (`x` as `𝑥`, U+1D465), so a font without those
-  letters is reported although `x` itself draws; and a font without an OpenType MATH table, without
+  variable is drawn as a mathematical italic letter (`x` as `𝑥`, U+1D465), so that letter is
+  reported when neither that font nor the machine's other fonts draw it, although `x` itself draws;
+  and a font without an OpenType MATH table, without
   which brackets, braces and radicals do not stretch, is reported as `font/no-math-table`, under the
   same `warn`, `error` and `off`. Under `mermaid.mode: pre-render`, a label's formula in the SVG the
   HTML carries is laid out in this machine's fonts, so its letters are reported as before; the PDF

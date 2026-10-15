@@ -24,7 +24,8 @@ PDF では monodocs が持っている New Computer Modern Math で、HTML で�
 - 幅の広いアクセント（式 15）が中身の上（`\utilde` と `\underbrace` は下）に来る。`\overrightarrow` と括弧は中身の幅に伸び、`\widehat` などは Latin Modern Math でも Cambria Math でも New Computer Modern Math でも 1 文字ほどにとどまる（roadmap 6.4）
 
 PDF は MATH フォントの無いマシンで作っても、数式についてフォント検査は何も報告しません（v0.17）。
-テーマが `math` に MATH テーブルの無いフォントを指定すると、数式の文字（`font/missing`）と MATH テーブルの不在（`font/no-math-table`）を報告します。
+テーマが `math` に自分のフォントを指定すると、フォント検査は、そのフォントでもこのマシンのほかのフォントでも描けない数式の文字を `font/missing` として報告します。
+そのフォントで括弧が伸びず、MATH テーブルが無いと分かれば、`font/no-math-table` を報告します。
 
 ## 文中の数式
 
