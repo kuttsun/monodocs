@@ -1,5 +1,6 @@
 = 相棒（AsciiDoc）
 :sd-title: 相棒（AsciiDoc）
+:sd-order: 201
 
 同じフォルダの Markdown ページへ戻る: link:index.md[混在トップ]。
 
