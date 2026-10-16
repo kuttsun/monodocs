@@ -30,12 +30,36 @@
 
 ```bash
 npm install -g monodocs
+# Or run it without installing
+npx monodocs build ./docs -o ./dist/docs.html
+# Or pin the version in a repository
+npm install -D monodocs
 ```
 
 > [!IMPORTANT]
 > PDF output and Mermaid pre-rendering need a system-installed Chromium or Google Chrome; `monodocs` never downloads one. It is found automatically on Linux and Windows (Windows also falls back to Chromium-based Microsoft Edge). Elsewhere, such as macOS, or for a non-standard location, set `PUPPETEER_EXECUTABLE_PATH`.
 
-A standalone binary that runs without Node.js is attached to every [release](https://github.com/kuttsun/monodocs/releases) for Linux x64 and Windows x64. It cannot produce PDFs or pre-render Mermaid, because both drive a headless browser that is left out of the bundle.
+### Standalone binary (no Node.js)
+
+A standalone binary that runs without Node.js is attached to every [release](https://github.com/kuttsun/monodocs/releases) for Linux x64 and Windows x64. Download it with its `.sha256` file. It cannot produce PDFs or pre-render Mermaid, because both drive a headless browser that is left out of the bundle. See [Getting Started](site/docs/getting-started.md#standalone-binary-no-nodejs) for the license notices that come with it.
+
+Linux x64:
+
+```bash
+sha256sum -c monodocs-linux-x64.sha256   # verify the download
+chmod +x monodocs-linux-x64
+./monodocs-linux-x64 build ./docs -o ./dist/docs.html
+```
+
+Windows x64 (PowerShell):
+
+```powershell
+# Verify the download: prints True when the hashes match
+(Get-FileHash .\monodocs-windows-x64.exe).Hash -eq (Get-Content .\monodocs-windows-x64.exe.sha256).Split(' ')[0]
+.\monodocs-windows-x64.exe build .\docs -o .\dist\docs.html
+```
+
+The Windows binary is unsigned, so SmartScreen may warn on first run.
 
 | Item                            | Support                                     |
 | ------------------------------- | ------------------------------------------- |

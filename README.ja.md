@@ -30,12 +30,36 @@
 
 ```bash
 npm install -g monodocs
+# インストールせずに実行する場合
+npx monodocs build ./docs -o ./dist/docs.html
+# リポジトリでバージョンを固定する場合
+npm install -D monodocs
 ```
 
 > [!IMPORTANT]
 > PDF 出力と Mermaid pre-render には、システムにインストールされた Chromium / Google Chrome が必要です（`monodocs` はダウンロードしません）。Linux / Windows では自動検出します（Windows では Chromium ベースの Microsoft Edge にもフォールバックします）。macOS など自動検出の無い環境や標準的でない場所では、`PUPPETEER_EXECUTABLE_PATH` を設定してください。
 
-Node.js 無しで動くスタンドアロンバイナリを、Linux x64 / Windows x64 向けに各[リリース](https://github.com/kuttsun/monodocs/releases)へ添付しています。ヘッドレスブラウザをバンドルから外しているため、PDF 出力と Mermaid pre-render はバイナリでは利用できません。
+### スタンドアロンバイナリ（Node.js 不要）
+
+Node.js 無しで動くスタンドアロンバイナリを、Linux x64 / Windows x64 向けに各[リリース](https://github.com/kuttsun/monodocs/releases)へ添付しています。`.sha256` ファイルと一緒にダウンロードしてください。ヘッドレスブラウザをバンドルから外しているため、PDF 出力と Mermaid pre-render はバイナリでは利用できません。同梱されるライセンス表記については[はじめに](site/ja/docs/getting-started.md#スタンドアロンバイナリnodejs-不要)を参照してください。
+
+Linux x64:
+
+```bash
+sha256sum -c monodocs-linux-x64.sha256   # ダウンロードを検証
+chmod +x monodocs-linux-x64
+./monodocs-linux-x64 build ./docs -o ./dist/docs.html
+```
+
+Windows x64（PowerShell）:
+
+```powershell
+# ダウンロードを検証（ハッシュが一致すれば True と表示）
+(Get-FileHash .\monodocs-windows-x64.exe).Hash -eq (Get-Content .\monodocs-windows-x64.exe.sha256).Split(' ')[0]
+.\monodocs-windows-x64.exe build .\docs -o .\dist\docs.html
+```
+
+Windows バイナリは署名していないため、初回実行時に SmartScreen が警告することがあります。
 
 | 項目                            | サポート範囲                                   |
 | ------------------------------- | ---------------------------------------------- |
