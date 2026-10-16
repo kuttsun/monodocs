@@ -1,5 +1,6 @@
 ---
 title: Mixed (same folder)
+order: 200
 ---
 
 # Markdown / AsciiDoc mixed

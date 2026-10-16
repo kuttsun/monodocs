@@ -1,6 +1,6 @@
 ---
 title: 検索
-order: 3
+order: 400
 ---
 
 # 検索

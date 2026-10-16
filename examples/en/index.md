@@ -1,9 +1,8 @@
 ---
-title: Sample
 order: 1
 ---
 
-# monodocs Sample
+# Overview
 
 🌐 **English** · [日本語](https://kuttsun.github.io/monodocs/ja/sample.html)
 
