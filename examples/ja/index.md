@@ -1,9 +1,8 @@
 ---
-title: サンプル
 order: 1
 ---
 
-# monodocs サンプル
+# 概要
 
 🌐 [English](https://kuttsun.github.io/monodocs/sample.html) · **日本語**
 
@@ -17,7 +16,7 @@ order: 1
 - **AsciiDoc**: [AsciiDoc サンプル](asciidoc/index.adoc)
 - **混在（同一フォルダ）**: [Markdown / AsciiDoc 混在](mixed/index.md)
 
-2・3 つ目は Markdown から AsciiDoc ページへのリンクです。形式をまたいだリンクも
+2 つ目は Markdown から AsciiDoc ページへのリンクです。形式をまたいだリンクも
 単一 HTML 内の hash route に変換されます（混在対応）。
 
 ## ビルド / プレビュー
