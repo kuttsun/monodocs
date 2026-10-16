@@ -16,7 +16,7 @@ Every syntax page shows the **source (raw Markdown / AsciiDoc)** first, then the
 - **AsciiDoc**: [AsciiDoc samples](asciidoc/index.adoc)
 - **Mixed (same folder)**: [Markdown / AsciiDoc mixed](mixed/index.md)
 
-The 2nd and 3rd are links from Markdown to AsciiDoc pages. Cross-format links are
+The 2nd is a link from Markdown to an AsciiDoc page. Cross-format links are
 also converted into hash routes within the single HTML (mixed support).
 
 ## Build / preview
