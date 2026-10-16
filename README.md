@@ -26,7 +26,7 @@
 
 ## Installation
 
-`monodocs` is distributed as an npm package for Node.js 22.12.0 or later. Linux x64 and Windows x64 are the supported platforms.
+`monodocs` is distributed as an npm package for Node.js 22.12.0 or later, and as a standalone binary that needs no Node.js. Linux x64 and Windows x64 are the supported platforms.
 
 ```bash
 npm install -g monodocs
@@ -38,6 +38,13 @@ npm install -D monodocs
 
 > [!IMPORTANT]
 > PDF output and Mermaid pre-rendering need a system-installed Chromium or Google Chrome; `monodocs` never downloads one. It is found automatically on Linux and Windows (Windows also falls back to Chromium-based Microsoft Edge). Elsewhere, such as macOS, or for a non-standard location, set `PUPPETEER_EXECUTABLE_PATH`.
+
+| Item                            | Support                                     |
+| ------------------------------- | ------------------------------------------- |
+| Distribution                    | npm (`npm install` / `npx`), release binary |
+| Node.js                         | 22.12.0 or later (not needed by the binary) |
+| HTML / validate / watch / serve | Linux x64, Windows x64                      |
+| PDF / pre-render                | Requires system Chromium; npm package only  |
 
 ### Standalone binary (no Node.js)
 
@@ -60,13 +67,6 @@ Windows x64 (PowerShell):
 ```
 
 The Windows binary is unsigned, so SmartScreen may warn on first run.
-
-| Item                            | Support                                     |
-| ------------------------------- | ------------------------------------------- |
-| Distribution                    | npm (`npm install` / `npx`), release binary |
-| Node.js                         | 22.12.0 or later (not needed by the binary) |
-| HTML / validate / watch / serve | Linux x64, Windows x64                      |
-| PDF / pre-render                | Requires system Chromium; npm package only  |
 
 ## Quick start
 

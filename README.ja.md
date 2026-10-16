@@ -26,7 +26,7 @@
 
 ## インストール
 
-`monodocs` は **npm パッケージ**として配布し、Node.js 22.12.0 以上で動作します。対応対象は Linux x64 と Windows x64 です。
+`monodocs` は **npm パッケージ**（Node.js 22.12.0 以上で動作）と、Node.js 不要のスタンドアロンバイナリとして配布します。対応対象は Linux x64 と Windows x64 です。
 
 ```bash
 npm install -g monodocs
@@ -38,6 +38,13 @@ npm install -D monodocs
 
 > [!IMPORTANT]
 > PDF 出力と Mermaid pre-render には、システムにインストールされた Chromium / Google Chrome が必要です（`monodocs` はダウンロードしません）。Linux / Windows では自動検出します（Windows では Chromium ベースの Microsoft Edge にもフォールバックします）。macOS など自動検出の無い環境や標準的でない場所では、`PUPPETEER_EXECUTABLE_PATH` を設定してください。
+
+| 項目                            | サポート範囲                                   |
+| ------------------------------- | ---------------------------------------------- |
+| 配布方法                        | npm（`npm install` / `npx`）、リリースバイナリ |
+| Node.js                         | 22.12.0 以上（バイナリでは不要）               |
+| HTML / validate / watch / serve | Linux x64、Windows x64                         |
+| PDF / pre-render                | システムの Chromium が必要。npm パッケージのみ |
 
 ### スタンドアロンバイナリ（Node.js 不要）
 
@@ -60,13 +67,6 @@ Windows x64（PowerShell）:
 ```
 
 Windows バイナリは署名していないため、初回実行時に SmartScreen が警告することがあります。
-
-| 項目                            | サポート範囲                                   |
-| ------------------------------- | ---------------------------------------------- |
-| 配布方法                        | npm（`npm install` / `npx`）、リリースバイナリ |
-| Node.js                         | 22.12.0 以上（バイナリでは不要）               |
-| HTML / validate / watch / serve | Linux x64、Windows x64                         |
-| PDF / pre-render                | システムの Chromium が必要。npm パッケージのみ |
 
 ## クイックスタート
 
