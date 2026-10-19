@@ -45,23 +45,30 @@ export function mapToEarlier(path: string, cwd: string, diff: DiffOptions): stri
   return isAbsolute(rel) ? rel : resolve(resolve(cwd, diff.dir), rel);
 }
 
-/** `path` for a message: relative to the earlier version's directory when it is inside it. */
+/**
+ * `path` for a message: relative to the earlier version's tree when it is inside it — for a ref,
+ * the path in the repository, which says more than `.` would from a directory that version lacks.
+ */
 function shown(path: string, diff: DiffOptions, cwd: string): string {
-  const dir = resolve(cwd, diff.dir);
-  const rel = relative(dir, path);
+  const rel = relative(resolve(cwd, diff.tree ?? diff.dir), path);
   return rel === "" ? "." : isAbsolute(rel) ? path : rel.split(sep).join("/");
 }
 
 /**
- * The earlier version's directory, and the tree it may read. `diff/dir-not-found` when the
- * directory is not one, since a typo there would otherwise read as a version with no pages.
+ * The earlier version's directory, and the tree it may read. `diff/dir-not-found` when the tree is
+ * not a directory, since a typo there would otherwise read as a version with no pages. `diff.dir`
+ * itself need not exist: the current directory may be one the earlier version did not have, and
+ * then every path mapped into it is reported as missing from that version.
  */
 export function earlierRoots(diff: DiffOptions, cwd: string): { dir: string; tree: string } {
-  const dir = resolve(cwd, diff.dir);
-  if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-    throw new MonodocsError("diff/dir-not-found", t("diff.dirNotFound", { path: diff.dir }));
+  const tree = resolve(cwd, diff.tree ?? diff.dir);
+  if (!existsSync(tree) || !statSync(tree).isDirectory()) {
+    throw new MonodocsError(
+      "diff/dir-not-found",
+      t("diff.dirNotFound", { path: diff.tree ?? diff.dir }),
+    );
   }
-  return { dir, tree: resolve(cwd, diff.tree ?? diff.dir) };
+  return { dir: resolve(cwd, diff.dir), tree };
 }
 
 /**
@@ -96,12 +103,19 @@ export function earlierBuildOptions(
 /**
  * The earlier version's configuration, found from its own directory by the rule the new one is
  * found by, with every path it resolves — the file itself, `input`, `root` — checked to stay inside
- * `diff.tree`.
+ * `diff.tree`, and its input checked to be there: a version whose document directory was later
+ * renamed is reported, not compared with nothing.
  */
 export async function loadEarlierConfig(
   options: BuildOptions,
   cwd: string,
   diff: DiffOptions,
+  {
+    requireInput = true,
+  }: {
+    /** False only to learn the root before its files are written, as the CLI does for a ref. */
+    requireInput?: boolean;
+  } = {},
 ): Promise<ResolvedConfig> {
   const { dir, tree } = earlierRoots(diff, cwd);
   const config = await loadConfig(earlierBuildOptions(options, cwd, diff), dir);
@@ -115,6 +129,13 @@ export async function loadEarlierConfig(
         t("diff.outsideVersion", { path: shown(absolute, diff, cwd), label }),
       );
     }
+  }
+  const input = resolve(dir, config.inputDir);
+  if (requireInput && !existsSync(input)) {
+    throw new MonodocsError(
+      "diff/outside-version",
+      t("diff.missingInVersion", { path: shown(input, diff, cwd), label }),
+    );
   }
   return config;
 }

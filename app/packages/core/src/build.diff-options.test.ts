@@ -132,6 +132,25 @@ describe("mapping the command line's paths", () => {
     }
   });
 
+  it("reports a current directory the earlier version lacks, not an empty version", async () => {
+    // The tree is there; the current directory's counterpart in it is not.
+    const missing = diff({ dir: join(then, "renamed"), tree: then });
+    for (const options of [{ inputDir: "." }, {}]) {
+      await expect(loadEarlierConfig(options, now, missing)).rejects.toMatchObject({
+        code: "diff/outside-version",
+        message: expect.stringContaining("renamed"),
+      });
+    }
+  });
+
+  it("is diff/outside-version for an earlier input that is not there", async () => {
+    await rm(join(then, "docs"), { recursive: true });
+    await expect(loadEarlierConfig({}, now, diff())).rejects.toMatchObject({
+      code: "diff/outside-version",
+      message: expect.stringContaining("docs"),
+    });
+  });
+
   it("allows what leaves diff.dir but stays inside diff.tree", async () => {
     await writeFile(join(then, "monodocs.config.yml"), "root: ..\n");
     const config = await loadEarlierConfig({}, now, diff({ tree: base }));

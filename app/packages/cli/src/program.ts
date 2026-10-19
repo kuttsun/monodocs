@@ -170,8 +170,12 @@ export function createProgram(): Command {
         let dispose: (() => void) | undefined;
         // The temporary directory is removed on Ctrl+C too, which does not run `finally`.
         const onSigint = () => {
-          dispose?.();
-          process.exit(130);
+          // git may still be writing into it; whatever cannot be removed now, the exit still is.
+          try {
+            dispose?.();
+          } finally {
+            process.exit(130);
+          }
         };
         try {
           if (options.diffFrom !== undefined && options.diffFromDir !== undefined) {

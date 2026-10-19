@@ -194,10 +194,10 @@ export async function extractEarlierVersion(
   onTemporary?.(dispose);
   try {
     const tree = join(temp, "tree");
-    // The earlier version's counterpart of the current directory. Made even when that version has
-    // no such directory, so a missing input is reported as missing, not as a missing version.
+    // The earlier version's counterpart of the current directory. Made only if that version has
+    // it: one made up would pass for an input that version lacks.
     const dir = join(tree, ...prefix.split("/").filter(Boolean));
-    await mkdir(dir, { recursive: true });
+    await mkdir(tree);
     const env = { GIT_INDEX_FILE: join(temp, "index"), GIT_WORK_TREE: tree };
     // Paths are root-relative and run from the top: with the work tree elsewhere, a relative
     // pathspec would lose the subdirectory it was meant in, and `--literal-pathspecs` keeps a
@@ -285,6 +285,7 @@ export async function extractEarlierVersion(
       }
     };
 
+    await materialize(dir);
     const diff: DiffOptions = { dir, tree, label: ref };
     const mappedInput =
       options.inputDir === undefined ? undefined : mapToEarlier(options.inputDir, cwd, diff);
@@ -298,7 +299,7 @@ export async function extractEarlierVersion(
     // The earlier configuration decides the root; core checks that it stays inside the tree.
     // Whether its own `input` names a file is asked of the index too: made to exist, it is read
     // again, so a file's directory is its root and a `root` naming a file is refused.
-    const first = await loadEarlierConfig(options, cwd, diff);
+    const first = await loadEarlierConfig(options, cwd, diff, { requireInput: false });
     await materialize(resolve(dir, first.inputDir));
     await materialize(resolve(dir, first.rootDir));
     const config = await loadEarlierConfig(options, cwd, diff);

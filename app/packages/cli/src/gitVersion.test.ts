@@ -151,6 +151,23 @@ describe("extracting a ref", () => {
     }
   });
 
+  it("is diff/outside-version from a directory the earlier version did not have", async () => {
+    await write(join(repo, "olddocs", "index.md"), "# Index\n");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "v1");
+    git(repo, "tag", "v1");
+    git(repo, "mv", "olddocs", "docs");
+    git(repo, "commit", "-q", "-m", "renamed");
+    for (const options of [{ inputDir: "." }, {}]) {
+      await expect(
+        extractEarlierVersion("v1", options, { cwd: join(repo, "docs") }),
+      ).rejects.toMatchObject({
+        code: "diff/outside-version",
+        message: expect.stringContaining("docs"),
+      });
+    }
+  });
+
   it("extracts a single-file input with the configuration beside it", async () => {
     await writeHistory();
     const earlier = await extractEarlierVersion("v1", { inputDir: "docs/index.md" }, { cwd: repo });
