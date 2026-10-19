@@ -51,7 +51,7 @@ npm install -D monodocs
 Linux x64:
 
 ```bash
-sha256sum -c monodocs-linux-x64.sha256   # ダウンロードの検証
+sha256sum -c monodocs-linux-x64.sha256   # ダウンロードを検証
 chmod +x monodocs-linux-x64
 ./monodocs-linux-x64 build ./docs -o ./dist/docs.html
 ```
@@ -59,7 +59,7 @@ chmod +x monodocs-linux-x64
 Windows x64（PowerShell）:
 
 ```powershell
-# ダウンロードの検証（ハッシュが一致すれば True と表示）
+# ダウンロードを検証（ハッシュが一致すれば True と表示）
 (Get-FileHash .\monodocs-windows-x64.exe).Hash -eq (Get-Content .\monodocs-windows-x64.exe.sha256).Split(' ')[0]
 .\monodocs-windows-x64.exe build .\docs -o .\dist\docs.html
 ```
