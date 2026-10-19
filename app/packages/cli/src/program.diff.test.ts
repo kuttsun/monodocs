@@ -1,3 +1,8 @@
+import { execFileSync } from "node:child_process";
+import { readdirSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { CommanderError } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "./program";
@@ -40,6 +45,45 @@ describe("--diff-from and --diff-from-dir", () => {
           code: "commander.unknownOption",
         } satisfies Partial<CommanderError>);
       }
+    }
+  });
+
+  it("leave no temporary directory behind when the build ends", async () => {
+    const base = await mkdtemp(join(tmpdir(), "monodocs-program-diff-"));
+    try {
+      await writeFile(join(base, "gitconfig"), "");
+      const env = {
+        ...process.env,
+        GIT_CONFIG_GLOBAL: join(base, "gitconfig"),
+        GIT_CONFIG_NOSYSTEM: "1",
+        GIT_AUTHOR_NAME: "monodocs",
+        GIT_AUTHOR_EMAIL: "monodocs@example.invalid",
+        GIT_COMMITTER_NAME: "monodocs",
+        GIT_COMMITTER_EMAIL: "monodocs@example.invalid",
+      };
+      const git = (...args: string[]) => execFileSync("git", args, { cwd: base, env });
+      await mkdir(join(base, "docs"));
+      await writeFile(join(base, "docs", "index.md"), "# Index\n");
+      git("init", "-q", "-b", "main");
+      git("add", "-A");
+      git("commit", "-q", "-m", "v1");
+      vi.spyOn(process, "cwd").mockReturnValue(base);
+      // A temporary directory of its own, so another test's extraction running alongside is not
+      // counted as this one's.
+      const temp = join(base, "tmp");
+      await mkdir(temp);
+      for (const name of ["TMPDIR", "TMP", "TEMP"]) vi.stubEnv(name, temp);
+      const temporaries = () =>
+        readdirSync(temp).filter((name) => name.startsWith("monodocs-diff-"));
+      const before = temporaries();
+      // The build gets as far as resolving the earlier version, and stops there (7.3).
+      const errors = await run("build", "--diff-from", "HEAD", "-o", join(base, "out.html"));
+      expect(errors.join("\n")).toContain("HEAD");
+      expect(process.exitCode).toBe(1);
+      expect(temporaries().filter((name) => !before.includes(name))).toEqual([]);
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(base, { recursive: true, force: true });
     }
   });
 });

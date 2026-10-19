@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, realpath } from "node:fs/promises";
 import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import {
   type BuildOptions,
   defaultConfigPath,
@@ -41,6 +41,12 @@ type GitResult = { code: number; stdout: Buffer; stderr: string };
 
 /** An index entry's mode for a submodule, which a checkout leaves as an empty directory. */
 const GITLINK_MODE = "160000";
+
+/** An index entry's mode for a symbolic link, whose content is the path it points to. */
+const SYMLINK_MODE = "120000";
+
+/** How many links a path is read through before it is taken to loop, as Linux's `ELOOP` is. */
+const MAX_LINKS = 40;
 
 /**
  * Run git. Its messages are read in the C locale, so that whether the current directory is a
@@ -106,6 +112,10 @@ async function locate(cwd: string, ref: string): Promise<{ top: string; prefix: 
   return { top: resolve(top), prefix };
 }
 
+/** What git says, in the C locale, of a revision it cannot resolve. */
+const REF_NOT_FOUND =
+  /no upstream configured|no such branch|has no upstream|log for '[^']*' only|unknown revision|bad revision|ambiguous argument|invalid object name|not a valid object name|needed a single revision/i;
+
 /** The commit `ref` names; in a shallow clone, the message says how to fetch the history. */
 async function resolveCommit(top: string, ref: string): Promise<string> {
   const result = await git(
@@ -113,9 +123,11 @@ async function resolveCommit(top: string, ref: string): Promise<string> {
     { cwd: top, ref },
   );
   if (result.code === 0) return result.stdout.toString("utf8").trim();
-  // `--quiet` makes a name that is not a commit a silent exit 1; anything git says is another
-  // failure, a broken object store or a permission, and is quoted rather than called a bad name.
-  if (result.code !== 1 || result.stderr !== "") throw gitFailed(ref, result);
+  // `--quiet` makes a name that is not a commit a silent failure — exit 1, or 128 for a reflog entry
+  // past its end — and git still speaks for a name it cannot read, such as `@{upstream}` with none
+  // set. Anything else it says is another failure, a broken object store or a permission, and is
+  // quoted rather than called a bad name.
+  if (result.stderr !== "" && !REF_NOT_FOUND.test(result.stderr)) throw gitFailed(ref, result);
   const shallow = await git(["rev-parse", "--is-shallow-repository"], { cwd: top, ref });
   const isShallow = shallow.code === 0 && shallow.stdout.toString("utf8").trim() === "true";
   throw new MonodocsError(
@@ -124,8 +136,8 @@ async function resolveCommit(top: string, ref: string): Promise<string> {
   );
 }
 
-/** An index entry: its mode, and its path as git wrote it, to hand back byte for byte. */
-type IndexEntry = { mode: string; raw: Buffer };
+/** An index entry: its mode, its object, and its path as git wrote it, to hand back byte for byte. */
+type IndexEntry = { mode: string; object: string; raw: Buffer };
 
 /**
  * The temporary index's entries, keyed by path, root-relative with `/`. The key is decoded as
@@ -143,8 +155,9 @@ function parseIndex(listing: Buffer): Map<string, IndexEntry> {
     const tab = record.indexOf(0x09);
     if (tab === -1) continue;
     const raw = record.subarray(tab + 1);
-    const mode = record.subarray(0, record.indexOf(0x20)).toString("latin1");
-    entries.set(raw.toString("utf8"), { mode, raw });
+    // `<mode> <object> <stage>`
+    const [mode = "", object = ""] = record.subarray(0, tab).toString("latin1").split(" ");
+    entries.set(raw.toString("utf8"), { mode, object, raw });
   }
   return entries;
 }
@@ -197,12 +210,25 @@ export async function extractEarlierVersion(
 
     await run(["read-tree", commit]);
     const index = parseIndex((await run(["ls-files", "-z", "-s"])).stdout);
+    // On a file system that ignores case, git does too, and so does every path the new version's
+    // build reads: `Docs` finds `docs/`. The earlier version's paths are matched the same way.
+    const ignoreCase =
+      (await git(["config", "--bool", "core.ignorecase"], { cwd: top, ref })).stdout
+        .toString("utf8")
+        .trim() === "true";
+    const fold = (path: string) => (ignoreCase ? path.toLowerCase() : path);
+    const byFolded = new Map([...index.keys()].map((path) => [fold(path), path]));
 
     /** `path` relative to the tree with `/`, or undefined when it is not inside it. */
     const inTree = (path: string): string | undefined => {
       const rel = relative(tree, path);
       if (isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`)) return undefined;
       return rel.split(sep).join("/");
+    };
+    /** The entries under a directory, `""` being the whole tree, as the index spells them. */
+    const entriesUnder = (rel: string): string[] => {
+      const under = rel === "" ? "" : `${fold(rel)}/`;
+      return [...index.keys()].filter((path) => fold(path).startsWith(under));
     };
     const writeOut = async (paths: string[]) => {
       const files: Buffer[] = [];
@@ -216,14 +242,46 @@ export async function extractEarlierVersion(
       if (files.length === 0) return;
       await run(["checkout-index", "-f", "-z", "--stdin"], Buffer.concat(files));
     };
+    /**
+     * `rel` as the index has it, read through every link on the way as a checkout would: a link is
+     * written out, and the path continues from its target. Undefined when the path leaves the tree,
+     * which core reports; a cycle stops where the file system would.
+     */
+    const follow = async (rel: string, depth = 0): Promise<string | undefined> => {
+      const parts = rel === "" ? [] : rel.split("/");
+      for (let i = 1; i <= parts.length; i++) {
+        const path = byFolded.get(fold(parts.slice(0, i).join("/")));
+        const entry = path === undefined ? undefined : index.get(path)!;
+        if (entry?.mode !== SYMLINK_MODE || path === undefined) continue;
+        await writeOut([path]);
+        if (depth >= MAX_LINKS) return undefined;
+        const target = (await run(["cat-file", "blob", entry.object])).stdout.toString("utf8");
+        const next = posix.normalize(
+          posix.join(posix.dirname(path), target.replace(/\\/g, "/"), ...parts.slice(i)),
+        );
+        if (posix.isAbsolute(next) || next === ".." || next.startsWith("../")) return undefined;
+        return follow(next === "." ? "" : next, depth + 1);
+      }
+      return byFolded.get(fold(rel)) ?? rel;
+    };
     /** Make `path` exist when the earlier version has it: a file written out, a directory made. */
     const materialize = async (path: string) => {
-      const rel = inTree(path);
+      const inside = inTree(path);
+      const rel = inside === undefined ? undefined : await follow(inside);
       if (rel === undefined) return;
       if (index.has(rel)) return writeOut([rel]);
-      const under = rel === "" ? "" : `${rel}/`;
-      for (const entry of index.keys()) {
-        if (entry.startsWith(under)) return void (await mkdir(path, { recursive: true }));
+      if (entriesUnder(rel).length > 0) await mkdir(join(tree, rel), { recursive: true });
+    };
+    /** Write out everything under a directory, and under every directory a link in it reaches. */
+    const writeTree = async (path: string, seen = new Set<string>()) => {
+      const inside = inTree(path);
+      const rel = inside === undefined ? undefined : await follow(inside);
+      if (rel === undefined || seen.has(rel)) return;
+      seen.add(rel);
+      const paths = entriesUnder(rel);
+      await writeOut(paths);
+      for (const link of paths.filter((p) => index.get(p)!.mode === SYMLINK_MODE)) {
+        await writeTree(join(tree, link), seen);
       }
     };
 
@@ -244,11 +302,7 @@ export async function extractEarlierVersion(
     await materialize(resolve(dir, first.inputDir));
     await materialize(resolve(dir, first.rootDir));
     const config = await loadEarlierConfig(options, cwd, diff);
-    const root = inTree(resolve(dir, config.rootDir));
-    if (root !== undefined) {
-      const under = root === "" ? "" : `${root}/`;
-      await writeOut([...index.keys()].filter((path) => path.startsWith(under)));
-    }
+    await writeTree(resolve(dir, config.rootDir));
     return { diff, dispose };
   } catch (error) {
     dispose();

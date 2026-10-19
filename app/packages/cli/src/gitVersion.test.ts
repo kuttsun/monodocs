@@ -14,7 +14,7 @@ import { extractEarlierVersion } from "./gitVersion";
 let base: string;
 let repo: string;
 
-/** git with an identity and none of the machine's own configuration but the system's. */
+/** git with an identity; the machine's own configuration is set aside in `beforeEach`. */
 function git(cwd: string, ...args: string[]): string {
   return execFileSync("git", args, {
     cwd,
@@ -53,6 +53,11 @@ beforeEach(async () => {
   base = await mkdtemp(join(tmpdir(), "monodocs-git-version-"));
   repo = join(base, "repo");
   await mkdir(repo);
+  // A developer's own settings — `commit.gpgsign`, a global attributes file — would change what
+  // these repositories are, so both the helper and the extraction run without them.
+  await writeFile(join(base, "gitconfig"), "");
+  vi.stubEnv("GIT_CONFIG_GLOBAL", join(base, "gitconfig"));
+  vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
   git(repo, "init", "-q", "-b", "main");
   // The machine's own line-ending setting would make a checkout and the extraction agree for the
   // wrong reason; with it off, only the repository's attributes decide.
@@ -233,10 +238,71 @@ describe("extracting a ref", () => {
     },
   );
 
+  it.skipIf(process.platform === "win32")(
+    "reads a document directory committed as a link through to its target, as a checkout does",
+    async () => {
+      await write(join(repo, "manual", "index.md"), "# Manual\n");
+      await symlink("manual", join(repo, "docs"));
+      git(repo, "add", "-A");
+      git(repo, "commit", "-q", "-m", "linked docs");
+      for (const options of [{}, { inputDir: "docs" }]) {
+        const earlier = await extractEarlierVersion("HEAD", options, { cwd: repo });
+        try {
+          expect(readFileSync(join(earlier.diff.dir, "docs", "index.md"), "utf8")).toBe(
+            "# Manual\n",
+          );
+        } finally {
+          earlier.dispose();
+        }
+      }
+    },
+  );
+
+  it("leaves a submodule as an empty directory, as a checkout without --recurse-submodules", async () => {
+    await write(join(repo, "monodocs.config.yml"), "input: docs\n");
+    await write(join(repo, "docs", "index.md"), "# Index\n");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "pages");
+    const head = git(repo, "rev-parse", "HEAD").trim();
+    git(repo, "update-index", "--add", "--cacheinfo", `160000,${head},docs/vendor`);
+    git(repo, "commit", "-q", "-m", "submodule");
+    const earlier = await extractEarlierVersion("HEAD", {}, { cwd: repo });
+    try {
+      const vendor = join(earlier.diff.dir, "docs", "vendor");
+      expect(statSync(vendor).isDirectory()).toBe(true);
+      expect(readdirSync(vendor)).toEqual([]);
+    } finally {
+      earlier.dispose();
+    }
+  });
+
+  it("finds a path written in another case where git ignores case, as the new build does", async () => {
+    await writeHistory();
+    // Unset is false, and `git config` says so by failing.
+    const ignoreCase = (() => {
+      try {
+        return git(repo, "config", "--bool", "core.ignorecase").trim() === "true";
+      } catch {
+        return false;
+      }
+    })();
+    if (!ignoreCase) return;
+    const earlier = await extractEarlierVersion("v1", { inputDir: "Docs" }, { cwd: repo });
+    try {
+      expect(existsSync(join(earlier.diff.dir, "Docs", "index.md"))).toBe(true);
+    } finally {
+      earlier.dispose();
+    }
+  });
+
   it("removes the temporary directory when the extraction fails", async () => {
     await writeHistory();
     let removed: (() => void) | undefined;
-    const before = readdirSync(tmpdir()).filter((name) => name.startsWith("monodocs-diff-"));
+    // A temporary directory of its own, so another test's extraction is not counted as this one's.
+    const temp = join(base, "tmp");
+    await mkdir(temp);
+    for (const name of ["TMPDIR", "TMP", "TEMP"]) vi.stubEnv(name, temp);
+    const before = readdirSync(temp).filter((name) => name.startsWith("monodocs-diff-"));
     await expect(
       extractEarlierVersion(
         "v1",
@@ -248,7 +314,7 @@ describe("extracting a ref", () => {
       ),
     ).rejects.toMatchObject({ code: "diff/outside-version" });
     expect(removed).toBeDefined();
-    const after = readdirSync(tmpdir()).filter((name) => name.startsWith("monodocs-diff-"));
+    const after = readdirSync(temp).filter((name) => name.startsWith("monodocs-diff-"));
     expect(after.filter((name) => !before.includes(name))).toEqual([]);
   });
 });
@@ -259,6 +325,15 @@ describe("failures that name their cause", () => {
     await expect(extractEarlierVersion("v9", {}, { cwd: repo })).rejects.toMatchObject({
       code: "diff/ref-not-found",
     });
+  });
+
+  it("is diff/ref-not-found for a reflog entry past its end, and an upstream that is not set", async () => {
+    await writeHistory();
+    for (const ref of ["HEAD@{99}", "@{upstream}"]) {
+      await expect(extractEarlierVersion(ref, {}, { cwd: repo })).rejects.toMatchObject({
+        code: "diff/ref-not-found",
+      });
+    }
   });
 
   it("names fetch-depth: 0 in a shallow clone without the ref", async () => {
