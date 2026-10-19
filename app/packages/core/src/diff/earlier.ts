@@ -1,5 +1,5 @@
 import { existsSync, realpathSync, statSync } from "node:fs";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadConfig, type ResolvedConfig } from "../config.js";
 import { MonodocsError } from "../diagnostics.js";
 import { t } from "../messages.js";
@@ -20,9 +20,16 @@ export function earlierLabel(diff: DiffOptions): string {
   return diff.label ?? diff.dir;
 }
 
-/** A path that does not exist resolves as written; one that does, through its links. */
+/**
+ * `path` read through its links. A path that does not exist yet — an earlier version's root before
+ * its files are written — is read through the links of the nearest directory above it that does, so
+ * it compares with a tree under a linked temporary directory as the files will.
+ */
 function real(path: string): string {
-  return existsSync(path) ? realpathSync(path) : resolve(path);
+  const absolute = resolve(path);
+  if (existsSync(absolute)) return realpathSync(absolute);
+  const parent = dirname(absolute);
+  return parent === absolute ? absolute : join(real(parent), basename(absolute));
 }
 
 /** Whether `path` is `tree` or inside it, both read through their links. */

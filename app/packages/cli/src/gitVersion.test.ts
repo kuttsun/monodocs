@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -177,6 +177,62 @@ describe("extracting a ref", () => {
     });
   });
 
+  it("extracts the file an earlier configuration's input names, and what is beside it", async () => {
+    await write(join(repo, "monodocs.config.yml"), "input: docs/index.md\n");
+    await write(join(repo, "docs", "index.md"), "# Index\n\n![](img.png)\n");
+    await write(join(repo, "docs", "img.png"), "png");
+    git(repo, "add", "-A");
+    git(repo, "commit", "-q", "-m", "file input");
+    const earlier = await extractEarlierVersion("HEAD", {}, { cwd: repo });
+    try {
+      expect(existsSync(join(earlier.diff.dir, "docs", "index.md"))).toBe(true);
+      expect(existsSync(join(earlier.diff.dir, "docs", "img.png"))).toBe(true);
+    } finally {
+      earlier.dispose();
+    }
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "works when the temporary directory is reached through a link",
+    async () => {
+      await writeHistory();
+      const real = join(base, "real-tmp");
+      const link = join(base, "link-tmp");
+      await mkdir(real);
+      await symlink(real, link);
+      vi.stubEnv("TMPDIR", link);
+      const earlier = await extractEarlierVersion("v1", {}, { cwd: repo });
+      try {
+        expect(existsSync(join(earlier.diff.dir, "docs", "index.md"))).toBe(true);
+      } finally {
+        earlier.dispose();
+      }
+    },
+  );
+
+  it.skipIf(process.platform !== "linux")(
+    "writes out a file whose name is not UTF-8, as a checkout does",
+    async () => {
+      await write(join(repo, "monodocs.config.yml"), "input: docs\n");
+      await write(join(repo, "docs", "index.md"), "# Index\n");
+      const name = Buffer.concat([
+        Buffer.from(join(repo, "docs") + "/"),
+        Buffer.from([0xff, 0x2e]),
+      ]);
+      writeFileSync(name, "bytes");
+      git(repo, "add", "-A");
+      git(repo, "commit", "-q", "-m", "latin1 name");
+      const earlier = await extractEarlierVersion("HEAD", {}, { cwd: repo });
+      try {
+        const docs = Buffer.from(join(earlier.diff.dir, "docs"));
+        const names = readdirSync(docs, { encoding: "buffer" });
+        expect(names.some((n) => n.equals(Buffer.from([0xff, 0x2e])))).toBe(true);
+      } finally {
+        earlier.dispose();
+      }
+    },
+  );
+
   it("removes the temporary directory when the extraction fails", async () => {
     await writeHistory();
     let removed: (() => void) | undefined;
@@ -223,6 +279,13 @@ describe("failures that name their cause", () => {
     await expect(extractEarlierVersion("v1", {}, { cwd: outside })).rejects.toMatchObject({
       code: "diff/not-a-repository",
     });
+  });
+
+  it("is diff/not-a-repository inside .git, which is no work tree", async () => {
+    await writeHistory();
+    await expect(
+      extractEarlierVersion("v1", {}, { cwd: join(repo, ".git") }),
+    ).rejects.toMatchObject({ code: "diff/not-a-repository" });
   });
 
   it("is diff/git-unavailable when git is not on PATH", async () => {

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath } from "node:fs/promises";
 import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -95,7 +95,9 @@ function gitFailed(ref: string, result: GitResult): MonodocsError {
 async function locate(cwd: string, ref: string): Promise<{ top: string; prefix: string }> {
   const result = await git(["rev-parse", "--show-toplevel", "--show-prefix"], { cwd, ref });
   if (result.code !== 0) {
-    if (/not a git repository/i.test(result.stderr)) {
+    // Inside `.git`, or in a bare repository, git is in a repository but not in a work tree, and
+    // there is no checkout to stand for either.
+    if (/not a git repository|must be run in a work tree/i.test(result.stderr)) {
       throw new MonodocsError("diff/not-a-repository", t("diff.notARepository", { ref }));
     }
     throw gitFailed(ref, result);
@@ -111,6 +113,9 @@ async function resolveCommit(top: string, ref: string): Promise<string> {
     { cwd: top, ref },
   );
   if (result.code === 0) return result.stdout.toString("utf8").trim();
+  // `--quiet` makes a name that is not a commit a silent exit 1; anything git says is another
+  // failure, a broken object store or a permission, and is quoted rather than called a bad name.
+  if (result.code !== 1 || result.stderr !== "") throw gitFailed(ref, result);
   const shallow = await git(["rev-parse", "--is-shallow-repository"], { cwd: top, ref });
   const isShallow = shallow.code === 0 && shallow.stdout.toString("utf8").trim() === "true";
   throw new MonodocsError(
@@ -119,13 +124,27 @@ async function resolveCommit(top: string, ref: string): Promise<string> {
   );
 }
 
-/** The temporary index's entries: each path, root-relative with `/`, and its mode. */
-function parseIndex(listing: Buffer): Map<string, string> {
-  const entries = new Map<string, string>();
-  for (const record of listing.toString("utf8").split("\0")) {
-    if (record === "") continue;
-    const tab = record.indexOf("\t");
-    entries.set(record.slice(tab + 1), record.slice(0, record.indexOf(" ")));
+/** An index entry: its mode, and its path as git wrote it, to hand back byte for byte. */
+type IndexEntry = { mode: string; raw: Buffer };
+
+/**
+ * The temporary index's entries, keyed by path, root-relative with `/`. The key is decoded as
+ * UTF-8 to compare with paths on this side; the raw bytes are what `checkout-index` is given, so a
+ * name that is not UTF-8 is still found.
+ */
+function parseIndex(listing: Buffer): Map<string, IndexEntry> {
+  const entries = new Map<string, IndexEntry>();
+  let start = 0;
+  while (start < listing.length) {
+    let end = listing.indexOf(0, start);
+    if (end === -1) end = listing.length;
+    const record = listing.subarray(start, end);
+    start = end + 1;
+    const tab = record.indexOf(0x09);
+    if (tab === -1) continue;
+    const raw = record.subarray(tab + 1);
+    const mode = record.subarray(0, record.indexOf(0x20)).toString("latin1");
+    entries.set(raw.toString("utf8"), { mode, raw });
   }
   return entries;
 }
@@ -150,7 +169,9 @@ export async function extractEarlierVersion(
   const { top, prefix } = await locate(cwd, ref);
   const commit = await resolveCommit(top, ref);
 
-  const temp = await mkdtemp(join(tmpdir(), "monodocs-diff-"));
+  // Read through its links once: on macOS the temporary directory is under `/var`, a link to
+  // `/private/var`, and a path compared through one and not the other would leave the tree.
+  const temp = await realpath(await mkdtemp(join(tmpdir(), "monodocs-diff-")));
   let disposed = false;
   const dispose = () => {
     if (disposed) return;
@@ -184,17 +205,16 @@ export async function extractEarlierVersion(
       return rel.split(sep).join("/");
     };
     const writeOut = async (paths: string[]) => {
-      const files = paths.filter((path) => index.get(path) !== GITLINK_MODE);
-      // A submodule's contents are not extracted: it appears as an empty directory, as in a
-      // checkout without `--recurse-submodules`.
+      const files: Buffer[] = [];
       for (const path of paths) {
-        if (index.get(path) === GITLINK_MODE) await mkdir(join(tree, path), { recursive: true });
+        const entry = index.get(path)!;
+        // A submodule's contents are not extracted: it appears as an empty directory, as in a
+        // checkout without `--recurse-submodules`.
+        if (entry.mode === GITLINK_MODE) await mkdir(join(tree, path), { recursive: true });
+        else files.push(entry.raw, Buffer.of(0));
       }
       if (files.length === 0) return;
-      await run(
-        ["checkout-index", "-f", "-z", "--stdin"],
-        Buffer.from(files.map((path) => `${path}\0`).join(""), "utf8"),
-      );
+      await run(["checkout-index", "-f", "-z", "--stdin"], Buffer.concat(files));
     };
     /** Make `path` exist when the earlier version has it: a file written out, a directory made. */
     const materialize = async (path: string) => {
@@ -218,6 +238,11 @@ export async function extractEarlierVersion(
     );
 
     // The earlier configuration decides the root; core checks that it stays inside the tree.
+    // Whether its own `input` names a file is asked of the index too: made to exist, it is read
+    // again, so a file's directory is its root and a `root` naming a file is refused.
+    const first = await loadEarlierConfig(options, cwd, diff);
+    await materialize(resolve(dir, first.inputDir));
+    await materialize(resolve(dir, first.rootDir));
     const config = await loadEarlierConfig(options, cwd, diff);
     const root = inTree(resolve(dir, config.rootDir));
     if (root !== undefined) {
