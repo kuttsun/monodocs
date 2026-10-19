@@ -49,10 +49,20 @@ binary comes with a `-NOTICES.txt` file listing the licenses of everything it em
 dependencies, and the Node.js runtime); keep it alongside the binary when you redistribute it inside your
 organization.
 
+Linux x64:
+
 ```bash
 sha256sum -c monodocs-linux-x64.sha256   # verify the download
 chmod +x monodocs-linux-x64
 ./monodocs-linux-x64 build ./docs -o ./dist/docs.html
+```
+
+Windows x64 (PowerShell):
+
+```powershell
+# Verify the download: prints True when the hashes match
+(Get-FileHash .\monodocs-windows-x64.exe).Hash -eq (Get-Content .\monodocs-windows-x64.exe.sha256).Split(' ')[0]
+.\monodocs-windows-x64.exe build .\docs -o .\dist\docs.html
 ```
 
 The binary covers `init`, `build` (HTML), `validate`, `watch`, and `serve`. **PDF output and Mermaid

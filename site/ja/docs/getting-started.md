@@ -48,10 +48,20 @@ npm install -D monodocs
 各バイナリには、同梱物（monodocs 本体・npm 依存・Node.js ランタイム）のライセンスをまとめた
 `-NOTICES.txt` も添付しています。社内などで再配布する場合はバイナリと一緒に配布してください。
 
+Linux x64:
+
 ```bash
-sha256sum -c monodocs-linux-x64.sha256   # ダウンロードの検証
+sha256sum -c monodocs-linux-x64.sha256   # ダウンロードを検証
 chmod +x monodocs-linux-x64
 ./monodocs-linux-x64 build ./docs -o ./dist/docs.html
+```
+
+Windows x64（PowerShell）:
+
+```powershell
+# ダウンロードを検証（ハッシュが一致すれば True と表示）
+(Get-FileHash .\monodocs-windows-x64.exe).Hash -eq (Get-Content .\monodocs-windows-x64.exe.sha256).Split(' ')[0]
+.\monodocs-windows-x64.exe build .\docs -o .\dist\docs.html
 ```
 
 バイナリで使えるのは `init`・`build`（HTML）・`validate`・`watch`・`serve` です。**PDF 出力と Mermaid の
