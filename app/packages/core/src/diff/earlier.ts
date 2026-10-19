@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readlinkSync, realpathSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readlinkSync, realpathSync, type Stats, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { defaultConfigPath, loadConfig, type ResolvedConfig } from "../config.js";
 import { MonodocsError } from "../diagnostics.js";
@@ -32,17 +32,31 @@ const MAX_LINKS = 40;
 function real(path: string, depth = 0): string {
   const absolute = resolve(path);
   if (existsSync(absolute)) return realpathSync(absolute);
-  const link = lstatSync(absolute, { throwIfNoEntry: false });
-  if (link?.isSymbolicLink() && depth < MAX_LINKS) {
-    return real(resolve(dirname(absolute), readlinkSync(absolute)), depth + 1);
-  }
   const parent = dirname(absolute);
-  return parent === absolute ? absolute : join(real(parent, depth), basename(absolute));
+  if (parent === absolute) return absolute;
+  // The link's target is read from where the link really is, as the file system reads it.
+  const realParent = real(parent, depth);
+  if (entry(absolute)?.isSymbolicLink() && depth < MAX_LINKS) {
+    return real(resolve(realParent, readlinkSync(absolute)), depth + 1);
+  }
+  return join(realParent, basename(absolute));
+}
+
+/**
+ * What is at `path` itself, a link not followed; undefined when nothing is — including when a
+ * directory on the way is a file, which `throwIfNoEntry` alone would still throw for.
+ */
+function entry(path: string): Stats | undefined {
+  try {
+    return lstatSync(path, { throwIfNoEntry: false });
+  } catch {
+    return undefined;
+  }
 }
 
 /** Whether something is at `path`, a link whose target is missing included. */
 function present(path: string): boolean {
-  return lstatSync(path, { throwIfNoEntry: false }) !== undefined;
+  return entry(path) !== undefined;
 }
 
 /** Whether `path` is `tree` or inside it, both read through their links. */

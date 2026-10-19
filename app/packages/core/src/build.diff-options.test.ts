@@ -159,6 +159,31 @@ describe("mapping the command line's paths", () => {
     },
   );
 
+  it("is diff/outside-version where the earlier version has a file for a directory", async () => {
+    await rm(join(then, "docs"), { recursive: true });
+    await writeFile(join(then, "docs"), "a file, once");
+    await mkdir(join(now, "docs", "guide"));
+    expect(await codeOf(loadEarlierConfig({ inputDir: "docs/guide" }, now, diff()))).toBe(
+      "diff/outside-version",
+    );
+    const inDocs = diff({ dir: join(then, "docs"), tree: then });
+    expect(await codeOf(loadEarlierConfig({}, join(now, "docs"), inDocs))).toBe(
+      "diff/outside-version",
+    );
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "reads a missing link's target from where the link really is",
+    async () => {
+      await mkdir(join(then, "a", "b", "c"), { recursive: true });
+      await symlink("../../..", join(then, "a", "b", "c", "up"));
+      await symlink("../nowhere.yml", join(then, "monodocs.config.yml"));
+      expect(await codeOf(loadEarlierConfig({ inputDir: "a/b/c/up" }, now, diff()))).toBe(
+        "diff/outside-version",
+      );
+    },
+  );
+
   it("allows what leaves diff.dir but stays inside diff.tree", async () => {
     await writeFile(join(then, "monodocs.config.yml"), "root: ..\n");
     const config = await loadEarlierConfig({}, now, diff({ tree: base }));
