@@ -1068,17 +1068,20 @@ function assertNoNegatedGlob(patterns: string[], key: string): void {
   }
 }
 
-function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
-  if (options.inputDir) {
-    const inputConfigPath = join(
-      configBaseFor(resolve(cwd, options.inputDir)),
-      DEFAULT_CONFIG_FILE,
-    );
-    return existsSync(inputConfigPath) ? inputConfigPath : undefined;
-  }
+/**
+ * Where a configuration file is looked for when `-c` is not given: beside the input when one is
+ * named, else in the current directory. Whether it is there is the caller's question — the CLI
+ * asks it of an earlier version's index before that version's files exist (roadmap 7.3.1).
+ */
+export function defaultConfigPath(options: BuildOptions, cwd: string): string {
+  return options.inputDir
+    ? join(configBaseFor(resolve(cwd, options.inputDir)), DEFAULT_CONFIG_FILE)
+    : resolve(cwd, DEFAULT_CONFIG_FILE);
+}
 
-  const cwdConfigPath = resolve(cwd, DEFAULT_CONFIG_FILE);
-  return existsSync(cwdConfigPath) ? cwdConfigPath : undefined;
+function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
+  const path = defaultConfigPath(options, cwd);
+  return existsSync(path) ? path : undefined;
 }
 
 /**

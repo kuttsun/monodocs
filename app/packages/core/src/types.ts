@@ -222,6 +222,23 @@ export type BuildOptions = {
    * CI must not turn every save into a failed rebuild, which would also stop the preview reloading.
    */
   onBudget?: "warn" | "error";
+  /** The earlier version to compare against (roadmap 7.3). Unset, the build is as before. */
+  diff?: DiffOptions;
+};
+
+/**
+ * The earlier version a build compares against (roadmap 7.3.1). core only takes a directory: the
+ * CLI turns a git ref into one, so core knows nothing about Git.
+ */
+export type DiffOptions = {
+  /** The earlier version's counterpart of the current directory. */
+  dir: string;
+  /** What the earlier version may read; every path it resolves stays inside. Defaults to dir. */
+  tree?: string;
+  /** The earlier version's name in messages, and in the output when it has no document.version. */
+  label?: string;
+  /** Stage 2: the PDF presentation (7.3.5). Not output yet, so given, it is `diff/unsupported`. */
+  pdf?: "markup" | "bars";
 };
 
 /** {@link buildSite} の結果。 */

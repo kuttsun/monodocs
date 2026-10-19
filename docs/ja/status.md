@@ -682,7 +682,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] 新旧で変わっていない、`{docdir}` を使う AsciiDoc のページが差分にならず、その include と画像は旧版のものが読まれ——`{docdir}` で書いたターゲットの include と画像を含め、旧版のページの行が黙って落ちることなく——、同じ ref からの 2 回のビルドが同じバイト列になる。新旧で変わっていない、`{doctime}` や `{localtime}` を使うページが差分にならず、`SOURCE_DATE_EPOCH` を設定すれば、差分のある 2 回のビルドが同じバイト列になる
 - [ ] `:sectnums:` を使う旧版の AsciiDoc を、`numbering.sections` を使う新版と比べてビルドでき、削除された見出しが番号を持たない
 - [ ] `client` モードで、新版の最後の図と一緒に消した図が描かれる。`pre-render` モードで、図のある旧版を Mermaid を切った新版と比べてビルドできる
-- [ ] PDF の出力と差分の組み合わせが、PDF が `-f pdf`、`-f both`、`output.format` のどれから来ても `diff/unsupported` になる。`watch`、`serve`、`validate` はこのオプションを未知のものとして拒み、`watchSite`、`serveSite`、`validateSite` は `diff` を拒む
+- [x] PDF の出力と差分の組み合わせが、PDF が `-f pdf`、`-f both`、`output.format` のどれから来ても `diff/unsupported` になる。`watch`、`serve`、`validate` はこのオプションを未知のものとして拒み、`watchSite`、`serveSite`、`validateSite` は `diff` を拒む
 - [ ] 同じ新旧の入力から同じバイト列の HTML ができること、差分を出さないビルドが、`siteDataJson` のラベルも含めて、この機能の前と同じバイト列になることを、テストが確かめる。新旧が共有する画像と、2 つのページで同じブロックを削除した場合を含めて、サイズの報告の各行の合計がファイルの大きさになる
 - [ ] `numbering.sections` が有効なとき、表示されるどの番号も、差分の無いビルドで同じページが得る番号と同じである
 - [ ] 変更の一覧のページ ID が、`diff-changes.md` というページとも、記事の ID と一致する ID の見出しとも衝突しない。変更の一覧は検索にも前後のナビゲーションにも入らない。バーのナビゲーションは、ページを出したあとにそれぞれの変更に着く

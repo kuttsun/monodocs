@@ -135,7 +135,7 @@ Two defaults stand for values, and the values are frozen with them.
 | --- | --- | --- |
 | (any) | — | `-V, --version`, `--lang <lang>`, `-h, --help` |
 | `init` | — | — |
-| `build` | `[input]` | `-o, --output <path>`, `-c, --config <file>`, `-f, --format <format>` |
+| `build` | `[input]` | `-o, --output <path>`, `-c, --config <file>`, `-f, --format <format>`, `--diff-from <ref>`, `--diff-from-dir <dir>` |
 | `watch` | `[input]` | `-o, --output <file>`, `-c, --config <file>` |
 | `serve` | `[input]` | `-o, --output <file>`, `-c, --config <file>`, `-p, --port <port>`, `-H, --host <host>`, `--open` |
 | `validate` | `[input]` | `-c, --config <file>`, `--format <format>`, `--strict` |
@@ -154,6 +154,14 @@ A diagnostic's `code` is what a job filters on, and is not renamed. The codes:
 - `config/input-outside-root`
 - `config/invalid`
 - `config/not-found`
+- `diff/conflicting-options`
+- `diff/dir-not-found`
+- `diff/git-failed`
+- `diff/git-unavailable`
+- `diff/not-a-repository`
+- `diff/outside-version`
+- `diff/ref-not-found`
+- `diff/unsupported`
 - `font/missing`
 - `font/no-math-table`
 - `font/unchecked`

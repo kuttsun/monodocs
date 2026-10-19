@@ -43,8 +43,9 @@ describe("the diagnostic code set", () => {
 
   it("carries no code nothing reports", async () => {
     // A code that no source emits is a promise to a consumer that nothing keeps. The registry's
-    // own declaration is removed before the search, or every code would find itself.
-    const files = await sourceFiles(SRC);
+    // own declaration is removed before the search, or every code would find itself. The CLI is
+    // searched too: what only it knows — git, for `--diff-from` — it reports itself.
+    const files = [...(await sourceFiles(SRC)), ...(await sourceFiles(CLI_SRC))];
     expect(files.length).toBeGreaterThan(20);
     const sources = await Promise.all(
       files.map(async (file) => {

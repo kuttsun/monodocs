@@ -121,6 +121,34 @@ const EN = {
     "A distributed PDF cannot reach relative images outside itself.",
   "build.overBudget": "{file} is {size}, over assets.budget ({budget}).",
 
+  // ---- difference from an earlier version (roadmap 7.3) ----
+  "diff.conflictingOptions": "--diff-from and --diff-from-dir cannot be used together.",
+  "diff.dirNotFound": "The earlier version's directory is not found, or is not a directory: {path}",
+  "diff.outsideVersion":
+    "{path} is outside the earlier version ({label}), so what it would read is not that version.",
+  "diff.missingInVersion": "The earlier version ({label}) has no {path}.",
+  "diff.unsupportedFormat":
+    "A difference from an earlier version is output in HTML only; the {format} output cannot have " +
+    "one yet. Build with -f html.",
+  "diff.unsupportedPdf": "diff.pdf (a difference in the PDF) is not output yet.",
+  "diff.unsupportedCommand":
+    "{command} does not compare against an earlier version; build does, with --diff-from or " +
+    "--diff-from-dir.",
+  "diff.notWritten":
+    "The earlier version ({label}) was found, but this monodocs does not write the difference into " +
+    "the HTML yet, so nothing was output.",
+  "diff.gitUnavailable":
+    "git is not found on PATH, and --diff-from {ref} needs it to read the earlier version. Install " +
+    "git, or pass a copy of that version with --diff-from-dir.",
+  "diff.notARepository":
+    "The current directory is not inside a git work tree, so --diff-from {ref} has no history to " +
+    "read. Run from inside the repository, or use --diff-from-dir.",
+  "diff.refNotFound": "{ref} does not name a commit in this repository.",
+  "diff.refNotFoundShallow":
+    "{ref} does not name a commit in this repository, which is a shallow clone. Fetch the history " +
+    "it is in; in GitHub Actions, actions/checkout with fetch-depth: 0.",
+  "diff.gitFailed": "git failed while reading the earlier version {ref}: {detail}",
+
   // ---- pages ----
   "pages.noRenderer": 'No renderer for "{path}" ({format}); skipped.',
   "pages.routeCollision":
@@ -324,6 +352,11 @@ index are all inside it — so it can be handed to someone as it is.
   "cli.build.opt.output":
     "Output target (html: file / pdf: file / both: directory. default: ./dist/docs.html)",
   "cli.build.opt.format": "Output format html | pdf | both (default: html)",
+  "cli.build.opt.diffFrom":
+    "Write the difference from an earlier version, a git ref, into the HTML",
+  "cli.build.opt.diffFromDir":
+    "Write the difference from an earlier version into the HTML, read from a directory that stands " +
+    "for the current one",
   "cli.watch.description": "Watch the input and config file, rebuilding on change",
   "cli.watch.opt.output": "Output file (default: ./dist/docs.html)",
   "cli.serve.description": "Serve locally, watching for changes and live-reloading",
@@ -460,6 +493,32 @@ const JA: Record<MessageKey, string> = {
     "配布された PDF は自分の外にある相対パスの画像を参照できないためです。",
   "build.overBudget": "{file} は {size} で、assets.budget（{budget}）を超えています。",
 
+  "diff.conflictingOptions": "--diff-from と --diff-from-dir は同時に指定できません。",
+  "diff.dirNotFound": "以前の版のディレクトリが見つからないか、ディレクトリではありません: {path}",
+  "diff.outsideVersion":
+    "{path} は以前の版（{label}）の外にあります。そこから読むものは、その版ではありません。",
+  "diff.missingInVersion": "以前の版（{label}）に {path} がありません。",
+  "diff.unsupportedFormat":
+    "以前の版との差分を出力できるのは HTML だけです。{format} の出力にはまだ書き込めません。" +
+    "-f html でビルドしてください。",
+  "diff.unsupportedPdf": "diff.pdf（PDF への差分）はまだ出力できません。",
+  "diff.unsupportedCommand":
+    "{command} は以前の版と比較しません。比較するのは build で、--diff-from か --diff-from-dir を" +
+    "指定します。",
+  "diff.notWritten":
+    "以前の版（{label}）は見つかりましたが、この monodocs はまだ差分を HTML に書き込めません。" +
+    "何も出力していません。",
+  "diff.gitUnavailable":
+    "PATH に git が見つかりません。--diff-from {ref} は以前の版を読むのに git を使います。git を" +
+    "入れるか、その版の写しを --diff-from-dir で渡してください。",
+  "diff.notARepository":
+    "現在のディレクトリが git の作業ツリーの中にないため、--diff-from {ref} が読む履歴がありません。" +
+    "リポジトリの中で実行するか、--diff-from-dir を使ってください。",
+  "diff.refNotFound": "{ref} はこのリポジトリのコミットを指していません。",
+  "diff.refNotFoundShallow":
+    "{ref} はこのリポジトリのコミットを指していません。このリポジトリは浅いクローンです。その ref を" +
+    "含む履歴を取得してください。GitHub Actions では actions/checkout に fetch-depth: 0 を指定します。",
+  "diff.gitFailed": "以前の版 {ref} を読む途中で git が失敗しました: {detail}",
   "pages.noRenderer": '"{path}"（{format}）に対応するレンダラがありません。スキップしました。',
   "pages.routeCollision":
     'route の衝突: "{route}" が "{first}" と "{second}" の両方から生成されます。',
@@ -647,6 +706,9 @@ monodocs build
   "cli.build.opt.output":
     "出力先（html: ファイル / pdf: ファイル / both: ディレクトリ。既定: ./dist/docs.html）",
   "cli.build.opt.format": "出力形式 html | pdf | both（既定: html）",
+  "cli.build.opt.diffFrom": "git の ref で指定した以前の版との差分を HTML に書き込む",
+  "cli.build.opt.diffFromDir":
+    "以前の版との差分を HTML に書き込む。以前の版は、現在のディレクトリに当たるディレクトリから読む",
   "cli.watch.description": "入力・設定ファイルの変更を監視して再ビルドする",
   "cli.watch.opt.output": "出力ファイル（既定: ./dist/docs.html）",
   "cli.serve.description": "ローカルサーバーで配信し、変更を監視してライブリロードする",

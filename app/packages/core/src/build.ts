@@ -12,6 +12,12 @@ import type {
 import { loadConfig, type MermaidMode, type OnLargeImage, type ResolvedConfig } from "./config.js";
 import { bySeverity, type Diagnostic, MonodocsError, toDiagnostic, warn } from "./diagnostics.js";
 import {
+  assertDiffSupported,
+  assertNoDiff,
+  earlierLabel,
+  loadEarlierConfig,
+} from "./diff/earlier.js";
+import {
   documentAuthor,
   documentCoverParts,
   documentKeywords,
@@ -230,6 +236,16 @@ export async function buildSite(
 ): Promise<BuildResult> {
   const cwd = process.cwd();
   const config = await loadConfig(options, cwd);
+  if (options.diff !== undefined) {
+    assertDiffSupported(config, options.diff);
+    await loadEarlierConfig(options, cwd, options.diff);
+    // The earlier version is named and found (7.3.1), but nothing writes the difference yet, and
+    // a difference asked for and not output would be accepted and ignored (7.3).
+    throw new MonodocsError(
+      "diff/unsupported",
+      t("diff.notWritten", { label: earlierLabel(options.diff) }),
+    );
+  }
 
   // PDF は配布時に読者のファイルシステム上の相対画像を参照できないため、PDF を出力する場合は
   // 画像を data URI として埋め込む必要がある。embedImages: false や onLargeImage: external
@@ -427,6 +443,7 @@ export async function validateSite(options: BuildOptions = {}): Promise<Validate
   // problem happened to be fatal.
   const found: Diagnostic[] = [];
   try {
+    assertNoDiff(options, "validate");
     const config = await loadConfig(options, cwd);
     found.push(...config.warnings);
     // validate は出力を書き出さないため format（html/pdf/both）に関わらず同じ検証を行う。

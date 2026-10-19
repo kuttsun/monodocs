@@ -5,6 +5,7 @@ import { loadConfig } from "./config.js";
 import { resolveOutputs } from "./build.js";
 import { watchSite, type WatchHandle } from "./watch.js";
 import type { BuildOptions, BuildResult } from "./types.js";
+import { assertNoDiff } from "./diff/earlier.js";
 
 /** ライブリロード用の SSE エンドポイント。 */
 const LIVE_RELOAD_PATH = "/__monodocs-livereload";
@@ -57,6 +58,7 @@ export async function serveSite(
   options: ServeOptions = {},
   callbacks: ServeCallbacks = {},
 ): Promise<ServeHandle> {
+  assertNoDiff(options, "serve");
   const cwd = process.cwd();
   // serve はプレビュー用途なので、設定が pdf / both でも HTML を配信する（PDF を毎回
   // 生成しない）。HTML の出力先を決め、その場所へ format=html で固定ビルドさせる。

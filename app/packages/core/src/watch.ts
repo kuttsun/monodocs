@@ -5,6 +5,7 @@ import { loadConfig } from "./config.js";
 import type { BuildOptions, BuildResult } from "./types.js";
 import { t } from "./messages.js";
 import { MonodocsError } from "./diagnostics.js";
+import { assertNoDiff } from "./diff/earlier.js";
 
 /** 連続したファイルイベントをまとめる待ち時間。 */
 const DEBOUNCE_MS = 150;
@@ -32,6 +33,7 @@ export async function watchSite(
   options: BuildOptions = {},
   callbacks: WatchCallbacks = {},
 ): Promise<WatchHandle> {
+  assertNoDiff(options, "watch");
   const cwd = process.cwd();
   const config = await loadConfig(options, cwd);
   const inputPath = isAbsolute(config.inputDir) ? config.inputDir : resolve(cwd, config.inputDir);

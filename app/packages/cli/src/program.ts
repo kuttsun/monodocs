@@ -1,10 +1,14 @@
 import { spawn } from "node:child_process";
 import { Command, CommanderError } from "commander";
 import {
+  assertDiffSupported,
   buildSite,
+  type BuildOptions,
   type BuildResult,
   initSite,
+  loadConfig,
   MESSAGE_LANGS,
+  MonodocsError,
   resolveMessageLang,
   serveSite,
   setMessageLang,
@@ -16,6 +20,7 @@ import {
   type OutputFormat,
 } from "@monodocs/core";
 import packageJson from "../package.json" with { type: "json" };
+import { extractEarlierVersion } from "./gitVersion.js";
 import { REPORT_FORMATS, renderReport, resolveReportFormat } from "./report.js";
 
 declare const __MONODOCS_VERSION__: string;
@@ -141,24 +146,56 @@ export function createProgram(): Command {
     .option("-o, --output <path>", t("cli.build.opt.output"))
     .option("-c, --config <file>", t("cli.opt.config"))
     .option("-f, --format <format>", t("cli.build.opt.format"))
+    .option("--diff-from <ref>", t("cli.build.opt.diffFrom"))
+    .option("--diff-from-dir <dir>", t("cli.build.opt.diffFromDir"))
     .helpOption("-h, --help", t("cli.help.helpOption"))
     .action(
       async (
         input: string | undefined,
-        options: { output?: string; config?: string; format?: string },
+        options: {
+          output?: string;
+          config?: string;
+          format?: string;
+          diffFrom?: string;
+          diffFromDir?: string;
+        },
       ) => {
+        const buildOptions: BuildOptions = {
+          inputDir: input,
+          outputFile: options.output,
+          configFile: options.config,
+          format: options.format as OutputFormat | undefined,
+          generatorVersion: CLI_VERSION,
+        };
+        let dispose: (() => void) | undefined;
+        // The temporary directory is removed on Ctrl+C too, which does not run `finally`.
+        const onSigint = () => {
+          dispose?.();
+          process.exit(130);
+        };
         try {
-          const result = await buildSite({
-            inputDir: input,
-            outputFile: options.output,
-            configFile: options.config,
-            format: options.format as OutputFormat | undefined,
-            generatorVersion: CLI_VERSION,
-          });
-          reportBuild(result);
+          if (options.diffFrom !== undefined && options.diffFromDir !== undefined) {
+            throw new MonodocsError("diff/conflicting-options", t("diff.conflictingOptions"));
+          }
+          if (options.diffFromDir !== undefined) {
+            // The label is the argument as written, since it appears in the output (7.3.1).
+            buildOptions.diff = { dir: options.diffFromDir, label: options.diffFromDir };
+          } else if (options.diffFrom !== undefined) {
+            // A difference this build cannot output is refused before git writes anything.
+            assertDiffSupported(await loadConfig(buildOptions), { dir: "" });
+            process.once("SIGINT", onSigint);
+            const earlier = await extractEarlierVersion(options.diffFrom, buildOptions, {
+              onTemporary: (remove) => (dispose = remove),
+            });
+            buildOptions.diff = earlier.diff;
+          }
+          reportBuild(await buildSite(buildOptions));
         } catch (error) {
           printError((error as Error).message);
           process.exitCode = 1;
+        } finally {
+          process.removeListener("SIGINT", onSigint);
+          dispose?.();
         }
       },
     );
