@@ -255,12 +255,18 @@ export async function extractEarlierVersion(
         if (entry?.mode !== SYMLINK_MODE || path === undefined) continue;
         await writeOut([path]);
         if (depth >= MAX_LINKS) return undefined;
-        const target = (await run(["cat-file", "blob", entry.object])).stdout.toString("utf8");
-        const next = posix.normalize(
-          posix.join(posix.dirname(path), target.replace(/\\/g, "/"), ...parts.slice(i)),
-        );
-        if (posix.isAbsolute(next) || next === ".." || next.startsWith("../")) return undefined;
-        return follow(next === "." ? "" : next, depth + 1);
+        const written = (await run(["cat-file", "blob", entry.object])).stdout.toString("utf8");
+        // A link git recorded on Windows may be written with `\`; on POSIX that is a character.
+        const target = process.platform === "win32" ? written.replace(/\\/g, "/") : written;
+        // An absolute target is not the earlier version's; core reports it when it reads it.
+        if (posix.isAbsolute(target) || /^[A-Za-z]:/.test(target)) return undefined;
+        const next = posix
+          .normalize(posix.join(posix.dirname(path), target, ...parts.slice(i)))
+          .split("/")
+          .filter((part) => part !== "" && part !== ".")
+          .join("/");
+        if (next === ".." || next.startsWith("../")) return undefined;
+        return follow(next, depth + 1);
       }
       return byFolded.get(fold(rel)) ?? rel;
     };

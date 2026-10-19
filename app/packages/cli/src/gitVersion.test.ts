@@ -260,12 +260,15 @@ describe("extracting a ref", () => {
     async () => {
       await write(join(repo, "manual", "index.md"), "# Manual\n");
       await symlink("manual", join(repo, "docs"));
+      // Tab completion writes a target with a slash on its end; a checkout reads it the same.
+      await symlink("manual/", join(repo, "guide"));
       git(repo, "add", "-A");
       git(repo, "commit", "-q", "-m", "linked docs");
-      for (const options of [{}, { inputDir: "docs" }]) {
+      for (const options of [{}, { inputDir: "docs" }, { inputDir: "guide" }]) {
         const earlier = await extractEarlierVersion("HEAD", options, { cwd: repo });
         try {
-          expect(readFileSync(join(earlier.diff.dir, "docs", "index.md"), "utf8")).toBe(
+          const input = "inputDir" in options ? options.inputDir : "docs";
+          expect(readFileSync(join(earlier.diff.dir, input, "index.md"), "utf8")).toBe(
             "# Manual\n",
           );
         } finally {
