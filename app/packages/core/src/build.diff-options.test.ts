@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -150,6 +150,14 @@ describe("mapping the command line's paths", () => {
       message: expect.stringContaining("docs"),
     });
   });
+
+  it.skipIf(process.platform === "win32")(
+    "is diff/outside-version for a configuration that links out of the tree, never the defaults",
+    async () => {
+      await symlink("../nowhere.yml", join(then, "monodocs.config.yml"));
+      expect(await codeOf(loadEarlierConfig({}, now, diff()))).toBe("diff/outside-version");
+    },
+  );
 
   it("allows what leaves diff.dir but stays inside diff.tree", async () => {
     await writeFile(join(then, "monodocs.config.yml"), "root: ..\n");

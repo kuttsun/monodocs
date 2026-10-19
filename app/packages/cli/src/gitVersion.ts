@@ -278,17 +278,30 @@ export async function extractEarlierVersion(
       if (index.has(rel)) return writeOut([rel]);
       if (entriesUnder(rel).length > 0) await mkdir(join(tree, rel), { recursive: true });
     };
-    /** Write out everything under a directory, and under every directory a link in it reaches. */
-    const writeTree = async (path: string, seen = new Set<string>()) => {
+    /**
+     * Write out everything under the root, and under every directory a link in it reaches while
+     * staying under the root. A link out of the root is written as the link alone: the build reads
+     * nothing through it — the scan does not follow links, and an image or include whose real path
+     * leaves the root is refused — so its target is not fetched.
+     */
+    const writeRoot = async (path: string) => {
       const inside = inTree(path);
-      const rel = inside === undefined ? undefined : await follow(inside);
-      if (rel === undefined || seen.has(rel)) return;
-      seen.add(rel);
-      const paths = entriesUnder(rel);
-      await writeOut(paths);
-      for (const link of paths.filter((p) => index.get(p)!.mode === SYMLINK_MODE)) {
-        await writeTree(join(tree, link), seen);
-      }
+      const root = inside === undefined ? undefined : await follow(inside);
+      if (root === undefined) return;
+      const underRoot = (rel: string) =>
+        root === "" || fold(rel) === fold(root) || fold(rel).startsWith(`${fold(root)}/`);
+      const seen = new Set<string>();
+      const walk = async (rel: string) => {
+        if (seen.has(rel)) return;
+        seen.add(rel);
+        const paths = entriesUnder(rel);
+        await writeOut(paths);
+        for (const link of paths.filter((p) => index.get(p)!.mode === SYMLINK_MODE)) {
+          const target = await follow(link);
+          if (target !== undefined && underRoot(target)) await walk(target);
+        }
+      };
+      await walk(root);
     };
 
     await materialize(dir);
@@ -309,7 +322,7 @@ export async function extractEarlierVersion(
     await materialize(resolve(dir, first.inputDir));
     await materialize(resolve(dir, first.rootDir));
     const config = await loadEarlierConfig(options, cwd, diff);
-    await writeTree(resolve(dir, config.rootDir));
+    await writeRoot(resolve(dir, config.rootDir));
     return { diff, dispose };
   } catch (error) {
     dispose();

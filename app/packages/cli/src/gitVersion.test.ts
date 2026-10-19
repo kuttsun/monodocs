@@ -278,6 +278,42 @@ describe("extracting a ref", () => {
     },
   );
 
+  it.skipIf(process.platform === "win32")(
+    "is diff/outside-version for a configuration linked from outside the repository",
+    async () => {
+      await write(join(base, "common", "monodocs.yml"), "input: nowhere\n");
+      await write(join(repo, "docs", "index.md"), "# Index\n");
+      await symlink("../common/monodocs.yml", join(repo, "monodocs.config.yml"));
+      git(repo, "add", "-A");
+      git(repo, "commit", "-q", "-m", "linked config");
+      await expect(extractEarlierVersion("HEAD", {}, { cwd: repo })).rejects.toMatchObject({
+        code: "diff/outside-version",
+        message: expect.stringContaining("monodocs.config.yml"),
+      });
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "does not write out what a link under the root reaches outside it",
+    async () => {
+      await write(join(repo, "monodocs.config.yml"), "input: docs\n");
+      await write(join(repo, "docs", "index.md"), "# Index\n");
+      await write(join(repo, "docs", "shared", "a.png"), "png");
+      await write(join(repo, "src", "main.ts"), "export {};\n");
+      await symlink("../src", join(repo, "docs", "code"));
+      await symlink("shared", join(repo, "docs", "images"));
+      git(repo, "add", "-A");
+      git(repo, "commit", "-q", "-m", "links under the root");
+      const earlier = await extractEarlierVersion("HEAD", {}, { cwd: repo });
+      try {
+        expect(existsSync(join(earlier.diff.tree!, "src"))).toBe(false);
+        expect(existsSync(join(earlier.diff.dir, "docs", "images", "a.png"))).toBe(true);
+      } finally {
+        earlier.dispose();
+      }
+    },
+  );
+
   it("leaves a submodule as an empty directory, as a checkout without --recurse-submodules", async () => {
     await write(join(repo, "monodocs.config.yml"), "input: docs\n");
     await write(join(repo, "docs", "index.md"), "# Index\n");

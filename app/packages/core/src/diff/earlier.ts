@@ -1,6 +1,6 @@
-import { existsSync, realpathSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readlinkSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { loadConfig, type ResolvedConfig } from "../config.js";
+import { defaultConfigPath, loadConfig, type ResolvedConfig } from "../config.js";
 import { MonodocsError } from "../diagnostics.js";
 import { t } from "../messages.js";
 import type { BuildOptions, DiffOptions } from "../types.js";
@@ -20,16 +20,29 @@ export function earlierLabel(diff: DiffOptions): string {
   return diff.label ?? diff.dir;
 }
 
+/** How many links a path is read through before it is taken to loop, as Linux's `ELOOP` is. */
+const MAX_LINKS = 40;
+
 /**
  * `path` read through its links. A path that does not exist yet — an earlier version's root before
  * its files are written — is read through the links of the nearest directory above it that does, so
- * it compares with a tree under a linked temporary directory as the files will.
+ * it compares with a tree under a linked temporary directory as the files will. A link whose target
+ * is not there is read through too: where it points is where the version would read.
  */
-function real(path: string): string {
+function real(path: string, depth = 0): string {
   const absolute = resolve(path);
   if (existsSync(absolute)) return realpathSync(absolute);
+  const link = lstatSync(absolute, { throwIfNoEntry: false });
+  if (link?.isSymbolicLink() && depth < MAX_LINKS) {
+    return real(resolve(dirname(absolute), readlinkSync(absolute)), depth + 1);
+  }
   const parent = dirname(absolute);
-  return parent === absolute ? absolute : join(real(parent), basename(absolute));
+  return parent === absolute ? absolute : join(real(parent, depth), basename(absolute));
+}
+
+/** Whether something is at `path`, a link whose target is missing included. */
+function present(path: string): boolean {
+  return lstatSync(path, { throwIfNoEntry: false }) !== undefined;
 }
 
 /** Whether `path` is `tree` or inside it, both read through their links. */
@@ -118,8 +131,18 @@ export async function loadEarlierConfig(
   } = {},
 ): Promise<ResolvedConfig> {
   const { dir, tree } = earlierRoots(diff, cwd);
-  const config = await loadConfig(earlierBuildOptions(options, cwd, diff), dir);
+  const earlierOptions = earlierBuildOptions(options, cwd, diff);
   const label = earlierLabel(diff);
+  // A configuration file that is a link out of the tree is not there for `loadConfig`, which would
+  // build with the defaults; it is the version's file, and it leaves the version.
+  const candidate = earlierOptions.configFile ?? defaultConfigPath(earlierOptions, dir);
+  if (present(candidate) && !inside(candidate, tree)) {
+    throw new MonodocsError(
+      "diff/outside-version",
+      t("diff.outsideVersion", { path: shown(candidate, diff, cwd), label }),
+    );
+  }
+  const config = await loadConfig(earlierOptions, dir);
   for (const path of [config.configFilePath, config.inputDir, config.rootDir]) {
     if (path === undefined) continue;
     const absolute = resolve(dir, path);
