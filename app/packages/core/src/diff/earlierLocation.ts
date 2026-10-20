@@ -11,7 +11,7 @@ import type { DiffOptions, Page } from "../types.js";
  */
 
 /** An instant as Asciidoctor writes it: `2026-10-20`, `11:59:01 +0900`, or `UTC` with no offset. */
-function asciidoctorDate(at: Date): { date: string; time: string; year: string } {
+function asciidoctorDate(at: Date): { date: string; time: string } {
   const pad = (n: number, width = 2) => String(n).padStart(width, "0");
   const offset = -at.getTimezoneOffset();
   const zone =
@@ -21,7 +21,6 @@ function asciidoctorDate(at: Date): { date: string; time: string; year: string }
   return {
     date: `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`,
     time: `${pad(at.getHours())}:${pad(at.getMinutes())}:${pad(at.getSeconds())} ${zone}`,
-    year: String(at.getFullYear()),
   };
 }
 
@@ -36,15 +35,15 @@ export function sharedClockAttributes(
   env: NodeJS.ProcessEnv = process.env,
 ): Record<string, string> {
   if (env.SOURCE_DATE_EPOCH !== undefined && env.SOURCE_DATE_EPOCH !== "") return {};
-  const { date, time, year } = asciidoctorDate(startedAt);
-  const attributes: Record<string, string> = {};
-  for (const prefix of ["doc", "local"]) {
-    attributes[`${prefix}date`] = `${date}@`;
-    attributes[`${prefix}time`] = `${time}@`;
-    attributes[`${prefix}datetime`] = `${date} ${time}@`;
-    attributes[`${prefix}year`] = `${year}@`;
-  }
-  return attributes;
+  const { date, time } = asciidoctorDate(startedAt);
+  // Only the date and the time: Asciidoctor derives `{docyear}` and `{docdatetime}` (and the local
+  // ones) from them, so a `docdate` the configuration sets still gives its own year.
+  return {
+    docdate: `${date}@`,
+    doctime: `${time}@`,
+    localdate: `${date}@`,
+    localtime: `${time}@`,
+  };
 }
 
 /** What writes the earlier version's location as the new one's: in plain text, and in HTML. */

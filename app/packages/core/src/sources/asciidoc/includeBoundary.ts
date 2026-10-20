@@ -169,15 +169,15 @@ function readerDirectory(doc: unknown): string | undefined {
   return typeof dir === "string" && dir !== "" ? dir : undefined;
 }
 
-/** Whether Asciidoctor will read an include met now: its depth is below `max-include-depth`. */
+/**
+ * Whether Asciidoctor will read an include met now, by its own test: the reader's
+ * `exceedsMaxDepth()`, `false` while the include is within `max-include-depth` and the `depth=`
+ * of the includes around it (measured with @asciidoctor/core 4.1).
+ */
 function withinIncludeDepth(doc: unknown): boolean {
   const reader = (doc as { getReader?: () => unknown } | undefined)?.getReader?.();
-  const depth = (reader as { getIncludeDepth?: () => unknown } | undefined)?.getIncludeDepth?.();
-  const limit = (
-    doc as { getAttribute?: (name: string, fallback: unknown) => unknown }
-  ).getAttribute?.("max-include-depth", 64);
-  const max = Number(limit);
-  return typeof depth !== "number" || !Number.isFinite(max) || depth < max;
+  const exceeds = (reader as { exceedsMaxDepth?: () => unknown } | undefined)?.exceedsMaxDepth;
+  return exceeds === undefined || exceeds.call(reader) === false;
 }
 
 function safeReal(path: string): string | undefined {

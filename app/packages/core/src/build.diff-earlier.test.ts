@@ -333,11 +333,11 @@ describe("where and when the earlier version was built", () => {
     // Measured in UTC, where Asciidoctor writes the zone as `UTC` (@asciidoctor/core 4).
     const at = new Date(Date.UTC(2001, 8, 9, 1, 46, 40));
     if (at.getTimezoneOffset() !== 0) return;
-    expect(sharedClockAttributes(at, {})).toMatchObject({
+    expect(sharedClockAttributes(at, {})).toEqual({
       docdate: "2001-09-09@",
       doctime: "01:46:40 UTC@",
-      docdatetime: "2001-09-09 01:46:40 UTC@",
-      localyear: "2001@",
+      localdate: "2001-09-09@",
+      localtime: "01:46:40 UTC@",
     });
   });
 });
@@ -573,5 +573,29 @@ describe("cross-review round 3", () => {
     await writeFile(join(then, "docs", "_part.adoc"), POINTER);
     await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\ninclude::_part.adoc[]\n");
     await expectBothBuilt();
+  });
+});
+
+describe("cross-review round 4", () => {
+  it("gives a docdate the configuration sets its own year and datetime", async () => {
+    for (const root of [now, then]) {
+      await writeFile(
+        join(root, "monodocs.config.yml"),
+        "sources:\n  asciidoc:\n    attributes:\n      docdate: '1999-09-09'\n",
+      );
+      await writeFile(join(root, "docs", "time.adoc"), "= Time\n\n{docyear} {docdatetime}\n");
+    }
+    const sites = await prepared();
+    for (const version of ["new", "earlier"] as const) {
+      expect(textOf(sites[version], "time.adoc"), version).toMatch(/1999 1999-09-09 /);
+    }
+    expect(textOf(sites.earlier, "time.adoc")).toBe(textOf(sites.new, "time.adoc"));
+  });
+
+  it("checks an include nested under one Asciidoctor reads", async () => {
+    await writeFile(join(then, "docs", "_outer.adoc"), "include::_part.adoc[]\n");
+    await writeFile(join(then, "docs", "_part.adoc"), POINTER);
+    await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\ninclude::_outer.adoc[]\n");
+    expect((await failure()).code).toBe("diff/lfs-pointer");
   });
 });
