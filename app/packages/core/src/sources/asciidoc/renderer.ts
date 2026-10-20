@@ -344,8 +344,9 @@ function numberingOf(doc: Document): GeneratedNumbering {
       if (name === "header") return;
       const level = node.getLevel?.() ?? 1;
       const caption = text(node.getCaption?.());
+      // Truthy rather than true: a book's special sections under `:sectnums: all` answer "chapter".
       const numeral =
-        node.isNumbered?.() === true && level <= sectnumlevels
+        Boolean(node.isNumbered?.()) && level <= sectnumlevels
           ? text(node.getSectionNumeral?.())
           : undefined;
       let heading: string | undefined;
@@ -357,8 +358,10 @@ function numberingOf(doc: Document): GeneratedNumbering {
         heading = `${signifier === undefined ? "" : `${signifier} `}${number} `;
       }
       // A section without an ID is found by its place among the others without one.
-      if (id === undefined) return void unidentified.push(heading ?? null);
-      if (heading === undefined) return;
+      if (id === undefined) return void unidentified.push({ heading: heading ?? null, level });
+      // Every section with an ID is a target, numbered or not, so its ID is known to be
+      // Asciidoctor's and not one monodocs gave a heading without one.
+      if (heading === undefined) return void (targets[id] = { references: [] });
       const bare = (numeral ?? heading).replace(/[.:]\s*$/, "").replace(/^.* /, "");
       const refsig = attribute(`${name}-refsig`);
       targets[id] = {
@@ -402,7 +405,7 @@ function numberingOf(doc: Document): GeneratedNumbering {
     }
   };
   walk(doc as unknown as { findBy(selector: object): unknown });
-  return { targets, unidentified, captions };
+  return { targets, unidentified, captions, toclevels: Number(attribute("toclevels") ?? 2) };
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

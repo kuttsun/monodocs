@@ -232,4 +232,32 @@ describe("marking generated numbers", () => {
     expect(found["o.adoc"]).toContain("[1]");
     expect(found["o.adoc"].filter((t) => t === "1")).toHaveLength(2);
   });
+
+  it("marks a book's special sections numbered under :sectnums: all", async () => {
+    const found = await marked({
+      "b.adoc":
+        "= B\n:doctype: book\n:sectnums: all\n:xrefstyle: short\n\nSee <<_glossary>>.\n\n[preface]\n== Preface\n\n== Ch\n\n[glossary]\n== Glossary\n",
+    });
+    // The glossary is referred to by its number alone: there is no `glossary-refsig`.
+    expect(found["b.adoc"]).toEqual(["3", "1. ", "2. ", "3. "]);
+  });
+
+  it("counts the first heading without an ID, in a page with no title", async () => {
+    const found = await marked({ "n.adoc": ":sectnums:\n:sectids!:\n\n== One\n\n== Two\n" });
+    expect(found["n.adoc"]).toEqual(["1. ", "2. "]);
+  });
+
+  it("does not take an author's ID like h1 for one monodocs gave", async () => {
+    const found = await marked({ "h.adoc": "= H\n:sectnums:\n\n[#h1]\n== One\n\n== Two\n" });
+    expect(found["h.adoc"]).toEqual(["1. ", "2. "]);
+  });
+
+  it("marks the table of contents' entries for sections without IDs", async () => {
+    const found = await marked({
+      "c.adoc":
+        "= C\n:sectnums:\n:toc:\n:sectids!:\n\n== One\n\n=== Deep\n\n==== Deeper\n\n== Two\n",
+    });
+    // The table of contents lists two levels: 1., 1.1., 2.; the headings are 1., 1.1., 1.1.1., 2.
+    expect(found["c.adoc"]).toEqual(["1. ", "1.1. ", "2. ", "1. ", "1.1. ", "1.1.1. ", "2. "]);
+  });
 });

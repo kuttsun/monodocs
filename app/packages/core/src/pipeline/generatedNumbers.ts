@@ -152,9 +152,16 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
       ? numbering.targets[id.slice(prefix.length)]
       : undefined;
 
-  // A heading monodocs gave an ID because Asciidoctor gave it none (`{page}-h1`, prefixIds.ts).
-  const anonymous = new RegExp(`^${escapeRegExp(page.id)}-h\\d+$`);
+  // A heading monodocs gave an ID because Asciidoctor gave it none — the first `{page}`, the rest
+  // `{page}-h1` and on (prefixIds.ts) — and that is no section's own ID.
+  const anonymous = new RegExp(`^${escapeRegExp(page.id)}(?:-h\\d+)?$`);
+  const isAnonymous = (id: unknown) =>
+    typeof id === "string" && anonymous.test(id) && targetOf(id) === undefined;
   let unidentified = 0;
+  // The document's own table of contents links a section without an ID as `#null`, in order,
+  // down to `toclevels`.
+  const listed = numbering.unidentified.filter((section) => section.level <= numbering.toclevels);
+  let tocEntry = 0;
 
   visit(tree, "element", (node, _index, parent) => {
     const own = classes(node);
@@ -163,8 +170,8 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
     if (HEADING.test(node.tagName)) {
       const id = node.properties.id;
       const heading =
-        typeof id === "string" && anonymous.test(id) && isSectionHeading(node, parent)
-          ? (numbering.unidentified[unidentified++] ?? undefined)
+        isAnonymous(id) && isSectionHeading(node, parent)
+          ? numbering.unidentified[unidentified++]?.heading
           : targetOf(id)?.heading;
       if (heading !== undefined && heading !== null) {
         markPrefix(node, new RegExp(escapeRegExp(heading)));
@@ -192,6 +199,13 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
     }
     // A link to a numbered target — the table of contents, a cross-reference — where its text
     // starts with what Asciidoctor wrote for it, and the number ends there.
+    if (node.tagName === "a" && node.properties.href === "#null") {
+      const heading = listed[tocEntry++]?.heading;
+      if (heading !== undefined && heading !== null) {
+        markPrefix(node, new RegExp(escapeRegExp(heading)));
+      }
+      return;
+    }
     if (node.tagName === "a") {
       const href = node.properties.href;
       const target =
