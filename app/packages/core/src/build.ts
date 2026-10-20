@@ -19,6 +19,7 @@ import {
   inEarlierVersion,
   loadEarlierConfig,
 } from "./diff/earlier.js";
+import { compareVersions, type PageComparison } from "./diff/compare.js";
 import { earlierBuildConfig } from "./diff/earlierConfig.js";
 import {
   earlierRelocator,
@@ -272,6 +273,8 @@ export type BuildInternals = {
   now?: () => Date;
   /** What makes the Mermaid pre-renderer when none is passed. For tests. */
   createPrerenderer?: typeof createPuppeteerPrerenderer;
+  /** Called with the comparison of the two versions, in a build with a difference. For tests. */
+  onCompared?: (pages: PageComparison[]) => void;
   /** Called with each version's pages once they are built, in a build with a difference. */
   onPrepared?: (version: "new" | "earlier", site: PreparedSite) => void;
 };
@@ -336,6 +339,7 @@ export async function buildSite(
       : undefined);
 
   let prepared: PreparedSite;
+  let earlierSite: PreparedSite | undefined;
   try {
     prepared = await preparePages(config, cwd, {
       mermaidPrerenderer: prerenderer,
@@ -368,6 +372,7 @@ export async function buildSite(
         ),
       );
       internals.onPrepared?.("earlier", earlier);
+      earlierSite = earlier;
     }
     // The earlier version's diagrams are checked too: a deleted one is drawn in the output with
     // this machine's fonts, as the new version's are. What the check finds is the machine's, not
@@ -383,6 +388,14 @@ export async function buildSite(
   }
   if (options.diff !== undefined) {
     internals.onPrepared?.("new", prepared);
+    if (earlierSite !== undefined) {
+      internals.onCompared?.(
+        compareVersions(
+          { pages: prepared.pages, trees: prepared.trees ?? new Map() },
+          { pages: earlierSite.pages, trees: earlierSite.trees ?? new Map() },
+        ),
+      );
+    }
     // Both versions are built (7.3.2), but nothing compares and writes them yet, and a difference
     // asked for and not output would be accepted and ignored (7.3).
     throw new MonodocsError(

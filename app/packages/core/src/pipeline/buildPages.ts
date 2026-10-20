@@ -219,6 +219,7 @@ export async function buildPages(
       description: meta.description,
       // Normalised here so that a spelling cannot decide a collision; validated once every page is
       // known, because whether an alias is shadowed depends on routes that may not exist yet (15.5).
+      ...(meta.title?.trim() ? { explicitTitle: meta.title.trim() } : {}),
       aliases: dedupe(
         (meta.aliases ?? []).map((alias) => toAliasRoute(alias, options.sourceExtensions)),
       ),

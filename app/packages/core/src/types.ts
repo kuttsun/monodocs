@@ -114,6 +114,12 @@ export type Page = {
    * ページではないので、サイドバー・検索インデックス・前後ナビには現れない。
    */
   aliases: string[];
+  /**
+   * The title the author wrote in front matter (`title`, `:sd-title:`), when they wrote one. A
+   * change to it is a change of the page; a title the sidebar derives is a display label, and a
+   * change in those settings is not (roadmap 7.3.3).
+   */
+  explicitTitle?: string;
 
   rawSource: string;
   html: string;

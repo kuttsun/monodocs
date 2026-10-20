@@ -1,0 +1,336 @@
+import type { Element, ElementContent, Root as HastRoot } from "hast";
+import { isGenerated } from "../pipeline/generatedNumbers.js";
+import { recordedData } from "../pipeline/postprocess.js";
+
+/**
+ * The blocks of a page, as comparison reads them (roadmap 7.3.3).
+ *
+ * A block is the smallest unit a reader would point at: a paragraph, a heading, a list item, a
+ * table row, a code block, a display formula, a diagram, an image, a caption, a block title.
+ * Containers — lists, tables, quotations, admonitions, AsciiDoc's wrappers — are not blocks; they
+ * are walked, and each block carries its chain: the element name and the classes of each container
+ * around it that say what the container is. Two blocks are the same only when their kinds, their
+ * chains, and what they read as agree.
+ */
+export type Block = {
+  /** What the block is: its element, and a heading's level with it (`h2`), or `code`, `image`... */
+  kind: string;
+  /** The containers around it, outermost first, as `tag.class.class`. */
+  chain: string;
+  /** What the block reads as, which comparison holds it to. */
+  key: string;
+  /** The block's element in the page's tree. */
+  node: Element;
+  /** The containers around it, outermost first, for writing a deleted block where it stood. */
+  ancestors: Element[];
+};
+
+/**
+ * The classes that say what a container is, and so go into a chain. Every other class — a role the
+ * author set, the classes that only set how a container looks (a table's `frame-*`, `grid-*`,
+ * `stripes-*`, `stretch`, `fit-content`), and the ones a renderer adds to say what a container holds
+ * (GFM's `contains-task-list`, AsciiDoc's `checklist`) — is left out, so changing it changes no
+ * block, and turning one item of a list into a task changes that item alone.
+ */
+const STRUCTURAL = new Set([
+  // AsciiDoc's block wrappers.
+  "paragraph",
+  "ulist",
+  "olist",
+  "dlist",
+  "qlist",
+  "hdlist",
+  "colist",
+  "exampleblock",
+  "sidebarblock",
+  "quoteblock",
+  "verseblock",
+  "openblock",
+  "listingblock",
+  "literalblock",
+  "imageblock",
+  "videoblock",
+  "audioblock",
+  "stemblock",
+  "tableblock",
+  "content",
+  "toc",
+  "abstract",
+  "partintro",
+  // An ordered list's numbering style, which the reader reads.
+  "arabic",
+  "decimal",
+  "loweralpha",
+  "upperalpha",
+  "lowerroman",
+  "upperroman",
+  "lowergreek",
+  // Admonitions, as monodocs writes them for both renderers, and their kinds.
+  "admonition",
+  "admonition-note",
+  "admonition-tip",
+  "admonition-important",
+  "admonition-caution",
+  "admonition-warning",
+  "admonition-content",
+  // Footnotes, both renderers'.
+  "footnotes",
+]);
+
+/** A section and the wrapper of its body, which the reader reads through the headings. */
+const SECTION_WRAPPER = /^(?:sect[0-6]|sectionbody)$/;
+
+/** Elements that hold blocks, and are walked. */
+const CONTAINER_TAGS = new Set([
+  "div",
+  "section",
+  "article",
+  "aside",
+  "main",
+  "nav",
+  "header",
+  "footer",
+  "blockquote",
+  "ul",
+  "ol",
+  "dl",
+  "table",
+  "thead",
+  "tbody",
+  "tfoot",
+  "details",
+  "figure",
+]);
+
+/** Elements that are blocks of their own, read as text. */
+const TEXT_BLOCK = /^(?:p|h[1-6]|li|dt|dd|caption|summary|hr)$/;
+
+/** Elements that make an element a container when they are among its children. */
+const BLOCK_LEVEL = new Set([
+  ...CONTAINER_TAGS,
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "pre",
+  "hr",
+  "li",
+  "dt",
+  "dd",
+  "tr",
+  "caption",
+  "summary",
+]);
+
+/** Parts of a container that are not blocks: a table's column layout. */
+const LAYOUT = new Set(["colgroup", "col"]);
+
+function classes(node: Element): string[] {
+  const value = node.properties.className;
+  return Array.isArray(value) ? value.map(String) : [];
+}
+
+function has(node: Element, name: string): boolean {
+  return classes(node).includes(name);
+}
+
+function elements(node: Element): Element[] {
+  return node.children.filter((child): child is Element => child.type === "element");
+}
+
+/** Whether `node` holds blocks of its own. */
+function holdsBlocks(node: Element): boolean {
+  return elements(node).some(
+    (child) => BLOCK_LEVEL.has(child.tagName) || has(child, "math-display"),
+  );
+}
+
+/** A container as a chain shows it: its element and the classes that say what it is. */
+function link(node: Element): string {
+  const own = classes(node)
+    .filter((name) => STRUCTURAL.has(name))
+    .sort();
+  return [node.tagName, ...own].join(".");
+}
+
+/** Whitespace runs collapsed, as a reader sees the text. */
+function collapse(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * What text reads as: generated numbers left out, an inline formula as its TeX, an inline image as
+ * its hash and `alt`, a checkbox as its state. Links, emphasis, and classes are not read: a link
+ * re-pointed with the same text is not a change to what the document says.
+ */
+function textOf(nodes: readonly ElementContent[], skip?: (node: Element) => boolean): string {
+  let out = "";
+  const walk = (list: readonly ElementContent[]) => {
+    for (const child of list) {
+      if (child.type === "text") {
+        if (!isGenerated(child)) out += child.value;
+        continue;
+      }
+      if (child.type !== "element") continue;
+      if (skip?.(child) === true) continue;
+      // The numbers `numbering.sections` writes are elements of their own (19.1).
+      if (child.properties.dataMonodocsSectionNumber !== undefined) continue;
+      if (has(child, "math") && typeof child.properties.dataMathTex === "string") {
+        out += ` \\(${child.properties.dataMathTex}\\) `;
+        continue;
+      }
+      if (child.tagName === "img") {
+        out += ` [image ${imageKey(child)}] `;
+        continue;
+      }
+      if (child.tagName === "input" && child.properties.type === "checkbox") {
+        out +=
+          child.properties.checked === true || child.properties.checked === "" ? "[x] " : "[ ] ";
+        continue;
+      }
+      // An icon is the theme's, drawn the same in both versions.
+      if (child.tagName === "svg") continue;
+      walk(child.children);
+    }
+  };
+  walk(nodes);
+  return collapse(out);
+}
+
+/** An image as comparison reads it: its bytes' hash, or its `src` where the build read none. */
+function imageKey(node: Element): string {
+  const recorded = recordedData(node).monodocsImage;
+  const what =
+    recorded === undefined
+      ? `src:${String(node.properties.src ?? node.properties.data ?? "")}`
+      : "hash" in recorded
+        ? `hash:${recorded.hash}`
+        : `src:${recorded.src}`;
+  return `${what} alt:${String(node.properties.alt ?? "")}`;
+}
+
+/** The significant children of `node`: elements, and text that is not only whitespace. */
+function significant(node: Element): ElementContent[] {
+  return node.children.filter(
+    (child) => child.type === "element" || (child.type === "text" && child.value.trim() !== ""),
+  );
+}
+
+/** The single element `node` holds, when it holds nothing else of note. */
+function only(node: Element): Element | undefined {
+  const children = significant(node);
+  return children.length === 1 && children[0]!.type === "element" ? children[0] : undefined;
+}
+
+/** The blocks of a page's tree, in reading order. */
+export function blocksOf(tree: HastRoot): Block[] {
+  const blocks: Block[] = [];
+  const add = (kind: string, key: string, node: Element, ancestors: Element[]) => {
+    blocks.push({
+      kind,
+      key,
+      node,
+      ancestors,
+      chain: ancestors
+        .filter((a) => !classes(a).some((c) => SECTION_WRAPPER.test(c)))
+        .map(link)
+        .join(" > "),
+    });
+  };
+
+  const visit = (node: Element, ancestors: Element[]) => {
+    const tag = node.tagName;
+    if (LAYOUT.has(tag)) return;
+    // A diagram, pre-rendered or drawn in the browser, compared by its source.
+    if (has(node, "mermaid")) {
+      const source = recordedData(node).monodocsSource;
+      return add("diagram", source?.source ?? textOf(node.children), node, ancestors);
+    }
+    if (tag === "pre") {
+      const source = recordedData(node).monodocsSource;
+      const key =
+        source === undefined
+          ? `text:${textOf(node.children)}`
+          : `${source.kind === "mermaid" ? "mermaid" : `lang:${source.lang ?? ""}`}\n${source.source}`;
+      return add("code", key, node, ancestors);
+    }
+    // A display formula, compared by its TeX.
+    if (has(node, "math-display") && typeof node.properties.dataMathTex === "string") {
+      return add("formula", node.properties.dataMathTex, node, ancestors);
+    }
+    if (tag === "img") return add("image", imageKey(node), node, ancestors);
+    // A paragraph that holds a display formula or an image alone is that block.
+    if (tag === "p") {
+      const sole = only(node);
+      if (sole !== undefined && (sole.tagName === "img" || has(sole, "math-display"))) {
+        return visit(sole, [...ancestors, node]);
+      }
+    }
+    // A block's title: AsciiDoc's `div.title`, a table's caption. Admonition titles are the
+    // theme's word for the kind, which the chain already carries.
+    if (has(node, "admonition-title")) return;
+    if (has(node, "title") || tag === "caption") {
+      return add("title", textOf(node.children), node, ancestors);
+    }
+    if (tag === "tr") {
+      // Each cell's text, kind, and span: a merged cell decides which column a value applies to.
+      const cells = elements(node)
+        .filter((cell) => cell.tagName === "td" || cell.tagName === "th")
+        .map(
+          (cell) =>
+            `${cell.tagName}[${String(cell.properties.colSpan ?? 1)}x${String(cell.properties.rowSpan ?? 1)}] ${textOf(cell.children)}`,
+        );
+      return add("tr", cells.join(" | "), node, ancestors);
+    }
+    if (tag === "li" || tag === "dd") {
+      // An item's own text, the same whether it is wrapped in a paragraph or not, without the lists
+      // or blocks nested in it, which are blocks of their own inside it.
+      const children = significant(node);
+      const leading =
+        children[0]?.type === "element" && children[0].tagName === "p" ? children[0] : undefined;
+      const own: ElementContent[] = [];
+      const nested: Element[] = [];
+      for (const child of node.children) {
+        if (child === leading) own.push(...child.children);
+        else if (
+          child.type === "element" &&
+          (BLOCK_LEVEL.has(child.tagName) || has(child, "math-display"))
+        ) {
+          nested.push(child);
+        } else own.push(child);
+      }
+      add(tag, textOf(own), node, ancestors);
+      for (const child of nested) visit(child, [...ancestors, node]);
+      return;
+    }
+    if (TEXT_BLOCK.test(tag)) {
+      return add(tag, tag === "hr" ? "" : textOf(node.children), node, ancestors);
+    }
+    if (CONTAINER_TAGS.has(tag) || holdsBlocks(node)) {
+      for (const child of node.children) {
+        if (child.type === "element") visit(child, [...ancestors, node]);
+        else if (child.type === "text" && child.value.trim() !== "") {
+          // Text straight inside a container (AsciiDoc's one-line admonition) reads as one block.
+          add("text", collapse(child.value), node, ancestors);
+        }
+      }
+      return;
+    }
+    // Anything else that holds only text and inline elements is a block of its own.
+    const text = textOf(node.children);
+    if (text !== "") add(tag, text, node, ancestors);
+  };
+
+  for (const child of tree.children) {
+    if (child.type === "element") visit(child, []);
+  }
+  return blocks;
+}
+
+/** Whether two blocks are the same block: kind, chain, and what they read as. */
+export function sameBlock(a: Block, b: Block): boolean {
+  return a.kind === b.kind && a.chain === b.chain && a.key === b.key;
+}
