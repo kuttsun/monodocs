@@ -524,3 +524,38 @@ describe("round 5", () => {
     expect(title(sites.earlier)).toBe(title(sites.new));
   });
 });
+
+describe("cross-review round 1", () => {
+  it("writes the new location once when the new version sits inside the earlier one's tree", async () => {
+    const inner = join(then, "inner");
+    await mkdir(join(inner, "docs"), { recursive: true });
+    await writeFile(join(inner, "docs", "index.md"), "# Index\n");
+    await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\nHere: {docdir}\n");
+    vi.spyOn(process, "cwd").mockReturnValue(inner);
+    const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
+    await expect(
+      buildSite(
+        { outputFile: join(base, "out.html"), diff: { dir: "..", label: "v1.2" } },
+        { onPrepared: (version, site) => (sites[version] = site) },
+      ),
+    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    const page = sites.earlier!.pages.find((p) => p.relativePath === "guide.adoc")!;
+    const slashed = (path: string) => path.replace(/\\/g, "/");
+    expect(slashed(page.text)).toContain(`Here: ${slashed(join(inner, "docs"))}\n`.trimEnd());
+    expect(slashed(page.text)).not.toContain("inner/inner");
+    expect(slashed(page.html)).not.toContain("inner/inner");
+  });
+
+  it("does not let Asciidoctor print the earlier build's warnings", async () => {
+    await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\ninclude::missing.adoc[]\n");
+    const printed: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      printed.push(String(chunk));
+      return true;
+    });
+    vi.spyOn(console, "error").mockImplementation((...args) => void printed.push(args.join(" ")));
+    vi.spyOn(console, "warn").mockImplementation((...args) => void printed.push(args.join(" ")));
+    await expectBothBuilt();
+    expect(printed.join("\n")).not.toContain("missing.adoc");
+  });
+});

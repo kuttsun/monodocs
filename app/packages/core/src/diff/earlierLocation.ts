@@ -74,29 +74,27 @@ export function earlierRelocator(
     [base, newTree],
     [slashed(base), slashed(newTree)],
   ]);
-  const patternsFor = (pairs: string[][]) =>
-    pairs
-      .sort((a, b) => b[0]!.length - a[0]!.length)
-      .map(
-        ([base, place]) =>
-          [
-            new RegExp(`${escapeRegExp(base!)}(?![A-Za-z0-9_~+-]|\\.[A-Za-z0-9])`, "g"),
-            place!,
-          ] as const,
-      );
-  const inText = patternsFor(forms.map(([base, place]) => [base!, place!]));
-  const inHtml = patternsFor(
+  // One pass over the text with every form at once, the longest first: replacing form by form
+  // would find a form again inside a location already written, when the new version sits inside
+  // the earlier one's tree.
+  const replacerFor = (pairs: string[][]) => {
+    const places = new Map<string, string>();
+    for (const [base, place] of pairs) if (!places.has(base!)) places.set(base!, place!);
+    const bases = [...places.keys()].sort((a, b) => b.length - a.length);
+    const pattern = new RegExp(
+      `(?:${bases.map(escapeRegExp).join("|")})(?![A-Za-z0-9_~+-]|\\.[A-Za-z0-9])`,
+      "g",
+    );
+    return (text: string) => text.replace(pattern, (found) => places.get(found)!);
+  };
+  const inText = replacerFor(forms.map(([base, place]) => [base!, place!]));
+  const inHtml = replacerFor(
     forms.flatMap(([base, place]) => [
       [amp(base!), amp(place!)],
       [hex(base!), amp(place!)],
     ]),
   );
-  const replaceAll = (patterns: (readonly [RegExp, string])[], text: string) => {
-    let out = text;
-    for (const [pattern, place] of patterns) out = out.replace(pattern, () => place);
-    return out;
-  };
-  return { text: (text) => replaceAll(inText, text), html: (html) => replaceAll(inHtml, html) };
+  return { text: inText, html: inHtml };
 }
 
 /**

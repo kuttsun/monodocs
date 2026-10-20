@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { load, type Document, type Section } from "@asciidoctor/core";
+import { load, LoggerManager, NullLogger, type Document, type Section } from "@asciidoctor/core";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
@@ -270,6 +270,22 @@ function unique(problems: MathProblem[]): MathProblem[] {
     seen.add(key);
     return true;
   });
+}
+
+/**
+ * Run `run` with Asciidoctor's own log silenced, and restore it after. The earlier version's build
+ * (roadmap 7.3.2) reports no warnings, and Asciidoctor writes its own straight to the terminal — a
+ * missing include, a duplicate ID — past the diagnostics monodocs discards. The logger is global,
+ * so this suits only a build that runs alone, as the earlier one does between the new one's steps.
+ */
+export async function withoutAsciidoctorLog<T>(run: () => Promise<T>): Promise<T> {
+  const logger = LoggerManager.getLogger();
+  LoggerManager.setLogger(NullLogger.create());
+  try {
+    return await run();
+  } finally {
+    LoggerManager.setLogger(logger);
+  }
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

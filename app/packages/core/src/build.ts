@@ -34,7 +34,7 @@ import {
 import { resolveLabels } from "./labels.js";
 import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { createMarkdownRenderer } from "./sources/markdown/renderer.js";
-import { createAsciidocRenderer } from "./sources/asciidoc/renderer.js";
+import { createAsciidocRenderer, withoutAsciidoctorLog } from "./sources/asciidoc/renderer.js";
 import { buildPages } from "./pipeline/buildPages.js";
 import { buildCustomSidebar, buildSidebar, orderPagesBySidebar } from "./pipeline/buildSidebar.js";
 import { postprocessPages, type PostprocessOptions } from "./pipeline/postprocess.js";
@@ -334,15 +334,18 @@ export async function buildSite(
       // doubled by the past hides what can be fixed now. A hard error stops the build, its paths
       // shown in the earlier version (7.3.2).
       const earlier = await inEarlierVersion(diff, cwd, () =>
-        preparePages(settings, resolve(cwd, diff.dir), {
-          mermaidPrerenderer: prerenderer,
-          embedImages: forceEmbed ? true : undefined,
-          onLargeImage: forceLargeEmbed ? "warn" : undefined,
-          checkRead: refuseLfsPointer,
-          checkEmbedded: (page, content) => refuseLfsPointer(page.sourcePath, content, "embedded"),
-          relocate: (pages) => relocateEarlierPages(pages, diff, cwd),
-          relocateTitle: earlierRelocator(diff, cwd).text,
-        }),
+        withoutAsciidoctorLog(() =>
+          preparePages(settings, resolve(cwd, diff.dir), {
+            mermaidPrerenderer: prerenderer,
+            embedImages: forceEmbed ? true : undefined,
+            onLargeImage: forceLargeEmbed ? "warn" : undefined,
+            checkRead: refuseLfsPointer,
+            checkEmbedded: (page, content) =>
+              refuseLfsPointer(page.sourcePath, content, "embedded"),
+            relocate: (pages) => relocateEarlierPages(pages, diff, cwd),
+            relocateTitle: earlierRelocator(diff, cwd).text,
+          }),
+        ),
       );
       internals.onPrepared?.("earlier", earlier);
     }
