@@ -9,6 +9,7 @@ import type {
   SourceFile,
   SourceFormat,
 } from "./types.js";
+import type { Root as HastRoot } from "hast";
 import { loadConfig, type MermaidMode, type OnLargeImage, type ResolvedConfig } from "./config.js";
 import { bySeverity, type Diagnostic, MonodocsError, toDiagnostic, warn } from "./diagnostics.js";
 import {
@@ -89,10 +90,16 @@ type PreparePagesOptions = {
   relocate?: (pages: Page[]) => Page[];
   /** Rewrites a page title before `sidebar.titleTransform` changes its characters. */
   relocateTitle?: (title: string) => string;
+  /** Keep each page's tree with what comparison needs (7.3.2), as {@link PreparedSite.trees}. */
+  record?: boolean;
+  /** What the version's pre-rendered diagram IDs start with. */
+  mermaidIdPrefix?: string;
 };
 
 export type PreparedSite = {
   pages: Page[];
+  /** Each page's tree by page ID, with what comparison needs; only when asked to record. */
+  trees?: Map<string, HastRoot>;
   sidebar: SidebarNode[];
   warnings: Diagnostic[];
   hasMermaid: boolean;
@@ -207,6 +214,8 @@ export async function preparePages(
     sectionNumbers,
     checkRead: opts.checkRead,
     checkEmbedded: opts.checkEmbedded,
+    ...(opts.record === true ? { record: true } : {}),
+    ...(opts.mermaidIdPrefix === undefined ? {} : { mermaidIdPrefix: opts.mermaidIdPrefix }),
   });
   // custom はサイドバーが閲覧順そのものになるため、ページの並びもそれに合わせる
   // （前後ナビ・PDF のページ順・初期表示ページが一致する）。
@@ -217,6 +226,7 @@ export async function preparePages(
       warnings: [...config.warnings, ...warnings, ...post.warnings, ...custom.warnings],
       hasMermaid: post.hasMermaid,
       embeddedImages: post.embeddedImages,
+      ...(post.trees === undefined ? {} : { trees: post.trees }),
     };
   }
 
@@ -226,6 +236,7 @@ export async function preparePages(
     warnings: [...config.warnings, ...warnings, ...post.warnings],
     hasMermaid: post.hasMermaid,
     embeddedImages: post.embeddedImages,
+    ...(post.trees === undefined ? {} : { trees: post.trees }),
   };
 }
 
@@ -250,6 +261,9 @@ export function resolveOutputs(config: ResolvedConfig, cwd: string): ResolvedOut
  * buildSite 内部でブラウザ依存処理へ差し込む注入口。
  * 通常は使わず、テストで Chromium なしに検証するために偽実装を渡す。
  */
+/** What the earlier version's pre-rendered diagram IDs start with (roadmap 7.3.2). */
+export const EARLIER_MERMAID_ID_PREFIX = "mermaid-earlier-";
+
 export type BuildInternals = {
   mermaidPrerenderer?: MermaidPrerenderer;
   pdfGenerator?: PdfGenerator;
@@ -326,6 +340,7 @@ export async function buildSite(
       mermaidPrerenderer: prerenderer,
       embedImages: forceEmbed ? true : undefined,
       onLargeImage: forceLargeEmbed ? "warn" : undefined,
+      record: options.diff !== undefined,
     });
     if (options.diff !== undefined && earlierConfig !== undefined) {
       const diff = options.diff;
@@ -344,6 +359,10 @@ export async function buildSite(
               refuseLfsPointer(page.sourcePath, content, "embedded"),
             relocate: (pages) => relocateEarlierPages(pages, diff, cwd),
             relocateTitle: earlierRelocator(diff, cwd).text,
+            record: true,
+            // The pre-renderer numbers IDs from a counter that restarts in every call, so the
+            // earlier build's diagrams use a prefix of their own (7.3.2).
+            mermaidIdPrefix: EARLIER_MERMAID_ID_PREFIX,
           }),
         ),
       );

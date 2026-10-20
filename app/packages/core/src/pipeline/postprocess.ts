@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { dirname, posix, relative, resolve, sep } from "node:path";
 import { unified } from "unified";
@@ -203,6 +204,14 @@ export type PostprocessOptions = {
   /** ソース拡張子（リンク変換対象。設定のカスタム拡張子に追従）。 */
   sourceExtensions: string[];
   embedImages: boolean;
+  /**
+   * Keep each page's tree, with what the serialised HTML loses recorded on the nodes' `data`
+   * (roadmap 7.3.2), which `hast-util-to-html` does not write. A build with a difference sets it;
+   * no node is written differently for it.
+   */
+  record?: boolean;
+  /** What a pre-rendered diagram's SVG IDs start with; the earlier version's build has its own. */
+  mermaidIdPrefix?: string;
   /** Called with every image file read and its bytes; the earlier build refuses an LFS pointer. */
   checkRead?: (path: string, content: Buffer) => void;
   /**
@@ -240,6 +249,11 @@ export type PostprocessOptions = {
 };
 
 export type PostprocessResult = {
+  /**
+   * Each page's tree, by page ID, with what comparison needs recorded on its nodes' `data`
+   * ({@link RecordedData}). Only with {@link PostprocessOptions.record}.
+   */
+  trees?: Map<string, HastRoot>;
   warnings: Diagnostic[];
   /** いずれかのページに Mermaid ブロックが含まれていたか。 */
   hasMermaid: boolean;
@@ -513,6 +527,7 @@ async function processMermaidPrerender(
         tagName: "figure",
         properties: { className: ["mermaid"] },
         children: [raw],
+        ...carriedData(block.parent.children[block.index]),
       };
     } catch (error) {
       // 環境／セットアップエラー（Chromium・puppeteer-core 不在、起動失敗）はビルドを止める
@@ -535,10 +550,107 @@ async function processMermaidPrerender(
         tagName: "pre",
         properties: { className: ["mermaid"] },
         children: [{ type: "text", value: block.code }],
+        ...carriedData(block.parent.children[block.index]),
       };
     }
   }
   return true;
+}
+
+/**
+ * What a build with a difference records on a node for comparison (roadmap 7.3.2), on `data`,
+ * which the serialiser does not write: a code block's source and language under the spans
+ * highlighting puts over it, a diagram's source under its SVG, and an image's bytes as a hash — or
+ * its `src`, for an image the build does not read.
+ */
+export type RecordedData = {
+  monodocsSource?: { kind: "code" | "mermaid"; source: string; lang?: string };
+  monodocsImage?: { hash: string } | { src: string };
+};
+
+/** What a node records, read back. */
+export function recordedData(node: Element): RecordedData {
+  return (node.data ?? {}) as RecordedData;
+}
+
+/** A replaced node's `data`, for the node that replaces it. */
+function carriedData(node: ElementContent | undefined): { data?: Element["data"] } {
+  return node?.type === "element" && node.data !== undefined ? { data: node.data } : {};
+}
+
+/** Record every code block's source and language, before Mermaid and highlighting replace them. */
+function recordSources(tree: HastRoot): void {
+  visit(tree, "element", (node) => {
+    if (node.tagName !== "pre") return;
+    const code = node.children.find(
+      (child): child is Element => child.type === "element" && child.tagName === "code",
+    );
+    if (code === undefined) return;
+    const lang = languageOf(code);
+    const recorded: RecordedData = {
+      monodocsSource: {
+        kind: lang === "mermaid" ? "mermaid" : "code",
+        source: toText(code, { whitespace: "pre" }),
+        ...(lang === undefined || lang === "mermaid" ? {} : { lang }),
+      },
+    };
+    node.data = { ...node.data, ...recorded } as Element["data"];
+  });
+}
+
+/**
+ * Record each image's bytes as a hash, whether or not it is embedded, so an image replaced under the
+ * same name is a difference. An image the build does not read — an external URL, which is never
+ * fetched, one outside the root, which the build refuses, or one that is missing — is recorded by
+ * its `src`, so whether its file happens to exist where the earlier version was extracted to makes
+ * no difference. One Asciidoctor embedded itself (`:data-uri:`) is hashed from its bytes.
+ */
+async function recordImages(
+  tree: HastRoot,
+  page: Page,
+  realRoot: string,
+  check: ((path: string, content: Buffer) => void) | undefined,
+): Promise<void> {
+  const images: Element[] = [];
+  visit(tree, "element", (node) => {
+    if (node.tagName === "img" || node.tagName === "object") images.push(node);
+  });
+  const baseDir = dirname(page.sourcePath);
+  for (const node of images) {
+    const value = node.tagName === "img" ? node.properties.src : node.properties.data;
+    if (typeof value !== "string" || value === "") continue;
+    const record = (image: RecordedData["monodocsImage"]) => {
+      node.data = { ...node.data, monodocsImage: image } as Element["data"];
+    };
+    const data = /^data:[^,]*;base64,(.*)$/s.exec(value);
+    if (data !== null) {
+      record({ hash: sha256(Buffer.from(data[1]!, "base64")) });
+      continue;
+    }
+    if (isExternalSrc(value)) {
+      record({ src: value });
+      continue;
+    }
+    const pathPart = value.split("#")[0]?.split("?")[0] ?? value;
+    let real: string;
+    try {
+      real = await realpath(resolve(baseDir, pathPart));
+    } catch {
+      record({ src: value });
+      continue;
+    }
+    if (!isInside(realRoot, real) || !(await stat(real)).isFile()) {
+      record({ src: value });
+      continue;
+    }
+    const bytes = await readFile(real);
+    check?.(real, bytes);
+    record({ hash: sha256(bytes) });
+  }
+}
+
+function sha256(bytes: Buffer): string {
+  return createHash("sha256").update(bytes).digest("hex");
 }
 
 /** code 要素の className から言語名（language-xxx）を取り出す。 */
@@ -612,7 +724,11 @@ async function highlightCode(tree: HastRoot): Promise<void> {
     const pre = root.children.find(
       (child): child is Element => child.type === "element" && child.tagName === "pre",
     );
-    if (pre) block.parent.children[block.index] = pre;
+    if (pre)
+      block.parent.children[block.index] = {
+        ...pre,
+        ...carriedData(block.parent.children[block.index]),
+      };
   }
 }
 
@@ -1084,7 +1200,8 @@ export async function postprocessPages(
   let hasMermaid = false;
   // pre-render SVG の id を全 HTML で一意にするグローバルカウンタ（CSS/SVG セーフな ASCII）。
   let mermaidIdSeq = 0;
-  const nextMermaidId = () => `mermaid-${mermaidIdSeq++}`;
+  const nextMermaidId = () => `${options.mermaidIdPrefix ?? "mermaid-"}${mermaidIdSeq++}`;
+  const trees = options.record === true ? new Map<string, HastRoot>() : undefined;
 
   if (
     options.mermaidEnabled &&
@@ -1099,6 +1216,7 @@ export async function postprocessPages(
     // admonition を共通構造へ正規化してから Mermaid / ハイライト / リンク変換にかける
     // （正規化後も内部の <pre>/<a>/<img> は後続処理の対象になる）。
     processAdmonitions(tree);
+    if (trees !== undefined) recordSources(tree);
     if (options.mermaidEnabled) {
       if (options.mermaidMode === "pre-render" && options.mermaidPrerenderer) {
         if (
@@ -1130,6 +1248,7 @@ export async function postprocessPages(
     checkHeadingLevels(tree, page, warnings);
     checkImageAlt(tree, page, warnings);
     if (options.checkEmbedded !== undefined) checkEmbeddedImages(tree, page, options.checkEmbedded);
+    if (trees !== undefined) await recordImages(tree, page, realRoot, options.checkRead);
     if (options.embedImages) {
       await embedImages(tree, page, options, realRoot, warnings, embeddedImages);
     }
@@ -1144,7 +1263,8 @@ export async function postprocessPages(
       numberHeadings(tree, page, pageNumber, options.sectionNumbers.depth);
     }
     page.html = serializer.stringify(tree);
+    trees?.set(page.id, tree);
   }
 
-  return { warnings, hasMermaid, embeddedImages };
+  return { ...(trees === undefined ? {} : { trees }), warnings, hasMermaid, embeddedImages };
 }
