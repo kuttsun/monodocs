@@ -505,4 +505,28 @@ describe("what each block is compared by", () => {
       ),
     ).toEqual([]);
   });
+
+  it("reads an inline image in an AsciiDoc one-line admonition as part of its sentence", async () => {
+    await write(then, { "docs/i.png": "PNG" });
+    await write(now, { "docs/i.png": "PNG" });
+    expect(
+      changes(
+        await onePage(
+          "docs/a.adoc",
+          "= A\n\nNOTE: Press image:i.png[] now.\n",
+          "= A\n\nNOTE: Press image:i.png[] later.\n",
+        ),
+      ).map((c) => c.slice(0, 18)),
+    ).toEqual(["-text Press [image", "+text Press [image"]);
+  });
+
+  it("reads a list item that holds only an image as an item", async () => {
+    await write(then, { "docs/i.png": "PNG" });
+    await write(now, { "docs/i.png": "PNG" });
+    expect(
+      changes(
+        await onePage("docs/l.md", "# L\n\n- ![i](i.png)\n", "# L\n\n- ![i](i.png) cap\n"),
+      ).map((c) => c.slice(0, 3)),
+    ).toEqual(["-li", "+li"]);
+  });
 });

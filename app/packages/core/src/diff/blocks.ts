@@ -151,7 +151,8 @@ function elements(node: Element): Element[] {
 
 /**
  * Whether an element inside a container stands as a block rather than inline: a display formula,
- * a diagram, an image written as SVG or as an object on its own, a title.
+ * a diagram, media, a title. An image is not one here: an element whose content is an image alone
+ * is read as that image ({@link soleImage}), and an image among text is part of the text.
  */
 function isBlockElement(node: Element): boolean {
   return (
@@ -159,10 +160,12 @@ function isBlockElement(node: Element): boolean {
     has(node, "mermaid") ||
     has(node, "title") ||
     MEDIA.has(node.tagName) ||
-    LAYOUT.has(node.tagName) ||
-    soleImage(node) !== undefined
+    LAYOUT.has(node.tagName)
   );
 }
+
+/** Blocks read as their own kind whatever they hold. */
+const OWN_KIND = new Set(["li", "dd", "dt", "tr", "td", "th"]);
 
 /** An image an element holds alone. */
 const IMAGE_TAGS = new Set(["img", "object", "svg"]);
@@ -174,8 +177,10 @@ const IMAGE_TAGS = new Set(["img", "object", "svg"]);
  */
 function soleImage(node: Element): Element | undefined {
   if (IMAGE_TAGS.has(node.tagName)) return node;
-  // A diagram's SVG is the diagram's.
-  if (has(node, "mermaid")) return undefined;
+  // A diagram's SVG is the diagram's; a list, a table, and their items and rows are not wrappers.
+  if (has(node, "mermaid") || STRUCTURE.has(node.tagName) || OWN_KIND.has(node.tagName)) {
+    return undefined;
+  }
   const sole = only(node);
   return sole === undefined ? undefined : soleImage(sole);
 }
@@ -338,7 +343,8 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
     // A paragraph that holds a display formula or an image alone is that block.
     // An element that holds an image alone — a paragraph, a link around it, a figure's content — is
     // that image, so wrapping it in a link changes nothing, as a link is not read anywhere.
-    if (!IMAGE_TAGS.has(tag)) {
+    // A list item, a description, and a row are read as what they are, an image their content.
+    if (!IMAGE_TAGS.has(tag) && !OWN_KIND.has(tag)) {
       const image = soleImage(node);
       if (image !== undefined) return visit(image, ancestors);
     }
