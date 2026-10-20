@@ -212,13 +212,10 @@ export type GeneratedNumbering = {
    */
   targets: Record<string, { heading?: string; references: string[] }>;
   /**
-   * Each section Asciidoctor gave no ID (`:sectids!:`), in document order: its heading prefix,
-   * null for one it left unnumbered, and its level, which decides whether the document's own table
-   * of contents lists it.
+   * The heading prefix of each section Asciidoctor gave no ID (`:sectids!:`), in document order,
+   * null for one it left unnumbered.
    */
-  unidentified: { heading: string | null; level: number }[];
-  /** How deep the document's own table of contents goes (`toclevels`, 2 unless set). */
-  toclevels: number;
+  unidentified: (string | null)[];
   /**
    * The captions it wrote, by the kind of block they are on: `Figure 1. ` on an image, and so on.
    * A caption the author wrote (`[caption="Mine: "]`) is the author's, and is not among them.

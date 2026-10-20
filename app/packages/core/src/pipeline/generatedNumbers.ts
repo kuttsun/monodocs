@@ -158,10 +158,12 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
   const isAnonymous = (id: unknown) =>
     typeof id === "string" && anonymous.test(id) && targetOf(id) === undefined;
   let unidentified = 0;
-  // The document's own table of contents links a section without an ID as `#null`, in order,
-  // down to `toclevels`.
-  const listed = numbering.unidentified.filter((section) => section.level <= numbering.toclevels);
-  let tocEntry = 0;
+  // The document's own table of contents links a section without an ID as `#null`. Which sections
+  // it lists depends on more than one limit (`toclevels`, a `toc::[levels=]`, a section's own), but
+  // all of it is Asciidoctor's, so an entry is marked where it starts with one of their prefixes.
+  const listed = referencePattern(
+    numbering.unidentified.filter((heading): heading is string => heading !== null),
+  );
 
   visit(tree, "element", (node, _index, parent) => {
     const own = classes(node);
@@ -171,7 +173,7 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
       const id = node.properties.id;
       const heading =
         isAnonymous(id) && isSectionHeading(node, parent)
-          ? numbering.unidentified[unidentified++]?.heading
+          ? (numbering.unidentified[unidentified++] ?? undefined)
           : targetOf(id)?.heading;
       if (heading !== undefined && heading !== null) {
         markPrefix(node, new RegExp(escapeRegExp(heading)));
@@ -200,10 +202,7 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
     // A link to a numbered target — the table of contents, a cross-reference — where its text
     // starts with what Asciidoctor wrote for it, and the number ends there.
     if (node.tagName === "a" && node.properties.href === "#null") {
-      const heading = listed[tocEntry++]?.heading;
-      if (heading !== undefined && heading !== null) {
-        markPrefix(node, new RegExp(escapeRegExp(heading)));
-      }
+      if (listed !== undefined) markPrefix(node, listed);
       return;
     }
     if (node.tagName === "a") {

@@ -345,10 +345,9 @@ function numberingOf(doc: Document): GeneratedNumbering {
       const level = node.getLevel?.() ?? 1;
       const caption = text(node.getCaption?.());
       // Truthy rather than true: a book's special sections under `:sectnums: all` answer "chapter".
-      const numeral =
-        Boolean(node.isNumbered?.()) && level <= sectnumlevels
-          ? text(node.getSectionNumeral?.())
-          : undefined;
+      // A cross-reference writes the number at any depth; the heading only within `sectnumlevels`.
+      const numbered = Boolean(node.isNumbered?.()) ? text(node.getSectionNumeral?.()) : undefined;
+      const numeral = level <= sectnumlevels ? numbered : undefined;
       let heading: string | undefined;
       if (caption !== undefined) heading = caption;
       else if (numeral !== undefined) {
@@ -358,15 +357,16 @@ function numberingOf(doc: Document): GeneratedNumbering {
         heading = `${signifier === undefined ? "" : `${signifier} `}${number} `;
       }
       // A section without an ID is found by its place among the others without one.
-      if (id === undefined) return void unidentified.push({ heading: heading ?? null, level });
+      if (id === undefined) return void unidentified.push(heading ?? null);
       // Every section with an ID is a target, numbered or not, so its ID is known to be
       // Asciidoctor's and not one monodocs gave a heading without one.
-      if (heading === undefined) return void (targets[id] = { references: [] });
-      const bare = (numeral ?? heading).replace(/[.:]\s*$/, "").replace(/^.* /, "");
       const refsig = attribute(`${name}-refsig`);
+      const bare = (numbered ?? heading)?.replace(/[.:]\s*$/, "").replace(/^.* /, "");
+      const reference =
+        bare === undefined ? undefined : refsig === undefined ? bare : `${refsig} ${bare}`;
       targets[id] = {
-        heading,
-        references: [heading, refsig === undefined ? bare : `${refsig} ${bare}`],
+        ...(heading === undefined ? {} : { heading }),
+        references: [heading, reference].filter((r): r is string => r !== undefined),
       };
       return;
     }
@@ -405,7 +405,7 @@ function numberingOf(doc: Document): GeneratedNumbering {
     }
   };
   walk(doc as unknown as { findBy(selector: object): unknown });
-  return { targets, unidentified, captions, toclevels: Number(attribute("toclevels") ?? 2) };
+  return { targets, unidentified, captions };
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

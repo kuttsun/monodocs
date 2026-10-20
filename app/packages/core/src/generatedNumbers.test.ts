@@ -260,4 +260,22 @@ describe("marking generated numbers", () => {
     // The table of contents lists two levels: 1., 1.1., 2.; the headings are 1., 1.1., 1.1.1., 2.
     expect(found["c.adoc"]).toEqual(["1. ", "1.1. ", "2. ", "1. ", "1.1. ", "1.1.1. ", "2. "]);
   });
+
+  it("marks a reference to a section numbered deeper than its heading shows", async () => {
+    const found = await marked({
+      "d.adoc":
+        "= D\n:sectnums:\n:sectnumlevels: 1\n:xrefstyle: short\n\n== One\n\nSee <<deep>>.\n\n[#deep]\n=== Deep\n",
+    });
+    expect(found["d.adoc"]).toEqual(["1. ", "Section 1.1"]);
+  });
+
+  it("marks the table of contents' entries for ID-less sections whatever limits what it lists", async () => {
+    const found = await marked({
+      "m.adoc":
+        "= M\n:sectnums:\n:sectids!:\n:toc: macro\n\ntoc::[levels=1]\n\n== One\n\n=== OneOne\n\n== Two\n",
+      "z.adoc": "= Z\n:sectnums:\n:sectids!:\n:toc:\n:toclevels: 0\n\n== One\n\n== Two\n",
+    });
+    expect(found["m.adoc"]).toEqual(["1. ", "2. ", "1. ", "1.1. ", "2. "]);
+    expect(found["z.adoc"]).toEqual(["1. ", "2. ", "1. ", "2. "]);
+  });
 });
