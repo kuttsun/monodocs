@@ -60,7 +60,7 @@ pnpm 11 は、公開から `minimumReleaseAge` 分（既定 1440 分＝24 時間
 
 ### サイト依存関係のセキュリティ override
 
-`site/` の standalone package は Vite を一時的に `~6.4.3` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は、Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を通し続けてください。安全な Vite を含む範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。2026-10-01 時点の再点検では、安定版は依然として VitePress 1.6.4（`vite ^5.4.14`）、VitePress 2 は alpha（`next` タグの `2.0.0-alpha.20`）のみ、Vite 6.4 系の最新 patch も `6.4.3` のままなので、override を維持します。
+`site/` の standalone package は Vite を一時的に `~6.4.4` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は、Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を通し続けてください。安全な Vite を含む範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。2026-10-21 時点の再点検では、安定版は依然として VitePress 1.6.4（`vite ^5.4.14`）、VitePress 2 は alpha（`next` タグの `2.0.0-alpha.20`）のみなので、override を維持します。2026-10-20 に公開された launch-editor の advisory（GHSA-587h-7wmj-h5pm、GHSA-698v-4r3x-3vcv、GHSA-r825-w8mm-5pxw）が Vite 6.4.3 までを対象とするため、`~6.4.3` から `~6.4.4` に上げました。
 
 ### サイトのテーマ
 
