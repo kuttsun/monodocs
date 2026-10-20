@@ -664,9 +664,18 @@ async function recordImages(
     const pathPart = value.split("#")[0]?.split("?")[0] ?? value;
     // Markdown writes a name with spaces or other than ASCII percent-encoded (`%E5%9B%B3.png`);
     // the file is found under the name as written or as decoded.
+    const component = (() => {
+      try {
+        return decodeURIComponent(pathPart);
+      } catch {
+        return pathPart;
+      }
+    })();
+    // `decodeURI` leaves what a URL reserves (`%23` for `#`); a name with one is found decoded whole.
     const real =
       (await realpath(resolve(baseDir, pathPart)).catch(() => undefined)) ??
-      (await realpath(resolve(baseDir, decodePathPart(pathPart))).catch(() => undefined));
+      (await realpath(resolve(baseDir, decodePathPart(pathPart))).catch(() => undefined)) ??
+      (await realpath(resolve(baseDir, component)).catch(() => undefined));
     if (real === undefined) {
       record({ src: value });
       continue;

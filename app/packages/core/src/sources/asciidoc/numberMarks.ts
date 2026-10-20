@@ -104,8 +104,17 @@ export async function createNumberMarks(
   const wrapped = (value: unknown) => typeof value === "string" && value.includes(OPEN);
 
   /** Wrap the numbers of `nodes` — and of the sections around a section — for the length of `run`. */
+  // Every number wrapped now: a section's stays wrapped while its body is converted, so a formula
+  // in the body unwraps them all while it is converted.
+  const active: { wrap(): void; unwrap(): void }[] = [];
   const withMarked = async (nodes: (Node | undefined)[], run: () => Promise<string>) => {
     const restore: (() => void)[] = [];
+    const entries: { wrap(): void; unwrap(): void }[] = [];
+    const track = (wrapIt: () => void, unwrapIt: () => void) => {
+      wrapIt();
+      restore.push(unwrapIt);
+      entries.push({ wrap: wrapIt, unwrap: unwrapIt });
+    };
     const markCaption = (node: Node, numeral: unknown) => {
       const caption = node.getCaption?.();
       if (typeof caption !== "string" || wrapped(caption) || node.setCaption === undefined) return;
@@ -113,10 +122,12 @@ export async function createNumberMarks(
       // number is its last occurrence there.
       const at = caption.lastIndexOf(String(numeral));
       if (at < 0) return;
-      node.setCaption(
-        caption.slice(0, at) + wrap(numeral) + caption.slice(at + String(numeral).length),
+      const marked =
+        caption.slice(0, at) + wrap(numeral) + caption.slice(at + String(numeral).length);
+      track(
+        () => node.setCaption!(marked),
+        () => node.setCaption!(caption),
       );
-      restore.push(() => node.setCaption!(caption));
     };
     for (const node of nodes) {
       if (node === undefined) continue;
@@ -129,8 +140,10 @@ export async function createNumberMarks(
           const numeral = section.getNumeral?.();
           if (numeral === null || numeral === undefined || wrapped(numeral)) continue;
           const current = section;
-          current.setNumeral?.(wrap(numeral));
-          restore.push(() => current.setNumeral?.(numeral));
+          track(
+            () => current.setNumeral?.(wrap(numeral)),
+            () => current.setNumeral?.(numeral),
+          );
           markCaption(current, numeral);
         }
       } else if (
@@ -140,15 +153,19 @@ export async function createNumberMarks(
         !wrapped(node.numeral)
       ) {
         const numeral = node.numeral;
-        node.numeral = wrap(numeral);
-        restore.push(() => (node.numeral = numeral));
+        track(
+          () => (node.numeral = wrap(numeral)),
+          () => (node.numeral = numeral),
+        );
         markCaption(node, numeral);
       }
     }
+    active.push(...entries);
     try {
       return await run();
     } finally {
       for (const undo of restore.reverse()) undo();
+      active.splice(active.length - entries.length, entries.length);
     }
   };
 
@@ -161,9 +178,28 @@ export async function createNumberMarks(
     return refs?.[id] ?? refs?.$$smap?.[id];
   };
 
+  // Inside a formula a number is the formula's text, read as TeX and compared as the formula: a
+  // marker there would be part of the TeX. Nothing is wrapped while one is converted.
+  let inFormula = 0;
+  const isFormula = (node: Node, name: string) =>
+    name === "stem" ||
+    (name === "inline_quoted" && ["latexmath", "asciimath"].includes(String(node.getType?.())));
+
   const convert = async (node: Node, transform?: string, opts?: unknown): Promise<string> => {
     const name = transform ?? node.getNodeName();
     const run = () => base.convert(node, transform, opts);
+    if (isFormula(node, name)) {
+      inFormula++;
+      const unwrapped = [...active].reverse();
+      for (const entry of unwrapped) entry.unwrap();
+      try {
+        return await run();
+      } finally {
+        for (const entry of [...unwrapped].reverse()) entry.wrap();
+        inFormula--;
+      }
+    }
+    if (inFormula > 0) return run();
     if (name === "section" || CAPTIONED.has(name)) return withMarked([node], run);
     // The document's own table of contents writes every section's number.
     if (name === "outline") {

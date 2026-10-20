@@ -202,9 +202,13 @@ describe("round 1: what else is recorded", () => {
 
   it("finds an image whose name Markdown percent-encoded", async () => {
     await writeFile(join(now, "docs", "index.md"), "# I\n");
-    await writeFile(join(then, "docs", "index.md"), "# I\n\n![x](図.png) ![y](<a b.png>)\n");
+    await writeFile(
+      join(then, "docs", "index.md"),
+      "# I\n\n![x](図.png) ![y](<a b.png>) ![z](a%23b.png)\n",
+    );
     await writeFile(join(then, "docs", "図.png"), "PNG");
     await writeFile(join(then, "docs", "a b.png"), "PNG");
+    await writeFile(join(then, "docs", "a#b.png"), "PNG");
     const sites = await prepared();
     for (const image of images(sites.earlier, "index.md")) expect(image).toHaveProperty("hash");
   });

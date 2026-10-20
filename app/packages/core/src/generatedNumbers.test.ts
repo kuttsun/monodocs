@@ -363,4 +363,16 @@ describe("marking generated numbers", () => {
     });
     expect(sources).toEqual([{ kind: "code", source: "text ", lang: "text" }]);
   });
+
+  it("leaves a number in a formula to the formula", async () => {
+    await writeFile(
+      join(dir, "docs", "m.adoc"),
+      "= M\n:sectnums:\n:xrefstyle: short\n:stem: latexmath\n\n[#one]\n== One\n\n[stem,subs=+macros]\n++++\n\\verb|xref:one[]|\n++++\n",
+    );
+    const config = await loadConfig({ inputDir: join(dir, "docs") }, dir);
+    const plain = await preparePages(config, dir, {});
+    const recorded = await preparePages(config, dir, { record: true });
+    expect(recorded.pages[0]!.html).toBe(plain.pages[0]!.html);
+    expect(recorded.pages[0]!.formulas).toEqual(plain.pages[0]!.formulas);
+  });
 });
