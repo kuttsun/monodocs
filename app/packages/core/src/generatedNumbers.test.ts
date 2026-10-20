@@ -303,4 +303,12 @@ describe("marking generated numbers", () => {
     });
     expect(found["e.adoc"]).toEqual(["A & B 1. ", "C & D A: "]);
   });
+
+  it("marks a chapter's number with a signifier and refsig written with characters the HTML escapes", async () => {
+    const found = await marked({
+      "s.adoc":
+        "= S\n:doctype: book\n:sectnums:\n:chapter-signifier: A & B\n:chapter-refsig: C & D\n:xrefstyle: short\n\n[#one]\n== One\n\nSee <<one>>.\n",
+    });
+    expect(found["s.adoc"]).toEqual(["A & B 1. ", "C & D 1"]);
+  });
 });

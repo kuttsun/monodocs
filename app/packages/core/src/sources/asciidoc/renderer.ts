@@ -344,8 +344,10 @@ function numberingOf(doc: Document): GeneratedNumbering {
       { getStyle?(): unknown; getInnerDocument?(): unknown }[][]
     >;
   };
+  // Read as text: a signifier or refsig Asciidoctor holds escaped (`A &amp; B`) is written into
+  // the page as the text it reads as.
   const attribute = (name: string): string | undefined => {
-    const value = doc.getAttribute(name) as unknown;
+    const value = decoded(doc.getAttribute(name) as unknown);
     return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
   };
   const text = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
