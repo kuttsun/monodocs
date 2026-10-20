@@ -67,10 +67,11 @@ function entry(path: string): Stats | undefined {
 }
 
 /**
- * The `root` and `input` a configuration file writes, resolved against it. Nothing when the file
- * is not there or cannot be read as an object, which `loadConfig` then reports in its own words.
+ * The `root` and `input` a configuration file writes, resolved against it — `input` only when
+ * `withInput`, since an input argument takes its place as it does in `loadConfig`. Nothing when the
+ * file is not there or cannot be read as an object, which `loadConfig` then reports in its words.
  */
-async function writtenPaths(file: string): Promise<string[]> {
+async function writtenPaths(file: string, withInput: boolean): Promise<string[]> {
   if (!existsSync(file)) return [];
   let parsed: unknown;
   try {
@@ -80,7 +81,7 @@ async function writtenPaths(file: string): Promise<string[]> {
   }
   if (typeof parsed !== "object" || parsed === null) return [];
   const { root, input } = parsed as { root?: unknown; input?: unknown };
-  return [root, input]
+  return [root, withInput ? input : undefined]
     .filter((value): value is string => typeof value === "string")
     .map((value) => resolve(dirname(file), value));
 }
@@ -190,7 +191,7 @@ export async function loadEarlierConfig(
   // The file's own `root` and `input` are checked before `loadConfig` reads them: it checks that
   // they agree with each other, and a pair that leaves the version would be reported as that
   // disagreement instead of as leaving.
-  for (const path of await writtenPaths(candidate)) {
+  for (const path of await writtenPaths(candidate, earlierOptions.inputDir === undefined)) {
     if (!inside(path, tree)) {
       throw new MonodocsError(
         "diff/outside-version",

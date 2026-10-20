@@ -205,6 +205,17 @@ describe("mapping the command line's paths", () => {
     },
   );
 
+  it("does not check a configuration's input that the input argument replaces", async () => {
+    await writeFile(join(then, "custom.yml"), "input: ../outside\n");
+    await writeFile(join(now, "custom.yml"), "input: ../outside\n");
+    const config = await loadEarlierConfig(
+      { inputDir: "docs", configFile: "custom.yml" },
+      now,
+      diff(),
+    );
+    expect(config.inputDir).toBe(join(then, "docs"));
+  });
+
   it("allows what leaves diff.dir but stays inside diff.tree", async () => {
     await writeFile(join(then, "monodocs.config.yml"), "root: ..\n");
     const config = await loadEarlierConfig({}, now, diff({ tree: base }));
