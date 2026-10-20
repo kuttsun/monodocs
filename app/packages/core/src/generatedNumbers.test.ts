@@ -178,14 +178,12 @@ describe("marking generated numbers", () => {
     expect(found["b.adoc"]).toEqual(["Part I: ", "Chapter 1. ", "Chapter 2", "Chapter 2. "]);
   });
 
-  // monodocs has Asciidoctor write the body only (`standalone: false`), so its own table of
-  // contents is not in the page; the reader's comes from monodocs.
-  it("marks a reference with no signifier", async () => {
+  it("marks the numbers in Asciidoctor's table of contents, and a reference with no signifier", async () => {
     const found = await marked({
       "t.adoc":
         "= T\n:sectnums:\n:toc:\n:xrefstyle: short\n:!section-refsig:\n\n== One\n\nSee <<two>>.\n\n[#two]\n== Two\n",
     });
-    expect(found["t.adoc"]).toEqual(["1. ", "2", "2. "]);
+    expect(found["t.adoc"]).toEqual(["1. ", "2. ", "1. ", "2", "2. "]);
   });
 
   it("leaves a caption and a reference text the author wrote", async () => {

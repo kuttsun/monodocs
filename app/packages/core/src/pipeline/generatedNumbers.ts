@@ -75,6 +75,25 @@ function markAll(node: Element): void {
 
 const HEADING = /^h[1-6]$/;
 
+/**
+ * What a link's text may start with, longest first. A text that ends in its number (`Section 2`)
+ * is taken only where the number ends there, so `Section 1` is not found in `Section 12`; one that
+ * ends in a space (`1. `, the heading's own prefix in a table of contents) is followed by the title.
+ */
+function referencePattern(references: string[]): RegExp | undefined {
+  const unique = [...new Set(references)].sort((a, b) => b.length - a.length);
+  if (unique.length === 0) return undefined;
+  return new RegExp(
+    `(?:${unique
+      .map((reference) =>
+        /[0-9A-Za-z]$/.test(reference)
+          ? `${escapeRegExp(reference)}(?![0-9A-Za-z.])`
+          : escapeRegExp(reference),
+      )
+      .join("|")})`,
+  );
+}
+
 /** Mark every number the renderers generated on a page, in its tree. */
 export function markGeneratedNumbers(tree: HastRoot, page: Page): void {
   if (page.format === "asciidoc") markAsciidoc(tree, page);
@@ -153,8 +172,7 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
       const href = node.properties.href;
       const target =
         typeof href === "string" && href.startsWith("#") ? targetOf(href.slice(1)) : undefined;
-      const pattern =
-        target === undefined ? undefined : startingWith(target.references, "(?![0-9A-Za-z.])");
+      const pattern = target === undefined ? undefined : referencePattern(target.references);
       if (pattern !== undefined) markPrefix(node, pattern);
     }
   });
