@@ -286,7 +286,7 @@ describe("generated numbers are not differences", () => {
         "+image",
         "+title Figure . New fig",
         "+h2 Appendix : Inserted",
-        "+div . Zeroth.",
+        "+text . Zeroth.",
       ]);
     });
   }
@@ -454,5 +454,55 @@ describe("what each block is compared by", () => {
         ),
       ).map((c) => c.slice(0, 3)),
     ).toEqual(["-tr", "+tr"]);
+  });
+
+  it("compares the words in a table cell beside an image", async () => {
+    await write(then, { "docs/i.png": "PNG" });
+    await write(now, { "docs/i.png": "PNG" });
+    const table = (cell: string) => `# T\n\n| a |\n|---|\n| ${cell} |\n`;
+    expect(
+      changes(
+        await onePage(
+          "docs/t.md",
+          table("See ![i](i.png) here"),
+          table("Do not use ![i](i.png) ever"),
+        ),
+      ).map((c) => c.slice(0, 3)),
+    ).toEqual(["-tr", "+tr"]);
+  });
+
+  it("adds only the title given to a one-line admonition", async () => {
+    expect(
+      changes(
+        await onePage(
+          "docs/a.adoc",
+          "= A\n\nNOTE: Use this carefully.\n",
+          "= A\n\n.Heads up\nNOTE: Use this carefully.\n",
+        ),
+      ),
+    ).toEqual(["+title Heads up"]);
+  });
+
+  it("reads an image wrapped in a link as the same image", async () => {
+    await write(then, { "docs/i.png": "PNG" });
+    await write(now, { "docs/i.png": "PNG" });
+    expect(
+      changes(
+        await onePage(
+          "docs/a.md",
+          "# A\n\n![x](i.png)\n",
+          "# A\n\n[![x](i.png)](https://example.invalid)\n",
+        ),
+      ),
+    ).toEqual([]);
+    expect(
+      changes(
+        await onePage(
+          "docs/b.adoc",
+          "= B\n\nimage::i.png[x]\n",
+          "= B\n\nimage::i.png[x,link=https://example.invalid]\n",
+        ),
+      ),
+    ).toEqual([]);
   });
 });

@@ -158,12 +158,26 @@ function isBlockElement(node: Element): boolean {
     has(node, "math-display") ||
     has(node, "mermaid") ||
     has(node, "title") ||
-    node.tagName === "svg" ||
-    node.tagName === "object" ||
-    node.tagName === "img" ||
     MEDIA.has(node.tagName) ||
-    LAYOUT.has(node.tagName)
+    LAYOUT.has(node.tagName) ||
+    soleImage(node) !== undefined
   );
+}
+
+/** An image an element holds alone. */
+const IMAGE_TAGS = new Set(["img", "object", "svg"]);
+
+/**
+ * The image `node` is, or holds alone — through a link or a wrapper that holds nothing else — or
+ * undefined. Such an image is a block of its own; one that stands among text is part of the text,
+ * so a cell or a paragraph with an icon beside its words is still compared by its words.
+ */
+function soleImage(node: Element): Element | undefined {
+  if (IMAGE_TAGS.has(node.tagName)) return node;
+  // A diagram's SVG is the diagram's.
+  if (has(node, "mermaid")) return undefined;
+  const sole = only(node);
+  return sole === undefined ? undefined : soleImage(sole);
 }
 
 /** Whether `node` holds blocks of its own. */
@@ -189,7 +203,7 @@ function collapse(text: string): string {
  * its hash and `alt`, a checkbox as its state. Links, emphasis, and classes are not read: a link
  * re-pointed with the same text is not a change to what the document says.
  */
-function textOf(nodes: readonly ElementContent[], skip?: (node: Element) => boolean): string {
+function textOf(nodes: readonly ElementContent[]): string {
   let out = "";
   const walk = (list: readonly ElementContent[]) => {
     for (const child of list) {
@@ -198,7 +212,6 @@ function textOf(nodes: readonly ElementContent[], skip?: (node: Element) => bool
         continue;
       }
       if (child.type !== "element") continue;
-      if (skip?.(child) === true) continue;
       // The numbers `numbering.sections` writes are elements of their own (19.1).
       if (child.properties.dataMonodocsSectionNumber !== undefined) continue;
       // By class and attribute: the mark `isMath` reads does not survive the renderer's HTML.
@@ -323,11 +336,15 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
       return add(tag, sources.join(" "), node, ancestors);
     }
     // A paragraph that holds a display formula or an image alone is that block.
+    // An element that holds an image alone — a paragraph, a link around it, a figure's content — is
+    // that image, so wrapping it in a link changes nothing, as a link is not read anywhere.
+    if (!IMAGE_TAGS.has(tag)) {
+      const image = soleImage(node);
+      if (image !== undefined) return visit(image, ancestors);
+    }
     if (tag === "p") {
       const sole = only(node);
-      if (sole !== undefined && (sole.tagName === "img" || has(sole, "math-display"))) {
-        return visit(sole, [...ancestors, node]);
-      }
+      if (sole !== undefined && has(sole, "math-display")) return visit(sole, [...ancestors, node]);
     }
     // A block's title: AsciiDoc's `div.title`, a table's caption. Admonition titles are the
     // theme's word for the kind, which the chain already carries.
@@ -390,14 +407,28 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
       flush();
       return;
     }
-    // Anything else that holds only text and inline elements is a block of its own.
+    // Anything else that holds only text and inline elements reads as text in it, as text beside
+    // blocks in the same element does: giving it a title or another block changes nothing else.
     const text = textOf(node.children);
-    if (text !== "") add(tag, text, node, ancestors);
+    if (text !== "") add("text", text, node, [...ancestors, node]);
   };
 
+  // The tree's own text and inline elements — a table cell's, read on its own — read as one block,
+  // as a container's do; its node stands for the run.
+  let run: ElementContent[] = [];
+  const flush = () => {
+    const text = textOf(run);
+    const node: Element = { type: "element", tagName: "span", properties: {}, children: run };
+    if (text !== "") add("text", text, node, []);
+    run = [];
+  };
   for (const child of tree.children) {
-    if (child.type === "element") visit(child, []);
+    if (child.type === "element" && (BLOCK_LEVEL.has(child.tagName) || isBlockElement(child))) {
+      flush();
+      visit(child, []);
+    } else if (child.type === "element" || child.type === "text") run.push(child);
   }
+  flush();
   return blocks;
 }
 
