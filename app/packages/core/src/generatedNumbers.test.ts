@@ -336,9 +336,9 @@ describe("marking generated numbers", () => {
     expect(sources).toEqual([{ kind: "code", source: "see Section ", lang: "text" }]);
   });
 
-  it("leaves no marker in a passthrough's raw text, comment, or template", async () => {
+  it("leaves no marker in a passthrough's raw text, comment, SVG, or template", async () => {
     const page =
-      '= P\n:sectnums:\n:xrefstyle: short\n\n[#one]\n== One\n\n[subs=macros]\n++++\n<!-- xref:one[] -->\n<template><p>xref:one[]</p></template>\n<textarea>xref:one[]</textarea>\n<script>var a = "xref:one[]";</script>\n++++\n';
+      '= P\n:sectnums:\n:xrefstyle: short\n\n[#one]\n== One\n\n[subs=macros]\n++++\n<!-- xref:one[] -->\n<template><p>xref:one[]</p></template>\n<textarea>xref:one[]</textarea>\n<script>var a = "xref:one[]";</script>\n<svg><text>xref:one[]</text></svg>\n<template><p class="xref:one[]">X</p></template>\n++++\n';
     await writeFile(join(dir, "docs", "p.adoc"), page);
     const config = await loadConfig({ inputDir: join(dir, "docs") }, dir);
     const plain = await preparePages(config, dir, {});

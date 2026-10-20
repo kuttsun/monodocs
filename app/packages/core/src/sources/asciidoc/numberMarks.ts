@@ -67,6 +67,9 @@ const RAW_TEXT = new Set([
   "plaintext",
 ]);
 
+/** Foreign content, where an HTML `span` cannot stand. */
+const FOREIGN = new Set(["svg", "math"]);
+
 /** The blocks Asciidoctor writes a numbered caption on. */
 const CAPTIONED = new Set(["image", "table", "example", "listing"]);
 
@@ -195,6 +198,9 @@ export async function createNumberMarks(
       else if (node.type === "element") {
         for (const [name, value] of Object.entries(node.properties)) {
           if (typeof value === "string") node.properties[name] = strip(value);
+          else if (Array.isArray(value)) {
+            node.properties[name] = value.map((v) => (typeof v === "string" ? strip(v) : v));
+          }
         }
         const content = (node as Element & { content?: HastRoot }).content;
         if (content !== undefined) stripAll(content);
@@ -221,12 +227,11 @@ export async function createNumberMarks(
         // nothing shows or compares: the marker is only removed.
         const content = (element as Element & { content?: HastRoot }).content;
         if (content !== undefined) stripAll(content);
-        // Where text is written as it is — a script, a textarea, a passthrough's — an element
-        // would be written as text, so the marker is only removed.
-        if (RAW_TEXT.has(element.tagName)) {
-          visit(element, "text", (text) => {
-            text.value = strip(text.value);
-          });
+        // Where text is written as it is — a script, a textarea — an element would be written as
+        // text, and inside an SVG or MathML an HTML element would be moved out when the page is
+        // read again: the marker is only removed there.
+        if (RAW_TEXT.has(element.tagName) || FOREIGN.has(element.tagName)) {
+          stripAll(element);
           return SKIP;
         }
         return;
