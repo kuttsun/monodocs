@@ -266,9 +266,17 @@ describe("extracting a ref", () => {
       await symlink("manual", join(repo, "docs"));
       // Tab completion writes a target with a slash on its end; a checkout reads it the same.
       await symlink("manual/", join(repo, "guide"));
+      // A colon is a character of a name on POSIX, not a drive.
+      await write(join(repo, "a:manual", "index.md"), "# Manual\n");
+      await symlink("a:manual", join(repo, "colon"));
       git(repo, "add", "-A");
       git(repo, "commit", "-q", "-m", "linked docs");
-      for (const options of [{}, { inputDir: "docs" }, { inputDir: "guide" }]) {
+      for (const options of [
+        {},
+        { inputDir: "docs" },
+        { inputDir: "guide" },
+        { inputDir: "colon" },
+      ]) {
         const earlier = await extractEarlierVersion("HEAD", options, { cwd: repo });
         try {
           const input = "inputDir" in options ? options.inputDir : "docs";

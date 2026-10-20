@@ -282,7 +282,9 @@ export async function extractEarlierVersion(
         // A link git recorded on Windows may be written with `\`; on POSIX that is a character.
         const target = process.platform === "win32" ? written.replace(/\\/g, "/") : written;
         // An absolute target is not the earlier version's; core reports it when it reads it.
-        if (posix.isAbsolute(target) || /^[A-Za-z]:/.test(target)) return undefined;
+        // A drive letter means one on Windows only; on POSIX `a:manual` is a relative name.
+        const drive = process.platform === "win32" && /^[A-Za-z]:/.test(target);
+        if (posix.isAbsolute(target) || drive) return undefined;
         pending.unshift(...target.split("/"));
       }
       return done.join("/");
