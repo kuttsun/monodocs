@@ -579,14 +579,22 @@ function carriedData(node: ElementContent | undefined): { data?: Element["data"]
   return node?.type === "element" && node.data !== undefined ? { data: node.data } : {};
 }
 
-/** `node` without the numbers Asciidoctor generated in it (`span[data-monodocs-generated]`). */
+/**
+ * `node` without the numbers the renderers generated in it: Asciidoctor's marked numbers
+ * (`span[data-monodocs-generated]`) and its footnote references (`sup.footnote`).
+ */
 function withoutGenerated(node: Element): Element {
+  const generated = (child: Element) => {
+    if (child.properties.dataMonodocsGenerated !== undefined) return true;
+    const classes = Array.isArray(child.properties.className) ? child.properties.className : [];
+    return (
+      child.tagName === "sup" && (classes.includes("footnote") || classes.includes("footnoteref"))
+    );
+  };
   const strip = (element: Element): Element => ({
     ...element,
     children: element.children
-      .filter(
-        (child) => child.type !== "element" || child.properties.dataMonodocsGenerated === undefined,
-      )
+      .filter((child) => child.type !== "element" || !generated(child))
       .map((child) => (child.type === "element" ? strip(child) : child)),
   });
   return strip(node);

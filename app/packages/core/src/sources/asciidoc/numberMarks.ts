@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ConverterFactory } from "@asciidoctor/core";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 
 /**
  * Generated numbers are not content (roadmap 7.3.2), and in an AsciiDoc page they are marked where
@@ -53,6 +53,20 @@ const END = "\uE00B";
 /** The key's digits, one per hexadecimal digit, so that only this build's markers are read. */
 const KEY_BASE = 0xe030;
 
+/** Elements whose content is written as text, where an element cannot go. */
+const RAW_TEXT = new Set([
+  "script",
+  "style",
+  "textarea",
+  "title",
+  "noscript",
+  "xmp",
+  "iframe",
+  "noembed",
+  "noframes",
+  "plaintext",
+]);
+
 /** The blocks Asciidoctor writes a numbered caption on. */
 const CAPTIONED = new Set(["image", "table", "example", "listing"]);
 
@@ -64,7 +78,7 @@ export type NumberMarks = {
    * which post-processing turns back into the text it holds, marked (pipeline/generatedNumbers); a
    * marker in an attribute is removed.
    */
-  markGenerated(tree: HastRoot): void;
+  markGenerated(tree: HastRoot | Element): void;
 };
 
 /** A converter that marks the numbers Asciidoctor generates, for one conversion. */
@@ -172,18 +186,48 @@ export async function createNumberMarks(
   const marker = new RegExp(`${OPEN}${key}${MID}([^${OPEN}]*?)${CLOSE}${key}${END}`, "g");
   const anyMarker = new RegExp(`${OPEN}${key}${MID}|${CLOSE}${key}${END}`, "g");
 
-  const markGenerated = (tree: HastRoot) => {
+  const strip = (value: string) => value.replace(anyMarker, "");
+
+  /** Remove every marker under `tree`, from its text, comments, and attributes. */
+  const stripAll = (tree: HastRoot | Element) => {
+    visit(tree, (node) => {
+      if (node.type === "text" || node.type === "comment") node.value = strip(node.value);
+      else if (node.type === "element") {
+        for (const [name, value] of Object.entries(node.properties)) {
+          if (typeof value === "string") node.properties[name] = strip(value);
+        }
+        const content = (node as Element & { content?: HastRoot }).content;
+        if (content !== undefined) stripAll(content);
+      }
+    });
+  };
+
+  const markGenerated = (tree: HastRoot | Element) => {
     visit(tree, (node, index, parent) => {
+      if (node.type === "comment") {
+        node.value = strip(node.value);
+        return;
+      }
       if (node.type === "element") {
         const element = node as Element;
         for (const [name, value] of Object.entries(element.properties)) {
           if (typeof value === "string" && value.includes(OPEN)) {
-            element.properties[name] = value.replace(anyMarker, "");
+            element.properties[name] = strip(value);
           } else if (Array.isArray(value)) {
-            element.properties[name] = value.map((v) =>
-              typeof v === "string" ? v.replace(anyMarker, "") : v,
-            );
+            element.properties[name] = value.map((v) => (typeof v === "string" ? strip(v) : v));
           }
+        }
+        // A template's content is a fragment of its own, which the walk does not enter, and which
+        // nothing shows or compares: the marker is only removed.
+        const content = (element as Element & { content?: HastRoot }).content;
+        if (content !== undefined) stripAll(content);
+        // Where text is written as it is — a script, a textarea, a passthrough's — an element
+        // would be written as text, so the marker is only removed.
+        if (RAW_TEXT.has(element.tagName)) {
+          visit(element, "text", (text) => {
+            text.value = strip(text.value);
+          });
+          return SKIP;
         }
         return;
       }
@@ -202,7 +246,7 @@ export async function createNumberMarks(
         });
         last = match.index + match[0].length;
       }
-      if (last < value.length) parts.push({ type: "text", value: value.slice(last) });
+      if (last < value.length) parts.push({ type: "text", value: strip(value.slice(last)) });
       (parent as { children: ElementContent[] }).children.splice(index, 1, ...parts);
       return index + parts.length;
     });

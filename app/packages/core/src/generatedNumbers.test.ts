@@ -335,4 +335,32 @@ describe("marking generated numbers", () => {
     });
     expect(sources).toEqual([{ kind: "code", source: "see Section ", lang: "text" }]);
   });
+
+  it("leaves no marker in a passthrough's raw text, comment, or template", async () => {
+    const page =
+      '= P\n:sectnums:\n:xrefstyle: short\n\n[#one]\n== One\n\n[subs=macros]\n++++\n<!-- xref:one[] -->\n<template><p>xref:one[]</p></template>\n<textarea>xref:one[]</textarea>\n<script>var a = "xref:one[]";</script>\n++++\n';
+    await writeFile(join(dir, "docs", "p.adoc"), page);
+    const config = await loadConfig({ inputDir: join(dir, "docs") }, dir);
+    const plain = await preparePages(config, dir, {});
+    const recorded = await preparePages(config, dir, { record: true });
+    expect(recorded.pages[0]!.html).toBe(plain.pages[0]!.html);
+    expect(recorded.pages[0]!.html).not.toMatch(
+      /[\uE008-\uE00B\uE030-\uE03F]|data-monodocs-generated/,
+    );
+  });
+
+  it("leaves a footnote's number out of a highlighted listing's recorded source", async () => {
+    await writeFile(
+      join(dir, "docs", "y.adoc"),
+      "= Y\n\nFirst.footnote:[A.]\n\n[source,text,subs=+macros]\n----\ntext footnote:[Original.]\n----\n",
+    );
+    const config = await loadConfig({ inputDir: join(dir, "docs") }, dir);
+    const site = await preparePages(config, dir, { record: true });
+    const sources: unknown[] = [];
+    visit(site.trees!.get(site.pages[0]!.id) as Root, "element", (node) => {
+      const source = (node.data as { monodocsSource?: unknown } | undefined)?.monodocsSource;
+      if (source !== undefined) sources.push(source);
+    });
+    expect(sources).toEqual([{ kind: "code", source: "text ", lang: "text" }]);
+  });
 });
