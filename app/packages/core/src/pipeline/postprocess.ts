@@ -203,6 +203,8 @@ export type PostprocessOptions = {
   /** ソース拡張子（リンク変換対象。設定のカスタム拡張子に追従）。 */
   sourceExtensions: string[];
   embedImages: boolean;
+  /** Called with every image file read and its bytes; the earlier build refuses an LFS pointer. */
+  checkRead?: (path: string, content: Buffer) => void;
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
   mermaidEnabled: boolean;
@@ -1002,6 +1004,7 @@ async function embedImages(
     }
 
     const data = await readFile(real);
+    options.checkRead?.(real, data);
     const dataUri = `data:${mime};base64,${data.toString("base64")}`;
     img.properties.src = dataUri;
     embedded.push({ path: relative(realRoot, real).split(sep).join("/"), dataUri });

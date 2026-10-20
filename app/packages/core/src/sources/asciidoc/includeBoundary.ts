@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import { Extensions } from "@asciidoctor/core";
 import { MonodocsError } from "../../diagnostics.js";
@@ -43,12 +43,16 @@ export type IncludeViolation = { target: string; resolved: string; root: string 
 export function createIncludeBoundary(
   rootDir: string,
   relativePath: string,
+  check?: (path: string, content: Buffer) => void,
 ): {
   registry: unknown;
   takeViolation(): IncludeViolation | undefined;
+  /** What `check` threw for an included file, which Asciidoctor wraps in its own error. */
+  takeRefusal(): Error | undefined;
 } {
   const realRoot = safeReal(rootDir);
   let violation: IncludeViolation | undefined;
+  let refusal: Error | undefined;
 
   const registry = Extensions.create();
   registry.includeProcessor(function (this: {
@@ -65,7 +69,18 @@ export function createIncludeBoundary(
       const real = safeReal(candidate);
       // 存在しないものは Asciidoctor が「見つからない」と報告する。ここで先回りしない。
       if (real === undefined) return false;
-      if (isInside(realRoot, real)) return false;
+      if (isInside(realRoot, real)) {
+        // Only a file is read; anything else Asciidoctor reports in its own words.
+        if (check !== undefined && statSync(real).isFile()) {
+          try {
+            check(real, readFileSync(real));
+          } catch (error) {
+            refusal = error as Error;
+            throw error;
+          }
+        }
+        return false;
+      }
 
       violation = { target, resolved: real, root: realRoot ?? rootDir };
       // Asciidoctor はこれを自分のエラーに包んでしまうので、呼び出し側は記録した violation から
@@ -85,6 +100,11 @@ export function createIncludeBoundary(
     takeViolation() {
       const found = violation;
       violation = undefined;
+      return found;
+    },
+    takeRefusal() {
+      const found = refusal;
+      refusal = undefined;
       return found;
     },
   };

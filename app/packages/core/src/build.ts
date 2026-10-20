@@ -19,6 +19,7 @@ import {
   loadEarlierConfig,
 } from "./diff/earlier.js";
 import { earlierBuildConfig } from "./diff/earlierConfig.js";
+import { refuseLfsPointer } from "./diff/lfsPointer.js";
 import {
   documentAuthor,
   documentCoverParts,
@@ -69,6 +70,11 @@ type PreparePagesOptions = {
    * にする）だと PDF から画像が欠落するため、埋め込み側（`warn`）へ倒す。
    */
   onLargeImage?: OnLargeImage;
+  /**
+   * Called with every file the build reads — a page, an included file, an image — and its content.
+   * The earlier version's build refuses an LFS pointer with it (roadmap 7.3.1).
+   */
+  checkRead?: (path: string, content: Buffer | string) => void;
 };
 
 type PreparedSite = {
@@ -131,6 +137,10 @@ export async function preparePages(
     }
   }
 
+  if (opts.checkRead !== undefined) {
+    for (const source of sources) opts.checkRead(source.absolutePath, source.raw);
+  }
+
   const { pages, warnings } = await buildPages(
     sources,
     [
@@ -139,6 +149,7 @@ export async function preparePages(
         lineBreak: config.lineBreak,
         refuseSectnums: config.numberingSections !== false,
         math: config.mathEnabled,
+        checkInclude: opts.checkRead,
       }),
     ],
     {
@@ -177,6 +188,7 @@ export async function preparePages(
     pdfPageBreakLevel: config.pdfPageBreakLevel,
     figureAlign: config.figuresAlign,
     sectionNumbers,
+    checkRead: opts.checkRead,
   });
   // custom はサイドバーが閲覧順そのものになるため、ページの並びもそれに合わせる
   // （前後ナビ・PDF のページ順・初期表示ページが一致する）。
@@ -294,6 +306,7 @@ export async function buildSite(
           mermaidPrerenderer: prerenderer,
           embedImages: forceEmbed ? true : undefined,
           onLargeImage: forceLargeEmbed ? "warn" : undefined,
+          checkRead: refuseLfsPointer,
         }),
       );
     }

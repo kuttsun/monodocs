@@ -158,6 +158,7 @@ A diagnostic's `code` is what a job filters on, and is not renamed. The codes:
 - `diff/dir-not-found`
 - `diff/git-failed`
 - `diff/git-unavailable`
+- `diff/lfs-pointer`
 - `diff/not-a-repository`
 - `diff/outside-version`
 - `diff/ref-not-found`

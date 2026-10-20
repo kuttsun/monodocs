@@ -242,7 +242,15 @@ export async function inEarlierVersion<T>(
     const tree = resolve(cwd, diff.tree ?? diff.dir);
     const bases = [...new Set([real(tree), tree])].sort((a, b) => b.length - a.length);
     let message = error.message;
-    for (const base of bases) message = message.split(`${base}${sep}`).join(`${label}:`);
+    for (const base of bases) {
+      const [head = "", ...rest] = message.split(`${base}${sep}`);
+      // What follows is a path in the version, written with `/` as the rest of monodocs writes
+      // one, up to where the sentence goes on.
+      message = [
+        head,
+        ...rest.map((part) => part.replace(/^[^\s"'`,;)]+/, (path) => path.split(sep).join("/"))),
+      ].join(`${label}:`);
+    }
     const source = { ...error.source };
     if (source.path !== undefined) source.path = `${label}:${source.path}`;
     throw new MonodocsError(error.code, message, source);

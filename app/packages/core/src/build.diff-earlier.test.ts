@@ -6,6 +6,7 @@ import { buildSite } from "./build";
 import { loadConfig, REMOVED_KEY_TRANSLATIONS, translateKeys } from "./config";
 import { loadEarlierConfig } from "./diff/earlier";
 import { EARLIER_FIELDS, earlierBuildConfig } from "./diff/earlierConfig";
+import { isLfsPointer } from "./diff/lfsPointer";
 
 /**
  * Building the earlier version (roadmap 7.3.2): with its own configuration for what the document
@@ -161,6 +162,47 @@ describe("building the earlier version", () => {
     await writeFile(
       join(then, "docs", "index.md"),
       "# Index\n\n![](missing.png)\n\n[x](nowhere.md)\n",
+    );
+    await expectBothBuilt();
+  });
+});
+
+/** A pointer as git-lfs writes it, for an object that is not here. */
+const POINTER = `version https://git-lfs.github.com/spec/v1\noid sha256:${"a".repeat(64)}\nsize 2048\n`;
+
+describe("an LFS pointer the earlier build reads", () => {
+  it("knows a pointer, with ext lines, and not a page quoting its first line", () => {
+    expect(isLfsPointer(POINTER)).toBe(true);
+    expect(isLfsPointer(POINTER.replace(/\n/g, "\r\n"))).toBe(true);
+    const withExt = POINTER.replace("oid", `ext-0-foo sha256:${"b".repeat(64)}\noid`);
+    expect(isLfsPointer(withExt)).toBe(true);
+    expect(isLfsPointer("version https://git-lfs.github.com/spec/v1\n")).toBe(false);
+    expect(isLfsPointer(`# LFS\n\n${POINTER}`)).toBe(false);
+  });
+
+  it("is diff/lfs-pointer for a page, an image, and an include that are pointers", async () => {
+    const cases: [string, string | Buffer][] = [
+      ["docs/index.md", POINTER],
+      ["docs/image.png", POINTER],
+      ["docs/_part.adoc", POINTER],
+    ];
+    await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\ninclude::_part.adoc[]\n");
+    for (const [path, content] of cases) {
+      await writeFile(join(then, "docs", "index.md"), "# Index\n\n![](image.png)\n");
+      await writeFile(join(then, "docs", "image.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+      await writeFile(join(then, "docs", "_part.adoc"), "Included.\n");
+      await writeFile(join(then, path), content);
+      const error = await failure();
+      expect(error.code, path).toBe("diff/lfs-pointer");
+      expect(error.message, path).toContain(`v1.2:${path}`);
+    }
+  });
+
+  it("leaves a pointer the build never reads, and a page quoting one, as they are", async () => {
+    await writeFile(join(then, "docs", "archive.zip"), POINTER);
+    await writeFile(
+      join(then, "docs", "index.md"),
+      "# Index\n\n```\nversion https://git-lfs.github.com/spec/v1\n```\n\n[archive](archive.zip)\n",
     );
     await expectBothBuilt();
   });

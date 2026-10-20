@@ -80,6 +80,8 @@ export function createAsciidocRenderer(
     refuseSectnums?: boolean;
     /** Render latexmath (`math.enabled`, roadmap 6.4). On unless turned off. */
     math?: boolean;
+    /** Called with every file `include::` reads and its content, before Asciidoctor reads it. */
+    checkInclude?: (path: string, content: Buffer) => void;
   } = {},
 ): SourceRenderer {
   const lineBreak = options.lineBreak ?? "space";
@@ -93,7 +95,9 @@ export function createAsciidocRenderer(
   const mathFor = () =>
     (options.math ?? true) ? createMathConverter({ htmlsyntax }) : Promise.resolve(undefined);
   const boundaryFor = (source: SourceFile) =>
-    rootDir === undefined ? undefined : createIncludeBoundary(rootDir, source.relativePath);
+    rootDir === undefined
+      ? undefined
+      : createIncludeBoundary(rootDir, source.relativePath, options.checkInclude);
 
   return {
     format: "asciidoc",
@@ -242,7 +246,8 @@ function numbersSections(doc: Document): boolean {
  * buried in it. The violation is read back from the boundary instead of parsed out of the text.
  */
 async function withBoundary<T>(
-  boundary: { takeViolation(): IncludeViolation | undefined } | undefined,
+  boundary:
+    { takeViolation(): IncludeViolation | undefined; takeRefusal(): Error | undefined } | undefined,
   source: SourceFile,
   run: () => Promise<T>,
 ): Promise<T> {
@@ -250,6 +255,9 @@ async function withBoundary<T>(
     return await run();
   } catch (error) {
     rethrowIncludeViolation(boundary?.takeViolation(), source.relativePath);
+    // A check on an included file throws inside Asciidoctor, which wraps it; the original is kept.
+    const refused = boundary?.takeRefusal();
+    if (refused !== undefined) throw refused;
     throw error;
   }
 }

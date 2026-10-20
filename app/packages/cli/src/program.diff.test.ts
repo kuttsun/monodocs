@@ -86,4 +86,49 @@ describe("--diff-from and --diff-from-dir", () => {
       await rm(base, { recursive: true, force: true });
     }
   });
+
+  it("stop at an LFS pointer under the root that a page reads, and at no other", async () => {
+    const base = await mkdtemp(join(tmpdir(), "monodocs-program-lfs-"));
+    try {
+      await writeFile(join(base, "gitconfig"), "");
+      const env = {
+        ...process.env,
+        GIT_CONFIG_GLOBAL: join(base, "gitconfig"),
+        GIT_CONFIG_NOSYSTEM: "1",
+        GIT_AUTHOR_NAME: "monodocs",
+        GIT_AUTHOR_EMAIL: "monodocs@example.invalid",
+        GIT_COMMITTER_NAME: "monodocs",
+        GIT_COMMITTER_EMAIL: "monodocs@example.invalid",
+      };
+      const git = (...args: string[]) => execFileSync("git", args, { cwd: base, env });
+      const pointer = `version https://git-lfs.github.com/spec/v1\noid sha256:${"a".repeat(64)}\nsize 2048\n`;
+      await mkdir(join(base, "docs"));
+      await mkdir(join(base, "assets"));
+      // Committed as git-lfs would leave them without its filter: the pointers themselves.
+      await writeFile(join(base, "docs", "archive.zip"), pointer);
+      await writeFile(join(base, "assets", "outside.png"), pointer);
+      await writeFile(join(base, "docs", "index.md"), "# Index\n\n[archive](archive.zip)\n");
+      git("init", "-q", "-b", "main");
+      git("add", "-A");
+      git("commit", "-q", "-m", "unread pointers");
+      git("tag", "unread");
+      await writeFile(join(base, "docs", "image.png"), pointer);
+      await writeFile(join(base, "docs", "index.md"), "# Index\n\n![](image.png)\n");
+      git("add", "-A");
+      git("commit", "-q", "-m", "a pointer a page reads");
+      vi.spyOn(process, "cwd").mockReturnValue(base);
+      const out = join(base, "out.html");
+      // A pointer the build never reads, and one outside the root, are left as they are.
+      expect((await run("build", "docs", "--diff-from", "unread", "-o", out)).join("\n")).toContain(
+        "does not write the difference",
+      );
+      vi.restoreAllMocks();
+      vi.spyOn(process, "cwd").mockReturnValue(base);
+      const errors = await run("build", "docs", "--diff-from", "HEAD", "-o", out);
+      expect(errors.join("\n")).toContain("HEAD:docs/image.png");
+      expect(errors.join("\n")).toContain("LFS pointer");
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
+  });
 });
