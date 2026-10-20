@@ -74,9 +74,10 @@ v0.16 は、これまでのマイルストーンが先送りしたものを片�
 PDF を見て、`next` を 0.17.0 に移した。Windows ホストのスクリプトは通った。ただし、ホストの `PATH` には
 Node.js があった。Windows で人が行う確認も済んだ。Edge はダウンロードのときに警告を出したが、ダウンロードした
 アセットに Mark of the Web は付いておらず、実行のときには SmartScreen の画面は現れなかった。
-0.17.1 は、バージョンを上げる変更の中で CI ガイドをそれに固定し、`latest` に出す。パッチだが、判断のうえで
+0.17.1 は、バージョンを上げる変更の中で CI ガイドをそれに固定し、`latest` に出した。パッチだが、判断のうえで
 lightbox の大きさのボタンのための `html.labels` のキーを 2 つ足している（#211）。`latest` を動かしたあとに、
-公開パッケージとリリースバイナリを検証する。
+公開パッケージとリリースバイナリを検証し（バイナリの確認は、サンプルの出力を新しい設定ファイルの横で探すよう
+直してから通った）、`next` を 0.17.1 に移した。
 
 v0.18〜v0.20 も 1.0 の前に置く。Git を見ない読み手のために、旧版との差分を書き込んだ HTML と PDF を
 3 つのリリースで出す。12.4 は 1.x でも許すが、先に入れる。足すものは 1.0 が凍結する表面であり、それを
@@ -663,7 +664,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [x] ファイル名に空白や ASCII 以外の文字を含む Markdown の画像（`図.png`、`<a b.png>`）を、AsciiDoc の同じ画像と同じく埋め込む。Markdown のレンダラは `src` をパーセントエンコードするので、ビルドはそれをデコードしてからファイルを探し、見つからなければ書かれたままの名前で探す——`build.image-names.test.ts` が両方の名前を Markdown と AsciiDoc で書き、HTML と PDF にビルドする。`postprocess.test.ts` が、名前がそのまま `c%20d.svg` のファイルと、デコードできない `src` を確かめる。変更前は、Markdown の画像が `image/not-found` と報告された
 - [x] ダークモードでは、Mermaid のライトテーマで描かれた図（クライアントのランタイムが描いたもの、明るいページ向けに pre-render したもの）に、図の画像と同じ白い下地を敷き、lightbox でも白いパネルに載せる。ほぼ黒の辺が `#0d1117` の上で見えなくなっていたためである。`html.colorScheme: dark` で（`redux-dark-color` で）pre-render した図にはビルド時に印を付け、どちらでもページの背景のままにする——`lightbox.layout.test.ts` がそれぞれを Chromium で開き、本文での下地とパネルの色を確かめる。変更前は、ライトテーマの図をダークモードで開く 2 件が失敗した。印は `postprocess.test.ts` と `build.mermaid-prerender.test.ts` が確かめる。[syntax.md](syntax.md) が説明する
 - [x] lightbox で、画像を「画面に合わせる」と「実寸」で切り替えられるようにする。実寸は、ラスター画像では画像の 1 ピクセルを CSS の 1 ピクセルとする大きさ、ローカルの SVG 画像では SVG が自分に与える大きさで、ビルドが `<img>` に記録する（`data-monodocs-svg-size`）。ブラウザは `viewBox` だけの SVG に丸めた既定の大きさを返し、`<img>` の `width` は作者が書いたものかもしれないためである。ビルドが読めない・大きさを決められない SVG（リモート、data URI、入力の外、`em` での寸法）にはボタンを出さない。実寸ではダイアログをスクロールさせ、絵の中央から見せる。ボタンは 2 つの大きさが違うときだけ出し、ラスター画像はどちらでも拡大しない。Mermaid 図には付けない。ボタンの文言は `html.labels` の新しいキー `actualSize` と `fitToScreen` で、issue はマイナーリリースを提案していたが、判断してこのパッチに入れた——`lightbox.layout.test.ts` が、小さいラスター画像（ボタンなし）、横長と縦長の大きいラスター画像をキーボードで実寸にする場合（ピクセルどおり、スクロールし、絵の始まりに届き、中央から始まる）、ボタンを 2 回押す場合（画面に合わせ直す）、開き直す場合（画面に合わせる）、draw.io の形の SVG、`viewBox` だけの SVG、作者が幅を狭めた SVG を、それぞれが自分に与える大きさで開く場合、大きさが記録されていない SVG にボタンを出さないこと、押してもボタンがフォーカスを保つことを確かめる。`svgOwnSize` と記録は `postprocess.test.ts` が確かめる。キーは `surfaces.md` に載せた
-- [ ] `0.17.1` を `latest` タグで公開し、CI ガイドをバージョン変更の中で固定する。`dist_tag: 0.17.1` で走らせた `verify-published.yml` と、リリースバイナリの `verify-release-binaries.yml` で検証し、`next` をそこへ移す
+- [x] `0.17.1` を `latest` タグで公開し、CI ガイドをバージョン変更の中で固定する。`dist_tag: 0.17.1` で走らせた `verify-published.yml` と、リリースバイナリの `verify-release-binaries.yml` で検証し、`next` をそこへ移す——2026-10-20 に #217 から公開した。CI ガイドは各言語で 4 箇所を `monodocs@0.17.1` に固定し、そのままデプロイされた。`dist_tag: 0.17.1` の `verify-published.yml` は Linux と Windows で通った。1 回目は、レジストリがその版を返す前に走らせたので `ETARGET` で失敗した。`verify-release-binaries.yml` は、初めは両方のプラットフォームで失敗した。[#208](https://github.com/kuttsun/monodocs/pull/208) が `examples/en` に設定ファイルを足したので、既定の出力は文書どおりその横に書かれるのに、スクリプトは作業ディレクトリを見ていたためである。[#218](https://github.com/kuttsun/monodocs/pull/218) でスクリプトを直したあとは、どちらのプラットフォームでも 16 件中 16 件が通り、Linux のスクリプトは Node.js の無い `debian:stable-slim` のコンテナでも同じく通った。`next` と `latest` はどちらも `0.17.1` を指す
 
 ### v0.18: 旧版との差分を HTML に出す
 
