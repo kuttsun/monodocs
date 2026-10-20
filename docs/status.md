@@ -79,6 +79,9 @@ Windows looked at, and `next` moved onto 0.17.0. The Windows host script passed,
 with Node.js on its `PATH`. The Windows checks a person makes were made too: Edge warned at
 download, but the downloaded asset carried no Mark of the Web, and no SmartScreen prompt appeared
 on running it.
+0.17.1 goes out under `latest`, with the CI guide pinned to it in the version change. It is a
+patch, but it adds two `html.labels` keys for the lightbox's size button (#211), by decision. The
+published package and the release binaries are verified after `latest` moves.
 
 v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an earlier version written
 into them, for readers who do not look at Git, in three releases. 12.4 would allow them in 1.x; they
