@@ -19,7 +19,11 @@ import {
   loadEarlierConfig,
 } from "./diff/earlier.js";
 import { earlierBuildConfig } from "./diff/earlierConfig.js";
-import { relocateEarlierPages, sharedClockAttributes } from "./diff/earlierLocation.js";
+import {
+  earlierRelocator,
+  relocateEarlierPages,
+  sharedClockAttributes,
+} from "./diff/earlierLocation.js";
 import { refuseLfsPointer } from "./diff/lfsPointer.js";
 import {
   documentAuthor,
@@ -83,6 +87,8 @@ type PreparePagesOptions = {
    * before post-processing splits their text — highlighting cuts a path into tokens.
    */
   relocate?: (pages: Page[]) => Page[];
+  /** Rewrites a page title before `sidebar.titleTransform` changes its characters. */
+  relocateTitle?: (title: string) => string;
 };
 
 export type PreparedSite = {
@@ -163,6 +169,7 @@ export async function preparePages(
     {
       titleTransform: config.sidebarTitleTransform.page,
       titleFrom: config.sidebarTitleFrom,
+      ...(opts.relocateTitle === undefined ? {} : { rewriteTitle: opts.relocateTitle }),
       sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
     },
   );
@@ -334,6 +341,7 @@ export async function buildSite(
           checkRead: refuseLfsPointer,
           checkEmbedded: (page, content) => refuseLfsPointer(page.sourcePath, content, "embedded"),
           relocate: (pages) => relocateEarlierPages(pages, diff, cwd),
+          relocateTitle: earlierRelocator(diff, cwd).text,
         }),
       );
       internals.onPrepared?.("earlier", earlier);

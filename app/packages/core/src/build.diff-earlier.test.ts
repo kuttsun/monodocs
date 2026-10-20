@@ -508,3 +508,19 @@ describe("round 4", () => {
     expect(page.html).toMatch(/n&(amp|#x26);w/);
   });
 });
+
+describe("round 5", () => {
+  it("writes the new location in a title before sidebar.titleTransform changes its characters", async () => {
+    const config =
+      "sidebar:\n  titleTransform:\n    page:\n      type: regex\n      pattern: '[-/\\\\]'\n      replacement: ' '\n      flags: g\n";
+    for (const root of [now, then]) {
+      await writeFile(join(root, "monodocs.config.yml"), config);
+      await writeFile(join(root, "docs", "guide.adoc"), "= Guide {docdir}\n");
+    }
+    const sites = await prepared();
+    const title = (site: PreparedSite) =>
+      site.pages.find((p) => p.relativePath === "guide.adoc")!.title;
+    // The same title as the new version's: the location went in before the transform ran.
+    expect(title(sites.earlier)).toBe(title(sites.new));
+  });
+});

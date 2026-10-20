@@ -47,15 +47,11 @@ export function sharedClockAttributes(
   return attributes;
 }
 
-/**
- * The earlier pages with the earlier version's location written as the new one's, where it is
- * text. Asciidoctor makes `{docdir}` the absolute directory of the file it reads, which for the
- * earlier build is under the temporary directory. Rewritten after the build, so an include or an
- * image whose target is written with `{docdir}` has already been read from the earlier version's
- * own files, which are what that version included. It runs on the pages as Asciidoctor wrote them,
- * before the sidebar takes their titles and before highlighting cuts a path into tokens.
- */
-export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: string): Page[] {
+/** What writes the earlier version's location as the new one's: in plain text, and in HTML. */
+export function earlierRelocator(
+  diff: DiffOptions,
+  cwd: string,
+): { text: (text: string) => string; html: (html: string) => string } {
   const dir = resolve(cwd, diff.dir);
   const tree = resolve(cwd, diff.tree ?? diff.dir);
   // The tree stands where the current directory stands, shifted as `diff.dir` is inside it.
@@ -100,7 +96,19 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
     for (const [pattern, place] of patterns) out = out.replace(pattern, () => place);
     return out;
   };
-  const relocate = (text: string) => replaceAll(inText, text);
+  return { text: (text) => replaceAll(inText, text), html: (html) => replaceAll(inHtml, html) };
+}
+
+/**
+ * The earlier pages with the earlier version's location written as the new one's, where it is
+ * text. Asciidoctor makes `{docdir}` the absolute directory of the file it reads, which for the
+ * earlier build is under the temporary directory. Rewritten after the build, so an include or an
+ * image whose target is written with `{docdir}` has already been read from the earlier version's
+ * own files, which are what that version included. It runs on the pages as Asciidoctor wrote them,
+ * before the sidebar takes their titles and before highlighting cuts a path into tokens.
+ */
+export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: string): Page[] {
+  const { text: relocate, html: relocateHtml } = earlierRelocator(diff, cwd);
   return pages.map((page) =>
     page.format !== "asciidoc"
       ? page
@@ -108,7 +116,7 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
           ...page,
           title: relocate(page.title),
           ...(page.description === undefined ? {} : { description: relocate(page.description) }),
-          html: replaceAll(inHtml, page.html),
+          html: relocateHtml(page.html),
           text: relocate(page.text),
           headings: page.headings.map((heading) => ({ ...heading, text: relocate(heading.text) })),
         },
