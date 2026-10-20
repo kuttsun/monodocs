@@ -14,6 +14,12 @@
   --color-code-link: #0550ae;
   --color-input-bg: #ffffff;
   --color-mark-bg: #fff3cd;
+  /* What an image is drawn on. Most images, a draw.io export or a transparent PNG, are drawn for
+     a light background, so the lightbox panel stays white in dark mode too, and in dark mode a
+     figure's image in the page gets a white backing; in light mode the page itself is that
+     background. */
+  --color-image-panel-bg: #ffffff;
+  --color-image-backing: transparent;
   /* Admonition（GFM alert）の種別色。GitHub Primer に準拠。淡い背景は色帯の色を
      地の背景に混ぜて（--admonition-tint の割合で）作るので背景色は個別に持たない。 */
   --color-adm-note: #0969da;
@@ -45,6 +51,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-bg: #0d1117;
+    --color-image-backing: #ffffff;
     --color-text: #e6edf3;
     --color-muted: #8b949e;
     --color-border: #30363d;
@@ -72,6 +79,7 @@
 /* 明示的にダークを選んだ場合。 */
 :root[data-theme="dark"] {
   --color-bg: #0d1117;
+  --color-image-backing: #ffffff;
   --color-text: #e6edf3;
   --color-muted: #8b949e;
   --color-border: #30363d;
@@ -841,6 +849,13 @@ body.content-wide #content {
   max-width: 100%;
 }
 
+/* A figure's image, a diagram or a screenshot, is drawn for a light background; in dark mode it
+   gets one (see --color-image-backing). An icon or a badge in a sentence does not, where a white
+   box would stand out more than its own colors. */
+#content [data-monodocs-figure] img {
+  background: var(--color-image-backing);
+}
+
 #content .image-lightbox-trigger {
   cursor: zoom-in;
 }
@@ -927,13 +942,41 @@ body.content-wide #content {
   gap: 0.75rem;
 }
 
+/* An image sits on a white panel, so a transparent image is not drawn over the dark backdrop and
+   the page showing through it, in dark mode as in light (see --color-image-panel-bg). The script
+   sizes the image to its picture; the limits here hold until it has, sizes of the content box,
+   inside the padding. */
 #image-lightbox-image {
   display: block;
+  box-sizing: content-box;
   width: auto;
   height: auto;
-  max-width: 100%;
-  max-height: calc(100vh - 7rem);
+  max-width: calc(100% - 2rem);
+  max-height: calc(100vh - 9rem);
+  padding: 1rem;
   object-fit: contain;
+  background: var(--color-image-panel-bg);
+  border-radius: 6px;
+}
+
+/* The figure takes the dialog's height, which the script measures the room in. */
+#image-lightbox.image-lightbox-picture .image-lightbox-content {
+  height: 100%;
+  min-height: 0;
+}
+
+#image-lightbox.image-lightbox-picture #image-lightbox-image {
+  flex: none;
+}
+
+/* An SVG image the browser gives no natural size fills the room instead. Its proportions are
+   then unknown to the script, since an <img> does not expose its viewBox, so the panel can leave
+   a band beside a picture narrower than the room. */
+#image-lightbox.image-lightbox-vector #image-lightbox-image {
+  flex: 0 1 auto;
+  width: calc(100% - 2rem);
+  min-height: 0;
+  max-height: none;
 }
 
 /* A Mermaid diagram moved into the dialog. Its own colors assume the page background, so the

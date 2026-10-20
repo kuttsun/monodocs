@@ -1,4 +1,4 @@
-import { readFile, realpath, stat } from "node:fs/promises";
+import { open, readFile, realpath, stat } from "node:fs/promises";
 import { dirname, posix, relative, resolve, sep } from "node:path";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
@@ -931,6 +931,86 @@ function isInside(realRoot: string, real: string): boolean {
   return real === realRoot || real.startsWith(realRoot + sep);
 }
 
+/** How much of an SVG is read to find its root element's attributes. */
+const SVG_HEAD_BYTES = 64 * 1024;
+
+/** Whether an SVG length attribute gives the image a size of its own: present and not a percentage. */
+function isOwnSvgLength(value: string | undefined): boolean {
+  if (value === undefined) return false;
+  const v = value.trim();
+  return v !== "" && v !== "auto" && !v.endsWith("%");
+}
+
+/**
+ * The width to give an SVG whose root element has a `viewBox` but neither a `width` nor a
+ * `height` of its own (a percentage counts as none). A browser stretches such an image across
+ * the page, however small its drawing; given its `viewBox` width in pixels, as a drawing tool
+ * exporting at 100% would write it, it shows at that size instead, and its height follows from
+ * the `viewBox`'s proportions. `undefined` when the SVG has a size, or no usable `viewBox`.
+ */
+export function unsizedSvgWidth(source: string): number | undefined {
+  // A quoted value can hold a ">", which does not end the tag.
+  const root = /<svg\b((?:[^>"']|"[^"]*"|'[^']*')*)>/i.exec(source);
+  if (!root) return undefined;
+  const attributes = new Map<string, string>();
+  for (const m of (root[1] ?? "").matchAll(/([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    attributes.set(m[1]!, m[2] ?? m[3] ?? "");
+  }
+  if (isOwnSvgLength(attributes.get("width")) || isOwnSvgLength(attributes.get("height"))) {
+    return undefined;
+  }
+  const box = (attributes.get("viewBox") ?? "")
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  if (box.length !== 4 || box.some((n) => !Number.isFinite(n))) return undefined;
+  const [, , width, height] = box as [number, number, number, number];
+  if (!(width > 0 && height > 0)) return undefined;
+  return Math.max(1, Math.round(width));
+}
+
+/**
+ * Gives each local SVG image that has no size of its own, and no `width` or `height` on its
+ * `<img>`, the width {@link unsizedSvgWidth} finds. Runs whether or not images are embedded,
+ * before they are, while `src` is still the path. An image that cannot be read is left alone:
+ * embedding, if on, reports it.
+ */
+async function sizeUnsizedSvgImages(tree: HastRoot, page: Page, realRoot: string): Promise<void> {
+  const images: Element[] = [];
+  visit(tree, "element", (node) => {
+    if (node.tagName === "img") images.push(node);
+  });
+
+  const baseDir = dirname(page.sourcePath);
+  for (const img of images) {
+    const src = img.properties.src;
+    if (typeof src !== "string" || !src || isExternalSrc(src)) continue;
+    if (img.properties.width !== undefined || img.properties.height !== undefined) continue;
+    const style = img.properties.style;
+    if (typeof style === "string" && /(?:^|[;\s])(?:width|height)\s*:/i.test(style)) continue;
+    const pathPart = src.split("#")[0]?.split("?")[0] ?? src;
+    if (posix.extname(pathPart).toLowerCase() !== ".svg") continue;
+
+    let head: string;
+    try {
+      const real = await realpath(resolve(baseDir, pathPart));
+      if (!isInside(realRoot, real)) continue;
+      const file = await open(real, "r");
+      try {
+        const buffer = Buffer.alloc(SVG_HEAD_BYTES);
+        const { bytesRead } = await file.read(buffer, 0, SVG_HEAD_BYTES, 0);
+        head = buffer.subarray(0, bytesRead).toString("utf8");
+      } finally {
+        await file.close();
+      }
+    } catch {
+      continue;
+    }
+    const width = unsizedSvgWidth(head);
+    if (width !== undefined) img.properties.width = width;
+  }
+}
+
 async function embedImages(
   tree: HastRoot,
   page: Page,
@@ -1078,6 +1158,7 @@ export async function postprocessPages(
     // 著者向けの検査は画像埋め込みより前に行う。あとにすると、報告する src が data URI になる。
     checkHeadingLevels(tree, page, warnings);
     checkImageAlt(tree, page, warnings);
+    await sizeUnsizedSvgImages(tree, page, realRoot);
     if (options.embedImages) {
       await embedImages(tree, page, options, realRoot, warnings, embeddedImages);
     }

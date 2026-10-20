@@ -5,7 +5,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unified } from "unified";
 import rehypeStringify from "rehype-stringify";
 import type { Root as HastRoot } from "hast";
-import { postprocessPages, SHIKI_INJECTORS, shikiLanguageClosure } from "./postprocess";
+import {
+  postprocessPages,
+  SHIKI_INJECTORS,
+  shikiLanguageClosure,
+  unsizedSvgWidth,
+} from "./postprocess";
 import { createMarkdownRenderer, markdownRenderer } from "../sources/markdown/renderer";
 import { MermaidPrerenderSetupError } from "./mermaidPrerender";
 import type { Page } from "../types";
@@ -955,5 +960,87 @@ describe("postprocessPages - image embedding", () => {
     });
     expect(result.warnings.some((w) => w.message.includes("nope.png"))).toBe(true);
     expect(pages[0]!.html).toContain('src="https://x/y.png"');
+  });
+});
+
+describe("unsizedSvgWidth", () => {
+  it.each([
+    ["only a viewBox", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 400">', 100],
+    ["a percentage width", '<svg width="100%" viewBox="0 0 640.4 480">', 640],
+    ["percentages both ways", "<svg width='100%' height='100%' viewBox='0,0,24,24'>", 24],
+    [
+      "an XML declaration and a comment first",
+      '<?xml version="1.0"?>\n<!-- x -->\n<svg viewBox="0 0 50 20">',
+      50,
+    ],
+  ])("gives the viewBox width to an SVG with %s", (_name, source, width) => {
+    expect(unsizedSvgWidth(source)).toBe(width);
+  });
+
+  it.each([
+    ["a width and a height", '<svg width="444px" height="392px" viewBox="0 0 444 392">'],
+    [
+      "a width and a height after a quoted >",
+      `<svg viewBox="0 0 100 400" aria-label="A > B" data-x='1>0' width="400" height="1600">`,
+    ],
+    ["a width only", '<svg width="200" viewBox="0 0 100 400">'],
+    ["a height only, in another unit", '<svg height="3cm" viewBox="0 0 100 400">'],
+    ["no viewBox", "<svg>"],
+    ["an empty viewBox", '<svg viewBox="0 0 0 10">'],
+    ["a malformed viewBox", '<svg viewBox="0 0 wide 10">'],
+    ["no svg root", "<html></html>"],
+  ])("leaves an SVG with %s alone", (_name, source) => {
+    expect(unsizedSvgWidth(source)).toBeUndefined();
+  });
+});
+
+describe("postprocessPages - sizing SVG images that have no size", () => {
+  let root: string;
+  let docs: string;
+  beforeAll(async () => {
+    root = await mkdtemp(join(tmpdir(), "monodocs-svg-size-"));
+    docs = join(root, "docs");
+    await mkdir(docs, { recursive: true });
+    const svg = (attributes: string) =>
+      `<svg xmlns="http://www.w3.org/2000/svg" ${attributes}><rect width="10" height="10"/></svg>`;
+    await writeFile(join(docs, "tall.svg"), svg('viewBox="0 0 100 400"'));
+    await writeFile(join(docs, "sized.svg"), svg('width="444" height="392" viewBox="0 0 444 392"'));
+    await writeFile(join(root, "outside.svg"), svg('viewBox="0 0 100 400"'));
+  });
+  afterAll(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  async function run(html: string, embedImages: boolean) {
+    const pages: Page[] = [
+      page({ relativePath: "index.md", route: "/", sourcePath: join(docs, "index.md"), html }),
+    ];
+    await postprocessPages(pages, { ...baseOptions, inputDir: docs, embedImages });
+    return pages[0]!.html;
+  }
+
+  it.each([true, false])(
+    "gives a viewBox-only SVG its viewBox width (embedImages: %s)",
+    async (embedImages) => {
+      const html = await run('<img src="tall.svg?v=1#x" alt="Flow">', embedImages);
+      expect(html).toMatch(/<img [^>]*width="100"/);
+      expect(html).not.toMatch(/<img [^>]*height=/);
+      expect(html.includes("data:image/svg+xml")).toBe(embedImages);
+    },
+  );
+
+  it.each([
+    ["an SVG with its own size", '<img src="sized.svg" alt="x">'],
+    ["an <img> with a width", '<img src="tall.svg" width="50" alt="x">'],
+    ["an <img> with a height", '<img src="tall.svg" height="50" alt="x">'],
+    ["an <img> with a width in its style", '<img src="tall.svg" style="width: 50%" alt="x">'],
+    ["an SVG outside the input", '<img src="../outside.svg" alt="x">'],
+    ["a missing SVG", '<img src="nope.svg" alt="x">'],
+    ["a remote SVG", '<img src="https://example.com/a.svg" alt="x">'],
+    ["a raster image", '<img src="tall.png" alt="x">'],
+  ])("leaves %s as it is", async (_name, html) => {
+    const out = await run(html, false);
+    // Whatever width it would be given, none is added; one the <img> sets itself stays.
+    expect(out.match(/width="/g)?.length ?? 0).toBe(html.match(/width="/g)?.length ?? 0);
   });
 });

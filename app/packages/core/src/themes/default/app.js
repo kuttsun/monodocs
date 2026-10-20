@@ -1931,6 +1931,43 @@
     // ids that its own <style> and url(#…) references point at, and a copy would duplicate them.
     var moved = null;
 
+    // A vector image has no pixels to blur, so the dialog scales it up to the space it has, as it
+    // does a diagram; a raster image is only ever shrunk to fit.
+    function isVectorSource(src) {
+      if (/^data:image\/svg\+xml[;,]/i.test(src)) return true;
+      return /\.svg$/i.test(src.split(/[?#]/)[0]);
+    }
+
+    // Sizes the image to the room the caption leaves, keeping its proportions, so its panel
+    // fits the picture with no band beside it. The caption takes its own height, however many
+    // lines it wraps to. Without a natural size yet, the stylesheet's sizing stands.
+    function fitPreview() {
+      preview.removeAttribute("style");
+      // Until the image has loaded, its panel would be an empty square in the dark.
+      if (!preview.complete) preview.style.visibility = "hidden";
+      if (preview.hidden || !dialog.hasAttribute("open")) return;
+      var width = preview.naturalWidth;
+      var height = preview.naturalHeight;
+      if (!(width > 0 && height > 0)) return;
+      var figure = preview.parentNode;
+      var box = window.getComputedStyle(preview);
+      var roomWidth =
+        figure.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight);
+      var roomHeight =
+        figure.clientHeight - parseFloat(box.paddingTop) - parseFloat(box.paddingBottom);
+      if (!caption.hidden) {
+        var gap = parseFloat(window.getComputedStyle(figure).rowGap) || 0;
+        roomHeight -= caption.offsetHeight + gap;
+      }
+      var scale = Math.min(roomWidth / width, roomHeight / height);
+      if (!dialog.classList.contains("image-lightbox-vector")) scale = Math.min(scale, 1);
+      if (!(scale > 0)) return;
+      preview.style.width = width * scale + "px";
+      preview.style.height = height * scale + "px";
+      preview.style.maxWidth = "none";
+      preview.style.maxHeight = "none";
+    }
+
     function restoreDiagram() {
       if (!moved) return;
       moved.container.insertBefore(moved.svg, moved.next);
@@ -1945,6 +1982,8 @@
       restoreDiagram();
       preview.removeAttribute("src");
       preview.alt = "";
+      dialog.classList.remove("image-lightbox-picture", "image-lightbox-vector");
+      preview.removeAttribute("style");
       caption.textContent = "";
       caption.hidden = true;
       if (lastTrigger && typeof lastTrigger.focus === "function") {
@@ -1980,7 +2019,12 @@
       var alt = trigger.getAttribute("alt") || "";
       preview.src = src;
       preview.alt = alt;
+      // Set on every open, since a dialog opened without showModal can take the next image
+      // without closing first.
+      dialog.classList.add("image-lightbox-picture");
+      dialog.classList.toggle("image-lightbox-vector", isVectorSource(src));
       showDialog(trigger, alt);
+      fitPreview();
     }
 
     function enhance(el, label, open) {
@@ -2005,6 +2049,9 @@
       if (e.target === dialog) closeLightbox();
     });
     dialog.addEventListener("close", resetPreview);
+    preview.addEventListener("load", fitPreview);
+    preview.addEventListener("error", fitPreview);
+    window.addEventListener("resize", fitPreview);
 
     document.querySelectorAll("#content img").forEach(function (img) {
       // Preserve parent interactions and the semantics of explicitly decorative images.
@@ -2058,6 +2105,8 @@
         diagramHost.style.width =
           "min(calc(100% - 2rem), calc(" + height + " * " + box.width / box.height + "))";
       }
+      dialog.classList.remove("image-lightbox-picture", "image-lightbox-vector");
+      preview.removeAttribute("style");
       diagramHost.appendChild(svg);
       diagramHost.hidden = false;
       preview.hidden = true;
