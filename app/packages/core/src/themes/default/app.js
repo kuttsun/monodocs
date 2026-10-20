@@ -2107,6 +2107,10 @@
       }
       dialog.classList.remove("image-lightbox-picture", "image-lightbox-vector");
       preview.removeAttribute("style");
+      // The panel's color follows the theme the diagram was drawn in (style.css).
+      var scheme = container.getAttribute("data-monodocs-scheme");
+      if (scheme) diagramHost.setAttribute("data-monodocs-scheme", scheme);
+      else diagramHost.removeAttribute("data-monodocs-scheme");
       diagramHost.appendChild(svg);
       diagramHost.hidden = false;
       preview.hidden = true;

@@ -636,7 +636,7 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | Self-contained          | cdn = needs network / inline = yes       | Yes (SVG embedded)                             |
 | JavaScript              | Required                                 | Not required                                   |
 | Added size              | cdn ≈ 0 / inline ≈ 1.6MB(gzip) fixed     | Proportional to diagram count (a few KB each)  |
-| Dark theme              | Does not follow it (mermaid default)     | Fixed via `html.colorScheme` (`dark`→`redux-dark-color`, else mermaid's default) |
+| Dark theme              | Does not follow it (mermaid default; on a white backing in dark mode) | Fixed via `html.colorScheme` (`dark`→`redux-dark-color`, else mermaid's default) |
 | Fonts                   | Reader's browser fonts                   | **Measured & baked with the build machine's fonts** |
 | Interactivity (`click`) | Works                                    | Disabled (static SVG)                          |
 | Print / unvisited pages | May be missing                           | Always rendered                                |

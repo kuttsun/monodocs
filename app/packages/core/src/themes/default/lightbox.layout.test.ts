@@ -37,9 +37,20 @@ afterAll(async () => {
   if (dir) await rm(dir, { recursive: true, force: true });
 });
 
-/** Opens a pre-render-shaped diagram with the given viewBox and measures the dialog. */
-async function open(viewBox: [number, number], title: string) {
+/**
+ * Opens a diagram with the given viewBox and measures the dialog. Pre-render-shaped by default.
+ * - `client`: shaped as the client runtime leaves it, the SVG in the `<pre>` that held the source.
+ * - `scheme`: the mark the build puts on a diagram pre-rendered in a dark theme.
+ * - `dark`: the reader has chosen the dark theme, set on the root as the theme toggle sets it.
+ */
+async function open(
+  viewBox: [number, number],
+  title: string,
+  options: { client?: boolean; scheme?: "dark"; dark?: boolean } = {},
+) {
   const [w, h] = viewBox;
+  const tag = options.client ? "pre" : "figure";
+  const scheme = options.scheme ? ` data-monodocs-scheme="${options.scheme}"` : "";
   const svg =
     `<svg id="mermaid-0" width="100%" viewBox="0 0 ${w} ${h}" style="max-width: ${w}px;">` +
     (title ? `<title>${title}</title>` : "") +
@@ -53,14 +64,24 @@ async function open(viewBox: [number, number], title: string) {
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
-    await page.setContent(html.replace(SLOT, `<figure class="mermaid">${svg}</figure>`), {
+    await page.setContent(html.replace(SLOT, `<${tag} class="mermaid"${scheme}>${svg}</${tag}>`), {
       waitUntil: "load",
     });
+    if (options.dark) {
+      await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    }
+    const inPageColor = await page.evaluate(
+      () => getComputedStyle(document.querySelector("#content .mermaid > svg")!).backgroundColor,
+    );
     await page.click("#content .mermaid");
-    return await page.evaluate(() => {
+    return await page.evaluate((inPageColor) => {
       const dialog = document.getElementById("image-lightbox") as HTMLDialogElement;
       const rect = document.querySelector("#image-lightbox-diagram svg")!.getBoundingClientRect();
       return {
+        inPageColor,
+        panelColor: getComputedStyle(document.getElementById("image-lightbox-diagram")!)
+          .backgroundColor,
+        pageColor: getComputedStyle(document.body).backgroundColor,
         open: dialog.open,
         width: rect.width,
         height: rect.height,
@@ -68,7 +89,7 @@ async function open(viewBox: [number, number], title: string) {
         bottom: rect.bottom,
         dialogScrolls: dialog.scrollHeight > dialog.clientHeight,
       };
-    });
+    }, inPageColor);
   } finally {
     await browser.close();
   }
@@ -91,6 +112,29 @@ describe.skipIf(!chromium)("diagram lightbox layout (real Chromium)", () => {
       expect(r.right).toBeLessThanOrEqual(1280);
       expect(r.bottom).toBeLessThanOrEqual(800);
       expect(r.dialogScrolls).toBe(false);
+    },
+    60_000,
+  );
+
+  // Mermaid's light theme draws edges near-black (#213): on a dark page, a diagram in it gets the
+  // backing a figure's image does, in the page and in the dialog. One pre-rendered in a dark theme
+  // stays on the page's background.
+  const WHITE = "rgb(255, 255, 255)";
+  const NONE = "rgba(0, 0, 0, 0)";
+  const DARK_BG = "rgb(13, 17, 23)";
+  it.each([
+    ["client-drawn, light mode", { client: true }, NONE, WHITE],
+    ["client-drawn, dark mode", { client: true, dark: true }, WHITE, WHITE],
+    ["pre-rendered in the light theme, dark mode", { dark: true }, WHITE, WHITE],
+    ["pre-rendered in a dark theme, dark mode", { scheme: "dark", dark: true }, NONE, DARK_BG],
+  ] as const)(
+    "puts a %s diagram on the right background",
+    async (_name, options, inPage, panel) => {
+      const r = await open([400, 300], "", options);
+      expect(r.open).toBe(true);
+      expect(r.pageColor).toBe(options.dark ? DARK_BG : WHITE);
+      expect(r.inPageColor).toBe(inPage);
+      expect(r.panelColor).toBe(panel);
     },
     60_000,
   );

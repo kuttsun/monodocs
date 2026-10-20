@@ -117,6 +117,11 @@ Preserve these pre-render invariants:
 - Create the browser lazily and close it in `finally`. Do not start Chromium when there are no diagrams.
 - Keep `validateSite` browserless by overriding Mermaid processing to client mode.
 - The pre-rendered SVG theme is fixed at build time and does not follow the reader's theme toggle.
+- A diagram drawn in Mermaid's light theme, by the client runtime or pre-rendered for a light page, gets the
+  white backing a figure's image does in dark mode, and the white panel in the lightbox. A diagram pre-rendered in
+  a dark theme (`MermaidPrerenderer.scheme`) is marked `data-monodocs-scheme="dark"` on its `<figure>`, and keeps
+  the page background in both: the lightbox script copies the mark onto the panel, since the SVG is moved out of
+  the marked block. The mark goes on the `<figure>`, not into the SVG, which `pdfVariants` keys by its string.
 - The HTML's SVG is laid out with the build machine's fonts. When a PDF is built too, a diagram with a formula in
   a label is laid out a second time, in the carried math font, and swapped in, as a string, for its HTML copy in
   the page the PDF is printed from (`pdfVariants`); the HTML written keeps its own.

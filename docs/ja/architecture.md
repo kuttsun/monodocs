@@ -79,6 +79,7 @@ pre-render の次の不変条件を守ってください。
 - ブラウザは遅延生成し、`finally` で閉じます。図がなければ Chromium を起動しません。
 - `validateSite` は Mermaid を client mode に上書きし、ブラウザを必要としません。
 - pre-render SVG のテーマはビルド時に固定され、閲覧者のテーマ切替には追従しません。
+- Mermaid のライトテーマで描かれた図（クライアントのランタイムが描いたもの、明るいページ向けに pre-render したもの）は、ダークモードでは図の画像と同じ白い下地を持ち、lightbox でも白いパネルに載ります。ダークテーマで pre-render した図（`MermaidPrerenderer.scheme`）は `<figure>` に `data-monodocs-scheme="dark"` の印を持ち、どちらでもページの背景のままです。SVG は印の付いたブロックからダイアログへ移されるので、lightbox のスクリプトが印をパネルへ写します。印は SVG の中ではなく `<figure>` に付けます。`pdfVariants` が SVG を文字列で引くためです。
 - HTML の SVG はビルドするマシンのフォントで組みます。PDF も作るときは、ラベルに数式を含む図をもう一度、持っている数式用のフォントで組み、PDF を印刷するページの中で HTML 用の写しと文字列として差し替えます（`pdfVariants`）。書き出す HTML は自分のものを持ちます。
 
 > [!IMPORTANT]

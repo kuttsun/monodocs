@@ -856,6 +856,13 @@ body.content-wide #content {
   background: var(--color-image-backing);
 }
 
+/* A diagram the client runtime draws, or one pre-rendered for a light page, is in Mermaid's light
+   theme, whose edges are near-black: in dark mode it gets the backing a figure's image does. One
+   pre-rendered in a dark theme is marked by the build and keeps the page's background. */
+#content .mermaid:not([data-monodocs-scheme="dark"]) > svg {
+  background: var(--color-image-backing);
+}
+
 #content .image-lightbox-trigger {
   cursor: zoom-in;
 }
@@ -979,10 +986,11 @@ body.content-wide #content {
   max-height: none;
 }
 
-/* A Mermaid diagram moved into the dialog. Its own colors assume the page background, so the
-   panel keeps that background instead of the dark backdrop. The script narrows the width to the
-   diagram's aspect ratio; without a viewBox the panel simply fills the dialog. Sizes are of the
-   content box, inside the padding. */
+/* A Mermaid diagram moved into the dialog. A diagram in Mermaid's light theme sits on the white
+   panel an image does, in dark mode too; one pre-rendered in a dark theme, which the script marks
+   the panel for, keeps the page background instead. The script narrows the width to the diagram's
+   aspect ratio; without a viewBox the panel simply fills the dialog. Sizes are of the content box,
+   inside the padding. */
 #image-lightbox-diagram {
   box-sizing: content-box;
   width: calc(100% - 2rem);
@@ -990,8 +998,12 @@ body.content-wide #content {
   max-height: calc(100vh - 9rem);
   padding: 1rem;
   color: var(--color-text);
-  background: var(--color-bg);
+  background: var(--color-image-panel-bg);
   border-radius: 6px;
+}
+
+#image-lightbox-diagram[data-monodocs-scheme="dark"] {
+  background: var(--color-bg);
 }
 
 #image-lightbox-image[hidden],

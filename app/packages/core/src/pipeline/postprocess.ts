@@ -504,7 +504,11 @@ async function processMermaidPrerender(
       block.parent.children[block.index] = {
         type: "element",
         tagName: "figure",
-        properties: { className: ["mermaid"] },
+        properties: {
+          className: ["mermaid"],
+          // A diagram drawn in a dark theme needs no light backing on a dark page (style.css).
+          ...(renderer.scheme === "dark" ? { dataMonodocsScheme: "dark" } : {}),
+        },
         children: [raw],
       };
     } catch (error) {

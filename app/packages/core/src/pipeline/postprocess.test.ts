@@ -420,6 +420,32 @@ describe("postprocessPages - mermaid pre-render", () => {
     expect(pages[0]!.html).not.toContain("language-mermaid");
   });
 
+  it.each([
+    ["dark", ' data-monodocs-scheme="dark"'],
+    ["light", ""],
+    [undefined, ""],
+  ] as const)(
+    "marks a diagram only when it is drawn for a dark page (scheme: %s)",
+    async (scheme, mark) => {
+      const pages: Page[] = [
+        page({
+          relativePath: "a.md",
+          route: "/a",
+          html: '<pre><code class="language-mermaid">graph TD; A-->B</code></pre>',
+        }),
+      ];
+      const { renderer } = fakeRenderer((id) => `<svg id="${id}"></svg>`);
+      await postprocessPages(pages, {
+        ...baseOptions,
+        mermaidMode: "pre-render",
+        mermaidPrerenderer: { ...renderer, scheme },
+      });
+      expect(pages[0]!.html).toContain(
+        `<figure class="mermaid"${mark} data-monodocs-figure="center"><svg`,
+      );
+    },
+  );
+
   it("assigns sequential ids across pages and multiple diagrams", async () => {
     const pages: Page[] = [
       page({
