@@ -89,4 +89,10 @@ describe("Myers' shortest edit script", () => {
     const edits = diffSequences(a, b, (x, y) => x === y);
     expect(edits).toHaveLength(12000);
   });
+
+  it("returns a long script without exhausting the call stack", () => {
+    expect(diffSequences([], new Array<string>(150000).fill("x"), (a, b) => a === b)).toHaveLength(
+      150000,
+    );
+  });
 });

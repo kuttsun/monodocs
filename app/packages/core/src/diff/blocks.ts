@@ -105,7 +105,7 @@ const CONTAINER_TAGS = new Set([
 ]);
 
 /** Elements that are blocks of their own, read as text. */
-const TEXT_BLOCK = /^(?:p|h[1-6]|li|dt|dd|caption|summary|hr)$/;
+const TEXT_BLOCK = /^(?:p|h[1-6]|li|dt|dd|caption|figcaption|summary|hr)$/;
 
 /** Elements that make an element a container when they are among its children. */
 const BLOCK_LEVEL = new Set([
@@ -124,6 +124,7 @@ const BLOCK_LEVEL = new Set([
   "dd",
   "tr",
   "caption",
+  "figcaption",
   "summary",
 ]);
 
@@ -243,6 +244,15 @@ function textOf(nodes: readonly ElementContent[]): string {
         out += ` [svg ${svgKey(child)}] `;
         continue;
       }
+      // A line break reads as the space between the words it separates.
+      if (child.tagName === "br") {
+        out += " ";
+        continue;
+      }
+      if (MEDIA.has(child.tagName)) {
+        out += ` [${child.tagName} ${String(child.properties.src ?? "")}] `;
+        continue;
+      }
       if (child.tagName === "object") {
         out += ` [image ${imageKey(child)}] `;
         continue;
@@ -360,7 +370,7 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
     // A block's title: AsciiDoc's `div.title`, a table's caption. Admonition titles are the
     // theme's word for the kind, which the chain already carries.
     if (has(node, "admonition-title")) return;
-    if (has(node, "title") || tag === "caption") {
+    if (has(node, "title") || tag === "caption" || tag === "figcaption") {
       return add("title", textOf(node.children), node, ancestors);
     }
     if (tag === "tr") {
@@ -386,7 +396,7 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
         if (child === leading) own.push(...child.children);
         else if (
           child.type === "element" &&
-          (BLOCK_LEVEL.has(child.tagName) || has(child, "math-display"))
+          (BLOCK_LEVEL.has(child.tagName) || isBlockElement(child))
         ) {
           nested.push(child);
         } else own.push(child);
@@ -406,8 +416,15 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
       // Text and inline elements between blocks read as one block, in the container's chain.
       let run: ElementContent[] = [];
       const flush = () => {
-        const text = textOf(run);
-        if (text !== "") add("text", text, node, inside);
+        // A run that is an image alone — beside a figcaption, a title — is that image.
+        const items = run.filter((c) => c.type === "element" || c.value.trim() !== "");
+        const image =
+          items.length === 1 && items[0]!.type === "element" ? soleImage(items[0]!) : undefined;
+        if (image !== undefined) visit(image, inside);
+        else {
+          const text = textOf(run);
+          if (text !== "") add("text", text, node, inside);
+        }
         run = [];
       };
       for (const child of node.children) {

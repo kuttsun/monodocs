@@ -569,4 +569,12 @@ describe("what each block is compared by", () => {
     );
     expect(changes(page).map((c) => c.slice(0, 3))).toEqual(["-tr", "+tr"]);
   });
+
+  it("reads a line break as a space", async () => {
+    expect(changes(await onePage("docs/b.md", "# B\n\na b\n", "# B\n\na\\\nb\n"))).toEqual([]);
+    expect(changes(await onePage("docs/c.md", "# C\n\nab\n", "# C\n\na\\\nb\n"))).toEqual([
+      "-p ab",
+      "+p a b",
+    ]);
+  });
 });

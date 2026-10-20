@@ -38,7 +38,10 @@ export function diffSequences<A, B>(
   while (start < old.length && start < next.length && same(old[start]!, next[start]!)) start++;
   const edits: Edit[] = [];
   for (let i = 0; i < start; i++) edits.push({ op: "equal", old: i, new: i });
-  edits.push(...search(start, old.length, start, next.length, old, next, same, maxEdits));
+  // One at a time: spread, a long script would pass more arguments than a call takes.
+  for (const edit of search(start, old.length, start, next.length, old, next, same, maxEdits)) {
+    edits.push(edit);
+  }
   return edits;
 }
 
