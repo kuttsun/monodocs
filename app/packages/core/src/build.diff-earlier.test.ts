@@ -203,6 +203,8 @@ describe("an LFS pointer the earlier build reads", () => {
     expect(isLfsPointer(POINTER.replace(/\n/g, "\r\n"))).toBe(true);
     const withExt = POINTER.replace("oid", `ext-0-foo sha256:${"b".repeat(64)}\noid`);
     expect(isLfsPointer(withExt)).toBe(true);
+    // An extension's name is not only letters and digits; `git lfs pointer --check` takes this.
+    expect(isLfsPointer(withExt.replace("ext-0-foo", "ext-0-my-filter"))).toBe(true);
     expect(isLfsPointer("version https://git-lfs.github.com/spec/v1\n")).toBe(false);
     expect(isLfsPointer(`# LFS\n\n${POINTER}`)).toBe(false);
   });
@@ -530,7 +532,7 @@ describe("cross-review round 1", () => {
     const inner = join(then, "inner");
     await mkdir(join(inner, "docs"), { recursive: true });
     await writeFile(join(inner, "docs", "index.md"), "# Index\n");
-    await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\nHere: {docdir}\n");
+    await writeFile(join(then, "docs", "guide.adoc"), "= Guide {docdir}\n\nHere: {docdir}\n");
     vi.spyOn(process, "cwd").mockReturnValue(inner);
     const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
     await expect(
@@ -544,6 +546,8 @@ describe("cross-review round 1", () => {
     expect(slashed(page.text)).toContain(`Here: ${slashed(join(inner, "docs"))}\n`.trimEnd());
     expect(slashed(page.text)).not.toContain("inner/inner");
     expect(slashed(page.html)).not.toContain("inner/inner");
+    expect(slashed(page.title)).toBe(`Guide ${slashed(join(inner, "docs"))}`);
+    expect(slashed(JSON.stringify(sites.earlier!.sidebar))).not.toContain("inner/inner");
   });
 
   it("does not let Asciidoctor print the earlier build's warnings", async () => {

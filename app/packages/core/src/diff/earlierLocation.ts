@@ -112,7 +112,8 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
       ? page
       : {
           ...page,
-          title: relocate(page.title),
+          // The title was rewritten before `sidebar.titleTransform` ran (`relocateTitle`); a second
+          // pass would find the earlier tree inside a new location written into it.
           ...(page.description === undefined ? {} : { description: relocate(page.description) }),
           html: relocateHtml(page.html),
           text: relocate(page.text),

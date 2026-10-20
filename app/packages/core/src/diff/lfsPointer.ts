@@ -8,7 +8,7 @@ import { t } from "../messages.js";
  * A line ending converted on the way out (`eol=crlf`) is still a pointer.
  */
 const POINTER =
-  /^version https:\/\/git-lfs\.github\.com\/spec\/v1\r?\n(?:ext-\d+-[A-Za-z0-9]+ sha256:[0-9a-f]{64}\r?\n)*oid sha256:[0-9a-f]{64}\r?\nsize \d+\r?\n?$/;
+  /^version https:\/\/git-lfs\.github\.com\/spec\/v1\r?\n(?:ext-\d+-[^\s]+ sha256:[0-9a-f]{64}\r?\n)*oid sha256:[0-9a-f]{64}\r?\nsize \d+\r?\n?$/;
 
 /** The specification keeps a pointer under 1024 bytes; anything larger is content. */
 const MAX_POINTER_SIZE = 1024;
