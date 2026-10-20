@@ -2,10 +2,11 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildSite } from "./build";
+import { buildSite, type PreparedSite } from "./build";
 import { loadConfig, REMOVED_KEY_TRANSLATIONS, translateKeys } from "./config";
 import { loadEarlierConfig } from "./diff/earlier";
 import { EARLIER_FIELDS, earlierBuildConfig } from "./diff/earlierConfig";
+import { sharedClockAttributes } from "./diff/earlierLocation";
 import { isLfsPointer } from "./diff/lfsPointer";
 
 /**
@@ -205,5 +206,86 @@ describe("an LFS pointer the earlier build reads", () => {
       "# Index\n\n```\nversion https://git-lfs.github.com/spec/v1\n```\n\n[archive](archive.zip)\n",
     );
     await expectBothBuilt();
+  });
+});
+
+/** Each version's pages, from a build with a difference that stops where nothing writes it. */
+async function prepared(): Promise<Record<"new" | "earlier", PreparedSite>> {
+  const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
+  await expect(
+    buildSite(
+      { outputFile: join(base, "out.html"), diff },
+      { onPrepared: (version, site) => (sites[version] = site) },
+    ),
+  ).rejects.toMatchObject({ code: "diff/unsupported" });
+  return sites as Record<"new" | "earlier", PreparedSite>;
+}
+
+const textOf = (site: PreparedSite, path: string) =>
+  site.pages.find((page) => page.relativePath === path)!.text;
+
+describe("where and when the earlier version was built", () => {
+  it("writes {docdir} as the new location, and still reads the earlier files through it", async () => {
+    const page = [
+      "= Guide",
+      "",
+      "Here: {docdir}",
+      "",
+      "include::{docdir}/_part.adoc[]",
+      "",
+      "image::{docdir}/image.png[Image]",
+      "",
+    ].join("\n");
+    for (const [root, word] of [
+      [now, "NOW"],
+      [then, "THEN"],
+    ] as const) {
+      await writeFile(join(root, "docs", "guide.adoc"), page);
+      await writeFile(join(root, "docs", "_part.adoc"), `Included from ${word}.\n`);
+      await writeFile(join(root, "docs", "image.png"), Buffer.from(word));
+    }
+    const sites = await prepared();
+    const earlier = sites.earlier.pages.find((p) => p.relativePath === "guide.adoc")!;
+    const slashed = (path: string) => path.replace(/\\/g, "/");
+    expect(slashed(earlier.text)).toContain(`Here: ${slashed(join(now, "docs"))}`);
+    expect(slashed(earlier.html)).not.toContain(slashed(then));
+    // The include is the earlier version's own, and no line was dropped.
+    expect(earlier.text).toContain("Included from THEN.");
+    // An image written with `{docdir}` has an absolute target, which no build reads (it is left as
+    // an external reference), so it is compared by its `src`: the new location in both versions.
+    const src = (html: string) => /<img src="([^"]*)"/.exec(html)?.[1];
+    const fresh = sites.new.pages.find((p) => p.relativePath === "guide.adoc")!;
+    expect(slashed(src(earlier.html)!)).toBe(slashed(join(now, "docs", "image.png")));
+    expect(src(earlier.html)).toBe(src(fresh.html));
+    expect(textOf(sites.new, "guide.adoc")).toBe(earlier.text.replace("THEN", "NOW"));
+  });
+
+  it("gives both builds one instant for {doctime} and {localtime}", async () => {
+    for (const root of [now, then]) {
+      await writeFile(
+        join(root, "docs", "time.adoc"),
+        "= Time\n\n{docdate} {doctime} {localdate} {localtime} {docyear}\n",
+      );
+    }
+    const sites = await prepared();
+    expect(textOf(sites.earlier, "time.adoc")).toBe(textOf(sites.new, "time.adoc"));
+  });
+
+  it("leaves a document's own :docdate: as it wrote it", async () => {
+    await writeFile(join(then, "docs", "own.adoc"), "= Own\n:docdate: 1999-09-09\n\n{docdate}\n");
+    expect(textOf((await prepared()).earlier, "own.adoc")).toContain("1999-09-09");
+  });
+
+  it("writes the instant as Asciidoctor would, and leaves SOURCE_DATE_EPOCH to it", async () => {
+    expect(sharedClockAttributes(new Date(), { SOURCE_DATE_EPOCH: "1000000000" })).toEqual({});
+    // Measured in UTC, where Asciidoctor writes the zone as `UTC` (@asciidoctor/core 4).
+    const at = new Date(Date.UTC(2001, 8, 9, 1, 46, 40));
+    if (at.getTimezoneOffset() !== 0) return;
+    expect(sharedClockAttributes(at, {})).toMatchObject({
+      docdate: "2001-09-09@",
+      doctime: "01:46:40 UTC@",
+      docdatetime: "2001-09-09 01:46:40 UTC@",
+      localyear: "2001@",
+    });
   });
 });

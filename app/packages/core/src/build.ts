@@ -19,6 +19,7 @@ import {
   loadEarlierConfig,
 } from "./diff/earlier.js";
 import { earlierBuildConfig } from "./diff/earlierConfig.js";
+import { relocateEarlierPages, sharedClockAttributes } from "./diff/earlierLocation.js";
 import { refuseLfsPointer } from "./diff/lfsPointer.js";
 import {
   documentAuthor,
@@ -77,7 +78,7 @@ type PreparePagesOptions = {
   checkRead?: (path: string, content: Buffer | string) => void;
 };
 
-type PreparedSite = {
+export type PreparedSite = {
   pages: Page[];
   sidebar: SidebarNode[];
   warnings: Diagnostic[];
@@ -235,6 +236,8 @@ export function resolveOutputs(config: ResolvedConfig, cwd: string): ResolvedOut
 export type BuildInternals = {
   mermaidPrerenderer?: MermaidPrerenderer;
   pdfGenerator?: PdfGenerator;
+  /** Called with each version's pages once they are built, in a build with a difference. */
+  onPrepared?: (version: "new" | "earlier", site: PreparedSite) => void;
 };
 
 /**
@@ -249,14 +252,22 @@ export async function buildSite(
   internals: BuildInternals = {},
 ): Promise<BuildResult> {
   const cwd = process.cwd();
-  const config = await loadConfig(options, cwd);
+  // One instant for both builds of a difference, taken before either reads the clock (7.3.2).
+  const startedAt = new Date();
+  const loadedConfig = await loadConfig(options, cwd);
+  const clock = options.diff === undefined ? {} : sharedClockAttributes(startedAt);
+  const withClock = (c: ResolvedConfig): ResolvedConfig =>
+    Object.keys(clock).length === 0
+      ? c
+      : { ...c, asciidocAttributes: { ...clock, ...c.asciidocAttributes } };
+  const config = withClock(loadedConfig);
   // The earlier version (7.3), built with its own configuration for what the document contains
   // and with the new one for how it looks (7.3.2).
   let earlierConfig: ResolvedConfig | undefined;
   if (options.diff !== undefined) {
     assertDiffSupported(config, options.diff);
     const loaded = await loadEarlierConfig(options, cwd, options.diff);
-    earlierConfig = earlierBuildConfig(config, loaded);
+    earlierConfig = withClock(earlierBuildConfig(loadedConfig, loaded));
   }
 
   // PDF は配布時に読者のファイルシステム上の相対画像を参照できないため、PDF を出力する場合は
@@ -301,7 +312,7 @@ export async function buildSite(
       // Its warnings are not reported: the author cannot fix a released version, and a report
       // doubled by the past hides what can be fixed now. A hard error stops the build, its paths
       // shown in the earlier version (7.3.2).
-      await inEarlierVersion(diff, cwd, () =>
+      const earlier = await inEarlierVersion(diff, cwd, () =>
         preparePages(settings, resolve(cwd, diff.dir), {
           mermaidPrerenderer: prerenderer,
           embedImages: forceEmbed ? true : undefined,
@@ -309,6 +320,10 @@ export async function buildSite(
           checkRead: refuseLfsPointer,
         }),
       );
+      internals.onPrepared?.("earlier", {
+        ...earlier,
+        pages: relocateEarlierPages(earlier.pages, diff, cwd),
+      });
     }
     // pre-render は本文と違って、ビルドマシンのフォントを SVG へ焼き込む。図を描いた文脈が
     // まだ開いているこの時点で確かめる（fontCheck: error なら例外が出てビルドは止まる）。
@@ -320,6 +335,7 @@ export async function buildSite(
     if (ownPrerenderer) await prerenderer?.close();
   }
   if (options.diff !== undefined) {
+    internals.onPrepared?.("new", prepared);
     // Both versions are built (7.3.2), but nothing compares and writes them yet, and a difference
     // asked for and not output would be accepted and ignored (7.3).
     throw new MonodocsError(
