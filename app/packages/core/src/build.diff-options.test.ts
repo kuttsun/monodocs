@@ -190,6 +190,10 @@ describe("mapping the command line's paths", () => {
     expect(await codeOf(loadEarlierConfig({ inputDir: "docs" }, now, diff()))).toBe(
       "diff/outside-version",
     );
+    // And when the file names its own input, which disagrees with the root the same way.
+    await rm(join(then, "docs", "monodocs.config.yml"));
+    await writeFile(join(then, "monodocs.config.yml"), "root: ..\ninput: docs\n");
+    expect(await codeOf(loadEarlierConfig({}, now, diff()))).toBe("diff/outside-version");
   });
 
   it.skipIf(process.platform === "win32")(

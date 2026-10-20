@@ -1,5 +1,7 @@
 import { existsSync, lstatSync, readlinkSync, realpathSync, type Stats, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from "node:path";
+import { readFile } from "node:fs/promises";
+import { parse as parseYaml } from "yaml";
 import { defaultConfigPath, loadConfig, type ResolvedConfig } from "../config.js";
 import { MonodocsError } from "../diagnostics.js";
 import { t } from "../messages.js";
@@ -62,6 +64,25 @@ function entry(path: string): Stats | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * The `root` and `input` a configuration file writes, resolved against it. Nothing when the file
+ * is not there or cannot be read as an object, which `loadConfig` then reports in its own words.
+ */
+async function writtenPaths(file: string): Promise<string[]> {
+  if (!existsSync(file)) return [];
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(await readFile(file, "utf8"));
+  } catch {
+    return [];
+  }
+  if (typeof parsed !== "object" || parsed === null) return [];
+  const { root, input } = parsed as { root?: unknown; input?: unknown };
+  return [root, input]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => resolve(dirname(file), value));
 }
 
 /** Whether something is at `path`, a link whose target is missing included. */
@@ -166,23 +187,18 @@ export async function loadEarlierConfig(
       t("diff.outsideVersion", { path: shown(candidate, diff, cwd), label }),
     );
   }
-  let config: ResolvedConfig;
-  try {
-    config = await loadConfig(earlierOptions, dir);
-  } catch (error) {
-    // An input that disagrees with a root out of the tree is the root leaving the version first:
-    // the root is read on its own, from the same file, to say so.
-    if (!(error instanceof MonodocsError) || error.code !== "config/input-outside-root")
-      throw error;
-    const { rootDir } = await loadConfig({ configFile: candidate }, dir);
-    if (!inside(resolve(dir, rootDir), tree)) {
+  // The file's own `root` and `input` are checked before `loadConfig` reads them: it checks that
+  // they agree with each other, and a pair that leaves the version would be reported as that
+  // disagreement instead of as leaving.
+  for (const path of await writtenPaths(candidate)) {
+    if (!inside(path, tree)) {
       throw new MonodocsError(
         "diff/outside-version",
-        t("diff.outsideVersion", { path: shown(resolve(dir, rootDir), diff, cwd), label }),
+        t("diff.outsideVersion", { path: shown(path, diff, cwd), label }),
       );
     }
-    throw error;
   }
+  const config = await loadConfig(earlierOptions, dir);
   for (const path of [config.configFilePath, config.inputDir, config.rootDir]) {
     if (path === undefined) continue;
     const absolute = resolve(dir, path);
