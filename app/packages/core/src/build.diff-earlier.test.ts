@@ -108,12 +108,20 @@ describe("keys a major release removed", () => {
       to: "sources.exclude",
     });
     expect(translateKeys({ sidebar: { exclude: ["a/**"], mode: "folder" } })).toEqual({
-      sidebar: { mode: "folder" },
-      sources: { exclude: ["a/**"] },
+      value: { sidebar: { mode: "folder" }, sources: { exclude: ["a/**"] } },
+      moved: [{ from: "sidebar.exclude", to: "sources.exclude" }],
     });
     // A replacement already written is left beside the old key, to be reported as it is anywhere.
     const both = { sidebar: { exclude: ["a/**"] }, sources: { exclude: ["b/**"] } };
-    expect(translateKeys(both)).toEqual(both);
+    expect(translateKeys(both)).toEqual({ value: both, moved: [] });
+  });
+
+  it("reports a problem with a translated key under the name the file gives it", async () => {
+    await writeFile(join(then, "monodocs.config.yml"), "sidebar:\n  exclude: 3\n");
+    const error = await failure();
+    expect(error.code).toBe("config/invalid");
+    expect(error.message).toContain("sidebar.exclude");
+    expect(error.message).not.toContain("sources.exclude");
   });
 
   it("builds an earlier version whose configuration uses sidebar.exclude", async () => {
@@ -156,6 +164,24 @@ describe("building the earlier version", () => {
     await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n");
     const error = await failure();
     expect(error.code).toBe("page/duplicate-route");
+    expect(error.message).toContain("In the earlier version (v1.2)");
+    expect(error.message).not.toContain(then);
+  });
+
+  it("says a message with no path is the earlier version's, and rewrites the tree itself", async () => {
+    await writeFile(
+      join(then, "monodocs.config.yml"),
+      "sidebar:\n  exclude: ['a/**']\nsources:\n  exclude: ['b/**']\n",
+    );
+    expect((await failure()).message).toContain("In the earlier version (v1.2)");
+    // The earlier version has no pages, and its root is the tree itself.
+    await rm(join(then, "monodocs.config.yml"));
+    await rm(join(then, "docs"), { recursive: true });
+    await writeFile(join(then, "monodocs.config.yml"), "root: .\n");
+    await writeFile(join(now, "monodocs.config.yml"), "root: .\n");
+    const error = await failure();
+    expect(error.code).toBe("input/no-sources");
+    expect(error.message).toContain("v1.2:.");
     expect(error.message).not.toContain(then);
   });
 
@@ -258,6 +284,30 @@ describe("where and when the earlier version was built", () => {
     expect(slashed(src(earlier.html)!)).toBe(slashed(join(now, "docs", "image.png")));
     expect(src(earlier.html)).toBe(src(fresh.html));
     expect(textOf(sites.new, "guide.adoc")).toBe(earlier.text.replace("THEN", "NOW"));
+  });
+
+  it("gives the same earlier pages wherever the earlier version sits", async () => {
+    // Two copies of one version, as two extractions of a ref would be; one named like the other
+    // with more after it, which the rewriting must not take for it.
+    const page = "= Guide\n\nHere: {docdir}, and {docdir}2 is not it.\n";
+    await writeFile(join(then, "docs", "guide.adoc"), page);
+    const copy = `${then}2`;
+    await mkdir(join(copy, "docs"), { recursive: true });
+    await writeFile(join(copy, "docs", "index.md"), "# Index\n\nA page.\n");
+    await writeFile(join(copy, "docs", "guide.adoc"), page);
+    const texts: string[] = [];
+    for (const dir of ["../then", "../then2"]) {
+      const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
+      await expect(
+        buildSite(
+          { outputFile: join(base, "out.html"), diff: { dir, label: "v1.2" } },
+          { onPrepared: (version, site) => (sites[version] = site) },
+        ),
+      ).rejects.toMatchObject({ code: "diff/unsupported" });
+      texts.push(textOf(sites.earlier!, "guide.adoc"));
+    }
+    expect(texts[0]).toBe(texts[1]);
+    expect(texts[0]!.replace(/\\/g, "/")).toContain(`${join(now, "docs").replace(/\\/g, "/")}2`);
   });
 
   it("gives both builds one instant for {doctime} and {localtime}", async () => {

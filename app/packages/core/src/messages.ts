@@ -148,6 +148,7 @@ const EN = {
     "{ref} does not name a commit in this repository, which is a shallow clone. Fetch the history " +
     "it is in; in GitHub Actions, actions/checkout with fetch-depth: 0.",
   "diff.gitFailed": "git failed while reading the earlier version {ref}: {detail}",
+  "diff.inEarlier": "In the earlier version ({label}): {message}",
   "diff.lfsPointer":
     "{path} is a Git LFS pointer, not the file it stands for. Install git-lfs, so that the earlier " +
     "version's files come out as a checkout gives them.",
@@ -522,6 +523,7 @@ const JA: Record<MessageKey, string> = {
     "{ref} はこのリポジトリのコミットを指していません。このリポジトリは浅いクローンです。その ref を" +
     "含む履歴を取得してください。GitHub Actions では actions/checkout に fetch-depth: 0 を指定します。",
   "diff.gitFailed": "以前の版 {ref} を読む途中で git が失敗しました: {detail}",
+  "diff.inEarlier": "以前の版（{label}）: {message}",
   "diff.lfsPointer":
     "{path} は Git LFS のポインタのままで、中身ではありません。git-lfs を入れてください。" +
     "以前の版のファイルが、チェックアウトしたときと同じ形で取り出されます。",

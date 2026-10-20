@@ -224,6 +224,10 @@ export async function loadEarlierConfig(
   return config;
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Run `run` for the earlier version, with every path of its tree in an error it throws shown as
  * `label:path` — `v1.2:monodocs.config.yml` — rather than as the temporary directory a ref was
@@ -243,17 +247,21 @@ export async function inEarlierVersion<T>(
     const bases = [...new Set([real(tree), tree])].sort((a, b) => b.length - a.length);
     let message = error.message;
     for (const base of bases) {
-      const [head = "", ...rest] = message.split(`${base}${sep}`);
-      // What follows is a path in the version, written with `/` as the rest of monodocs writes
-      // one, up to where the sentence goes on.
-      message = [
-        head,
-        ...rest.map((part) => part.replace(/^[^\s"'`,;)]+/, (path) => path.split(sep).join("/"))),
-      ].join(`${label}:`);
+      // The tree, alone or followed by a path in it, up to where the sentence goes on — a quote,
+      // a space, or a full stop that ends it. The path is written with `/`, as monodocs writes one.
+      const pattern = new RegExp(
+        `${escapeRegExp(base)}(?:${escapeRegExp(sep)}([^\\s"'\`,;)]*?))?(?=$|[\\s"'\`,;:)]|\\.(?:\\s|$))`,
+        "g",
+      );
+      message = message.replace(
+        pattern,
+        (_match, path: string | undefined) =>
+          `${label}:${path === undefined || path === "" ? "." : path.split(sep).join("/")}`,
+      );
     }
-    const source = { ...error.source };
-    if (source.path !== undefined) source.path = `${label}:${source.path}`;
-    throw new MonodocsError(error.code, message, source);
+    // Every error says it is the earlier version's, a path in it or not: a route collision or a
+    // configuration value would otherwise read as one in the new version.
+    throw new MonodocsError(error.code, t("diff.inEarlier", { label, message }), error.source);
   }
 }
 

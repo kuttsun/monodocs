@@ -1101,8 +1101,15 @@ export const REMOVED_KEY_TRANSLATIONS: readonly { from: string; to: string }[] =
  * already written is left alone, beside the old key, so that the two are reported as they would
  * be in any configuration rather than one silently winning.
  */
-export function translateKeys(parsed: unknown): unknown {
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return parsed;
+export function translateKeys(parsed: unknown): {
+  value: unknown;
+  /** The translations applied, so that a problem is reported under the key the author wrote. */
+  moved: { from: string; to: string }[];
+} {
+  const moved: { from: string; to: string }[] = [];
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { value: parsed, moved };
+  }
   const out = structuredClone(parsed) as Record<string, unknown>;
   for (const { from, to } of REMOVED_KEY_TRANSLATIONS) {
     const [fromParent, fromKey] = splitKey(from);
@@ -1113,8 +1120,9 @@ export function translateKeys(parsed: unknown): unknown {
     if (target === undefined || toKey in target) continue;
     target[toKey] = source[fromKey];
     delete source[fromKey];
+    moved.push({ from, to });
   }
-  return out;
+  return { value: out, moved };
 }
 
 function splitKey(key: string): [string[], string] {
@@ -1142,10 +1150,17 @@ function objectAt(
  * Render a schema failure as `path: message` per problem. Zod's own `error.message` is a JSON dump
  * of the issue array, which buries the one thing the author needs — which key, and what about it.
  */
-function formatConfigIssues(error: z.ZodError): string {
+function formatConfigIssues(
+  error: z.ZodError,
+  moved: readonly { from: string; to: string }[] = [],
+): string {
   return error.issues
     .map((issue) => {
-      const path = issue.path.join(".");
+      let path = issue.path.join(".");
+      // A key read as its replacement is reported under the name the file gives it.
+      for (const { from, to } of moved) {
+        if (path === to || path.startsWith(`${to}.`)) path = from + path.slice(to.length);
+      }
       return path ? `${path}: ${issue.message}` : issue.message;
     })
     .join("; ");
@@ -1183,12 +1198,15 @@ export async function loadConfig(
         t("config.parseFailed", { path: configPath, detail: (error as Error).message }),
       );
     }
-    if (translateRemovedKeys) parsed = translateKeys(parsed);
-    const result = buildConfigFileSchema().safeParse(parsed ?? {});
+    const translated = translateRemovedKeys ? translateKeys(parsed) : { value: parsed, moved: [] };
+    const result = buildConfigFileSchema().safeParse(translated.value ?? {});
     if (!result.success) {
       throw new MonodocsError(
         "config/invalid",
-        t("config.invalid", { path: configPath, detail: formatConfigIssues(result.error) }),
+        t("config.invalid", {
+          path: configPath,
+          detail: formatConfigIssues(result.error, translated.moved),
+        }),
       );
     }
     fileConfig = result.data;

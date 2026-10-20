@@ -59,17 +59,30 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
   const tree = resolve(cwd, diff.tree ?? diff.dir);
   // The tree stands where the current directory stands, shifted as `diff.dir` is inside it.
   const newTree = resolve(cwd, relative(dir, tree));
-  // Asciidoctor writes a Windows path with `/`; the place is found, and written, either way.
+  // Asciidoctor writes a Windows path with `/`, and the HTML escapes what it must; the place is
+  // found, and written, in each form.
   const slashed = (path: string) => path.replace(/\\/g, "/");
+  const escaped = (path: string) =>
+    path.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const pairs = [tree, safeReal(tree)]
     .flatMap((base) => [
       [base, newTree],
       [slashed(base), slashed(newTree)],
+      [escaped(base), escaped(newTree)],
+      [escaped(slashed(base)), escaped(slashed(newTree))],
     ])
     .sort((a, b) => b[0]!.length - a[0]!.length);
+  // Only the tree itself, not a longer name that starts with it: `then2` is not under `then`.
+  const patterns = pairs.map(
+    ([base, place]) =>
+      [
+        new RegExp(`${escapeRegExp(base!)}(?![A-Za-z0-9_~+-]|\\.[A-Za-z0-9])`, "g"),
+        place!,
+      ] as const,
+  );
   const relocate = (text: string) => {
     let out = text;
-    for (const [base, place] of pairs) out = out.split(base!).join(place!);
+    for (const [pattern, place] of patterns) out = out.replace(pattern, () => place);
     return out;
   };
   return pages.map((page) =>
@@ -78,11 +91,16 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
       : {
           ...page,
           title: relocate(page.title),
+          ...(page.description === undefined ? {} : { description: relocate(page.description) }),
           html: relocate(page.html),
           text: relocate(page.text),
           headings: page.headings.map((heading) => ({ ...heading, text: relocate(heading.text) })),
         },
   );
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function safeReal(path: string): string {

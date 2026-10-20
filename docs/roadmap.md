@@ -1276,7 +1276,15 @@ Measured on 2026-10-14, monodocs hands Asciidoctor each file's text with `base_d
 Where `{docdir}` is text, the earlier build shows the new location; where it is part of an include
 or image target, it still leads to the earlier version's own files, which are what that version
 included. How the earlier build reaches both is decided in stage 1; the completion criteria hold it
-to the result.
+to the result. Stage 1 decided it this way. Without `SOURCE_DATE_EPOCH`, a build with a difference
+takes the time once and hands both builds `{docdate}`, `{doctime}`, `{localdate}`, `{localtime}`,
+and their `datetime` and `year` relatives, soft-set as Asciidoctor would have written them at that
+moment. A document's own `:docdate:` therefore still wins. The earlier version's location is
+written as the new one's in the earlier pages' text once they are built, so an include written with
+`{docdir}` has already read the earlier version's own file. An image written with `{docdir}` has an
+absolute target. No build reads an absolute target, in either version: it is left as an external
+reference. So that image is compared by its `src`, which the rewriting makes the new location's in
+both versions.
 
 **Generated numbers are not content.** Inserting one section renumbers every section after it;
 inserting one figure, every later caption; one footnote, every later reference. Compared as text,
