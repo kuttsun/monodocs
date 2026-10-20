@@ -184,6 +184,23 @@ describe("mapping the command line's paths", () => {
     },
   );
 
+  it("is diff/outside-version for a root out of the tree that the input disagrees with", async () => {
+    // Found beside the input, as the new configuration would be; its root is two levels up.
+    await writeFile(join(then, "docs", "monodocs.config.yml"), "root: ../..\n");
+    expect(await codeOf(loadEarlierConfig({ inputDir: "docs" }, now, diff()))).toBe(
+      "diff/outside-version",
+    );
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "reads a backslash in a missing link's target as a character on POSIX",
+    async () => {
+      // `..\..` is one name here, not a way back in: the link leaves the tree.
+      await symlink("../escape\\../then/missing.yml", join(then, "monodocs.config.yml"));
+      expect(await codeOf(loadEarlierConfig({}, now, diff()))).toBe("diff/outside-version");
+    },
+  );
+
   it("allows what leaves diff.dir but stays inside diff.tree", async () => {
     await writeFile(join(then, "monodocs.config.yml"), "root: ..\n");
     const config = await loadEarlierConfig({}, now, diff({ tree: base }));

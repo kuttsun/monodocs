@@ -42,7 +42,8 @@ function real(path: string, depth = 0): string {
     let at = realParent;
     const target = readlinkSync(absolute);
     if (isAbsolute(target)) at = parse(target).root;
-    for (const name of target.split(/[\\/]/)) {
+    // `\\` separates names on Windows only; on POSIX it is a character of one.
+    for (const name of target.split(process.platform === "win32" ? /[\\/]/ : "/")) {
       if (name === "" || name === ".") continue;
       at = name === ".." ? dirname(at) : real(join(at, name), depth + 1);
     }
@@ -165,7 +166,23 @@ export async function loadEarlierConfig(
       t("diff.outsideVersion", { path: shown(candidate, diff, cwd), label }),
     );
   }
-  const config = await loadConfig(earlierOptions, dir);
+  let config: ResolvedConfig;
+  try {
+    config = await loadConfig(earlierOptions, dir);
+  } catch (error) {
+    // An input that disagrees with a root out of the tree is the root leaving the version first:
+    // the root is read on its own, from the same file, to say so.
+    if (!(error instanceof MonodocsError) || error.code !== "config/input-outside-root")
+      throw error;
+    const { rootDir } = await loadConfig({ configFile: candidate }, dir);
+    if (!inside(resolve(dir, rootDir), tree)) {
+      throw new MonodocsError(
+        "diff/outside-version",
+        t("diff.outsideVersion", { path: shown(resolve(dir, rootDir), diff, cwd), label }),
+      );
+    }
+    throw error;
+  }
   for (const path of [config.configFilePath, config.inputDir, config.rootDir]) {
     if (path === undefined) continue;
     const absolute = resolve(dir, path);
