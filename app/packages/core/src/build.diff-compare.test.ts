@@ -286,7 +286,7 @@ describe("generated numbers are not differences", () => {
         "+image",
         "+title Figure . New fig",
         "+h2 Appendix : Inserted",
-        "+text . Zeroth.",
+        "+div . Zeroth.",
       ]);
     });
   }
@@ -312,5 +312,103 @@ describe("generated numbers are not differences", () => {
         ),
       ),
     ).toEqual(["+h2 New"]);
+  });
+});
+
+describe("what each block is compared by", () => {
+  it("compares code by its source and language, not its highlighting", async () => {
+    expect(
+      changes(await onePage("docs/a.md", "# A\n\n```js\nx\n```\n", "# A\n\n```ts\nx\n```\n")),
+    ).toEqual(["-code lang:js\nx\n", "+code lang:ts\nx\n"]);
+    expect(
+      changes(await onePage("docs/b.md", "# B\n\n```js\nx\n```\n", "# B\n\n```js\nx\n```\n")),
+    ).toEqual([]);
+  });
+
+  it("compares a diagram by its source, and a display formula by its TeX", async () => {
+    expect(
+      changes(
+        await onePage(
+          "docs/a.md",
+          "# A\n\n```mermaid\ngraph TD; A-->B\n```\n",
+          "# A\n\n```mermaid\ngraph TD; A-->C\n```\n",
+        ),
+      ),
+    ).toEqual(["-diagram graph TD; A-->B\n", "+diagram graph TD; A-->C\n"]);
+    expect(
+      changes(await onePage("docs/b.md", "# B\n\n$$\na+b\n$$\n", "# B\n\n$$\na+c\n$$\n")),
+    ).toEqual(["-formula a+b", "+formula a+c"]);
+    // Reflowed, the TeX is the same.
+    expect(
+      changes(await onePage("docs/c.md", "# C\n\n$$\na+b\n$$\n", "# C\n\n$$ a+b $$\n")),
+    ).toEqual([]);
+  });
+
+  it("reads an inline formula as its TeX and an inline image as its bytes", async () => {
+    expect(
+      changes(await onePage("docs/a.md", "# A\n\nSee $a$ here.\n", "# A\n\nSee $b$ here.\n")),
+    ).toEqual(["-p See \\(a\\) here.", "+p See \\(b\\) here."]);
+    await write(then, { "docs/i.png": "OLD" });
+    await write(now, { "docs/i.png": "NEW" });
+    const page = await onePage(
+      "docs/b.md",
+      "# B\n\nSee ![i](i.png) here.\n",
+      "# B\n\nSee ![i](i.png) here.\n",
+    );
+    expect(changes(page).map((c) => c.slice(0, 2))).toEqual(["-p", "+p"]);
+  });
+
+  it("reads an admonition's kind: every paragraph of a note turned into a warning changes", async () => {
+    expect(
+      changes(
+        await onePage(
+          "docs/a.md",
+          "# A\n\n> [!NOTE]\n> One.\n>\n> Two.\n",
+          "# A\n\n> [!WARNING]\n> One.\n>\n> Two.\n",
+        ),
+      ),
+    ).toEqual(["-p One.", "-p Two.", "+p One.", "+p Two."]);
+  });
+
+  it("reads emphasis added inside an AsciiDoc one-line admonition or footnote as no change", async () => {
+    expect(
+      changes(
+        await onePage(
+          "docs/a.adoc",
+          "= A\n\nNOTE: Use this carefully.\n\nText.footnote:[See this.]\n",
+          "= A\n\nNOTE: Use *this* carefully.\n\nText.footnote:[See _this_.]\n",
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+  it("compares an SVG written inline, and one embedded as an object, by its content", async () => {
+    const svg = (shape: string) =>
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">${shape}</svg>`;
+    await write(then, { "docs/i.svg": svg('<rect width="5" height="5"/>') });
+    await write(now, { "docs/i.svg": svg('<circle r="5"/>') });
+    for (const [name, macro] of [
+      ["block", "image::i.svg[pic,opts=inline]"],
+      ["inline", "See image:i.svg[x,opts=inline] here."],
+      ["object", ":data-uri:\n\nimage::i.svg[pic,opts=interactive]"],
+    ] as const) {
+      const page = await onePage(`docs/${name}.adoc`, `= A\n\n${macro}\n`, `= A\n\n${macro}\n`);
+      expect(page.changed, name).toBe(true);
+    }
+  });
+
+  it("never makes whitespace between AsciiDoc elements a block", async () => {
+    const page = await onePage("docs/a.adoc", "= A\n\nOne.\n\n\n\nTwo.\n", "= A\n\nOne.\n\nTwo.\n");
+    expect(changes(page)).toEqual([]);
+  });
+
+  it("reads a front-matter title written with {docdir} as the same title", async () => {
+    const page = await onePage(
+      "docs/a.adoc",
+      "= A\n:sd-title: In {docdir}\n\nText.\n",
+      "= A\n:sd-title: In {docdir}\n\nText.\n",
+    );
+    expect(page.titleChanged).toBeUndefined();
+    expect(page.changed).toBe(false);
   });
 });

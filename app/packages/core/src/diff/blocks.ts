@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
+import { toHtml } from "hast-util-to-html";
 import { isGenerated } from "../pipeline/generatedNumbers.js";
 import { recordedData } from "../pipeline/postprocess.js";
 
@@ -125,6 +127,9 @@ const BLOCK_LEVEL = new Set([
   "summary",
 ]);
 
+/** Containers whatever they hold: lists and tables, whose items and rows are the blocks. */
+const STRUCTURE = new Set(["ul", "ol", "dl", "table", "thead", "tbody", "tfoot"]);
+
 /** Parts of a container that are not blocks: a table's column layout. */
 const LAYOUT = new Set(["colgroup", "col"]);
 
@@ -141,11 +146,25 @@ function elements(node: Element): Element[] {
   return node.children.filter((child): child is Element => child.type === "element");
 }
 
+/**
+ * Whether an element inside a container stands as a block rather than inline: a display formula,
+ * a diagram, an image written as SVG or as an object on its own, a title.
+ */
+function isBlockElement(node: Element): boolean {
+  return (
+    has(node, "math-display") ||
+    has(node, "mermaid") ||
+    has(node, "title") ||
+    node.tagName === "svg" ||
+    node.tagName === "object" ||
+    node.tagName === "img" ||
+    LAYOUT.has(node.tagName)
+  );
+}
+
 /** Whether `node` holds blocks of its own. */
 function holdsBlocks(node: Element): boolean {
-  return elements(node).some(
-    (child) => BLOCK_LEVEL.has(child.tagName) || has(child, "math-display"),
-  );
+  return elements(node).some((child) => BLOCK_LEVEL.has(child.tagName) || isBlockElement(child));
 }
 
 /** A container as a chain shows it: its element and the classes that say what it is. */
@@ -191,8 +210,15 @@ function textOf(nodes: readonly ElementContent[], skip?: (node: Element) => bool
           child.properties.checked === true || child.properties.checked === "" ? "[x] " : "[ ] ";
         continue;
       }
-      // An icon is the theme's, drawn the same in both versions.
-      if (child.tagName === "svg") continue;
+      // An SVG written into the text — Asciidoctor's `opts=inline` — read as its markup.
+      if (child.tagName === "svg") {
+        out += ` [svg ${svgKey(child)}] `;
+        continue;
+      }
+      if (child.tagName === "object") {
+        out += ` [image ${imageKey(child)}] `;
+        continue;
+      }
       walk(child.children);
     }
   };
@@ -210,6 +236,11 @@ function imageKey(node: Element): string {
         ? `hash:${recorded.hash}`
         : `src:${recorded.src}`;
   return `${what} alt:${String(node.properties.alt ?? "")}`;
+}
+
+/** An SVG written into the page, as the hash of its markup: each version's own file. */
+function svgKey(node: Element): string {
+  return createHash("sha256").update(toHtml(node)).digest("hex");
 }
 
 /** The significant children of `node`: elements, and text that is not only whitespace. */
@@ -259,9 +290,10 @@ export function blocksOf(tree: HastRoot): Block[] {
     }
     // A display formula, compared by its TeX.
     if (has(node, "math-display") && typeof node.properties.dataMathTex === "string") {
-      return add("formula", node.properties.dataMathTex, node, ancestors);
+      return add("formula", collapse(node.properties.dataMathTex), node, ancestors);
     }
-    if (tag === "img") return add("image", imageKey(node), node, ancestors);
+    if (tag === "img" || tag === "object") return add("image", imageKey(node), node, ancestors);
+    if (tag === "svg") return add("image", `svg:${svgKey(node)}`, node, ancestors);
     // A paragraph that holds a display formula or an image alone is that block.
     if (tag === "p") {
       const sole = only(node);
@@ -309,14 +341,25 @@ export function blocksOf(tree: HastRoot): Block[] {
     if (TEXT_BLOCK.test(tag)) {
       return add(tag, tag === "hr" ? "" : textOf(node.children), node, ancestors);
     }
-    if (CONTAINER_TAGS.has(tag) || holdsBlocks(node)) {
+    // A list or a table is a container whatever it holds; any other element only when it holds
+    // blocks. One holding only text and inline elements — AsciiDoc's one-line admonition, its
+    // footnote — is a block, so emphasis added inside it changes nothing.
+    if (STRUCTURE.has(tag) || holdsBlocks(node)) {
+      const inside = [...ancestors, node];
+      // Text and inline elements between blocks read as one block, in the container's chain.
+      let run: ElementContent[] = [];
+      const flush = () => {
+        const text = textOf(run);
+        if (text !== "") add("text", text, node, inside);
+        run = [];
+      };
       for (const child of node.children) {
-        if (child.type === "element") visit(child, [...ancestors, node]);
-        else if (child.type === "text" && child.value.trim() !== "") {
-          // Text straight inside a container (AsciiDoc's one-line admonition) reads as one block.
-          add("text", collapse(child.value), node, ancestors);
-        }
+        if (child.type === "element" && (BLOCK_LEVEL.has(child.tagName) || isBlockElement(child))) {
+          flush();
+          visit(child, inside);
+        } else if (child.type === "element" || child.type === "text") run.push(child);
       }
+      flush();
       return;
     }
     // Anything else that holds only text and inline elements is a block of its own.
