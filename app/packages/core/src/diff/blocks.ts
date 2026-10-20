@@ -371,7 +371,8 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
           (cell) =>
             `${cell.tagName}[${String(cell.properties.colSpan ?? 1)}x${String(cell.properties.rowSpan ?? 1)}] ${cellKey(cell)}`,
         );
-      return add("tr", cells.join(" | "), node, ancestors);
+      // As a list whose boundaries no cell's text can imitate.
+      return add("tr", JSON.stringify(cells), node, ancestors);
     }
     if (tag === "li" || tag === "dd") {
       // An item's own text, the same whether it is wrapped in a paragraph or not, without the lists
@@ -451,7 +452,8 @@ function cellKey(cell: Element): string {
   if (!holdsBlocks(cell)) return textOf(cell.children);
   // Read with the page's prefix, which blocksOf sets again as it is.
   const inner = blocksOf({ type: "root", children: cell.children }, pagePrefix.replace(/-$/, ""));
-  return inner.map((block) => `${block.kind}{${block.key}}`).join(" ");
+  // Each with its kind and chain, so a nested list made flat inside a cell is a change.
+  return JSON.stringify(inner.map((block) => [block.kind, block.chain, block.key]));
 }
 
 /** Whether two blocks are the same block: kind, chain, and what they read as. */

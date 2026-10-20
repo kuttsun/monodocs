@@ -550,4 +550,23 @@ describe("what each block is compared by", () => {
       true,
     );
   });
+
+  it("reads a list nested deeper inside an AsciiDoc table cell as a change", async () => {
+    const page = await onePage(
+      "docs/n.adoc",
+      "= N\n\n|===\na|\n* one\n* two\n|===\n",
+      "= N\n\n|===\na|\n* one\n** two\n|===\n",
+    );
+    expect(changes(page).map((c) => c.slice(0, 3))).toEqual(["-tr", "+tr"]);
+  });
+
+  it("tells cells apart whatever their text holds", async () => {
+    const table = (a: string, b: string) => `# T\n\n| x | y |\n|---|---|\n| ${a} | ${b} |\n`;
+    const page = await onePage(
+      "docs/p.md",
+      table("a \\| td[1x1] b", "c"),
+      table("a", "b \\| td[1x1] c"),
+    );
+    expect(changes(page).map((c) => c.slice(0, 3))).toEqual(["-tr", "+tr"]);
+  });
 });
