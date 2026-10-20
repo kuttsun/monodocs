@@ -563,3 +563,15 @@ describe("cross-review round 1", () => {
     expect(printed.join("\n")).not.toContain("missing.adoc");
   });
 });
+
+describe("cross-review round 3", () => {
+  it("does not check an include Asciidoctor leaves unread past max-include-depth", async () => {
+    await writeFile(
+      join(then, "monodocs.config.yml"),
+      "sources:\n  asciidoc:\n    attributes:\n      max-include-depth: 0\n",
+    );
+    await writeFile(join(then, "docs", "_part.adoc"), POINTER);
+    await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\ninclude::_part.adoc[]\n");
+    await expectBothBuilt();
+  });
+});

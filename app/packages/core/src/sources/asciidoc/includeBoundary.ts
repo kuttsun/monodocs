@@ -70,8 +70,10 @@ export function createIncludeBoundary(
       // 存在しないものは Asciidoctor が「見つからない」と報告する。ここで先回りしない。
       if (real === undefined) return false;
       if (isInside(realRoot, real)) {
-        // Only a file is read; anything else Asciidoctor reports in its own words.
-        if (check !== undefined && statSync(real).isFile()) {
+        // Only a file Asciidoctor will read: anything else it reports in its own words, and an
+        // include past `max-include-depth` it leaves as a line of text. `handles` is asked before
+        // that limit is applied (measured with @asciidoctor/core 4.1).
+        if (check !== undefined && statSync(real).isFile() && withinIncludeDepth(doc)) {
           try {
             check(real, readFileSync(real));
           } catch (error) {
@@ -165,6 +167,17 @@ function readerDirectory(doc: unknown): string | undefined {
   const cursor = (reader as { getCursor?: () => unknown } | undefined)?.getCursor?.();
   const dir = (cursor as { getDirectory?: () => unknown } | undefined)?.getDirectory?.();
   return typeof dir === "string" && dir !== "" ? dir : undefined;
+}
+
+/** Whether Asciidoctor will read an include met now: its depth is below `max-include-depth`. */
+function withinIncludeDepth(doc: unknown): boolean {
+  const reader = (doc as { getReader?: () => unknown } | undefined)?.getReader?.();
+  const depth = (reader as { getIncludeDepth?: () => unknown } | undefined)?.getIncludeDepth?.();
+  const limit = (
+    doc as { getAttribute?: (name: string, fallback: unknown) => unknown }
+  ).getAttribute?.("max-include-depth", 64);
+  const max = Number(limit);
+  return typeof depth !== "number" || !Number.isFinite(max) || depth < max;
 }
 
 function safeReal(path: string): string | undefined {
