@@ -74,11 +74,16 @@ export function createIncludeBoundary(
         // include past `max-include-depth` it leaves as a line of text. `handles` is asked before
         // that limit is applied (measured with @asciidoctor/core 4.1).
         if (check !== undefined && statSync(real).isFile() && withinIncludeDepth(doc)) {
-          try {
-            check(real, readFileSync(real));
-          } catch (error) {
-            refusal = error as Error;
-            throw error;
+          // A file that cannot be read is Asciidoctor's to report, as it does in any build; only
+          // what `check` refuses stops it here.
+          const content = readable(real);
+          if (content !== undefined) {
+            try {
+              check(real, content);
+            } catch (error) {
+              refusal = error as Error;
+              throw error;
+            }
           }
         }
         return false;
@@ -178,6 +183,14 @@ function withinIncludeDepth(doc: unknown): boolean {
   const reader = (doc as { getReader?: () => unknown } | undefined)?.getReader?.();
   const exceeds = (reader as { exceedsMaxDepth?: () => unknown } | undefined)?.exceedsMaxDepth;
   return exceeds === undefined || exceeds.call(reader) === false;
+}
+
+function readable(path: string): Buffer | undefined {
+  try {
+    return readFileSync(path);
+  } catch {
+    return undefined;
+  }
 }
 
 function safeReal(path: string): string | undefined {

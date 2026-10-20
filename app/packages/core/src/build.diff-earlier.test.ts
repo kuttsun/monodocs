@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -598,4 +598,21 @@ describe("cross-review round 4", () => {
     await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\ninclude::_outer.adoc[]\n");
     expect((await failure()).code).toBe("diff/lfs-pointer");
   });
+});
+
+describe("cross-review round 5", () => {
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "leaves an include it cannot read to Asciidoctor, as any build does",
+    async () => {
+      await writeFile(join(then, "docs", "_part.adoc"), "Included.\n");
+      await chmod(join(then, "docs", "_part.adoc"), 0o000);
+      await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\ninclude::_part.adoc[]\n");
+      vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      try {
+        await expectBothBuilt();
+      } finally {
+        await chmod(join(then, "docs", "_part.adoc"), 0o644);
+      }
+    },
+  );
 });
