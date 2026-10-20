@@ -320,4 +320,19 @@ describe("marking generated numbers", () => {
     });
     expect(found["s.adoc"]).toEqual(["1", "1"]);
   });
+
+  it("leaves a generated number out of a highlighted listing's recorded source", async () => {
+    await writeFile(
+      join(dir, "docs", "x.adoc"),
+      "= X\n:sectnums:\n:xrefstyle: short\n\n[#two]\n== Two\n\n[source,text,subs=+macros]\n----\nsee <<two>>\n----\n",
+    );
+    const config = await loadConfig({ inputDir: join(dir, "docs") }, dir);
+    const site = await preparePages(config, dir, { record: true });
+    const sources: unknown[] = [];
+    visit(site.trees!.get(site.pages[0]!.id) as Root, "element", (node) => {
+      const source = (node.data as { monodocsSource?: unknown } | undefined)?.monodocsSource;
+      if (source !== undefined) sources.push(source);
+    });
+    expect(sources).toEqual([{ kind: "code", source: "see Section ", lang: "text" }]);
+  });
 });

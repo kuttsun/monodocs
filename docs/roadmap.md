@@ -1299,13 +1299,33 @@ difference, both builds mark them so that comparison leaves them out, and a buil
 difference writes nothing new. How each is reached, in every configuration the renderers have, is
 decided in stage 1.
 
+Stage 1 decided it this way. Only the number is marked — `2.3`, `A`, `II` — not the word written
+with it (`Section`, `Figure`, `Chapter`): an insertion changes the number, and a word the author
+changes is still a difference. An AsciiDoc page's numbers are marked where Asciidoctor writes them,
+by Asciidoctor. Rebuilding its strings from its model was tried first and kept missing what it
+composes another way: a formatted caption word, an attribute changed mid-document, a missing or
+duplicate ID, the limits of its own table of contents, references it composes while it reads the
+document. Instead, a converter around the math converter, while Asciidoctor converts a node that
+writes a number — a section, a captioned block, its own table of contents, a cross-reference — wraps
+the number on the section or block in a marker keyed for the build, delegates, and takes it back off.
+The marker reaches the HTML wherever Asciidoctor wrote that number, list items and table cells
+included, and with the markers removed the HTML is Asciidoctor's own, byte for byte (measured with
+`@asciidoctor/core` 4.1). The renderer makes each marker an element and post-processing makes it
+marked text again, so the page, its text, and its headings are as they would be without one. A
+footnote's number is assigned while Asciidoctor converts the text it is in, so footnotes, and GFM's,
+are marked by their structure, where they are unambiguous. A number in a highlighted listing (a
+cross-reference under `subs=macros`) is left out of the source recorded for the block, since
+highlighting rebuilds the block from its text. `{counter:x}` and a reference text the author wrote
+are the author's, and are not marked.
+
 **IDs the build generates are kept apart.** Pre-rendered diagrams number their SVG IDs `mermaid-N`
 from a counter that restarts in every call, so the earlier build uses a prefix of its own. A page ID
 and a heading could still produce the same string, as `mermaid-N` already risks today; that is not
 new, and is left as it is. Whether the pre-renderer and the client runtime are needed is decided
 over both versions, so an earlier diagram is drawn even when the new version has none, or has
 Mermaid off. Diagrams unchanged between the versions are rendered twice; that costs time, not
-correctness, and is not optimised in stage 1.
+correctness, and is not optimised in stage 1. Stage 1 numbers the earlier build's pre-rendered
+diagrams `mermaid-earlier-N`.
 
 ### 7.3.3 Matching Pages and Comparing Blocks
 

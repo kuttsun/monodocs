@@ -579,6 +579,19 @@ function carriedData(node: ElementContent | undefined): { data?: Element["data"]
   return node?.type === "element" && node.data !== undefined ? { data: node.data } : {};
 }
 
+/** `node` without the numbers Asciidoctor generated in it (`span[data-monodocs-generated]`). */
+function withoutGenerated(node: Element): Element {
+  const strip = (element: Element): Element => ({
+    ...element,
+    children: element.children
+      .filter(
+        (child) => child.type !== "element" || child.properties.dataMonodocsGenerated === undefined,
+      )
+      .map((child) => (child.type === "element" ? strip(child) : child)),
+  });
+  return strip(node);
+}
+
 /**
  * Record every code block's source and language, before Mermaid and highlighting replace them. A
  * `mermaid` block is a diagram only where the version has Mermaid on (7.3.2: what the text means);
@@ -597,7 +610,9 @@ function recordSources(tree: HastRoot, mermaidEnabled: boolean): void {
     const recorded: RecordedData = {
       monodocsSource: {
         kind: diagram ? "mermaid" : "code",
-        source: toText(code, { whitespace: "pre" }),
+        // Without the numbers Asciidoctor generated (a cross-reference in a listing): highlighting
+        // rebuilds the block from its text and drops their marks, so they are left out here.
+        source: toText(withoutGenerated(code), { whitespace: "pre" }),
         ...(lang === undefined || diagram ? {} : { lang }),
       },
     };
