@@ -15,8 +15,10 @@ import {
   assertDiffSupported,
   assertNoDiff,
   earlierLabel,
+  inEarlierVersion,
   loadEarlierConfig,
 } from "./diff/earlier.js";
+import { earlierBuildConfig } from "./diff/earlierConfig.js";
 import {
   documentAuthor,
   documentCoverParts,
@@ -236,15 +238,13 @@ export async function buildSite(
 ): Promise<BuildResult> {
   const cwd = process.cwd();
   const config = await loadConfig(options, cwd);
+  // The earlier version (7.3), built with its own configuration for what the document contains
+  // and with the new one for how it looks (7.3.2).
+  let earlierConfig: ResolvedConfig | undefined;
   if (options.diff !== undefined) {
     assertDiffSupported(config, options.diff);
-    await loadEarlierConfig(options, cwd, options.diff);
-    // The earlier version is named and found (7.3.1), but nothing writes the difference yet, and
-    // a difference asked for and not output would be accepted and ignored (7.3).
-    throw new MonodocsError(
-      "diff/unsupported",
-      t("diff.notWritten", { label: earlierLabel(options.diff) }),
-    );
+    const loaded = await loadEarlierConfig(options, cwd, options.diff);
+    earlierConfig = earlierBuildConfig(config, loaded);
   }
 
   // PDF は配布時に読者のファイルシステム上の相対画像を参照できないため、PDF を出力する場合は
@@ -263,7 +263,10 @@ export async function buildSite(
   const ownPrerenderer = internals.mermaidPrerenderer === undefined;
   const prerenderer =
     internals.mermaidPrerenderer ??
-    (config.mermaidEnabled && config.mermaidMode === "pre-render"
+    // Decided over both versions, so an earlier diagram is drawn when the new version has none
+    // or has Mermaid off (7.3.2).
+    ((config.mermaidEnabled || earlierConfig?.mermaidEnabled === true) &&
+    config.mermaidMode === "pre-render"
       ? createPuppeteerPrerenderer({
           colorScheme: config.colorScheme,
           // A PDF's labels are laid out in the font the PDF sets them in; the HTML's are not.
@@ -280,6 +283,20 @@ export async function buildSite(
       embedImages: forceEmbed ? true : undefined,
       onLargeImage: forceLargeEmbed ? "warn" : undefined,
     });
+    if (options.diff !== undefined && earlierConfig !== undefined) {
+      const diff = options.diff;
+      const settings = earlierConfig;
+      // Its warnings are not reported: the author cannot fix a released version, and a report
+      // doubled by the past hides what can be fixed now. A hard error stops the build, its paths
+      // shown in the earlier version (7.3.2).
+      await inEarlierVersion(diff, cwd, () =>
+        preparePages(settings, resolve(cwd, diff.dir), {
+          mermaidPrerenderer: prerenderer,
+          embedImages: forceEmbed ? true : undefined,
+          onLargeImage: forceLargeEmbed ? "warn" : undefined,
+        }),
+      );
+    }
     // pre-render は本文と違って、ビルドマシンのフォントを SVG へ焼き込む。図を描いた文脈が
     // まだ開いているこの時点で確かめる（fontCheck: error なら例外が出てビルドは止まる）。
     await prerenderer?.checkFonts?.({
@@ -288,6 +305,14 @@ export async function buildSite(
     });
   } finally {
     if (ownPrerenderer) await prerenderer?.close();
+  }
+  if (options.diff !== undefined) {
+    // Both versions are built (7.3.2), but nothing compares and writes them yet, and a difference
+    // asked for and not output would be accepted and ignored (7.3).
+    throw new MonodocsError(
+      "diff/unsupported",
+      t("diff.notWritten", { label: earlierLabel(options.diff) }),
+    );
   }
   const { pages, sidebar, warnings, hasMermaid } = prepared;
   if (forceEmbed || forceLargeEmbed) {

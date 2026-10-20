@@ -199,7 +199,11 @@ export async function loadEarlierConfig(
       );
     }
   }
-  const config = await loadConfig(earlierOptions, dir);
+  // A key a major release removed is read as its replacement: every version that used it would
+  // otherwise be impossible to compare against, and its author cannot rewrite it (7.3.2).
+  const config = await inEarlierVersion(diff, cwd, () =>
+    loadConfig(earlierOptions, dir, { translateRemovedKeys: true }),
+  );
   for (const path of [config.configFilePath, config.inputDir, config.rootDir]) {
     if (path === undefined) continue;
     const absolute = resolve(dir, path);
@@ -218,6 +222,31 @@ export async function loadEarlierConfig(
     );
   }
   return config;
+}
+
+/**
+ * Run `run` for the earlier version, with every path of its tree in an error it throws shown as
+ * `label:path` — `v1.2:monodocs.config.yml` — rather than as the temporary directory a ref was
+ * extracted to, which means nothing to the author and is gone once the build ends (7.3.2).
+ */
+export async function inEarlierVersion<T>(
+  diff: DiffOptions,
+  cwd: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (!(error instanceof MonodocsError)) throw error;
+    const label = earlierLabel(diff);
+    const tree = resolve(cwd, diff.tree ?? diff.dir);
+    const bases = [...new Set([real(tree), tree])].sort((a, b) => b.length - a.length);
+    let message = error.message;
+    for (const base of bases) message = message.split(`${base}${sep}`).join(`${label}:`);
+    const source = { ...error.source };
+    if (source.path !== undefined) source.path = `${label}:${source.path}`;
+    throw new MonodocsError(error.code, message, source);
+  }
 }
 
 /**

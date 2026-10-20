@@ -1085,6 +1085,60 @@ function findDefaultConfigPath(options: BuildOptions, cwd: string): string | und
 }
 
 /**
+ * Keys a major release removes after deprecating them, and what each is read as in an earlier
+ * version's configuration (roadmap 7.3.2). Kept beside the deprecations: a key deprecated for
+ * removal joins this table when it is deprecated, so the release that removes it from the schema
+ * leaves every version that used it still comparable. A key in neither the schema nor this table
+ * is an error, as in any configuration.
+ */
+export const REMOVED_KEY_TRANSLATIONS: readonly { from: string; to: string }[] = [
+  // Deprecated in 0.10 for `sources.exclude`, removed in 1.0 (12.4). Read the same way today.
+  { from: "sidebar.exclude", to: "sources.exclude" },
+];
+
+/**
+ * A parsed configuration with every removed key moved to its replacement. A replacement that is
+ * already written is left alone, beside the old key, so that the two are reported as they would
+ * be in any configuration rather than one silently winning.
+ */
+export function translateKeys(parsed: unknown): unknown {
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return parsed;
+  const out = structuredClone(parsed) as Record<string, unknown>;
+  for (const { from, to } of REMOVED_KEY_TRANSLATIONS) {
+    const [fromParent, fromKey] = splitKey(from);
+    const [toParent, toKey] = splitKey(to);
+    const source = objectAt(out, fromParent);
+    if (source === undefined || !(fromKey in source)) continue;
+    const target = objectAt(out, toParent, true);
+    if (target === undefined || toKey in target) continue;
+    target[toKey] = source[fromKey];
+    delete source[fromKey];
+  }
+  return out;
+}
+
+function splitKey(key: string): [string[], string] {
+  const parts = key.split(".");
+  return [parts.slice(0, -1), parts[parts.length - 1]!];
+}
+
+/** The object at a dotted path, made on the way when `create`; undefined when something else is. */
+function objectAt(
+  root: Record<string, unknown>,
+  path: string[],
+  create = false,
+): Record<string, unknown> | undefined {
+  let at: Record<string, unknown> = root;
+  for (const name of path) {
+    let next = at[name];
+    if (next === undefined && create) next = at[name] = {};
+    if (typeof next !== "object" || next === null || Array.isArray(next)) return undefined;
+    at = next as Record<string, unknown>;
+  }
+  return at;
+}
+
+/**
  * Render a schema failure as `path: message` per problem. Zod's own `error.message` is a JSON dump
  * of the issue array, which buries the one thing the author needs — which key, and what about it.
  */
@@ -1104,6 +1158,15 @@ function formatConfigIssues(error: z.ZodError): string {
 export async function loadConfig(
   options: BuildOptions = {},
   cwd: string = process.cwd(),
+  {
+    translateRemovedKeys = false,
+  }: {
+    /**
+     * Read a key a major release removed as its replacement ({@link REMOVED_KEY_TRANSLATIONS}).
+     * Only for an earlier version's configuration, which its author cannot rewrite (roadmap 7.3.2).
+     */
+    translateRemovedKeys?: boolean;
+  } = {},
 ): Promise<ResolvedConfig> {
   const configPath = options.configFile
     ? resolve(cwd, options.configFile)
@@ -1120,6 +1183,7 @@ export async function loadConfig(
         t("config.parseFailed", { path: configPath, detail: (error as Error).message }),
       );
     }
+    if (translateRemovedKeys) parsed = translateKeys(parsed);
     const result = buildConfigFileSchema().safeParse(parsed ?? {});
     if (!result.success) {
       throw new MonodocsError(
