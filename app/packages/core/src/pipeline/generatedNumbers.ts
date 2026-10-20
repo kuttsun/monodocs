@@ -76,6 +76,20 @@ function markAll(node: Element): void {
 const HEADING = /^h[1-6]$/;
 
 /**
+ * Whether a heading is a section's own: the first element in a `div.sectN`, or a part's `h1.sect0`
+ * — not a `[discrete]` heading, nor one a passthrough wrote.
+ */
+function isSectionHeading(node: Element, parent: unknown): boolean {
+  if (classes(node).includes("discrete")) return false;
+  if (node.tagName === "h1") return classes(node).includes("sect0");
+  const container = parent as Element | undefined;
+  if (container?.type !== "element" || !classes(container).some((c) => /^sect[1-6]$/.test(c))) {
+    return false;
+  }
+  return container.children.find((child) => child.type === "element") === node;
+}
+
+/**
  * What a link's text may start with, longest first. A text that ends in its number (`Section 2`)
  * is taken only where the number ends there, so `Section 1` is not found in `Section 12`; one that
  * ends in a space (`1. `, the heading's own prefix in a table of contents) is followed by the title.
@@ -138,12 +152,23 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
       ? numbering.targets[id.slice(prefix.length)]
       : undefined;
 
+  // A heading monodocs gave an ID because Asciidoctor gave it none (`{page}-h1`, prefixIds.ts).
+  const anonymous = new RegExp(`^${escapeRegExp(page.id)}-h\\d+$`);
+  let unidentified = 0;
+
   visit(tree, "element", (node, _index, parent) => {
     const own = classes(node);
-    // A section's heading, found by its ID: the text Asciidoctor wrote before its title.
+    // A section's heading, found by its ID: the text Asciidoctor wrote before its title. One
+    // Asciidoctor gave no ID is found by its place among the other sections without one.
     if (HEADING.test(node.tagName)) {
-      const heading = targetOf(node.properties.id)?.heading;
-      if (heading !== undefined) markPrefix(node, new RegExp(escapeRegExp(heading)));
+      const id = node.properties.id;
+      const heading =
+        typeof id === "string" && anonymous.test(id) && isSectionHeading(node, parent)
+          ? (numbering.unidentified[unidentified++] ?? undefined)
+          : targetOf(id)?.heading;
+      if (heading !== undefined && heading !== null) {
+        markPrefix(node, new RegExp(escapeRegExp(heading)));
+      }
       return;
     }
     // A block's title, with a caption Asciidoctor wrote on that kind of block.
@@ -155,10 +180,9 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
     }
     // A footnote's number, where it is referred to — the first time and again by name — and where
     // it is listed.
+    // The whole reference, brackets and all; in a table of contents it is copied with no link.
     if (node.tagName === "sup" && (own.includes("footnote") || own.includes("footnoteref"))) {
-      for (const child of node.children) {
-        if (child.type === "element" && child.tagName === "a") markAll(child);
-      }
+      markAll(node);
       return;
     }
     if (node.tagName === "div" && own.includes("footnote")) {

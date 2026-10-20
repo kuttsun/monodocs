@@ -87,7 +87,9 @@ describe("marking generated numbers", () => {
         "Appendix A",
         "Figure 1",
         "Table 1",
+        "[",
         "1",
+        "]",
         "Figure 1. ",
         "Table 1. ",
         "Example 1. ",
@@ -150,7 +152,7 @@ describe("marking generated numbers", () => {
     const found = await marked({
       "f.adoc": "= F\n\nOne.footnote:n1[Shared.] Two.footnote:n1[]\n",
     });
-    expect(found["f.adoc"]).toEqual(["1", "1", "1"]);
+    expect(found["f.adoc"]).toEqual(["[", "1", "]", "[", "1", "]", "1"]);
   });
 
   it("does not take a section's own title for a reference to a numbered block", async () => {
@@ -197,5 +199,37 @@ describe("marking generated numbers", () => {
   it("marks the counter GFM puts on a footnote referred to again", async () => {
     const found = await marked({ "g.md": "# G\n\nA[^a] and again[^a].\n\n[^a]: Note.\n" });
     expect(found["g.md"]).toEqual(["1", "1", "2"]);
+  });
+
+  it("leaves a caption the author set on an image and a table", async () => {
+    const found = await marked({
+      "c.adoc":
+        '= C\n\n[caption="Bild A: "]\n.Mine\nimage::i.png[]\n\n[caption="Tab X: "]\n.Mine\n|===\n|a\n|===\n',
+    });
+    expect(found["c.adoc"]).toEqual([]);
+  });
+
+  it("marks a figure inside an AsciiDoc table cell, and a reference to it", async () => {
+    const found = await marked({
+      "t.adoc":
+        "= T\n:xrefstyle: short\n\nSee <<inner>>.\n\n|===\na|\n[#inner]\n.Inner\nimage::i.png[]\n|===\n\n.After\nimage::i.png[]\n",
+    });
+    expect(found["t.adoc"]).toEqual(["Figure 1", "Figure 1. ", "Figure 2. "]);
+  });
+
+  it("marks the numbers of sections Asciidoctor gave no ID", async () => {
+    const found = await marked({
+      "s.adoc": "= S\n:sectnums:\n:sectids!:\n\n== One\n\n[discrete]\n=== Float\n\n== Two\n",
+    });
+    expect(found["s.adoc"]).toEqual(["1. ", "2. "]);
+  });
+
+  it("marks a footnote's number copied into Asciidoctor's table of contents", async () => {
+    const found = await marked({
+      "o.adoc": "= O\n:sectnums:\n:toc:\n\n== One footnote:[N.]\n",
+    });
+    // In the heading and in the list, and in the table of contents, where the copy is one text.
+    expect(found["o.adoc"]).toContain("[1]");
+    expect(found["o.adoc"].filter((t) => t === "1")).toHaveLength(2);
   });
 });

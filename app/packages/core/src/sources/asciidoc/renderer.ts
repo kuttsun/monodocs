@@ -313,12 +313,17 @@ function numberingOf(doc: Document): GeneratedNumbering {
     getContext(): string;
     getId?(): unknown;
     getCaption?(): unknown;
-    hasAttribute?(name: string): boolean;
     isNumbered?(): boolean;
     getSectionNumeral?(): unknown;
     sectnum?(delimiter?: string, append?: string): unknown;
     getSectionName?(): unknown;
     getLevel?(): number;
+    /** The number Asciidoctor gave a captioned block; null where the author wrote the caption. */
+    numeral?: unknown;
+    rows?: Record<
+      "head" | "body" | "foot",
+      { getStyle?(): unknown; getInnerDocument?(): unknown }[][]
+    >;
   };
   const attribute = (name: string): string | undefined => {
     const value = doc.getAttribute(name) as unknown;
@@ -328,13 +333,15 @@ function numberingOf(doc: Document): GeneratedNumbering {
   const book = attribute("doctype") === "book";
   const sectnumlevels = Number(attribute("sectnumlevels") ?? 3);
   const targets: GeneratedNumbering["targets"] = {};
+  const unidentified: GeneratedNumbering["unidentified"] = [];
   const captions: GeneratedNumbering["captions"] = {};
-  for (const node of doc.findBy({}) as unknown as Node[]) {
+
+  const visitNode = (node: Node) => {
     const id = text(node.getId?.());
     const context = node.getContext();
     if (context === "section") {
       const name = text(node.getSectionName?.());
-      if (name === "header") continue;
+      if (name === "header") return;
       const level = node.getLevel?.() ?? 1;
       const caption = text(node.getCaption?.());
       const numeral =
@@ -346,30 +353,56 @@ function numberingOf(doc: Document): GeneratedNumbering {
       else if (numeral !== undefined) {
         const signifier = book && level <= 1 ? attribute(`${name}-signifier`) : undefined;
         const number =
-          book && name === "part" ? `${text(node.sectnum?.(undefined, ":")) ?? numeral}` : numeral;
+          book && name === "part" ? (text(node.sectnum?.(undefined, ":")) ?? numeral) : numeral;
         heading = `${signifier === undefined ? "" : `${signifier} `}${number} `;
       }
-      if (id === undefined || heading === undefined) continue;
+      // A section without an ID is found by its place among the others without one.
+      if (id === undefined) return void unidentified.push(heading ?? null);
+      if (heading === undefined) return;
       const bare = (numeral ?? heading).replace(/[.:]\s*$/, "").replace(/^.* /, "");
       const refsig = attribute(`${name}-refsig`);
       targets[id] = {
         heading,
         references: [heading, refsig === undefined ? bare : `${refsig} ${bare}`],
       };
-      continue;
+      return;
     }
     const kind = CAPTIONED[context];
     const caption = text(node.getCaption?.());
-    // A caption the author set is theirs, number or not.
-    if (kind === undefined || caption === undefined || node.hasAttribute?.("caption") === true)
-      continue;
+    // A caption the author set is theirs: Asciidoctor gives it no number.
+    if (
+      kind === undefined ||
+      caption === undefined ||
+      node.numeral === null ||
+      node.numeral === undefined
+    )
+      return;
     (captions[kind] ??= []).push(caption);
     if (id !== undefined) {
       // A cross-reference to a captioned block reads as its caption without the full stop.
       targets[id] = { references: [caption.replace(/[.:]\s*$/, "").trim()] };
     }
-  }
-  return { targets, captions };
+  };
+  // `findBy` does not enter a table cell's own document (`a|`), whose blocks share the document's
+  // counters, so each such cell is walked as a document of its own.
+  const walk = (document: { findBy(selector: object): unknown }) => {
+    for (const node of document.findBy({}) as Node[]) {
+      visitNode(node);
+      if (node.getContext() !== "table" || node.rows === undefined) continue;
+      for (const part of ["head", "body", "foot"] as const) {
+        for (const row of node.rows[part] ?? []) {
+          for (const cell of row) {
+            if (cell.getStyle?.() !== "asciidoc") continue;
+            const inner = cell.getInnerDocument?.() as
+              { findBy(selector: object): unknown } | undefined;
+            if (inner !== undefined) walk(inner);
+          }
+        }
+      }
+    }
+  };
+  walk(doc as unknown as { findBy(selector: object): unknown });
+  return { targets, unidentified, captions };
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */
