@@ -19,7 +19,7 @@ import {
   loadEarlierConfig,
 } from "./diff/earlier.js";
 import { earlierBuildConfig } from "./diff/earlierConfig.js";
-import { relocateEarlierSite, sharedClockAttributes } from "./diff/earlierLocation.js";
+import { relocateEarlierPages, sharedClockAttributes } from "./diff/earlierLocation.js";
 import { refuseLfsPointer } from "./diff/lfsPointer.js";
 import {
   documentAuthor,
@@ -78,6 +78,11 @@ type PreparePagesOptions = {
   checkRead?: (path: string, content: Buffer | string) => void;
   /** Called with every image Asciidoctor read itself and wrote into a page, and those bytes. */
   checkEmbedded?: (page: Page, content: Buffer) => void;
+  /**
+   * Rewrites the pages as the renderers wrote them, before the sidebar takes their titles and
+   * before post-processing splits their text — highlighting cuts a path into tokens.
+   */
+  relocate?: (pages: Page[]) => Page[];
 };
 
 export type PreparedSite = {
@@ -144,7 +149,7 @@ export async function preparePages(
     for (const source of sources) opts.checkRead(source.absolutePath, source.raw);
   }
 
-  const { pages, warnings } = await buildPages(
+  const rendered = await buildPages(
     sources,
     [
       createMarkdownRenderer({ lineBreak: config.lineBreak, math: config.mathEnabled }),
@@ -161,6 +166,8 @@ export async function preparePages(
       sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
     },
   );
+  const { warnings } = rendered;
+  const pages = opts.relocate === undefined ? rendered.pages : opts.relocate(rendered.pages);
   // The sidebar comes first: it needs only titles and paths, and with numbering on it decides
   // every page's number, which post-processing writes into the headings (19.1).
   const custom =
@@ -326,10 +333,14 @@ export async function buildSite(
           onLargeImage: forceLargeEmbed ? "warn" : undefined,
           checkRead: refuseLfsPointer,
           checkEmbedded: (page, content) => refuseLfsPointer(page.sourcePath, content, "embedded"),
+          relocate: (pages) => relocateEarlierPages(pages, diff, cwd),
         }),
       );
-      internals.onPrepared?.("earlier", relocateEarlierSite(earlier, diff, cwd));
+      internals.onPrepared?.("earlier", earlier);
     }
+    // The earlier version's diagrams are checked too: a deleted one is drawn in the output with
+    // this machine's fonts, as the new version's are. What the check finds is the machine's, not
+    // either version's, so it is reported as it is in any build (7.3.2).
     // pre-render は本文と違って、ビルドマシンのフォントを SVG へ焼き込む。図を描いた文脈が
     // まだ開いているこの時点で確かめる（fontCheck: error なら例外が出てビルドは止まる）。
     await prerenderer?.checkFonts?.({

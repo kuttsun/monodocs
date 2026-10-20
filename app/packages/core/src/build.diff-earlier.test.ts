@@ -437,3 +437,43 @@ describe("round 2: what the earlier build reads and writes of itself", () => {
     expect(sites.earlier!.pages[0]!.html).toContain("<svg");
   });
 });
+
+describe("round 3: where highlighting would cut the location", () => {
+  it("writes the new location in a highlighted listing, the same wherever the version sits", async () => {
+    const page = [
+      "= Code",
+      "",
+      '[source,js,subs="attributes+"]',
+      "----",
+      "const p = {docdir}/x;",
+      "----",
+      "",
+      '[source,python,subs="attributes+"]',
+      "----",
+      "open({docdir}/z)",
+      "----",
+      "",
+    ].join("\n");
+    await writeFile(join(then, "docs", "code.adoc"), page);
+    const copy = join(base, "then-x");
+    await mkdir(join(copy, "docs"), { recursive: true });
+    await writeFile(join(copy, "docs", "index.md"), "# Index\n\nA page.\n");
+    await writeFile(join(copy, "docs", "code.adoc"), page);
+    const htmls: string[] = [];
+    for (const dir of ["../then", "../then-x"]) {
+      const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
+      await expect(
+        buildSite(
+          { outputFile: join(base, "out.html"), diff: { dir, label: "v1.2" } },
+          { onPrepared: (version, site) => (sites[version] = site) },
+        ),
+      ).rejects.toMatchObject({ code: "diff/unsupported" });
+      const html = sites.earlier!.pages.find((p) => p.relativePath === "code.adoc")!.html;
+      // Highlighted: the location went in before the tokens were cut.
+      expect(html).toContain("<span");
+      htmls.push(html);
+    }
+    expect(htmls[0]).toBe(htmls[1]);
+    expect(htmls[0]!.replace(/<[^>]+>/g, "")).not.toContain("then");
+  });
+});

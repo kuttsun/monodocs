@@ -1281,10 +1281,12 @@ takes the time once and hands both builds `{docdate}`, `{doctime}`, `{localdate}
 and their `datetime` and `year` relatives, soft-set as Asciidoctor would have written them at that
 moment. A document's own `:docdate:` therefore still wins. The earlier version's location is
 written as the new one's in the earlier pages' text once they are built, so an include written with
-`{docdir}` has already read the earlier version's own file. An image written with `{docdir}` has an
-absolute target. No build reads an absolute target, in either version: it is left as an external
-reference. So that image is compared by its `src`, which the rewriting makes the new location's in
-both versions.
+`{docdir}` has already read the earlier version's own file. The rewriting runs on the pages as
+Asciidoctor wrote them, before highlighting cuts a path in a listing into tokens. An image written
+with `{docdir}` has an absolute target. monodocs reads no absolute target, in either version: it is
+left as an external reference, and that image is compared by its `src`, which the rewriting makes the
+new location's in both versions. Asciidoctor reads one itself under `:data-uri:` or as an inline SVG,
+and then each version embeds its own file and the image is compared by those bytes.
 
 **Generated numbers are not content.** Inserting one section renumbers every section after it;
 inserting one figure, every later caption; one footnote, every later reference. Compared as text,

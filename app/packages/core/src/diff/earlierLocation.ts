@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import type { DiffOptions, Page, SidebarNode } from "../types.js";
+import type { DiffOptions, Page } from "../types.js";
 
 /**
  * Neither version's output depends on where or when the earlier one was built (roadmap 7.3.2).
@@ -48,17 +48,14 @@ export function sharedClockAttributes(
 }
 
 /**
- * The earlier pages and sidebar with the earlier version's location written as the new one's,
- * where it is text. Asciidoctor makes `{docdir}` the absolute directory of the file it reads, which for the
+ * The earlier pages with the earlier version's location written as the new one's, where it is
+ * text. Asciidoctor makes `{docdir}` the absolute directory of the file it reads, which for the
  * earlier build is under the temporary directory. Rewritten after the build, so an include or an
  * image whose target is written with `{docdir}` has already been read from the earlier version's
- * own files, which are what that version included.
+ * own files, which are what that version included. It runs on the pages as Asciidoctor wrote them,
+ * before the sidebar takes their titles and before highlighting cuts a path into tokens.
  */
-export function relocateEarlierSite<T extends { pages: Page[]; sidebar: SidebarNode[] }>(
-  site: T,
-  diff: DiffOptions,
-  cwd: string,
-): T {
+export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: string): Page[] {
   const dir = resolve(cwd, diff.dir);
   const tree = resolve(cwd, diff.tree ?? diff.dir);
   // The tree stands where the current directory stands, shifted as `diff.dir` is inside it.
@@ -105,14 +102,7 @@ export function relocateEarlierSite<T extends { pages: Page[]; sidebar: SidebarN
     for (const [pattern, place] of patterns) out = out.replace(pattern, () => place);
     return out;
   };
-  // The sidebar copied the titles before they were rewritten, and lists deleted pages (7.3.2).
-  const relocateNodes = (nodes: SidebarNode[]): SidebarNode[] =>
-    nodes.map((node) =>
-      node.type === "dir"
-        ? { ...node, title: relocate(node.title), children: relocateNodes(node.children) }
-        : { ...node, title: relocate(node.title) },
-    );
-  const pages = site.pages.map((page) =>
+  return pages.map((page) =>
     page.format !== "asciidoc"
       ? page
       : {
@@ -124,7 +114,6 @@ export function relocateEarlierSite<T extends { pages: Page[]; sidebar: SidebarN
           headings: page.headings.map((heading) => ({ ...heading, text: relocate(heading.text) })),
         },
   );
-  return { ...site, pages, sidebar: relocateNodes(site.sidebar) };
 }
 
 function escapeRegExp(text: string): string {

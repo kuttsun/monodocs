@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { defaultConfigPath, loadConfig, type ResolvedConfig } from "../config.js";
 import { MonodocsError } from "../diagnostics.js";
+import { BrowserSetupError } from "../pipeline/browser.js";
 import { t } from "../messages.js";
 import type { BuildOptions, DiffOptions } from "../types.js";
 
@@ -243,7 +244,9 @@ export async function inEarlierVersion<T>(
   } catch (error) {
     // An error that is not monodocs' own — the file system, Asciidoctor — is still the earlier
     // version's, and gets the code any foreign error gets (27.3).
-    if (!(error instanceof Error)) throw error;
+    // The machine failing — no Chromium for the pre-renderer, which opens lazily and so may first
+    // open for an earlier diagram — is not the earlier version's, and is reported as it is.
+    if (!(error instanceof Error) || error instanceof BrowserSetupError) throw error;
     const code = error instanceof MonodocsError ? error.code : "internal/unexpected";
     const label = earlierLabel(diff);
     const tree = resolve(cwd, diff.tree ?? diff.dir);
