@@ -23,6 +23,7 @@ import { markFigures } from "./figures.js";
 import { markPageBreakHeadings } from "./pageBreakHeadings.js";
 import { checkHeadingLevels, checkImageAlt } from "./pageChecks.js";
 import { numberHeadings } from "./sectionNumbers.js";
+import { markGeneratedNumbers } from "./generatedNumbers.js";
 import { t } from "../messages.js";
 
 /** コードハイライトに使う配色（shiki の dual theme。ダークは CSS で切替）。 */
@@ -1249,6 +1250,7 @@ export async function postprocessPages(
     checkImageAlt(tree, page, warnings);
     if (options.checkEmbedded !== undefined) checkEmbeddedImages(tree, page, options.checkEmbedded);
     if (trees !== undefined) await recordImages(tree, page, realRoot, options.checkRead);
+    if (trees !== undefined) markGeneratedNumbers(tree, page);
     if (options.embedImages) {
       await embedImages(tree, page, options, realRoot, warnings, embeddedImages);
     }

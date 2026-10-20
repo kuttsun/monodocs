@@ -5,6 +5,7 @@ import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
 import type { Root as HastRoot } from "hast";
 import type {
+  GeneratedNumbering,
   Heading,
   PageFormula,
   PageMeta,
@@ -130,13 +131,16 @@ export function createAsciidocRenderer(
     async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
       const boundary = boundaryFor(source);
       const math = await mathFor();
+      let numbering: GeneratedNumbering | undefined;
       const rawHtml = await withBoundary(boundary, source, async () => {
         const doc = await load(
           source.raw,
           buildOptions(source, attributes, boundary?.registry, math),
         );
         markChecklists(doc);
-        return doc.convert();
+        const html = await doc.convert();
+        numbering = numberingOf(doc);
+        return html;
       });
       const problems: MathProblem[] = [];
 
@@ -173,6 +177,7 @@ export function createAsciidocRenderer(
         formulas: out.formulas,
         links: [],
         assets: [],
+        ...(numbering === undefined ? {} : { numbering }),
         // A formula in a section title is converted again for each copy (a TOC entry, an xref's
         // text), and reported once.
         math: unique([
@@ -286,6 +291,41 @@ export async function withoutAsciidoctorLog<T>(run: () => Promise<T>): Promise<T
   } finally {
     LoggerManager.setLogger(logger);
   }
+}
+
+/**
+ * The words the document numbers things with, read after conversion, when every attribute the
+ * document set is in place (roadmap 7.3.2). An attribute turned off (`:figure-caption!:`) has no
+ * number to find.
+ */
+function numberingOf(doc: Document): GeneratedNumbering {
+  const word = (name: string): string | undefined => {
+    const value = doc.getAttribute(name) as unknown;
+    return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
+  };
+  const words = (names: string[]) =>
+    names.map(word).filter((value): value is string => value !== undefined);
+  const appendixCaption = word("appendix-caption");
+  const captions: GeneratedNumbering["captions"] = {};
+  for (const kind of ["figure", "table", "example", "listing"] as const) {
+    const caption = word(`${kind}-caption`);
+    if (caption !== undefined) captions[kind] = caption;
+  }
+  return {
+    sectnums: doc.hasAttribute("sectnums"),
+    captions,
+    ...(appendixCaption === undefined ? {} : { appendixCaption }),
+    refsigs: words([
+      "section-refsig",
+      "appendix-refsig",
+      "chapter-refsig",
+      "part-refsig",
+      "figure-caption",
+      "table-caption",
+      "example-caption",
+      "listing-caption",
+    ]),
+  };
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

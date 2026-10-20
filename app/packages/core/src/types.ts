@@ -134,6 +134,8 @@ export type Page = {
   formulas?: PageFormula[];
   links: LinkRef[];
   assets: AssetRef[];
+  /** What {@link RenderedContent.numbering} reported, for an AsciiDoc page. */
+  numbering?: GeneratedNumbering;
 };
 
 /** サイドバーのノード（ディレクトリ or ページ）。 */
@@ -191,6 +193,26 @@ export type RenderedContent = {
   assets: AssetRef[];
   /** Formulas the renderer could not render as written, reported by the build with the file. */
   math?: MathProblem[];
+  /** The words an AsciiDoc document numbers things with, for marking those numbers (7.3.2). */
+  numbering?: GeneratedNumbering;
+};
+
+/**
+ * How an AsciiDoc document writes the numbers Asciidoctor generates, read from the document itself
+ * so that a caption it renamed (`:figure-caption: 図`) is still found (roadmap 7.3.2).
+ */
+export type GeneratedNumbering = {
+  /** `:sectnums:` was set: section headings start with `1.2. `. */
+  sectnums: boolean;
+  /**
+   * The caption word each kind of block's title is numbered with: `Figure` for an image, `Table`,
+   * `Example`, and `Listing` only where the document turned listing captions on.
+   */
+  captions: Partial<Record<"figure" | "table" | "example" | "listing", string>>;
+  /** The word an appendix heading starts with, `Appendix` unless renamed or turned off. */
+  appendixCaption?: string;
+  /** The words a cross-reference's text names its target with: `Section`, `Appendix`, ... */
+  refsigs: string[];
 };
 
 /**
