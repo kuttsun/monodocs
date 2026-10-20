@@ -177,12 +177,17 @@ const IMAGE_TAGS = new Set(["img", "object", "svg"]);
  */
 function soleImage(node: Element): Element | undefined {
   if (IMAGE_TAGS.has(node.tagName)) return node;
-  // A diagram's SVG is the diagram's; a list, a table, and their items and rows are not wrappers.
-  if (has(node, "mermaid") || STRUCTURE.has(node.tagName) || OWN_KIND.has(node.tagName)) {
-    return undefined;
-  }
+  // Only a wrapper that says nothing of its own is passed through: anything else — a quotation, an
+  // example, a heading, a list item — is what it is, with the image its content.
+  if (!isWrapper(node)) return undefined;
   const sole = only(node);
   return sole === undefined ? undefined : soleImage(sole);
+}
+
+/** The elements an image is read through: a paragraph, a link, a span, a figure's content. */
+function isWrapper(node: Element): boolean {
+  if (["p", "a", "span", "picture"].includes(node.tagName)) return true;
+  return node.tagName === "div" && classes(node).every((name) => name === "content");
 }
 
 /** Whether `node` holds blocks of its own. */

@@ -529,4 +529,25 @@ describe("what each block is compared by", () => {
       ).map((c) => c.slice(0, 3)),
     ).toEqual(["-li", "+li"]);
   });
+
+  it("reads an image moved into a quotation, an example, or a heading as a change", async () => {
+    await write(then, { "docs/i.png": "PNG" });
+    await write(now, { "docs/i.png": "PNG" });
+    const changed = async (path: string, before: string, after: string) =>
+      (await onePage(path, before, after)).changed;
+    expect(await changed("docs/q.md", "# Q\n\n![x](i.png)\n", "# Q\n\n> ![x](i.png)\n")).toBe(true);
+    expect(
+      await changed(
+        "docs/e.adoc",
+        "= E\n\nimage::i.png[x]\n",
+        "= E\n\n====\nimage::i.png[x]\n====\n",
+      ),
+    ).toBe(true);
+    expect(await changed("docs/h.md", "# H\n\n## ![x](i.png)\n", "# H\n\n### ![x](i.png)\n")).toBe(
+      true,
+    );
+    expect(await changed("docs/p.md", "# P\n\n![x](i.png)\n", "# P\n\n## ![x](i.png)\n")).toBe(
+      true,
+    );
+  });
 });
