@@ -411,4 +411,48 @@ describe("what each block is compared by", () => {
     expect(page.titleChanged).toBeUndefined();
     expect(page.changed).toBe(false);
   });
+
+  it("reads an inline SVG the same on a page that moved, whose IDs carry another prefix", async () => {
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><g id="g"><rect id="r" width="5" height="5"/></g><use href="#r"/></svg>';
+    await write(then, { "docs/a.svg": svg });
+    await write(now, { "docs/a.svg": svg });
+    const pages = await compare(
+      {
+        "docs/old.adoc":
+          "= Page\n\nimage::a.svg[a,opts=inline]\n\nText image:a.svg[b,opts=inline] end.\n",
+      },
+      {
+        "docs/new.adoc":
+          "= Page\n:sd-aliases: /old\n\nimage::a.svg[a,opts=inline]\n\nText image:a.svg[b,opts=inline] end.\n",
+      },
+    );
+    const moved = pages.find((p) => p.state === "matched")!;
+    expect(moved.state === "matched" && moved.movedFrom).toBe("/old");
+    expect(changes(moved)).toEqual([]);
+  });
+
+  it("compares a video and an embedded player by what they play", async () => {
+    expect(
+      changes(
+        await onePage(
+          "docs/v.adoc",
+          "= V\n\nvideo::a.mp4[]\n",
+          "= V\n\nvideo::b.mp4[]\n\nvideo::xyz[youtube]\n",
+        ),
+      ).map((c) => c.split(" ")[0]),
+    ).toEqual(["-video", "+video", "+iframe"]);
+  });
+
+  it("reads the blocks in an AsciiDoc table cell: code with its language", async () => {
+    expect(
+      changes(
+        await onePage(
+          "docs/t.adoc",
+          "= T\n\n|===\na|\n[source,js]\n----\nx\n----\n|===\n",
+          "= T\n\n|===\na|\n[source,ts]\n----\nx\n----\n|===\n",
+        ),
+      ).map((c) => c.slice(0, 3)),
+    ).toEqual(["-tr", "+tr"]);
+  });
 });

@@ -1393,7 +1393,10 @@ bytes, so the choice belongs to what monodocs promises. A deletion is taken befo
 a replaced block shows the old one first; the full tie-break is fixed in the code, and tests pin its
 output on sequences with several shortest scripts. A block left unaligned was added or deleted. A
 block that moved within the page is a deletion and an addition; inferring moves would need a
-similarity threshold, and a wrong threshold silently hides a change.
+similarity threshold, and a wrong threshold silently hides a change. Stage 1 bounds the search: past
+4000 edits, after what both versions share at the start, the rest of the page is read as deleted and
+then added. That is what so rewritten a page is to its reader, and it keeps the memory a build needs
+bounded — six thousand blocks rewritten on each side would otherwise take gigabytes.
 
 ### 7.3.4 Writing the Difference into the HTML
 

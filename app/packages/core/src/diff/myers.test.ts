@@ -71,4 +71,22 @@ describe("Myers' shortest edit script", () => {
       );
     }
   });
+
+  it("replaces the middle whole past the most edits it searches, keeping the memory bounded", () => {
+    // Past the limit, after what both share at the start, the rest is deleted and then added.
+    expect(diffSequences([..."xabc"], [..."xdef"], (a, b) => a === b, 2).map((e) => e.op)).toEqual([
+      "equal",
+      "delete",
+      "delete",
+      "delete",
+      "insert",
+      "insert",
+      "insert",
+    ]);
+    // Six thousand blocks rewritten on each side finish without a search of every edit.
+    const a = Array.from({ length: 6000 }, (_, i) => `a${i}`);
+    const b = Array.from({ length: 6000 }, (_, i) => `b${i}`);
+    const edits = diffSequences(a, b, (x, y) => x === y);
+    expect(edits).toHaveLength(12000);
+  });
 });

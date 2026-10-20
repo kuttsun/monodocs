@@ -27,7 +27,7 @@ export type ComparedVersion = { pages: readonly Page[]; trees: ReadonlyMap<strin
 export function compareVersions(next: ComparedVersion, old: ComparedVersion): PageComparison[] {
   const blocks = (version: ComparedVersion, page: Page) => {
     const tree = version.trees.get(page.id);
-    return tree === undefined ? [] : blocksOf(tree);
+    return tree === undefined ? [] : blocksOf(tree, page.id);
   };
   return matchPages(next.pages, old.pages).map((match): PageComparison => {
     if (match.state !== "matched") return { ...match, changed: true };

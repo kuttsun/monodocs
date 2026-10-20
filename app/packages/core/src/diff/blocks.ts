@@ -127,6 +127,9 @@ const BLOCK_LEVEL = new Set([
   "summary",
 ]);
 
+/** A video, an audio clip, an embedded player: blocks compared by their `src`. */
+const MEDIA = new Set(["video", "audio", "iframe"]);
+
 /** Containers whatever they hold: lists and tables, whose items and rows are the blocks. */
 const STRUCTURE = new Set(["ul", "ol", "dl", "table", "thead", "tbody", "tfoot"]);
 
@@ -158,6 +161,7 @@ function isBlockElement(node: Element): boolean {
     node.tagName === "svg" ||
     node.tagName === "object" ||
     node.tagName === "img" ||
+    MEDIA.has(node.tagName) ||
     LAYOUT.has(node.tagName)
   );
 }
@@ -197,6 +201,7 @@ function textOf(nodes: readonly ElementContent[], skip?: (node: Element) => bool
       if (skip?.(child) === true) continue;
       // The numbers `numbering.sections` writes are elements of their own (19.1).
       if (child.properties.dataMonodocsSectionNumber !== undefined) continue;
+      // By class and attribute: the mark `isMath` reads does not survive the renderer's HTML.
       if (has(child, "math") && typeof child.properties.dataMathTex === "string") {
         out += ` \\(${child.properties.dataMathTex}\\) `;
         continue;
@@ -238,9 +243,24 @@ function imageKey(node: Element): string {
   return `${what} alt:${String(node.properties.alt ?? "")}`;
 }
 
-/** An SVG written into the page, as the hash of its markup: each version's own file. */
+/**
+ * The page's ID prefix, which every element ID on it carries (`{page}-`, sources/prefixIds.ts), set
+ * while {@link blocksOf} reads a page. Element IDs and their prefixes are not compared (7.3.3), and a
+ * page that moved has another.
+ */
+let pagePrefix = "";
+
+/**
+ * An SVG written into the page, as the hash of its markup without the page's ID prefix: each
+ * version's own file, the same wherever the page now is.
+ */
 function svgKey(node: Element): string {
-  return createHash("sha256").update(toHtml(node)).digest("hex");
+  let markup = toHtml(node);
+  if (pagePrefix !== "") {
+    const prefix = pagePrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    markup = markup.replace(new RegExp(`(id="|#)${prefix}`, "g"), "$1");
+  }
+  return createHash("sha256").update(markup).digest("hex");
 }
 
 /** The significant children of `node`: elements, and text that is not only whitespace. */
@@ -256,8 +276,9 @@ function only(node: Element): Element | undefined {
   return children.length === 1 && children[0]!.type === "element" ? children[0] : undefined;
 }
 
-/** The blocks of a page's tree, in reading order. */
-export function blocksOf(tree: HastRoot): Block[] {
+/** The blocks of a page's tree, in reading order. `pageId` is the page's, whose prefix its IDs carry. */
+export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
+  pagePrefix = pageId === "" ? "" : `${pageId}-`;
   const blocks: Block[] = [];
   const add = (kind: string, key: string, node: Element, ancestors: Element[]) => {
     blocks.push({
@@ -294,6 +315,13 @@ export function blocksOf(tree: HastRoot): Block[] {
     }
     if (tag === "img" || tag === "object") return add("image", imageKey(node), node, ancestors);
     if (tag === "svg") return add("image", `svg:${svgKey(node)}`, node, ancestors);
+    // A video, an audio clip, or an embedded player, compared by what it plays.
+    if (MEDIA.has(tag)) {
+      const sources = [node, ...elements(node).filter((c) => c.tagName === "source")]
+        .map((element) => element.properties.src)
+        .filter((src) => typeof src === "string" && src !== "");
+      return add(tag, sources.join(" "), node, ancestors);
+    }
     // A paragraph that holds a display formula or an image alone is that block.
     if (tag === "p") {
       const sole = only(node);
@@ -313,7 +341,7 @@ export function blocksOf(tree: HastRoot): Block[] {
         .filter((cell) => cell.tagName === "td" || cell.tagName === "th")
         .map(
           (cell) =>
-            `${cell.tagName}[${String(cell.properties.colSpan ?? 1)}x${String(cell.properties.rowSpan ?? 1)}] ${textOf(cell.children)}`,
+            `${cell.tagName}[${String(cell.properties.colSpan ?? 1)}x${String(cell.properties.rowSpan ?? 1)}] ${cellKey(cell)}`,
         );
       return add("tr", cells.join(" | "), node, ancestors);
     }
@@ -371,6 +399,17 @@ export function blocksOf(tree: HastRoot): Block[] {
     if (child.type === "element") visit(child, []);
   }
   return blocks;
+}
+
+/**
+ * What a table cell reads as: its text, or, for a cell that holds blocks (AsciiDoc's `a|`), each of
+ * them as it is compared — a diagram by its source, code with its language.
+ */
+function cellKey(cell: Element): string {
+  if (!holdsBlocks(cell)) return textOf(cell.children);
+  // Read with the page's prefix, which blocksOf sets again as it is.
+  const inner = blocksOf({ type: "root", children: cell.children }, pagePrefix.replace(/-$/, ""));
+  return inner.map((block) => `${block.kind}{${block.key}}`).join(" ");
 }
 
 /** Whether two blocks are the same block: kind, chain, and what they read as. */

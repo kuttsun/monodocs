@@ -217,12 +217,12 @@ export async function buildPages(
       order: meta.order,
       hidden: meta.hidden,
       description: meta.description,
-      // Normalised here so that a spelling cannot decide a collision; validated once every page is
-      // known, because whether an alias is shadowed depends on routes that may not exist yet (15.5).
       // As the title is: the earlier version's location in it written as the new one's (7.3.2).
       ...(meta.title?.trim()
         ? { explicitTitle: (options.rewriteTitle ?? ((t: string) => t))(meta.title.trim()) }
         : {}),
+      // Normalised here so that a spelling cannot decide a collision; validated once every page is
+      // known, because whether an alias is shadowed depends on routes that may not exist yet (15.5).
       aliases: dedupe(
         (meta.aliases ?? []).map((alias) => toAliasRoute(alias, options.sourceExtensions)),
       ),
