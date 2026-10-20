@@ -131,21 +131,14 @@ function markGfm(tree: HastRoot): void {
 function markAsciidoc(tree: HastRoot, page: Page): void {
   const numbering = page.numbering;
   if (numbering === undefined) return;
-  const startingWith = (prefixes: string[], boundary = "") =>
-    prefixes.length === 0
-      ? undefined
-      : new RegExp(
-          `(?:${[...new Set(prefixes)]
-            .sort((a, b) => b.length - a.length)
-            .map(escapeRegExp)
-            .join("|")})${boundary}`,
-        );
-  const captionFor: [string, RegExp | undefined][] = [
-    ["imageblock", startingWith(numbering.captions.figure ?? [])],
-    ["tableblock", startingWith(numbering.captions.table ?? [])],
-    ["exampleblock", startingWith(numbering.captions.example ?? [])],
-    ["listingblock", startingWith(numbering.captions.listing ?? [])],
+  // Each kind's titles, matched to their blocks in document order.
+  const captionsOf: [string, (string | null)[]][] = [
+    ["imageblock", numbering.captions.figure ?? []],
+    ["tableblock", numbering.captions.table ?? []],
+    ["exampleblock", numbering.captions.example ?? []],
+    ["listingblock", numbering.captions.listing ?? []],
   ];
+  const seen = new Map<string, number>();
   // Element IDs carry the page's prefix (`{page}-{id}`, sources/prefixIds.ts).
   const prefix = `${page.id}-`;
   const targetOf = (id: unknown) =>
@@ -189,8 +182,15 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
     // A block's title, with a caption Asciidoctor wrote on that kind of block.
     if (own.includes("title") && parent?.type === "element") {
       const block = classes(parent);
-      const pattern = captionFor.find(([kind]) => block.includes(kind))?.[1];
-      if (pattern !== undefined) markPrefix(node, pattern);
+      const found = captionsOf.find(([kind]) => block.includes(kind));
+      if (found === undefined) return;
+      const [kind, captions] = found;
+      const index = seen.get(kind) ?? 0;
+      seen.set(kind, index + 1);
+      const caption = captions[index];
+      if (caption !== undefined && caption !== null) {
+        markPrefix(node, new RegExp(escapeRegExp(caption)));
+      }
       return;
     }
     // A footnote's number, where it is referred to — the first time and again by name — and where

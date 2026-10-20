@@ -218,10 +218,10 @@ export type GeneratedNumbering = {
    */
   unidentified: { heading: string | null; title: string }[];
   /**
-   * The captions it wrote, by the kind of block they are on: `Figure 1. ` on an image, and so on.
-   * A caption the author wrote (`[caption="Mine: "]`) is the author's, and is not among them.
+   * For each kind of block, every one with a title, in document order: the caption Asciidoctor
+   * numbered it with (`Figure 1. `), or null — none, or one the author wrote, which is theirs.
    */
-  captions: Partial<Record<"figure" | "table" | "example" | "listing", string[]>>;
+  captions: Partial<Record<"figure" | "table" | "example" | "listing", (string | null)[]>>;
 };
 
 /**

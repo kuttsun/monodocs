@@ -286,4 +286,21 @@ describe("marking generated numbers", () => {
     // The contents entry and the heading of One; nothing of "1. Literal".
     expect(found["l.adoc"]).toEqual(["1. ", "1. "]);
   });
+
+  it("leaves an author's caption that reads like another block's generated one", async () => {
+    const found = await marked({
+      "a.adoc":
+        '= A\n\n.Gen\nimage::i.png[]\n\n[caption="Figure 1. "]\n.Own\nimage::i.png[]\n\n[%collapsible]\n.Fold\n====\nx\n====\n\n.Ex\n====\ny\n====\n',
+    });
+    // The generated figure's and example's captions, not the author's copy of the first.
+    expect(found["a.adoc"]).toEqual(["Figure 1. ", "Example 1. "]);
+  });
+
+  it("marks a caption and an appendix caption written with characters the HTML escapes", async () => {
+    const found = await marked({
+      "e.adoc":
+        "= E\n:figure-caption: A & B\n:appendix-caption: C & D\n\n.F\nimage::i.png[]\n\n[appendix]\n== X\n",
+    });
+    expect(found["e.adoc"]).toEqual(["A & B 1. ", "C & D A: "]);
+  });
 });

@@ -294,6 +294,15 @@ export async function withoutAsciidoctorLog<T>(run: () => Promise<T>): Promise<T
   }
 }
 
+/**
+ * A caption as text: Asciidoctor gives it with its substitutions applied (`A &amp; B`), and the
+ * page's tree holds the text the HTML reads as. Spaces are kept; a caption ends in one.
+ */
+function decoded(html: unknown): unknown {
+  if (typeof html !== "string" || !/[&<]/.test(html)) return html;
+  return toText(unified().use(rehypeParse, { fragment: true }).parse(html), { whitespace: "pre" });
+}
+
 /** A converted title's text, as the HTML gives it: its markup and entities read. */
 function textOf(html: unknown): string {
   if (typeof html !== "string") return "";
@@ -327,6 +336,7 @@ function numberingOf(doc: Document): GeneratedNumbering {
     getSectionName?(): unknown;
     getLevel?(): number;
     getTitle?(): unknown;
+    hasAttribute?(name: string): boolean;
     /** The number Asciidoctor gave a captioned block; null where the author wrote the caption. */
     numeral?: unknown;
     rows?: Record<
@@ -352,7 +362,7 @@ function numberingOf(doc: Document): GeneratedNumbering {
       const name = text(node.getSectionName?.());
       if (name === "header") return;
       const level = node.getLevel?.() ?? 1;
-      const caption = text(node.getCaption?.());
+      const caption = text(decoded(node.getCaption?.()));
       // Truthy rather than true: a book's special sections under `:sectnums: all` answer "chapter".
       // A cross-reference writes the number at any depth; the heading only within `sectnumlevels`.
       const numbered = Boolean(node.isNumbered?.()) ? text(node.getSectionNumeral?.()) : undefined;
@@ -385,16 +395,15 @@ function numberingOf(doc: Document): GeneratedNumbering {
       return;
     }
     const kind = CAPTIONED[context];
-    const caption = text(node.getCaption?.());
+    // Every block of a captioned kind whose title the page shows, so that each title is matched
+    // to its own block; a collapsible example's title is a `summary` of its own, not counted.
+    if (kind === undefined || text(node.getTitle?.()) === undefined) return;
+    if (node.hasAttribute?.("collapsible-option") === true) return;
     // A caption the author set is theirs: Asciidoctor gives it no number.
-    if (
-      kind === undefined ||
-      caption === undefined ||
-      node.numeral === null ||
-      node.numeral === undefined
-    )
-      return;
-    (captions[kind] ??= []).push(caption);
+    const generated = node.numeral !== null && node.numeral !== undefined;
+    const caption = generated ? text(decoded(node.getCaption?.())) : undefined;
+    (captions[kind] ??= []).push(caption ?? null);
+    if (caption === undefined) return;
     if (id !== undefined) {
       // A cross-reference to a captioned block reads as its caption without the full stop.
       targets[id] = { references: [caption.replace(/[.:]\s*$/, "").trim()] };
