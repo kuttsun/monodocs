@@ -73,12 +73,11 @@ function markAll(node: Element): void {
   });
 }
 
-const HEADING = /^h[2-6]$/;
-const SECTION = /^sect[0-6]$/;
+const HEADING = /^h[1-6]$/;
 
 /** Mark every number the renderers generated on a page, in its tree. */
 export function markGeneratedNumbers(tree: HastRoot, page: Page): void {
-  if (page.format === "asciidoc") markAsciidoc(tree, page.numbering);
+  if (page.format === "asciidoc") markAsciidoc(tree, page);
   else markGfm(tree);
 }
 
@@ -86,19 +85,26 @@ export function markGeneratedNumbers(tree: HastRoot, page: Page): void {
 function markGfm(tree: HastRoot): void {
   visit(tree, "element", (node) => {
     if (node.tagName === "a" && node.properties.dataFootnoteRef !== undefined) markAll(node);
+    // A footnote referred to again is listed with a counter on its back-reference: `↩2`.
+    if (node.tagName === "a" && node.properties.dataFootnoteBackref !== undefined) {
+      for (const child of node.children) {
+        if (child.type === "element" && child.tagName === "sup") markAll(child);
+      }
+    }
   });
 }
 
-function markAsciidoc(tree: HastRoot, numbering: GeneratedNumbering | undefined): void {
+function markAsciidoc(tree: HastRoot, page: Page): void {
+  const numbering = page.numbering;
   if (numbering === undefined) return;
-  const startingWith = (prefixes: string[]) =>
+  const startingWith = (prefixes: string[], boundary = "") =>
     prefixes.length === 0
       ? undefined
       : new RegExp(
           `(?:${[...new Set(prefixes)]
             .sort((a, b) => b.length - a.length)
             .map(escapeRegExp)
-            .join("|")})`,
+            .join("|")})${boundary}`,
         );
   const captionFor: [string, RegExp | undefined][] = [
     ["imageblock", startingWith(numbering.captions.figure ?? [])],
@@ -106,34 +112,22 @@ function markAsciidoc(tree: HastRoot, numbering: GeneratedNumbering | undefined)
     ["exampleblock", startingWith(numbering.captions.example ?? [])],
     ["listingblock", startingWith(numbering.captions.listing ?? [])],
   ];
-  // A reference is marked only where it is followed by what ends a number, so `Section 1` is not
-  // taken from `Section 12`.
-  const reference =
-    numbering.references.length === 0
-      ? undefined
-      : new RegExp(
-          `(?:${[...numbering.references]
-            .sort((a, b) => b.length - a.length)
-            .map(escapeRegExp)
-            .join("|")})(?![0-9A-Za-z.])`,
-        );
-  let section = 0;
+  // Element IDs carry the page's prefix (`{page}-{id}`, sources/prefixIds.ts).
+  const prefix = `${page.id}-`;
+  const targetOf = (id: unknown) =>
+    typeof id === "string" && id.startsWith(prefix)
+      ? numbering.targets[id.slice(prefix.length)]
+      : undefined;
 
   visit(tree, "element", (node, _index, parent) => {
     const own = classes(node);
-    // A section's heading, in document order: the prefix Asciidoctor wrote, if it wrote one.
-    if (
-      HEADING.test(node.tagName) &&
-      parent?.type === "element" &&
-      classes(parent).some((c) => SECTION.test(c))
-    ) {
-      const prefix = numbering.sections[section++];
-      if (prefix !== undefined && prefix !== null) {
-        markPrefix(node, new RegExp(escapeRegExp(prefix)));
-      }
+    // A section's heading, found by its ID: the text Asciidoctor wrote before its title.
+    if (HEADING.test(node.tagName)) {
+      const heading = targetOf(node.properties.id)?.heading;
+      if (heading !== undefined) markPrefix(node, new RegExp(escapeRegExp(heading)));
       return;
     }
-    // A block's title, with the caption Asciidoctor wrote on that kind of block.
+    // A block's title, with a caption Asciidoctor wrote on that kind of block.
     if (own.includes("title") && parent?.type === "element") {
       const block = classes(parent);
       const pattern = captionFor.find(([kind]) => block.includes(kind))?.[1];
@@ -153,10 +147,15 @@ function markAsciidoc(tree: HastRoot, numbering: GeneratedNumbering | undefined)
       if (link?.tagName === "a") markAll(link);
       return;
     }
-    // A cross-reference's text, where it names a numbered target.
-    if (node.tagName === "a" && reference !== undefined) {
+    // A link to a numbered target — the table of contents, a cross-reference — where its text
+    // starts with what Asciidoctor wrote for it, and the number ends there.
+    if (node.tagName === "a") {
       const href = node.properties.href;
-      if (typeof href === "string" && href.startsWith("#")) markPrefix(node, reference);
+      const target =
+        typeof href === "string" && href.startsWith("#") ? targetOf(href.slice(1)) : undefined;
+      const pattern =
+        target === undefined ? undefined : startingWith(target.references, "(?![0-9A-Za-z.])");
+      if (pattern !== undefined) markPrefix(node, pattern);
     }
   });
 }

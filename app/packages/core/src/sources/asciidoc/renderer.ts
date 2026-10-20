@@ -303,16 +303,20 @@ const CAPTIONED: Record<string, keyof GeneratedNumbering["captions"]> = {
 
 /**
  * The numbers Asciidoctor generated, read from the document's model after conversion (roadmap
- * 7.3.2). A section's prefix is its caption when it has one (`Appendix A: `), else its number
- * (`A.1. `) when it is numbered; a cross-reference to it starts with its signifier and that
- * number, `Section A.1` or `Appendix A`.
+ * 7.3.2), built as its HTML converter writes them: a section's caption when it has one
+ * (`Appendix A: `), else, when it is numbered within `sectnumlevels`, its number — after the
+ * chapter or part signifier in a book. A cross-reference to it reads `{name}-refsig` and the
+ * number, or the number alone where the document set no signifier.
  */
 function numberingOf(doc: Document): GeneratedNumbering {
   type Node = {
     getContext(): string;
+    getId?(): unknown;
     getCaption?(): unknown;
+    hasAttribute?(name: string): boolean;
     isNumbered?(): boolean;
     getSectionNumeral?(): unknown;
+    sectnum?(delimiter?: string, append?: string): unknown;
     getSectionName?(): unknown;
     getLevel?(): number;
   };
@@ -321,35 +325,51 @@ function numberingOf(doc: Document): GeneratedNumbering {
     return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
   };
   const text = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
-  const sections: (string | null)[] = [];
+  const book = attribute("doctype") === "book";
+  const sectnumlevels = Number(attribute("sectnumlevels") ?? 3);
+  const targets: GeneratedNumbering["targets"] = {};
   const captions: GeneratedNumbering["captions"] = {};
-  const references = new Set<string>();
   for (const node of doc.findBy({}) as unknown as Node[]) {
+    const id = text(node.getId?.());
     const context = node.getContext();
     if (context === "section") {
-      // The document header is a section of level 0; its title is the page's, not numbered.
-      if (node.getLevel?.() === 0) continue;
+      const name = text(node.getSectionName?.());
+      if (name === "header") continue;
+      const level = node.getLevel?.() ?? 1;
       const caption = text(node.getCaption?.());
-      const numeral = node.isNumbered?.() === true ? text(node.getSectionNumeral?.()) : undefined;
-      sections.push(caption ?? (numeral === undefined ? null : `${numeral} `));
-      if (numeral !== undefined) {
-        const name = text(node.getSectionName?.());
-        const refsig = attribute(
-          `${name === "appendix" ? "appendix" : name === "chapter" ? "chapter" : "section"}-refsig`,
-        );
-        const bare = numeral.replace(/\.$/, "");
-        if (refsig !== undefined) references.add(`${refsig} ${bare}`);
+      const numeral =
+        node.isNumbered?.() === true && level <= sectnumlevels
+          ? text(node.getSectionNumeral?.())
+          : undefined;
+      let heading: string | undefined;
+      if (caption !== undefined) heading = caption;
+      else if (numeral !== undefined) {
+        const signifier = book && level <= 1 ? attribute(`${name}-signifier`) : undefined;
+        const number =
+          book && name === "part" ? `${text(node.sectnum?.(undefined, ":")) ?? numeral}` : numeral;
+        heading = `${signifier === undefined ? "" : `${signifier} `}${number} `;
       }
+      if (id === undefined || heading === undefined) continue;
+      const bare = (numeral ?? heading).replace(/[.:]\s*$/, "").replace(/^.* /, "");
+      const refsig = attribute(`${name}-refsig`);
+      targets[id] = {
+        heading,
+        references: [heading, refsig === undefined ? bare : `${refsig} ${bare}`],
+      };
       continue;
     }
     const kind = CAPTIONED[context];
     const caption = text(node.getCaption?.());
-    if (kind === undefined || caption === undefined) continue;
+    // A caption the author set is theirs, number or not.
+    if (kind === undefined || caption === undefined || node.hasAttribute?.("caption") === true)
+      continue;
     (captions[kind] ??= []).push(caption);
-    // A cross-reference to a captioned block reads as its caption without the full stop.
-    references.add(caption.replace(/[.:]\s*$/, "").trim());
+    if (id !== undefined) {
+      // A cross-reference to a captioned block reads as its caption without the full stop.
+      targets[id] = { references: [caption.replace(/[.:]\s*$/, "").trim()] };
+    }
   }
-  return { sections, captions, references: [...references] };
+  return { targets, captions };
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

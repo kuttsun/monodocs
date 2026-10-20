@@ -159,4 +159,45 @@ describe("marking generated numbers", () => {
     });
     expect(found["t.adoc"]).toEqual([]);
   });
+
+  it("counts no heading that is not a section, and marks no section past sectnumlevels", async () => {
+    const found = await marked({
+      "d.adoc":
+        "= D\n:sectnums:\n\n== One\n\n=== One A\n\n[discrete]\n==== Float\n\n=== One B\n\n== Two\n",
+      "n.adoc": "= N\n:sectnums:\n:sectnumlevels: 1\n\n== One\n\n=== Sub\n",
+    });
+    expect(found["d.adoc"]).toEqual(["1. ", "1.1. ", "1.2. ", "2. "]);
+    expect(found["n.adoc"]).toEqual(["1. "]);
+  });
+
+  it("marks a book's chapter and part numbers with their signifiers", async () => {
+    const found = await marked({
+      "b.adoc":
+        "= B\n:doctype: book\n:sectnums:\n:partnums:\n:chapter-signifier: Chapter\n:part-signifier: Part\n:xrefstyle: short\n\n= Part One\n\n[#intro]\n== Intro\n\nSee <<next>>.\n\n[#next]\n== Next\n",
+    });
+    expect(found["b.adoc"]).toEqual(["Part I: ", "Chapter 1. ", "Chapter 2", "Chapter 2. "]);
+  });
+
+  // monodocs has Asciidoctor write the body only (`standalone: false`), so its own table of
+  // contents is not in the page; the reader's comes from monodocs.
+  it("marks a reference with no signifier", async () => {
+    const found = await marked({
+      "t.adoc":
+        "= T\n:sectnums:\n:toc:\n:xrefstyle: short\n:!section-refsig:\n\n== One\n\nSee <<two>>.\n\n[#two]\n== Two\n",
+    });
+    expect(found["t.adoc"]).toEqual(["1. ", "2", "2. "]);
+  });
+
+  it("leaves a caption and a reference text the author wrote", async () => {
+    const found = await marked({
+      "m.adoc":
+        '= M\n:sectnums:\n\n[caption="Mine: "]\n.Titled\n====\nBody.\n====\n\nSee <<two,Section 9 is about apples>>.\n\n[#two]\n== Two\n',
+    });
+    expect(found["m.adoc"]).toEqual(["1. "]);
+  });
+
+  it("marks the counter GFM puts on a footnote referred to again", async () => {
+    const found = await marked({ "g.md": "# G\n\nA[^a] and again[^a].\n\n[^a]: Note.\n" });
+    expect(found["g.md"]).toEqual(["1", "1", "2"]);
+  });
 });

@@ -205,14 +205,17 @@ export type RenderedContent = {
  */
 export type GeneratedNumbering = {
   /**
-   * For each section heading, in document order, the text Asciidoctor put before its title —
-   * `1.2. `, `Appendix A: `, `A.1. ` — or null for one it left unnumbered.
+   * What Asciidoctor wrote for each numbered target, by its ID as Asciidoctor gave it: the text
+   * before a section's title in its heading (`1.2. `, `Chapter 1. `, `Part I: `, `Appendix A: `),
+   * and the texts a link to it may start with — the table of contents' entry, and a
+   * cross-reference's `Section 2`, or `2` where the document set no signifier.
    */
-  sections: (string | null)[];
-  /** The captions it wrote, by the block they are on: `Figure 1. ` on an image, and so on. */
+  targets: Record<string, { heading?: string; references: string[] }>;
+  /**
+   * The captions it wrote, by the kind of block they are on: `Figure 1. ` on an image, and so on.
+   * A caption the author wrote (`[caption="Mine: "]`) is the author's, and is not among them.
+   */
   captions: Partial<Record<"figure" | "table" | "example" | "listing", string[]>>;
-  /** The text a cross-reference to a numbered target starts with: `Section 2`, `Figure 1`. */
-  references: string[];
 };
 
 /**
