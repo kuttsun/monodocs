@@ -339,3 +339,101 @@ describe("where and when the earlier version was built", () => {
     });
   });
 });
+
+describe("round 2: what the earlier build reads and writes of itself", () => {
+  it("writes the new location over a tree whose name the HTML escapes, and in the sidebar", async () => {
+    const odd = join(base, "R&D");
+    await mkdir(join(odd, "docs"), { recursive: true });
+    await writeFile(join(odd, "docs", "index.md"), "# Index\n");
+    await writeFile(
+      join(odd, "docs", "guide.adoc"),
+      "= Title {docdir}\n\nHere: {docdir}\n\nimage::{docdir}/i.png[I]\n",
+    );
+    const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
+    await expect(
+      buildSite(
+        { outputFile: join(base, "out.html"), diff: { dir: "../R&D", label: "v1.2" } },
+        { onPrepared: (version, site) => (sites[version] = site) },
+      ),
+    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    const page = sites.earlier!.pages.find((p) => p.relativePath === "guide.adoc")!;
+    const slashed = (path: string) => path.replace(/\\/g, "/");
+    for (const text of [page.html, page.text, page.title]) {
+      expect(slashed(text)).not.toContain("R&");
+      expect(slashed(text)).not.toContain("R&#x26;");
+    }
+    const titles = JSON.stringify(sites.earlier!.sidebar);
+    expect(titles).not.toContain("R&D");
+    expect(slashed(titles)).toContain(slashed(join(now, "docs")));
+  });
+
+  it("is diff/lfs-pointer for an image Asciidoctor embeds or writes inline", async () => {
+    for (const page of [
+      ":data-uri:\n\nimage::i.png[I]",
+      "image::s.svg[opts=inline]",
+      "See image:s.svg[opts=inline].",
+    ]) {
+      await writeFile(join(then, "docs", "i.png"), POINTER);
+      await writeFile(join(then, "docs", "s.svg"), POINTER);
+      await writeFile(join(then, "docs", "guide.adoc"), `= Guide\n\n${page}\n`);
+      const error = await failure();
+      expect(error.code, page).toBe("diff/lfs-pointer");
+      expect(error.message, page).toContain("v1.2:docs/guide.adoc");
+    }
+  });
+
+  it("does not take a page quoting a whole pointer in a listing for one", async () => {
+    await writeFile(join(then, "docs", "guide.adoc"), `= Guide\n\n----\n${POINTER}----\n`);
+    await expectBothBuilt();
+  });
+
+  it("reads the one instant from the start of the build, not from each build's own clock", async () => {
+    for (const root of [now, then]) {
+      await writeFile(join(root, "docs", "time.adoc"), "= Time\n\n{docyear} {localyear}\n");
+    }
+    const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
+    await expect(
+      buildSite(
+        { outputFile: join(base, "out.html"), diff },
+        {
+          // An instant far from the real clock, which each build would otherwise read.
+          now: () => new Date(Date.UTC(2001, 5, 15, 12)),
+          onPrepared: (version, site) => (sites[version] = site),
+        },
+      ),
+    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    for (const version of ["new", "earlier"] as const) {
+      expect(textOf(sites[version]!, "time.adoc"), version).toContain("2001 2001");
+    }
+  });
+
+  it("makes the pre-renderer for an earlier diagram when the new version has Mermaid off", async () => {
+    await writeFile(
+      join(now, "monodocs.config.yml"),
+      "mermaid:\n  enabled: false\n  mode: pre-render\n",
+    );
+    await writeFile(
+      join(then, "docs", "index.md"),
+      "# Index\n\n```mermaid\ngraph TD; A-->B\n```\n",
+    );
+    const calls: string[] = [];
+    const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
+    await expect(
+      buildSite(
+        { outputFile: join(base, "out.html"), diff },
+        {
+          createPrerenderer: () => ({
+            async render(id: string) {
+              calls.push(id);
+              return `<svg id="${id}"><g/></svg>`;
+            },
+            async close() {},
+          }),
+          onPrepared: (version, site) => (sites[version] = site),
+        },
+      ),
+    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    expect(calls).toHaveLength(1);
+    expect(sites.earlier!.pages[0]!.html).toContain("<svg");
+  });
+});

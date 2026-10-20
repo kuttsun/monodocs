@@ -150,8 +150,13 @@ const EN = {
   "diff.gitFailed": "git failed while reading the earlier version {ref}: {detail}",
   "diff.inEarlier": "In the earlier version ({label}): {message}",
   "diff.lfsPointer":
-    "{path} is a Git LFS pointer, not the file it stands for. Install git-lfs, so that the earlier " +
-    "version's files come out as a checkout gives them.",
+    "{path} is a Git LFS pointer, not the file it stands for. Give the earlier version its files' " +
+    "content: install git-lfs and do not skip its smudge (GIT_LFS_SKIP_SMUDGE), or, with " +
+    "--diff-from-dir, fetch the objects into that copy.",
+  "diff.lfsPointerEmbedded":
+    "An image {path} embeds is a Git LFS pointer, not the file it stands for. Give the earlier " +
+    "version its files' content: install git-lfs and do not skip its smudge (GIT_LFS_SKIP_SMUDGE), " +
+    "or, with --diff-from-dir, fetch the objects into that copy.",
 
   // ---- pages ----
   "pages.noRenderer": 'No renderer for "{path}" ({format}); skipped.',
@@ -525,8 +530,13 @@ const JA: Record<MessageKey, string> = {
   "diff.gitFailed": "以前の版 {ref} を読む途中で git が失敗しました: {detail}",
   "diff.inEarlier": "以前の版（{label}）: {message}",
   "diff.lfsPointer":
-    "{path} は Git LFS のポインタのままで、中身ではありません。git-lfs を入れてください。" +
-    "以前の版のファイルが、チェックアウトしたときと同じ形で取り出されます。",
+    "{path} は Git LFS のポインタのままで、中身ではありません。以前の版のファイルに中身を与えて" +
+    "ください。git-lfs を入れ、その smudge を飛ばさない（GIT_LFS_SKIP_SMUDGE）か、" +
+    "--diff-from-dir ならその写しにオブジェクトを取得します。",
+  "diff.lfsPointerEmbedded":
+    "{path} が埋め込む画像が Git LFS のポインタのままで、中身ではありません。以前の版のファイルに" +
+    "中身を与えてください。git-lfs を入れ、その smudge を飛ばさない（GIT_LFS_SKIP_SMUDGE）か、" +
+    "--diff-from-dir ならその写しにオブジェクトを取得します。",
   "pages.noRenderer": '"{path}"（{format}）に対応するレンダラがありません。スキップしました。',
   "pages.routeCollision":
     'route の衝突: "{route}" が "{first}" と "{second}" の両方から生成されます。',

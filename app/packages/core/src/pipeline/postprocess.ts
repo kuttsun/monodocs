@@ -205,6 +205,11 @@ export type PostprocessOptions = {
   embedImages: boolean;
   /** Called with every image file read and its bytes; the earlier build refuses an LFS pointer. */
   checkRead?: (path: string, content: Buffer) => void;
+  /**
+   * Called with every image Asciidoctor read itself — a `data:` URI from `:data-uri:`, an SVG
+   * written inline — and the bytes it put in the page, since those reach no {@link checkRead}.
+   */
+  checkEmbedded?: (page: Page, content: Buffer) => void;
   maxInlineSize: number;
   onLargeImage: OnLargeImage;
   mermaidEnabled: boolean;
@@ -933,6 +938,48 @@ function isInside(realRoot: string, real: string): boolean {
   return real === realRoot || real.startsWith(realRoot + sep);
 }
 
+/**
+ * Hand `check` what Asciidoctor read of an image and wrote into the page itself: the bytes of a
+ * `data:` URI, and the text of an image written inline, which is the file's content. Only the
+ * content of an image is looked at, so a page quoting a file in a code block is not taken for one.
+ */
+function checkEmbeddedImages(
+  tree: HastRoot,
+  page: Page,
+  check: (page: Page, content: Buffer) => void,
+): void {
+  visit(tree, "element", (node) => {
+    const classes = Array.isArray(node.properties.className) ? node.properties.className : [];
+    if (node.tagName === "img") {
+      const src = node.properties.src;
+      const data = typeof src === "string" ? /^data:[^,]*;base64,(.*)$/s.exec(src) : null;
+      if (data !== null) check(page, Buffer.from(data[1]!, "base64"));
+      return;
+    }
+    // `image::x.svg[opts=inline]` writes the file into `div.imageblock > div.content`, and
+    // `image:x.svg[opts=inline]` into `span.image`.
+    const content = classes.includes("imageblock")
+      ? node.children.find(
+          (child): child is Element =>
+            child.type === "element" &&
+            Array.isArray(child.properties.className) &&
+            child.properties.className.includes("content"),
+        )
+      : node.tagName === "span" && classes.includes("image")
+        ? node
+        : undefined;
+    if (content !== undefined) {
+      // The text as written, every descendant's: `toText` collapses the line breaks a pointer is
+      // made of, and Asciidoctor turns the URL on its first line into a link inside an inline one.
+      let text = "";
+      visit(content, "text", (child) => {
+        text += child.value;
+      });
+      check(page, Buffer.from(`${text.trim()}\n`, "utf8"));
+    }
+  });
+}
+
 async function embedImages(
   tree: HastRoot,
   page: Page,
@@ -1081,6 +1128,7 @@ export async function postprocessPages(
     // 著者向けの検査は画像埋め込みより前に行う。あとにすると、報告する src が data URI になる。
     checkHeadingLevels(tree, page, warnings);
     checkImageAlt(tree, page, warnings);
+    if (options.checkEmbedded !== undefined) checkEmbeddedImages(tree, page, options.checkEmbedded);
     if (options.embedImages) {
       await embedImages(tree, page, options, realRoot, warnings, embeddedImages);
     }

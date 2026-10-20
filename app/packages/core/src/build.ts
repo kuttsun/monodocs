@@ -19,7 +19,7 @@ import {
   loadEarlierConfig,
 } from "./diff/earlier.js";
 import { earlierBuildConfig } from "./diff/earlierConfig.js";
-import { relocateEarlierPages, sharedClockAttributes } from "./diff/earlierLocation.js";
+import { relocateEarlierSite, sharedClockAttributes } from "./diff/earlierLocation.js";
 import { refuseLfsPointer } from "./diff/lfsPointer.js";
 import {
   documentAuthor,
@@ -76,6 +76,8 @@ type PreparePagesOptions = {
    * The earlier version's build refuses an LFS pointer with it (roadmap 7.3.1).
    */
   checkRead?: (path: string, content: Buffer | string) => void;
+  /** Called with every image Asciidoctor read itself and wrote into a page, and those bytes. */
+  checkEmbedded?: (page: Page, content: Buffer) => void;
 };
 
 export type PreparedSite = {
@@ -190,6 +192,7 @@ export async function preparePages(
     figureAlign: config.figuresAlign,
     sectionNumbers,
     checkRead: opts.checkRead,
+    checkEmbedded: opts.checkEmbedded,
   });
   // custom はサイドバーが閲覧順そのものになるため、ページの並びもそれに合わせる
   // （前後ナビ・PDF のページ順・初期表示ページが一致する）。
@@ -236,6 +239,10 @@ export function resolveOutputs(config: ResolvedConfig, cwd: string): ResolvedOut
 export type BuildInternals = {
   mermaidPrerenderer?: MermaidPrerenderer;
   pdfGenerator?: PdfGenerator;
+  /** The clock a build with a difference reads its one instant from (7.3.2). For tests. */
+  now?: () => Date;
+  /** What makes the Mermaid pre-renderer when none is passed. For tests. */
+  createPrerenderer?: typeof createPuppeteerPrerenderer;
   /** Called with each version's pages once they are built, in a build with a difference. */
   onPrepared?: (version: "new" | "earlier", site: PreparedSite) => void;
 };
@@ -253,7 +260,7 @@ export async function buildSite(
 ): Promise<BuildResult> {
   const cwd = process.cwd();
   // One instant for both builds of a difference, taken before either reads the clock (7.3.2).
-  const startedAt = new Date();
+  const startedAt = internals.now?.() ?? new Date();
   const loadedConfig = await loadConfig(options, cwd);
   const clock = options.diff === undefined ? {} : sharedClockAttributes(startedAt);
   const withClock = (c: ResolvedConfig): ResolvedConfig =>
@@ -290,7 +297,7 @@ export async function buildSite(
     // or has Mermaid off (7.3.2).
     ((config.mermaidEnabled || earlierConfig?.mermaidEnabled === true) &&
     config.mermaidMode === "pre-render"
-      ? createPuppeteerPrerenderer({
+      ? (internals.createPrerenderer ?? createPuppeteerPrerenderer)({
           colorScheme: config.colorScheme,
           // A PDF's labels are laid out in the font the PDF sets them in; the HTML's are not.
           mathFont: needsPdf
@@ -318,12 +325,10 @@ export async function buildSite(
           embedImages: forceEmbed ? true : undefined,
           onLargeImage: forceLargeEmbed ? "warn" : undefined,
           checkRead: refuseLfsPointer,
+          checkEmbedded: (page, content) => refuseLfsPointer(page.sourcePath, content, "embedded"),
         }),
       );
-      internals.onPrepared?.("earlier", {
-        ...earlier,
-        pages: relocateEarlierPages(earlier.pages, diff, cwd),
-      });
+      internals.onPrepared?.("earlier", relocateEarlierSite(earlier, diff, cwd));
     }
     // pre-render は本文と違って、ビルドマシンのフォントを SVG へ焼き込む。図を描いた文脈が
     // まだ開いているこの時点で確かめる（fontCheck: error なら例外が出てビルドは止まる）。

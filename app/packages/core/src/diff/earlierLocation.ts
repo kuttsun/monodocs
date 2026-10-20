@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import type { Page, DiffOptions } from "../types.js";
+import type { DiffOptions, Page, SidebarNode } from "../types.js";
 
 /**
  * Neither version's output depends on where or when the earlier one was built (roadmap 7.3.2).
@@ -48,13 +48,17 @@ export function sharedClockAttributes(
 }
 
 /**
- * The earlier pages with the earlier version's location written as the new one's, where it is
- * text. Asciidoctor makes `{docdir}` the absolute directory of the file it reads, which for the
+ * The earlier pages and sidebar with the earlier version's location written as the new one's,
+ * where it is text. Asciidoctor makes `{docdir}` the absolute directory of the file it reads, which for the
  * earlier build is under the temporary directory. Rewritten after the build, so an include or an
  * image whose target is written with `{docdir}` has already been read from the earlier version's
  * own files, which are what that version included.
  */
-export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: string): Page[] {
+export function relocateEarlierSite<T extends { pages: Page[]; sidebar: SidebarNode[] }>(
+  site: T,
+  diff: DiffOptions,
+  cwd: string,
+): T {
   const dir = resolve(cwd, diff.dir);
   const tree = resolve(cwd, diff.tree ?? diff.dir);
   // The tree stands where the current directory stands, shifted as `diff.dir` is inside it.
@@ -62,14 +66,30 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
   // Asciidoctor writes a Windows path with `/`, and the HTML escapes what it must; the place is
   // found, and written, in each form.
   const slashed = (path: string) => path.replace(/\\/g, "/");
-  const escaped = (path: string) =>
-    path.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  // Both spellings of an escape: Asciidoctor writes `&amp;`, and the serialiser monodocs writes
+  // the page with (`hast-util-to-html`) writes `&#x26;`.
+  const escapes = [
+    (path: string) =>
+      path
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;"),
+    (path: string) =>
+      path
+        .replace(/&/g, "&#x26;")
+        .replace(/</g, "&#x3C;")
+        .replace(/>/g, "&#x3E;")
+        .replace(/"/g, "&#x22;"),
+  ];
   const pairs = [tree, safeReal(tree)]
     .flatMap((base) => [
       [base, newTree],
       [slashed(base), slashed(newTree)],
-      [escaped(base), escaped(newTree)],
-      [escaped(slashed(base)), escaped(slashed(newTree))],
+    ])
+    .flatMap(([base, place]) => [
+      [base, place],
+      ...escapes.map((escape) => [escape(base!), escape(place!)]),
     ])
     .sort((a, b) => b[0]!.length - a[0]!.length);
   // Only the tree itself, not a longer name that starts with it: `then2` is not under `then`.
@@ -85,7 +105,14 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
     for (const [pattern, place] of patterns) out = out.replace(pattern, () => place);
     return out;
   };
-  return pages.map((page) =>
+  // The sidebar copied the titles before they were rewritten, and lists deleted pages (7.3.2).
+  const relocateNodes = (nodes: SidebarNode[]): SidebarNode[] =>
+    nodes.map((node) =>
+      node.type === "dir"
+        ? { ...node, title: relocate(node.title), children: relocateNodes(node.children) }
+        : { ...node, title: relocate(node.title) },
+    );
+  const pages = site.pages.map((page) =>
     page.format !== "asciidoc"
       ? page
       : {
@@ -97,6 +124,7 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
           headings: page.headings.map((heading) => ({ ...heading, text: relocate(heading.text) })),
         },
   );
+  return { ...site, pages, sidebar: relocateNodes(site.sidebar) };
 }
 
 function escapeRegExp(text: string): string {

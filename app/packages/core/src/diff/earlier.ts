@@ -241,7 +241,10 @@ export async function inEarlierVersion<T>(
   try {
     return await run();
   } catch (error) {
-    if (!(error instanceof MonodocsError)) throw error;
+    // An error that is not monodocs' own — the file system, Asciidoctor — is still the earlier
+    // version's, and gets the code any foreign error gets (27.3).
+    if (!(error instanceof Error)) throw error;
+    const code = error instanceof MonodocsError ? error.code : "internal/unexpected";
     const label = earlierLabel(diff);
     const tree = resolve(cwd, diff.tree ?? diff.dir);
     const bases = [...new Set([real(tree), tree])].sort((a, b) => b.length - a.length);
@@ -261,7 +264,8 @@ export async function inEarlierVersion<T>(
     }
     // Every error says it is the earlier version's, a path in it or not: a route collision or a
     // configuration value would otherwise read as one in the new version.
-    throw new MonodocsError(error.code, t("diff.inEarlier", { label, message }), error.source);
+    const source = error instanceof MonodocsError ? error.source : {};
+    throw new MonodocsError(code, t("diff.inEarlier", { label, message }), source);
   }
 }
 

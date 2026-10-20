@@ -26,8 +26,16 @@ export function isLfsPointer(content: Buffer | string): boolean {
  * that is still a pointer is `diff/lfs-pointer`, naming it — built from a pointer, an image would
  * appear deleted and replaced by a broken one. A pointer the build never reads is never checked.
  */
-export function refuseLfsPointer(path: string, content: Buffer | string): void {
+export function refuseLfsPointer(
+  path: string,
+  content: Buffer | string,
+  /** `embedded` when `path` is the page an image was written into, not the image itself. */
+  where: "file" | "embedded" = "file",
+): void {
   if (isLfsPointer(content)) {
-    throw new MonodocsError("diff/lfs-pointer", t("diff.lfsPointer", { path }));
+    throw new MonodocsError(
+      "diff/lfs-pointer",
+      t(where === "file" ? "diff.lfsPointer" : "diff.lfsPointerEmbedded", { path }),
+    );
   }
 }
