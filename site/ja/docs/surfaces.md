@@ -90,6 +90,8 @@
 | `html.labels.openImagePreview` | `lang` から |
 | `html.labels.imagePreview` | `lang` から |
 | `html.labels.closeImagePreview` | `lang` から |
+| `html.labels.actualSize` | `lang` から |
+| `html.labels.fitToScreen` | `lang` から |
 | `html.labels.generatedBy` | `lang` から |
 | `html.labels.version` | `lang` から |
 | `html.labels.cover` | `lang` から |

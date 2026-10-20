@@ -9,6 +9,7 @@ import {
   postprocessPages,
   SHIKI_INJECTORS,
   shikiLanguageClosure,
+  svgOwnSize,
   unsizedSvgWidth,
 } from "./postprocess";
 import { createMarkdownRenderer, markdownRenderer } from "../sources/markdown/renderer";
@@ -1046,6 +1047,41 @@ describe("unsizedSvgWidth", () => {
   });
 });
 
+describe("svgOwnSize", () => {
+  it.each([
+    [
+      "its own width and height",
+      '<svg width="444px" height="392px" viewBox="0 0 444 392">',
+      [444, 392],
+    ],
+    ["unitless lengths and no viewBox", '<svg width="200" height="100">', [200, 100]],
+    ["absolute units", '<svg width="1in" height="72pt">', [96, 96]],
+    [
+      "a width and the viewBox's proportions",
+      '<svg width="200" viewBox="0 0 100 400">',
+      [200, 800],
+    ],
+    [
+      "a height and the viewBox's proportions",
+      '<svg height="50" viewBox="0 0 100 400">',
+      [12.5, 50],
+    ],
+    ["only a viewBox, as the build sizes it", '<svg viewBox="0 0 100.4 400">', [100, 398.41]],
+    ["percentages and a viewBox", '<svg width="100%" height="100%" viewBox="0 0 24 24">', [24, 24]],
+  ])("takes the size from %s", (_name, source, size) => {
+    expect(svgOwnSize(source)).toEqual(size);
+  });
+
+  it.each([
+    ["no viewBox and no size", "<svg>"],
+    ["a relative length", '<svg width="10em" height="5em" viewBox="0 0 2 1">'],
+    ["a width alone, with no viewBox", '<svg width="200">'],
+    ["no svg root", "<html></html>"],
+  ])("finds no size in an SVG with %s", (_name, source) => {
+    expect(svgOwnSize(source)).toBeUndefined();
+  });
+});
+
 describe("postprocessPages - sizing SVG images that have no size", () => {
   let root: string;
   let docs: string;
@@ -1094,5 +1130,20 @@ describe("postprocessPages - sizing SVG images that have no size", () => {
     const out = await run(html, false);
     // Whatever width it would be given, none is added; one the <img> sets itself stays.
     expect(out.match(/width="/g)?.length ?? 0).toBe(html.match(/width="/g)?.length ?? 0);
+  });
+
+  // The lightbox's actual size (#211) is the size the SVG gives itself, whatever the <img> says.
+  it.each([
+    ["a viewBox-only SVG", '<img src="tall.svg" alt="x">', "100 400"],
+    ["an SVG with its own size", '<img src="sized.svg" alt="x">', "444 392"],
+    ["an SVG an author narrows", '<img src="sized.svg" width="200" alt="x">', "444 392"],
+    ["an SVG outside the input", '<img src="../outside.svg" alt="x">', undefined],
+    ["a remote SVG", '<img src="https://example.com/a.svg" alt="x">', undefined],
+  ])("records the size %s gives itself", async (_name, html, size) => {
+    for (const embedImages of [true, false]) {
+      const out = await run(html, embedImages);
+      const recorded = /data-monodocs-svg-size="([^"]*)"/.exec(out)?.[1];
+      expect(recorded).toBe(size);
+    }
   });
 });

@@ -939,6 +939,25 @@ body.content-wide #content {
   border-radius: 50%;
 }
 
+/* Switches an image between fitting the screen and its actual size, beside the close button. */
+#image-lightbox-size {
+  position: fixed;
+  top: 1rem;
+  right: 4.25rem;
+  height: 2.5rem;
+  padding: 0 1rem;
+  color: #ffffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 1.25rem;
+}
+
+#image-lightbox-size[hidden] {
+  display: none;
+}
+
 .image-lightbox-content {
   display: flex;
   min-height: 100%;
@@ -1004,6 +1023,18 @@ body.content-wide #content {
 
 #image-lightbox-diagram[data-monodocs-scheme="dark"] {
   background: var(--color-bg);
+}
+
+/* At actual size the figure grows past the dialog, which scrolls. Centred while the picture fits,
+   it starts at the top left where it does not, so no part is out of the scroll's reach; a browser
+   without the safe keyword keeps the start. */
+#image-lightbox.image-lightbox-actual .image-lightbox-content {
+  height: auto;
+  min-height: 100%;
+  justify-content: flex-start;
+  align-items: flex-start;
+  justify-content: safe center;
+  align-items: safe center;
 }
 
 #image-lightbox-image[hidden],
