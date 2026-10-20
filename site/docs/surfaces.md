@@ -90,6 +90,8 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `html.labels.openImagePreview` | from `lang` |
 | `html.labels.imagePreview` | from `lang` |
 | `html.labels.closeImagePreview` | from `lang` |
+| `html.labels.actualSize` | from `lang` |
+| `html.labels.fitToScreen` | from `lang` |
 | `html.labels.generatedBy` | from `lang` |
 | `html.labels.version` | from `lang` |
 | `html.labels.cover` | from `lang` |

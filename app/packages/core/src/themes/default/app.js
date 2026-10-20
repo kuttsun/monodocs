@@ -1922,6 +1922,14 @@
     var closeBtn = document.getElementById("image-lightbox-close");
     if (!dialog || !preview || !caption || !closeBtn) return;
     var diagramHost = document.getElementById("image-lightbox-diagram");
+    // Switches an image between fitting the screen and its actual size. A custom template may
+    // leave it out.
+    var sizeBtn = document.getElementById("image-lightbox-size");
+    var actualSize = false;
+    // An SVG image's actual size, which the build records for a local SVG it reads: the browser
+    // reports a rounded default for one with only a viewBox, so its natural size cannot be used.
+    // Null for an SVG the build did not read, which then gets no switch.
+    var svgSize = null;
 
     var lastTrigger = null;
     // Whether focus should return without a focus ring: a diagram opened by a pointer click
@@ -1941,31 +1949,95 @@
     // Sizes the image to the room the caption leaves, keeping its proportions, so its panel
     // fits the picture with no band beside it. The caption takes its own height, however many
     // lines it wraps to. Without a natural size yet, the stylesheet's sizing stands.
+    //
+    // At actual size, a raster image shows one image pixel per CSS pixel and an SVG image at the
+    // size it gives itself, as the build recorded it, and the dialog scrolls. The switch is
+    // offered only when the two sizes differ, and for an SVG only when that size is known.
     function fitPreview() {
-      preview.removeAttribute("style");
-      // Until the image has loaded, its panel would be an empty square in the dark.
-      if (!preview.complete) preview.style.visibility = "hidden";
-      if (preview.hidden || !dialog.hasAttribute("open")) return;
       var width = preview.naturalWidth;
       var height = preview.naturalHeight;
-      if (!(width > 0 && height > 0)) return;
-      var figure = preview.parentNode;
+      if (preview.hidden || !dialog.hasAttribute("open") || !(width > 0 && height > 0)) {
+        unsized();
+        // Until the image has loaded, its panel would be an empty square in the dark.
+        if (!preview.complete) preview.style.visibility = "hidden";
+        return;
+      }
+      var vector = dialog.classList.contains("image-lightbox-vector");
+      if (vector && svgSize) {
+        width = svgSize[0];
+        height = svgSize[1];
+      }
+      // Everything is measured before the image's size changes. The room is the dialog's content
+      // box, taken from its outer box: at actual size the figure grows past it and scrollbars
+      // take some of it. Laying the dialog out at another size in between would scroll it back to
+      // the start.
       var box = window.getComputedStyle(preview);
+      var outer = dialog.getBoundingClientRect();
+      var frame = window.getComputedStyle(dialog);
       var roomWidth =
-        figure.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight);
+        outer.width -
+        parseFloat(frame.paddingLeft) -
+        parseFloat(frame.paddingRight) -
+        parseFloat(box.paddingLeft) -
+        parseFloat(box.paddingRight);
       var roomHeight =
-        figure.clientHeight - parseFloat(box.paddingTop) - parseFloat(box.paddingBottom);
+        outer.height -
+        parseFloat(frame.paddingTop) -
+        parseFloat(frame.paddingBottom) -
+        parseFloat(box.paddingTop) -
+        parseFloat(box.paddingBottom);
       if (!caption.hidden) {
-        var gap = parseFloat(window.getComputedStyle(figure).rowGap) || 0;
+        var gap = parseFloat(window.getComputedStyle(preview.parentNode).rowGap) || 0;
         roomHeight -= caption.offsetHeight + gap;
       }
       var scale = Math.min(roomWidth / width, roomHeight / height);
-      if (!dialog.classList.contains("image-lightbox-vector")) scale = Math.min(scale, 1);
-      if (!(scale > 0)) return;
+      if (!vector) scale = Math.min(scale, 1);
+      if (!(scale > 0)) {
+        unsized();
+        return;
+      }
+      var differs =
+        (!vector || svgSize !== null) &&
+        (Math.abs(width * scale - width) >= 1 || Math.abs(height * scale - height) >= 1);
+      if (!differs) actualSize = false;
+      if (actualSize) scale = 1;
+      dialog.classList.toggle("image-lightbox-actual", actualSize);
+      preview.removeAttribute("style");
+      if (!preview.complete) preview.style.visibility = "hidden";
       preview.style.width = width * scale + "px";
       preview.style.height = height * scale + "px";
       preview.style.maxWidth = "none";
       preview.style.maxHeight = "none";
+      // The button is hidden only now, once the size is settled: hidden while the dialog is laid
+      // out, it would lose the focus a keyboard user pressed it with.
+      if (sizeBtn) {
+        showSizeButton(differs);
+        sizeBtn.textContent = actualSize ? LABELS.fitToScreen : LABELS.actualSize;
+      }
+    }
+
+    // The stylesheet's sizing, at fit to screen, for an image that cannot be sized yet.
+    function unsized() {
+      actualSize = false;
+      dialog.classList.remove("image-lightbox-actual");
+      showSizeButton(false);
+      preview.removeAttribute("style");
+    }
+
+    // A button hidden with the focus on it would drop the focus out of the dialog, as when a
+    // resize makes the two sizes equal; it goes to the close button instead.
+    function showSizeButton(shown) {
+      if (!sizeBtn) return;
+      if (!shown && document.activeElement === sizeBtn) closeBtn.focus();
+      sizeBtn.hidden = !shown;
+    }
+
+    function toggleActualSize() {
+      actualSize = !actualSize;
+      fitPreview();
+      // Start from the middle of the picture, which is where the reader was looking.
+      dialog.scrollLeft = (dialog.scrollWidth - dialog.clientWidth) / 2;
+      dialog.scrollTop = (dialog.scrollHeight - dialog.clientHeight) / 2;
     }
 
     function restoreDiagram() {
@@ -1982,8 +2054,15 @@
       restoreDiagram();
       preview.removeAttribute("src");
       preview.alt = "";
-      dialog.classList.remove("image-lightbox-picture", "image-lightbox-vector");
+      dialog.classList.remove(
+        "image-lightbox-picture",
+        "image-lightbox-vector",
+        "image-lightbox-actual",
+      );
       preview.removeAttribute("style");
+      actualSize = false;
+      svgSize = null;
+      if (sizeBtn) sizeBtn.hidden = true;
       caption.textContent = "";
       caption.hidden = true;
       if (lastTrigger && typeof lastTrigger.focus === "function") {
@@ -2023,6 +2102,10 @@
       // without closing first.
       dialog.classList.add("image-lightbox-picture");
       dialog.classList.toggle("image-lightbox-vector", isVectorSource(src));
+      actualSize = false;
+      dialog.classList.remove("image-lightbox-actual");
+      var own = (trigger.getAttribute("data-monodocs-svg-size") || "").split(" ").map(Number);
+      svgSize = own.length === 2 && own[0] > 0 && own[1] > 0 ? own : null;
       showDialog(trigger, alt);
       fitPreview();
     }
@@ -2045,6 +2128,7 @@
     }
 
     closeBtn.addEventListener("click", closeLightbox);
+    if (sizeBtn) sizeBtn.addEventListener("click", toggleActualSize);
     dialog.addEventListener("click", function (e) {
       if (e.target === dialog) closeLightbox();
     });
@@ -2105,8 +2189,19 @@
         diagramHost.style.width =
           "min(calc(100% - 2rem), calc(" + height + " * " + box.width / box.height + "))";
       }
-      dialog.classList.remove("image-lightbox-picture", "image-lightbox-vector");
+      dialog.classList.remove(
+        "image-lightbox-picture",
+        "image-lightbox-vector",
+        "image-lightbox-actual",
+      );
       preview.removeAttribute("style");
+      // A diagram has no actual size beyond the one in the page.
+      actualSize = false;
+      if (sizeBtn) sizeBtn.hidden = true;
+      // The panel's color follows the theme the diagram was drawn in (style.css).
+      var scheme = container.getAttribute("data-monodocs-scheme");
+      if (scheme) diagramHost.setAttribute("data-monodocs-scheme", scheme);
+      else diagramHost.removeAttribute("data-monodocs-scheme");
       diagramHost.appendChild(svg);
       diagramHost.hidden = false;
       preview.hidden = true;

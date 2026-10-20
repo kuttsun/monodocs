@@ -19,6 +19,12 @@ export interface MermaidPrerenderer {
   /** `id` は生成 SVG のルート id（CSS/SVG セーフ・全 HTML で一意であること）。 */
   render(id: string, code: string): Promise<string>;
   /**
+   * `dark` when the diagrams are drawn in a dark theme, for a dark page. The page marks them so a
+   * dark page does not put the light backing a diagram in Mermaid's light theme needs behind them.
+   * Unset means light, as for the client runtime.
+   */
+  readonly scheme?: "light" | "dark";
+  /**
    * 図が必要とするフォントがこのマシンに揃っていたかを、**図を描いた文脈そのもの**で確かめる
    * （{@link file://./fontCheck.ts}）。完成 HTML の側で測り直しても、その SVG を生んだフォント
    * 解決は再現できない。実装は任意（テストの偽レンダラは持たない）。
@@ -140,6 +146,7 @@ export function createPuppeteerPrerenderer(options: {
   }
 
   return {
+    scheme: theme === undefined ? "light" : "dark",
     async render(id, code) {
       const formula = mathFont !== undefined && mermaidHasFormula(code);
       if (formula && mathFont.mode === "only") {

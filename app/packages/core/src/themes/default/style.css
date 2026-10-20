@@ -856,6 +856,13 @@ body.content-wide #content {
   background: var(--color-image-backing);
 }
 
+/* A diagram the client runtime draws, or one pre-rendered for a light page, is in Mermaid's light
+   theme, whose edges are near-black: in dark mode it gets the backing a figure's image does. One
+   pre-rendered in a dark theme is marked by the build and keeps the page's background. */
+#content .mermaid:not([data-monodocs-scheme="dark"]) > svg {
+  background: var(--color-image-backing);
+}
+
 #content .image-lightbox-trigger {
   cursor: zoom-in;
 }
@@ -932,6 +939,25 @@ body.content-wide #content {
   border-radius: 50%;
 }
 
+/* Switches an image between fitting the screen and its actual size, beside the close button. */
+#image-lightbox-size {
+  position: fixed;
+  top: 1rem;
+  right: 4.25rem;
+  height: 2.5rem;
+  padding: 0 1rem;
+  color: #ffffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 1.25rem;
+}
+
+#image-lightbox-size[hidden] {
+  display: none;
+}
+
 .image-lightbox-content {
   display: flex;
   min-height: 100%;
@@ -979,10 +1005,11 @@ body.content-wide #content {
   max-height: none;
 }
 
-/* A Mermaid diagram moved into the dialog. Its own colors assume the page background, so the
-   panel keeps that background instead of the dark backdrop. The script narrows the width to the
-   diagram's aspect ratio; without a viewBox the panel simply fills the dialog. Sizes are of the
-   content box, inside the padding. */
+/* A Mermaid diagram moved into the dialog. A diagram in Mermaid's light theme sits on the white
+   panel an image does, in dark mode too; one pre-rendered in a dark theme, which the script marks
+   the panel for, keeps the page background instead. The script narrows the width to the diagram's
+   aspect ratio; without a viewBox the panel simply fills the dialog. Sizes are of the content box,
+   inside the padding. */
 #image-lightbox-diagram {
   box-sizing: content-box;
   width: calc(100% - 2rem);
@@ -990,8 +1017,24 @@ body.content-wide #content {
   max-height: calc(100vh - 9rem);
   padding: 1rem;
   color: var(--color-text);
-  background: var(--color-bg);
+  background: var(--color-image-panel-bg);
   border-radius: 6px;
+}
+
+#image-lightbox-diagram[data-monodocs-scheme="dark"] {
+  background: var(--color-bg);
+}
+
+/* At actual size the figure grows past the dialog, which scrolls. Centred while the picture fits,
+   it starts at the top left where it does not, so no part is out of the scroll's reach; a browser
+   without the safe keyword keeps the start. */
+#image-lightbox.image-lightbox-actual .image-lightbox-content {
+  height: auto;
+  min-height: 100%;
+  justify-content: flex-start;
+  align-items: flex-start;
+  justify-content: safe center;
+  align-items: safe center;
 }
 
 #image-lightbox-image[hidden],

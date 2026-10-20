@@ -37,9 +37,20 @@ afterAll(async () => {
   if (dir) await rm(dir, { recursive: true, force: true });
 });
 
-/** Opens a pre-render-shaped diagram with the given viewBox and measures the dialog. */
-async function open(viewBox: [number, number], title: string) {
+/**
+ * Opens a diagram with the given viewBox and measures the dialog. Pre-render-shaped by default.
+ * - `client`: shaped as the client runtime leaves it, the SVG in the `<pre>` that held the source.
+ * - `scheme`: the mark the build puts on a diagram pre-rendered in a dark theme.
+ * - `dark`: the reader has chosen the dark theme, set on the root as the theme toggle sets it.
+ */
+async function open(
+  viewBox: [number, number],
+  title: string,
+  options: { client?: boolean; scheme?: "dark"; dark?: boolean } = {},
+) {
   const [w, h] = viewBox;
+  const tag = options.client ? "pre" : "figure";
+  const scheme = options.scheme ? ` data-monodocs-scheme="${options.scheme}"` : "";
   const svg =
     `<svg id="mermaid-0" width="100%" viewBox="0 0 ${w} ${h}" style="max-width: ${w}px;">` +
     (title ? `<title>${title}</title>` : "") +
@@ -53,14 +64,24 @@ async function open(viewBox: [number, number], title: string) {
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
-    await page.setContent(html.replace(SLOT, `<figure class="mermaid">${svg}</figure>`), {
+    await page.setContent(html.replace(SLOT, `<${tag} class="mermaid"${scheme}>${svg}</${tag}>`), {
       waitUntil: "load",
     });
+    if (options.dark) {
+      await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+    }
+    const inPageColor = await page.evaluate(
+      () => getComputedStyle(document.querySelector("#content .mermaid > svg")!).backgroundColor,
+    );
     await page.click("#content .mermaid");
-    return await page.evaluate(() => {
+    return await page.evaluate((inPageColor) => {
       const dialog = document.getElementById("image-lightbox") as HTMLDialogElement;
       const rect = document.querySelector("#image-lightbox-diagram svg")!.getBoundingClientRect();
       return {
+        inPageColor,
+        panelColor: getComputedStyle(document.getElementById("image-lightbox-diagram")!)
+          .backgroundColor,
+        pageColor: getComputedStyle(document.body).backgroundColor,
         open: dialog.open,
         width: rect.width,
         height: rect.height,
@@ -68,7 +89,7 @@ async function open(viewBox: [number, number], title: string) {
         bottom: rect.bottom,
         dialogScrolls: dialog.scrollHeight > dialog.clientHeight,
       };
-    });
+    }, inPageColor);
   } finally {
     await browser.close();
   }
@@ -91,6 +112,29 @@ describe.skipIf(!chromium)("diagram lightbox layout (real Chromium)", () => {
       expect(r.right).toBeLessThanOrEqual(1280);
       expect(r.bottom).toBeLessThanOrEqual(800);
       expect(r.dialogScrolls).toBe(false);
+    },
+    60_000,
+  );
+
+  // Mermaid's light theme draws edges near-black (#213): on a dark page, a diagram in it gets the
+  // backing a figure's image does, in the page and in the dialog. One pre-rendered in a dark theme
+  // stays on the page's background.
+  const WHITE = "rgb(255, 255, 255)";
+  const NONE = "rgba(0, 0, 0, 0)";
+  const DARK_BG = "rgb(13, 17, 23)";
+  it.each([
+    ["client-drawn, light mode", { client: true }, NONE, WHITE],
+    ["client-drawn, dark mode", { client: true, dark: true }, WHITE, WHITE],
+    ["pre-rendered in the light theme, dark mode", { dark: true }, WHITE, WHITE],
+    ["pre-rendered in a dark theme, dark mode", { scheme: "dark", dark: true }, NONE, DARK_BG],
+  ] as const)(
+    "puts a %s diagram on the right background",
+    async (_name, options, inPage, panel) => {
+      const r = await open([400, 300], "", options);
+      expect(r.open).toBe(true);
+      expect(r.pageColor).toBe(options.dark ? DARK_BG : WHITE);
+      expect(r.inPageColor).toBe(inPage);
+      expect(r.panelColor).toBe(panel);
     },
     60_000,
   );
@@ -124,6 +168,10 @@ function svgImage(attributes: string, box: [number, number], alt: string) {
  * - `slowSvg`: this SVG is served from `SLOW_URL` after a delay, and the image is opened before
  *   it has loaded, so only its load can size it.
  * - `dark`: the reader has chosen the dark theme, set on the root as the theme toggle sets it.
+ * - `actualSize`: the size button is pressed this many times once the image is sized, from the
+ *   keyboard, so it is reached as a keyboard user reaches it.
+ * - `reopen`: the dialog is closed with Escape and the image opened again before the measuring.
+ * - `resizeAfter`: the viewport is resized to this after the size button is pressed.
  */
 async function openImage(
   content: string,
@@ -133,9 +181,12 @@ async function openImage(
     resizeTo?: [number, number];
     slowSvg?: string;
     dark?: boolean;
+    actualSize?: number;
+    reopen?: boolean;
+    resizeAfter?: [number, number];
   } = {},
 ) {
-  const { raster, resizeTo, slowSvg, dark } = options;
+  const { raster, resizeTo, slowSvg, dark, actualSize, reopen, resizeAfter } = options;
   const puppeteer = (await import("puppeteer-core")).default;
   const browser = await puppeteer.launch({
     headless: true,
@@ -206,6 +257,26 @@ async function openImage(
       await page.setViewport({ width: resizeTo[0], height: resizeTo[1] });
       await frames();
     }
+    // Focused once: a press must leave the focus on the button, for the next one.
+    if (actualSize) await page.focus("#image-lightbox-size");
+    for (let i = 0; i < (actualSize ?? 0); i++) {
+      await page.keyboard.press("Enter");
+      await frames();
+    }
+    if (resizeAfter) {
+      await page.setViewport({ width: resizeAfter[0], height: resizeAfter[1] });
+      await frames();
+    }
+    const sizeButtonFocused = await page.evaluate(
+      () => document.activeElement === document.getElementById("image-lightbox-size"),
+    );
+    const focusedId = await page.evaluate(() => document.activeElement?.id ?? null);
+    if (reopen) {
+      await page.keyboard.press("Escape");
+      await frames();
+      await page.click("#content img");
+      await frames();
+    }
     const shot = await page.screenshot({ encoding: "base64" });
     const measured = await page.evaluate(
       async (png, fill) => {
@@ -264,12 +335,26 @@ async function openImage(
             ? 0
             : Math.round(captionRect.height / parseFloat(getComputedStyle(caption).lineHeight)),
           dialogScrolls: dialog.scrollHeight > dialog.clientHeight,
+          // The picture's size from layout, which a screenshot cannot give once it is larger
+          // than the viewport, and where it starts in the dialog's scrolled content.
+          layoutWidth: panel.width - 32,
+          layoutHeight: panel.height - 32,
+          scrolledLeft: panel.left + dialog.scrollLeft,
+          scrolledTop: panel.top + dialog.scrollTop,
+          scrollX: dialog.scrollWidth - dialog.clientWidth,
+          scrollY: dialog.scrollHeight - dialog.clientHeight,
+          scrollLeft: dialog.scrollLeft,
+          scrollTop: dialog.scrollTop,
+          sizeButton: (() => {
+            const button = document.getElementById("image-lightbox-size")!;
+            return button.hidden ? null : button.textContent;
+          })(),
         };
       },
       shot,
       FILL,
     );
-    return { ...measured, hiddenWhileLoading };
+    return { ...measured, hiddenWhileLoading, sizeButtonFocused, focusedId };
   } finally {
     await browser.close();
   }
@@ -406,6 +491,130 @@ describe.skipIf(!chromium)("image lightbox layout (real Chromium)", () => {
     },
     60_000,
   );
+
+  // Fit to screen and actual size (#211).
+  describe("switching between fit to screen and actual size", () => {
+    it("offers no switch for a small raster image, already at its own size", async () => {
+      const r = await openImage('<p><img alt="Photo"></p>', [1280, 800], { raster: [120, 80] });
+      expect(r.sizeButton).toBeNull();
+    }, 60_000);
+
+    it.each([
+      ["wide", [3000, 1000]],
+      ["tall", [400, 3000]],
+    ])(
+      "shows a %s raster image pixel for pixel, scrolling, with all of it in reach",
+      async (_name, size) => {
+        const [w, h] = size as [number, number];
+        const fitted = await openImage('<p><img alt="Photo"></p>', [1280, 800], { raster: [w, h] });
+        expect(fitted.sizeButton).toBe("Actual size");
+        const r = await openImage('<p><img alt="Photo"></p>', [1280, 800], {
+          raster: [w, h],
+          actualSize: 1,
+        });
+        expect(r.sizeButton).toBe("Fit to screen");
+        expect(r.layoutWidth).toBe(w);
+        expect(r.layoutHeight).toBe(h);
+        // The dialog scrolls along the side that does not fit, and the picture's start is not
+        // cut off before the scroll's start.
+        if (w > 1280) expect(r.scrollX).toBeGreaterThan(0);
+        if (h > 800) expect(r.scrollY).toBeGreaterThan(0);
+        expect(r.scrolledLeft).toBeGreaterThanOrEqual(0);
+        expect(r.scrolledTop).toBeGreaterThanOrEqual(0);
+        // It opens on the middle of the picture.
+        expect(Math.abs(r.scrollLeft - r.scrollX / 2)).toBeLessThanOrEqual(1);
+        expect(Math.abs(r.scrollTop - r.scrollY / 2)).toBeLessThanOrEqual(1);
+      },
+      60_000,
+    );
+
+    it("fits the image to the screen again on a second press", async () => {
+      const r = await openImage('<p><img alt="Photo"></p>', [1280, 800], {
+        raster: [3000, 1000],
+        actualSize: 2,
+      });
+      expectPanelAndFit(r, [3000, 1000], [1280, 800]);
+      expect(r.sizeButton).toBe("Actual size");
+      expect(r.sizeButtonFocused).toBe(true);
+    }, 60_000);
+
+    it("opens the next image fitted to the screen", async () => {
+      const r = await openImage('<p><img alt="Photo"></p>', [1280, 800], {
+        raster: [3000, 1000],
+        actualSize: 1,
+        reopen: true,
+      });
+      expectPanelAndFit(r, [3000, 1000], [1280, 800]);
+      expect(r.sizeButton).toBe("Actual size");
+    }, 60_000);
+
+    // The size an SVG gives itself is what the build records on its <img>; the width the build
+    // or an author gives the <img> is how it shows in the page, not its actual size.
+    it.each([
+      ["fixed-size", 'width="444px" height="392px" viewBox="0 0 444 392"', "", [444, 392]],
+      ["viewBox-only", 'viewBox="0 0 100 400"', ' width="100"', [100, 400]],
+      [
+        "author-narrowed",
+        'width="444" height="392" viewBox="0 0 444 392"',
+        ' width="200"',
+        [444, 392],
+      ],
+    ])(
+      "shows a %s SVG image at the size it gives itself, centred",
+      async (_name, attributes, imgWidth, size) => {
+        const [w, h] = size as [number, number];
+        const content = svgImage(attributes as string, [w, h], "Diagram").replace(
+          "<img ",
+          `<img${imgWidth} data-monodocs-svg-size="${w} ${h}" `,
+        );
+        const r = await openImage(content, [1280, 800], { actualSize: 1 });
+        expect(r.sizeButton).toBe("Fit to screen");
+        expect(r.sizeButtonFocused).toBe(true);
+        expect(r.width).toBe(w);
+        expect(r.height).toBe(h);
+        expect(r.dialogScrolls).toBe(false);
+        expect(Math.abs(r.right - r.width / 2 - 640)).toBeLessThanOrEqual(2);
+      },
+      60_000,
+    );
+
+    it("shows an SVG image larger than the screen at its size, scrolling, with all of it in reach", async () => {
+      const content = svgImage('width="2000" height="1500"', [2000, 1500], "Diagram").replace(
+        "<img ",
+        '<img data-monodocs-svg-size="2000 1500" ',
+      );
+      const r = await openImage(content, [1280, 800], { actualSize: 1 });
+      expect(r.sizeButton).toBe("Fit to screen");
+      expect(r.layoutWidth).toBe(2000);
+      expect(r.layoutHeight).toBe(1500);
+      expect(r.scrollX).toBeGreaterThan(0);
+      expect(r.scrollY).toBeGreaterThan(0);
+      expect(r.scrolledLeft).toBeGreaterThanOrEqual(0);
+      expect(r.scrolledTop).toBeGreaterThanOrEqual(0);
+    }, 60_000);
+
+    it("moves the focus to the close button when a resize makes the switch go", async () => {
+      const r = await openImage('<p><img alt="Photo"></p>', [1280, 800], {
+        raster: [1400, 900],
+        actualSize: 1,
+        resizeAfter: [1800, 1200],
+      });
+      expect(r.sizeButton).toBeNull();
+      expect(r.focusedId).toBe("image-lightbox-close");
+      expectPanelAndFit(r, [1400, 900], [1800, 1200]);
+    }, 60_000);
+
+    it("offers no switch for an SVG image whose own size the build did not record", async () => {
+      // A remote SVG, or one written as a data URI, with only a viewBox: the browser's natural
+      // size for it is a rounded default, not a size to show.
+      const r = await openImage(
+        svgImage('viewBox="0 0 100 400"', [100, 400], "Diagram"),
+        [1280, 800],
+      );
+      expectPanelAndFit(r, [100, 400], [1280, 800]);
+      expect(r.sizeButton).toBeNull();
+    }, 60_000);
+  });
 
   it("shrinks a large raster image to the viewport, on a panel", async () => {
     const r = await openImage('<p><img alt="Photo"></p>', [1280, 800], { raster: [3000, 1000] });

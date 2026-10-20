@@ -117,6 +117,11 @@ Preserve these pre-render invariants:
 - Create the browser lazily and close it in `finally`. Do not start Chromium when there are no diagrams.
 - Keep `validateSite` browserless by overriding Mermaid processing to client mode.
 - The pre-rendered SVG theme is fixed at build time and does not follow the reader's theme toggle.
+- A diagram drawn in Mermaid's light theme, by the client runtime or pre-rendered for a light page, gets the
+  white backing a figure's image does in dark mode, and the white panel in the lightbox. A diagram pre-rendered in
+  a dark theme (`MermaidPrerenderer.scheme`) is marked `data-monodocs-scheme="dark"` on its `<figure>`, and keeps
+  the page background in both: the lightbox script copies the mark onto the panel, since the SVG is moved out of
+  the marked block. The mark goes on the `<figure>`, not into the SVG, which `pdfVariants` keys by its string.
 - The HTML's SVG is laid out with the build machine's fonts. When a PDF is built too, a diagram with a formula in
   a label is laid out a second time, in the carried math font, and swapped in, as a string, for its HTML copy in
   the page the PDF is printed from (`pdfVariants`); the HTML written keeps its own.
@@ -198,6 +203,15 @@ Preserve these display and reachability invariants:
   - A raster image is only shrunk to fit, since enlarging it blurs it. An SVG image (an `.svg` path or a
     `data:image/svg+xml` URI) is scaled up to fill the dialog, keeping its proportions, as a diagram is,
     instead of stopping at the size its `width` and `height` give it.
+  - When that fitted size differs from the image's actual size, a button switches between the two, and the
+    dialog scrolls at actual size. A raster image's actual size is its pixels, one per CSS pixel. An SVG
+    image's is the size the SVG gives itself, which the build reads from each local SVG and records in
+    `data-monodocs-svg-size` (`svgOwnSize`): the browser reports a rounded default for an SVG with only a
+    `viewBox`, and a `width` on the `<img>` is how it shows in the page, not its own size. An SVG the build
+    cannot read or size, remote, a data URI, outside the input, or sized in `em`, gets no button. Every size is measured before the image is
+    resized, since laying the dialog out at another size in between scrolls it back to the start, and the
+    button is hidden only after, since hiding it while the dialog is laid out drops a keyboard user's focus.
+    A diagram gets no button: it has no size beyond the page's.
   - An image sits on a white panel fitted to the picture, so a transparent image is not drawn over the
     dark backdrop and the page showing through it. The panel stays white in dark mode, as does the
     backing a figure's image gets in the page there, because most images, a draw.io export or a

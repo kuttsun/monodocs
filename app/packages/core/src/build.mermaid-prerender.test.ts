@@ -110,6 +110,14 @@ describe.skipIf(!chromium)("buildSite - mermaid pre-render (real Chromium)", () 
       outputFile: darkOut,
       format: "html",
     });
-    expect(await readFile(darkOut, "utf8")).toMatch(/#111113|rgb\(17, 17, 19\)/i);
+    const darkHtml = await readFile(darkOut, "utf8");
+    expect(darkHtml).toMatch(/#111113|rgb\(17, 17, 19\)/i);
+    // Marked, so a dark page puts no light backing behind it (#213); the light one is not.
+    expect(darkHtml).toContain(
+      '<figure class="mermaid" data-monodocs-scheme="dark" data-monodocs-figure="center">',
+    );
+    expect(await readFile(out, "utf8")).toContain(
+      '<figure class="mermaid" data-monodocs-figure="center">',
+    );
   }, 60_000);
 });
