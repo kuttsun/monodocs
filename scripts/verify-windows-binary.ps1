@@ -420,14 +420,17 @@ try {
 
     $defaultBuildDir = Join-Path $WorkDir 'build-default'
     New-Item -ItemType Directory -Force -Path $defaultBuildDir | Out-Null
-    $defaultOutput = Join-Path $defaultBuildDir 'dist\docs.html'
+    # examples/en carries a monodocs.config.yml, and the default output.path is relative to the
+    # config file, so the build run from another directory writes beside the staged example.
+    $defaultOutput = Join-Path $docsEn 'dist\docs.html'
 
-    Invoke-Check 'build without -o writes dist\docs.html' {
+    Invoke-Check 'build without -o writes dist\docs.html beside the config' {
         $result = Invoke-Bin @('build', $docsEn) $defaultBuildDir
         Assert-That ($result.ExitCode -eq 0) "Exit code $($result.ExitCode): $($result.StdErr)"
-        Assert-That (Test-Path -LiteralPath $defaultOutput) 'dist\docs.html was not created'
+        Assert-That (Test-Path -LiteralPath $defaultOutput) 'dist\docs.html was not created beside the config'
+        Assert-That (-not (Test-Path -LiteralPath (Join-Path $defaultBuildDir 'dist'))) 'dist\ was created in the working directory'
         # 0.9.0 renamed the default output; make sure the old name is really gone.
-        Assert-That (-not (Test-Path -LiteralPath (Join-Path $defaultBuildDir 'dist\manual.html'))) 'dist\manual.html was created'
+        Assert-That (-not (Test-Path -LiteralPath (Join-Path $docsEn 'dist\manual.html'))) 'dist\manual.html was created'
     }
 
     Invoke-Check 'HTML output is self-contained' {
@@ -578,7 +581,7 @@ Write-Host ("{0} passed, {1} failed" -f ($Checks.Count - $failed.Count), $failed
 
 Write-Host ''
 Write-Host 'Still to check by hand:' -ForegroundColor Yellow
-Write-Host ("  1. Open {0} in a browser: sidebar, previous/next" -f (Join-Path $WorkDir 'build-default\dist\docs.html'))
+Write-Host ("  1. Open {0} in a browser: sidebar, previous/next" -f $defaultOutput)
 Write-Host '     navigation, search (kana folding, highlighting, arrow keys and Enter), dark mode,'
 Write-Host '     and the drawer at a narrow window width.'
 Write-Host '  2. SmartScreen / Mark of the Web, which downloads from this script never attach.'
