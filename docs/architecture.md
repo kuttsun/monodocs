@@ -195,6 +195,13 @@ Preserve these display and reachability invariants:
   keyboard-accessible dialog.
   - Images inside links or buttons keep the parent interaction; images with an explicit empty `alt` stay
     decorative. The dialog must not appear in print or PDF output.
+  - A raster image is only shrunk to fit, since enlarging it blurs it. An SVG image (an `.svg` path or a
+    `data:image/svg+xml` URI) is scaled up to fill the dialog, keeping its proportions, as a diagram is,
+    instead of stopping at the size its `width` and `height` give it.
+  - An image sits on a white panel fitted to the picture, so a transparent image is not drawn over the
+    dark backdrop and the page showing through it. The panel stays white in dark mode, as does the
+    backing a figure's image gets in the page there, because most images, a draw.io export or a
+    transparent PNG, are drawn for a light background. An icon in a sentence gets no backing.
   - Mermaid diagrams open in the same dialog once their SVG exists (at load for `pre-render`, after rendering
     for `client`). The SVG is moved into the dialog and back on close, not copied, because a copy would
     duplicate the IDs its styles and `url(#…)` references depend on.
