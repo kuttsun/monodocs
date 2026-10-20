@@ -171,6 +171,7 @@ export async function preparePages(
         refuseSectnums: config.numberingSections !== false,
         math: config.mathEnabled,
         checkInclude: opts.checkRead,
+        markNumbers: opts.record === true,
       }),
     ],
     {

@@ -3,10 +3,8 @@ import { load, LoggerManager, NullLogger, type Document, type Section } from "@a
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
-import { toText } from "hast-util-to-text";
 import type { Root as HastRoot } from "hast";
 import type {
-  GeneratedNumbering,
   Heading,
   PageFormula,
   PageMeta,
@@ -23,6 +21,7 @@ import { prefixIdsAndCollect } from "../prefixIds.js";
 import { rehypeRenderMath, type MathProblem } from "../mathRender.js";
 import { createMathConverter, type AsciidocMath } from "./math.js";
 import { markChecklists, normalizeChecklistBoxes } from "./checklist.js";
+import { createNumberMarks } from "./numberMarks.js";
 import {
   createIncludeBoundary,
   rethrowIncludeViolation,
@@ -44,13 +43,13 @@ function buildOptions(
   source: SourceFile,
   attributes: Readonly<Record<string, string>>,
   registry: unknown,
-  math?: AsciidocMath,
+  converter?: object,
 ): Record<string, unknown> {
   return {
     // Asciidoctor's own hook for a converter made beforehand, used here so that the formulas in a
     // section title, which Asciidoctor converts while it loads the document (to make the section's ID),
     // go through the math converter too. Not in Asciidoctor's public API; a test pins it.
-    ...(math === undefined ? {} : { _preCreatedConverter: math.converter }),
+    ...(converter === undefined ? {} : { _preCreatedConverter: converter }),
     safe: "safe",
     standalone: false,
     base_dir: dirname(source.absolutePath),
@@ -84,6 +83,8 @@ export function createAsciidocRenderer(
     math?: boolean;
     /** Called with every file `include::` reads and its content, before Asciidoctor reads it. */
     checkInclude?: (path: string, content: Buffer) => void;
+    /** Mark the numbers Asciidoctor generates, for a build with a difference (7.3.2). */
+    markNumbers?: boolean;
   } = {},
 ): SourceRenderer {
   const lineBreak = options.lineBreak ?? "space";
@@ -109,7 +110,7 @@ export function createAsciidocRenderer(
       const boundary = boundaryFor(source);
       const math = await mathFor();
       const doc = await withBoundary(boundary, source, () =>
-        load(source.raw, buildOptions(source, attributes, boundary?.registry, math)),
+        load(source.raw, buildOptions(source, attributes, boundary?.registry, math?.converter)),
       );
       if (options.refuseSectnums) refuseNumberedSections(doc, source);
       const rawTitle = doc.getDocumentTitle();
@@ -132,16 +133,24 @@ export function createAsciidocRenderer(
     async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
       const boundary = boundaryFor(source);
       const math = await mathFor();
-      let numbering: GeneratedNumbering | undefined;
+      // In a build with a difference, the numbers Asciidoctor generates are marked as it writes
+      // them (7.3.2), by a converter around the math converter.
+      const numbers =
+        options.markNumbers === true
+          ? await createNumberMarks(math?.converter, { htmlsyntax })
+          : undefined;
       const rawHtml = await withBoundary(boundary, source, async () => {
         const doc = await load(
           source.raw,
-          buildOptions(source, attributes, boundary?.registry, math),
+          buildOptions(
+            source,
+            attributes,
+            boundary?.registry,
+            numbers?.converter ?? math?.converter,
+          ),
         );
         markChecklists(doc);
-        const html = await doc.convert();
-        numbering = numberingOf(doc);
-        return html;
+        return doc.convert();
       });
       const problems: MathProblem[] = [];
 
@@ -156,6 +165,7 @@ export function createAsciidocRenderer(
       // （見出し・xref・脚注などの単一 HTML 内 ID 衝突を回避）。Markdown と共通処理。
       const file = await unified()
         .use(rehypeParse, { fragment: true })
+        .use(numbers ? [() => numbers.markGenerated] : [])
         .use(() => normalizeChecklistBoxes)
         .use(math ? [() => (tree: HastRoot) => math.markFormulas(tree)] : [])
         .use(lineBreak === "join" ? [() => joinSegmentBreaks] : [])
@@ -178,7 +188,6 @@ export function createAsciidocRenderer(
         formulas: out.formulas,
         links: [],
         assets: [],
-        ...(numbering === undefined ? {} : { numbering }),
         // A formula in a section title is converted again for each copy (a TOC entry, an xref's
         // text), and reported once.
         math: unique([
@@ -292,145 +301,6 @@ export async function withoutAsciidoctorLog<T>(run: () => Promise<T>): Promise<T
   } finally {
     LoggerManager.setLogger(logger);
   }
-}
-
-/**
- * A caption as text: Asciidoctor gives it with its substitutions applied (`A &amp; B`), and the
- * page's tree holds the text the HTML reads as. Spaces are kept; a caption ends in one.
- */
-function decoded(html: unknown): unknown {
-  if (typeof html !== "string" || !/[&<]/.test(html)) return html;
-  return toText(unified().use(rehypeParse, { fragment: true }).parse(html), { whitespace: "pre" });
-}
-
-/** A converted title's text, as the HTML gives it: its markup and entities read. */
-function textOf(html: unknown): string {
-  if (typeof html !== "string") return "";
-  const tree = unified().use(rehypeParse, { fragment: true }).parse(html);
-  return toText(tree).replace(/\s+/g, " ").trim();
-}
-
-/** The block kinds Asciidoctor captions with a number, by the context it gives them. */
-const CAPTIONED: Record<string, keyof GeneratedNumbering["captions"]> = {
-  image: "figure",
-  table: "table",
-  example: "example",
-  listing: "listing",
-};
-
-/**
- * The numbers Asciidoctor generated, read from the document's model after conversion (roadmap
- * 7.3.2), built as its HTML converter writes them: a section's caption when it has one
- * (`Appendix A: `), else, when it is numbered within `sectnumlevels`, its number — after the
- * chapter or part signifier in a book. A cross-reference to it reads `{name}-refsig` and the
- * number, or the number alone where the document set no signifier.
- */
-function numberingOf(doc: Document): GeneratedNumbering {
-  type Node = {
-    getContext(): string;
-    getId?(): unknown;
-    getCaption?(): unknown;
-    isNumbered?(): boolean;
-    getSectionNumeral?(): unknown;
-    sectnum?(delimiter?: string, append?: string): unknown;
-    getSectionName?(): unknown;
-    getLevel?(): number;
-    getTitle?(): unknown;
-    hasAttribute?(name: string): boolean;
-    /** The number Asciidoctor gave a captioned block; null where the author wrote the caption. */
-    numeral?: unknown;
-    rows?: Record<
-      "head" | "body" | "foot",
-      { getStyle?(): unknown; getInnerDocument?(): unknown }[][]
-    >;
-  };
-  // Read as text: a signifier or refsig Asciidoctor holds escaped (`A &amp; B`) is written into
-  // the page as the text it reads as.
-  const attribute = (name: string): string | undefined => {
-    const value = decoded(doc.getAttribute(name) as unknown);
-    return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
-  };
-  const text = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
-  const book = attribute("doctype") === "book";
-  const sectnumlevels = Number(attribute("sectnumlevels") ?? 3);
-  const targets: GeneratedNumbering["targets"] = {};
-  const unidentified: GeneratedNumbering["unidentified"] = [];
-  const captions: GeneratedNumbering["captions"] = {};
-
-  const visitNode = (node: Node) => {
-    const id = text(node.getId?.());
-    const context = node.getContext();
-    if (context === "section") {
-      const name = text(node.getSectionName?.());
-      if (name === "header") return;
-      const level = node.getLevel?.() ?? 1;
-      const caption = text(decoded(node.getCaption?.()));
-      // Truthy rather than true: a book's special sections under `:sectnums: all` answer "chapter".
-      // A cross-reference writes the number at any depth; the heading only within `sectnumlevels`.
-      const numbered = Boolean(node.isNumbered?.()) ? text(node.getSectionNumeral?.()) : undefined;
-      const numeral = level <= sectnumlevels ? numbered : undefined;
-      let heading: string | undefined;
-      if (caption !== undefined) heading = caption;
-      else if (numeral !== undefined) {
-        const signifier = book && level <= 1 ? attribute(`${name}-signifier`) : undefined;
-        const number =
-          book && name === "part" ? (text(node.sectnum?.(undefined, ":")) ?? numeral) : numeral;
-        heading = `${signifier === undefined ? "" : `${signifier} `}${number} `;
-      }
-      // A section without an ID is found by its place among the others without one.
-      if (id === undefined) {
-        return void unidentified.push({
-          heading: heading ?? null,
-          title: textOf(node.getTitle?.()),
-        });
-      }
-      // Every section with an ID is a target, numbered or not, so its ID is known to be
-      // Asciidoctor's and not one monodocs gave a heading without one.
-      const refsig = attribute(`${name}-refsig`);
-      const bare = (numbered ?? heading)?.replace(/[.:]\s*$/, "").replace(/^.* /, "");
-      const reference =
-        bare === undefined ? undefined : refsig === undefined ? bare : `${refsig} ${bare}`;
-      targets[id] = {
-        ...(heading === undefined ? {} : { heading }),
-        references: [heading, reference].filter((r): r is string => r !== undefined),
-      };
-      return;
-    }
-    const kind = CAPTIONED[context];
-    // Every block of a captioned kind whose title the page shows, so that each title is matched
-    // to its own block; a collapsible example's title is a `summary` of its own, not counted.
-    if (kind === undefined || text(node.getTitle?.()) === undefined) return;
-    if (node.hasAttribute?.("collapsible-option") === true) return;
-    // A caption the author set is theirs: Asciidoctor gives it no number.
-    const generated = node.numeral !== null && node.numeral !== undefined;
-    const caption = generated ? text(decoded(node.getCaption?.())) : undefined;
-    (captions[kind] ??= []).push(caption ?? null);
-    if (caption === undefined) return;
-    if (id !== undefined) {
-      // A cross-reference to a captioned block reads as its caption without the full stop.
-      targets[id] = { references: [caption.replace(/[.:]\s*$/, "").trim()] };
-    }
-  };
-  // `findBy` does not enter a table cell's own document (`a|`), whose blocks share the document's
-  // counters, so each such cell is walked as a document of its own.
-  const walk = (document: { findBy(selector: object): unknown }) => {
-    for (const node of document.findBy({}) as Node[]) {
-      visitNode(node);
-      if (node.getContext() !== "table" || node.rows === undefined) continue;
-      for (const part of ["head", "body", "foot"] as const) {
-        for (const row of node.rows[part] ?? []) {
-          for (const cell of row) {
-            if (cell.getStyle?.() !== "asciidoc") continue;
-            const inner = cell.getInnerDocument?.() as
-              { findBy(selector: object): unknown } | undefined;
-            if (inner !== undefined) walk(inner);
-          }
-        }
-      }
-    }
-  };
-  walk(doc as unknown as { findBy(selector: object): unknown });
-  return { targets, unidentified, captions };
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

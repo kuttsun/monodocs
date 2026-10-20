@@ -134,8 +134,6 @@ export type Page = {
   formulas?: PageFormula[];
   links: LinkRef[];
   assets: AssetRef[];
-  /** What {@link RenderedContent.numbering} reported, for an AsciiDoc page. */
-  numbering?: GeneratedNumbering;
 };
 
 /** サイドバーのノード（ディレクトリ or ページ）。 */
@@ -193,35 +191,6 @@ export type RenderedContent = {
   assets: AssetRef[];
   /** Formulas the renderer could not render as written, reported by the build with the file. */
   math?: MathProblem[];
-  /** The words an AsciiDoc document numbers things with, for marking those numbers (7.3.2). */
-  numbering?: GeneratedNumbering;
-};
-
-/**
- * The numbers Asciidoctor generated for an AsciiDoc document, read from its model after
- * conversion, so that what is marked is what Asciidoctor wrote: a section numbered before the
- * document turned `:sectnums:` off, an appendix's letter, a caption the document renamed
- * (`:figure-caption: 図`), and nothing the author wrote that only looks like one (roadmap 7.3.2).
- */
-export type GeneratedNumbering = {
-  /**
-   * What Asciidoctor wrote for each numbered target, by its ID as Asciidoctor gave it: the text
-   * before a section's title in its heading (`1.2. `, `Chapter 1. `, `Part I: `, `Appendix A: `),
-   * and the texts a link to it may start with — the table of contents' entry, and a
-   * cross-reference's `Section 2`, or `2` where the document set no signifier.
-   */
-  targets: Record<string, { heading?: string; references: string[] }>;
-  /**
-   * Each section Asciidoctor gave no ID (`:sectids!:`), in document order: its heading prefix,
-   * null for one it left unnumbered, and its title as text, by which its entry in the document's
-   * own table of contents (linked `#null`) is told from another's.
-   */
-  unidentified: { heading: string | null; title: string }[];
-  /**
-   * For each kind of block, every one with a title, in document order: the caption Asciidoctor
-   * numbered it with (`Figure 1. `), or null — none, or one the author wrote, which is theirs.
-   */
-  captions: Partial<Record<"figure" | "table" | "example" | "listing", (string | null)[]>>;
 };
 
 /**

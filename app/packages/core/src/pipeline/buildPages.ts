@@ -230,7 +230,6 @@ export async function buildPages(
       ...(rendered.formulas && rendered.formulas.length > 0 ? { formulas: rendered.formulas } : {}),
       links: rendered.links,
       assets: rendered.assets,
-      ...(rendered.numbering === undefined ? {} : { numbering: rendered.numbering }),
     });
   }
 
