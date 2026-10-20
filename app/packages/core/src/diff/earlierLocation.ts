@@ -63,45 +63,44 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
   // Asciidoctor writes a Windows path with `/`, and the HTML escapes what it must; the place is
   // found, and written, in each form.
   const slashed = (path: string) => path.replace(/\\/g, "/");
-  // Both spellings of an escape: Asciidoctor writes `&amp;`, and the serialiser monodocs writes
-  // the page with (`hast-util-to-html`) writes `&#x26;`.
-  const escapes = [
-    (path: string) =>
-      path
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;"),
-    (path: string) =>
-      path
-        .replace(/&/g, "&#x26;")
-        .replace(/</g, "&#x3C;")
-        .replace(/>/g, "&#x3E;")
-        .replace(/"/g, "&#x22;"),
-  ];
-  const pairs = [tree, safeReal(tree)]
-    .flatMap((base) => [
-      [base, newTree],
-      [slashed(base), slashed(newTree)],
-    ])
-    .flatMap(([base, place]) => [
-      [base, place],
-      ...escapes.map((escape) => [escape(base!), escape(place!)]),
-    ])
-    .sort((a, b) => b[0]!.length - a[0]!.length);
-  // Only the tree itself, not a longer name that starts with it: `then2` is not under `then`.
-  const patterns = pairs.map(
-    ([base, place]) =>
-      [
-        new RegExp(`${escapeRegExp(base!)}(?![A-Za-z0-9_~+-]|\\.[A-Za-z0-9])`, "g"),
-        place!,
-      ] as const,
+  // In the HTML, both spellings of an escape are found: Asciidoctor writes `&amp;`, and the
+  // serialiser monodocs writes pages with (`hast-util-to-html`) writes `&#x26;`. The new location
+  // goes in escaped there, and as it is in the plain-text fields.
+  const amp = (path: string) =>
+    path.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const hex = (path: string) =>
+    path
+      .replace(/&/g, "&#x26;")
+      .replace(/</g, "&#x3C;")
+      .replace(/>/g, "&#x3E;")
+      .replace(/"/g, "&#x22;");
+  const forms = [tree, safeReal(tree)].flatMap((base) => [
+    [base, newTree],
+    [slashed(base), slashed(newTree)],
+  ]);
+  const patternsFor = (pairs: string[][]) =>
+    pairs
+      .sort((a, b) => b[0]!.length - a[0]!.length)
+      .map(
+        ([base, place]) =>
+          [
+            new RegExp(`${escapeRegExp(base!)}(?![A-Za-z0-9_~+-]|\\.[A-Za-z0-9])`, "g"),
+            place!,
+          ] as const,
+      );
+  const inText = patternsFor(forms.map(([base, place]) => [base!, place!]));
+  const inHtml = patternsFor(
+    forms.flatMap(([base, place]) => [
+      [amp(base!), amp(place!)],
+      [hex(base!), amp(place!)],
+    ]),
   );
-  const relocate = (text: string) => {
+  const replaceAll = (patterns: (readonly [RegExp, string])[], text: string) => {
     let out = text;
     for (const [pattern, place] of patterns) out = out.replace(pattern, () => place);
     return out;
   };
+  const relocate = (text: string) => replaceAll(inText, text);
   return pages.map((page) =>
     page.format !== "asciidoc"
       ? page
@@ -109,7 +108,7 @@ export function relocateEarlierPages(pages: Page[], diff: DiffOptions, cwd: stri
           ...page,
           title: relocate(page.title),
           ...(page.description === undefined ? {} : { description: relocate(page.description) }),
-          html: relocate(page.html),
+          html: replaceAll(inHtml, page.html),
           text: relocate(page.text),
           headings: page.headings.map((heading) => ({ ...heading, text: relocate(heading.text) })),
         },

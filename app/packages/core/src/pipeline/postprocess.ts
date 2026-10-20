@@ -950,8 +950,9 @@ function checkEmbeddedImages(
 ): void {
   visit(tree, "element", (node) => {
     const classes = Array.isArray(node.properties.className) ? node.properties.className : [];
-    if (node.tagName === "img") {
-      const src = node.properties.src;
+    // `img[src]`, and `object[data]`, which `:data-uri:` writes for an SVG with `opts=interactive`.
+    if (node.tagName === "img" || node.tagName === "object") {
+      const src = node.tagName === "img" ? node.properties.src : node.properties.data;
       const data = typeof src === "string" ? /^data:[^,]*;base64,(.*)$/s.exec(src) : null;
       if (data !== null) check(page, Buffer.from(data[1]!, "base64"));
       return;

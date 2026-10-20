@@ -477,3 +477,34 @@ describe("round 3: where highlighting would cut the location", () => {
     expect(htmls[0]!.replace(/<[^>]+>/g, "")).not.toContain("then");
   });
 });
+
+describe("round 4", () => {
+  it("is diff/lfs-pointer for an SVG :data-uri: embeds as an object", async () => {
+    await writeFile(join(then, "docs", "s.svg"), POINTER);
+    await writeFile(
+      join(then, "docs", "guide.adoc"),
+      "= Guide\n:data-uri:\n\nimage::s.svg[opts=interactive]\n",
+    );
+    expect((await failure()).code).toBe("diff/lfs-pointer");
+  });
+
+  it("writes a new location the HTML must escape, escaped there and as it is in the text", async () => {
+    const odd = join(base, "n&w");
+    await mkdir(join(odd, "docs"), { recursive: true });
+    await writeFile(join(odd, "docs", "index.md"), "# Index\n");
+    await writeFile(join(then, "docs", "guide.adoc"), "= Guide\n\nHere: {docdir}\n");
+    vi.spyOn(process, "cwd").mockReturnValue(odd);
+    const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
+    await expect(
+      buildSite(
+        { outputFile: join(base, "out.html"), diff },
+        { onPrepared: (version, site) => (sites[version] = site) },
+      ),
+    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    const page = sites.earlier!.pages.find((p) => p.relativePath === "guide.adoc")!;
+    const slashed = (path: string) => path.replace(/\\/g, "/");
+    expect(slashed(page.text)).toContain(`Here: ${slashed(join(odd, "docs"))}`);
+    expect(page.html).not.toMatch(/n&w/);
+    expect(page.html).toMatch(/n&(amp|#x26);w/);
+  });
+});
