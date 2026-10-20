@@ -944,6 +944,32 @@ describe("postprocessPages - image embedding", () => {
     expect(pages[0]!.html).not.toContain("data:image");
   });
 
+  it("decodes a percent-encoded src, and falls back to the name as written", async () => {
+    await writeFile(join(docs, "図.svg"), "<svg xmlns='http://www.w3.org/2000/svg'></svg>");
+    await writeFile(join(docs, "a b.svg"), "<svg xmlns='http://www.w3.org/2000/svg'></svg>");
+    await writeFile(join(docs, "c%20d.svg"), "<svg xmlns='http://www.w3.org/2000/svg'></svg>");
+    const pages: Page[] = [
+      page({
+        relativePath: "index.md",
+        route: "/",
+        sourcePath: join(docs, "index.md"),
+        html: ["%E5%9B%B3.svg", "a%20b.svg", "c%20d.svg", "%E0%A4%A.svg"]
+          .map((src) => `<img src="${src}" alt="x">`)
+          .join(""),
+      }),
+    ];
+    const result = await postprocessPages(pages, {
+      ...baseOptions,
+      inputDir: docs,
+      embedImages: true,
+    });
+    expect(pages[0]!.html.match(/data:image\/svg\+xml;base64,/g)).toHaveLength(3);
+    // A src that does not decode is looked up as written, and reported when that is not found.
+    const imageWarnings = result.warnings.filter((w) => w.code.startsWith("image/"));
+    expect(imageWarnings.map((w) => w.code)).toEqual(["image/not-found"]);
+    expect(imageWarnings[0]!.message).toContain("%E0%A4%A.svg");
+  });
+
   it("warns on missing images and leaves external untouched", async () => {
     const pages: Page[] = [
       page({

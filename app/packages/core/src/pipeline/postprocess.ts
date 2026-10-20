@@ -970,6 +970,24 @@ export function unsizedSvgWidth(source: string): number | undefined {
 }
 
 /**
+ * Resolves a local image's path to the file it names. The Markdown renderer percent-encodes
+ * `src` (`図.png` becomes `%E5%9B%B3.png`) and Asciidoctor does not, so the decoded path is tried
+ * first, as link rewriting does, and the path as written second, for a file whose name really
+ * contains `%20`. Rejects when neither exists.
+ */
+async function realpathOfImage(baseDir: string, pathPart: string): Promise<string> {
+  const decoded = decodePathPart(pathPart);
+  if (decoded !== pathPart) {
+    try {
+      return await realpath(resolve(baseDir, decoded));
+    } catch {
+      // Fall through to the name as written.
+    }
+  }
+  return realpath(resolve(baseDir, pathPart));
+}
+
+/**
  * Gives each local SVG image that has no size of its own, and no `width` or `height` on its
  * `<img>`, the width {@link unsizedSvgWidth} finds. Runs whether or not images are embedded,
  * before they are, while `src` is still the path. An image that cannot be read is left alone:
@@ -993,7 +1011,7 @@ async function sizeUnsizedSvgImages(tree: HastRoot, page: Page, realRoot: string
 
     let head: string;
     try {
-      const real = await realpath(resolve(baseDir, pathPart));
+      const real = await realpathOfImage(baseDir, pathPart);
       if (!isInside(realRoot, real)) continue;
       const file = await open(real, "r");
       try {
@@ -1044,7 +1062,7 @@ async function embedImages(
     // symlink を解決した実体パスで存在確認し、入力ルート外への参照を拒否する。
     let real: string;
     try {
-      real = await realpath(resolve(baseDir, pathPart));
+      real = await realpathOfImage(baseDir, pathPart);
     } catch {
       warnings.push(
         warn("image/not-found", t("post.imageNotFound", { src, path: page.relativePath }), {
