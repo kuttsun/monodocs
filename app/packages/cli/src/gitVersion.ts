@@ -157,7 +157,13 @@ function parseIndex(listing: Buffer): Map<string, IndexEntry> {
     const raw = record.subarray(tab + 1);
     // `<mode> <object> <stage>`
     const [mode = "", object = ""] = record.subarray(0, tab).toString("latin1").split(" ");
-    entries.set(raw.toString("utf8"), { mode, object, raw });
+    // A name that is not UTF-8 decodes with replacement characters, and two such names could
+    // decode alike; its key keeps the bytes, so neither is lost. Nothing on this side names it.
+    const decoded = raw.toString("utf8");
+    const key = Buffer.from(decoded, "utf8").equals(raw)
+      ? decoded
+      : `${decoded}\0${raw.toString("hex")}`;
+    entries.set(key, { mode, object, raw });
   }
   return entries;
 }
@@ -243,32 +249,43 @@ export async function extractEarlierVersion(
       await run(["checkout-index", "-f", "-z", "--stdin"], Buffer.concat(files));
     };
     /**
-     * `rel` as the index has it, read through every link on the way as a checkout would: a link is
-     * written out, and the path continues from its target. Undefined when the path leaves the tree,
-     * which core reports; a cycle stops where the file system would.
+     * `rel` as the index has it, read through every link on the way as a checkout would: one name
+     * at a time, a `..` taken from where the path really is, and a link written out and replaced by
+     * its target. Undefined when the path leaves the tree, which core reports, or loops.
      */
-    const follow = async (rel: string, depth = 0): Promise<string | undefined> => {
-      const parts = rel === "" ? [] : rel.split("/");
-      for (let i = 1; i <= parts.length; i++) {
-        const path = byFolded.get(fold(parts.slice(0, i).join("/")));
-        const entry = path === undefined ? undefined : index.get(path)!;
-        if (entry?.mode !== SYMLINK_MODE || path === undefined) continue;
+    const follow = async (rel: string): Promise<string | undefined> => {
+      const pending = rel.split("/");
+      const done: string[] = [];
+      let links = 0;
+      while (pending.length > 0) {
+        const name = pending.shift()!;
+        if (name === "" || name === ".") continue;
+        if (name === "..") {
+          if (done.length === 0) return undefined;
+          done.pop();
+          continue;
+        }
+        const joined = [...done, name].join("/");
+        const path = byFolded.get(fold(joined)) ?? joined;
+        const entry = index.get(path);
+        if (entry?.mode !== SYMLINK_MODE) {
+          // A directory on the way is made, so a link through it resolves on disk as it did here.
+          if (entry === undefined && entriesUnder(path).length > 0) {
+            await mkdir(join(tree, path), { recursive: true });
+          }
+          done.splice(0, done.length, ...path.split("/"));
+          continue;
+        }
         await writeOut([path]);
-        if (depth >= MAX_LINKS) return undefined;
+        if (++links > MAX_LINKS) return undefined;
         const written = (await run(["cat-file", "blob", entry.object])).stdout.toString("utf8");
         // A link git recorded on Windows may be written with `\`; on POSIX that is a character.
         const target = process.platform === "win32" ? written.replace(/\\/g, "/") : written;
         // An absolute target is not the earlier version's; core reports it when it reads it.
         if (posix.isAbsolute(target) || /^[A-Za-z]:/.test(target)) return undefined;
-        const next = posix
-          .normalize(posix.join(posix.dirname(path), target, ...parts.slice(i)))
-          .split("/")
-          .filter((part) => part !== "" && part !== ".")
-          .join("/");
-        if (next === ".." || next.startsWith("../")) return undefined;
-        return follow(next, depth + 1);
+        pending.unshift(...target.split("/"));
       }
-      return byFolded.get(fold(rel)) ?? rel;
+      return done.join("/");
     };
     /** Make `path` exist when the earlier version has it: a file written out, a directory made. */
     const materialize = async (path: string) => {

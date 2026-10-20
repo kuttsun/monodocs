@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, readlinkSync, realpathSync, type Stats, statSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import { defaultConfigPath, loadConfig, type ResolvedConfig } from "../config.js";
 import { MonodocsError } from "../diagnostics.js";
 import { t } from "../messages.js";
@@ -31,13 +31,22 @@ const MAX_LINKS = 40;
  */
 function real(path: string, depth = 0): string {
   const absolute = resolve(path);
-  if (existsSync(absolute)) return realpathSync(absolute);
+  // The system's own: Node's JavaScript version shortens a `..` after a link before reading it.
+  if (existsSync(absolute)) return realpathSync.native(absolute);
   const parent = dirname(absolute);
   if (parent === absolute) return absolute;
   // The link's target is read from where the link really is, as the file system reads it.
   const realParent = real(parent, depth);
   if (entry(absolute)?.isSymbolicLink() && depth < MAX_LINKS) {
-    return real(resolve(realParent, readlinkSync(absolute)), depth + 1);
+    // One name at a time, each read through its links before a `..` after it is taken.
+    let at = realParent;
+    const target = readlinkSync(absolute);
+    if (isAbsolute(target)) at = parse(target).root;
+    for (const name of target.split(/[\\/]/)) {
+      if (name === "" || name === ".") continue;
+      at = name === ".." ? dirname(at) : real(join(at, name), depth + 1);
+    }
+    return at;
   }
   return join(realParent, basename(absolute));
 }

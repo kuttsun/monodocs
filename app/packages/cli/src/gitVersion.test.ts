@@ -237,18 +237,22 @@ describe("extracting a ref", () => {
     async () => {
       await write(join(repo, "monodocs.config.yml"), "input: docs\n");
       await write(join(repo, "docs", "index.md"), "# Index\n");
-      const name = Buffer.concat([
-        Buffer.from(join(repo, "docs") + "/"),
-        Buffer.from([0xff, 0x2e]),
-      ]);
-      writeFileSync(name, "bytes");
+      // Two names that decode to the same replacement character, both kept.
+      for (const byte of [0xff, 0xfe]) {
+        writeFileSync(
+          Buffer.concat([Buffer.from(join(repo, "docs") + "/"), Buffer.from([byte, 0x2e])]),
+          "bytes",
+        );
+      }
       git(repo, "add", "-A");
       git(repo, "commit", "-q", "-m", "latin1 name");
       const earlier = await extractEarlierVersion("HEAD", {}, { cwd: repo });
       try {
         const docs = Buffer.from(join(earlier.diff.dir, "docs"));
         const names = readdirSync(docs, { encoding: "buffer" });
-        expect(names.some((n) => n.equals(Buffer.from([0xff, 0x2e])))).toBe(true);
+        for (const byte of [0xff, 0xfe]) {
+          expect(names.some((n) => n.equals(Buffer.from([byte, 0x2e])))).toBe(true);
+        }
       } finally {
         earlier.dispose();
       }
@@ -274,6 +278,24 @@ describe("extracting a ref", () => {
         } finally {
           earlier.dispose();
         }
+      }
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "takes a `..` after a link from where the link leads, as the file system does",
+    async () => {
+      await write(join(repo, "real", "nested", "keep.txt"), "keep\n");
+      await write(join(repo, "real", "manual", "index.md"), "# Manual\n");
+      await symlink("real/nested", join(repo, "pivot"));
+      await symlink("pivot/../manual", join(repo, "docs"));
+      git(repo, "add", "-A");
+      git(repo, "commit", "-q", "-m", "a link through a link");
+      const earlier = await extractEarlierVersion("HEAD", {}, { cwd: repo });
+      try {
+        expect(readFileSync(join(earlier.diff.dir, "docs", "index.md"), "utf8")).toBe("# Manual\n");
+      } finally {
+        earlier.dispose();
       }
     },
   );
@@ -306,7 +328,7 @@ describe("extracting a ref", () => {
       git(repo, "commit", "-q", "-m", "links under the root");
       const earlier = await extractEarlierVersion("HEAD", {}, { cwd: repo });
       try {
-        expect(existsSync(join(earlier.diff.tree!, "src"))).toBe(false);
+        expect(existsSync(join(earlier.diff.tree!, "src", "main.ts"))).toBe(false);
         expect(existsSync(join(earlier.diff.dir, "docs", "images", "a.png"))).toBe(true);
       } finally {
         earlier.dispose();
