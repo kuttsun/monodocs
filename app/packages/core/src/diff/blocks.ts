@@ -250,7 +250,7 @@ function textOf(nodes: readonly ElementContent[]): string {
         continue;
       }
       if (MEDIA.has(child.tagName)) {
-        out += ` [${child.tagName} ${String(child.properties.src ?? "")}] `;
+        out += ` [${child.tagName} ${mediaKey(child)}] `;
         continue;
       }
       if (child.tagName === "object") {
@@ -296,6 +296,14 @@ function svgKey(node: Element): string {
   return createHash("sha256").update(markup).digest("hex");
 }
 
+/** A video, an audio clip, or a player as what it plays: its `src`, and its `<source>` children's. */
+function mediaKey(node: Element): string {
+  return [node, ...elements(node).filter((c) => c.tagName === "source")]
+    .map((element) => element.properties.src)
+    .filter((src) => typeof src === "string" && src !== "")
+    .join(" ");
+}
+
 /** The significant children of `node`: elements, and text that is not only whitespace. */
 function significant(node: Element): ElementContent[] {
   return node.children.filter(
@@ -326,7 +334,20 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
     });
   };
 
-  const visit = (node: Element, ancestors: Element[]) => {
+  /**
+   * Text and inline elements between blocks: one block of text, in the chain of what holds them —
+   * or, when they are an image alone (beside a figcaption, a title), that image.
+   */
+  const readRun = (run: ElementContent[], holder: Element, inside: Element[]) => {
+    const items = run.filter((c) => c.type === "element" || c.value.trim() !== "");
+    const image =
+      items.length === 1 && items[0]!.type === "element" ? soleImage(items[0]!) : undefined;
+    if (image !== undefined) return visit(image, inside);
+    const text = textOf(run);
+    if (text !== "") add("text", text, holder, inside);
+  };
+
+  const visit = (node: Element, ancestors: Element[]): void => {
     const tag = node.tagName;
     if (LAYOUT.has(tag)) return;
     // A diagram, pre-rendered or drawn in the browser, compared by its source.
@@ -349,12 +370,7 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
     if (tag === "img" || tag === "object") return add("image", imageKey(node), node, ancestors);
     if (tag === "svg") return add("image", `svg:${svgKey(node)}`, node, ancestors);
     // A video, an audio clip, or an embedded player, compared by what it plays.
-    if (MEDIA.has(tag)) {
-      const sources = [node, ...elements(node).filter((c) => c.tagName === "source")]
-        .map((element) => element.properties.src)
-        .filter((src) => typeof src === "string" && src !== "");
-      return add(tag, sources.join(" "), node, ancestors);
-    }
+    if (MEDIA.has(tag)) return add(tag, mediaKey(node), node, ancestors);
     // A paragraph that holds a display formula or an image alone is that block.
     // An element that holds an image alone — a paragraph, a link around it, a figure's content — is
     // that image, so wrapping it in a link changes nothing, as a link is not read anywhere.
@@ -416,15 +432,7 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
       // Text and inline elements between blocks read as one block, in the container's chain.
       let run: ElementContent[] = [];
       const flush = () => {
-        // A run that is an image alone — beside a figcaption, a title — is that image.
-        const items = run.filter((c) => c.type === "element" || c.value.trim() !== "");
-        const image =
-          items.length === 1 && items[0]!.type === "element" ? soleImage(items[0]!) : undefined;
-        if (image !== undefined) visit(image, inside);
-        else {
-          const text = textOf(run);
-          if (text !== "") add("text", text, node, inside);
-        }
+        readRun(run, node, inside);
         run = [];
       };
       for (const child of node.children) {
@@ -442,13 +450,11 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
     if (text !== "") add("text", text, node, [...ancestors, node]);
   };
 
-  // The tree's own text and inline elements — a table cell's, read on its own — read as one block,
-  // as a container's do; its node stands for the run.
+  // The tree's own text and inline elements — a table cell's, read on its own — read as a
+  // container's do; a synthetic node stands for the run.
   let run: ElementContent[] = [];
   const flush = () => {
-    const text = textOf(run);
-    const node: Element = { type: "element", tagName: "span", properties: {}, children: run };
-    if (text !== "") add("text", text, node, []);
+    readRun(run, { type: "element", tagName: "span", properties: {}, children: run }, []);
     run = [];
   };
   for (const child of tree.children) {

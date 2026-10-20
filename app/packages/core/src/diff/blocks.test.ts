@@ -34,4 +34,16 @@ describe("blocks from HTML the renderers may pass through", () => {
     );
     expect(blocksOf(figure).map((b) => b.kind)).toEqual(["image", "title"]);
   });
+
+  it("reads a video's source children inside text", () => {
+    const page = (src: string) =>
+      root(h("p", {}, [text("See "), h("video", {}, [h("source", { src })])]));
+    expect(blocksOf(page("a.mp4"))[0]!.key).not.toBe(blocksOf(page("b.mp4"))[0]!.key);
+  });
+
+  it("reads an image at the top of a page as it reads one in a paragraph", () => {
+    const bare = blocksOf(root(h("img", { src: "a.png", alt: "x" })));
+    const wrapped = blocksOf(root(h("p", {}, [h("img", { src: "a.png", alt: "x" })])));
+    expect(bare.map((b) => [b.kind, b.key])).toEqual(wrapped.map((b) => [b.kind, b.key]));
+  });
 });
