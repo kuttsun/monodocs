@@ -293,39 +293,63 @@ export async function withoutAsciidoctorLog<T>(run: () => Promise<T>): Promise<T
   }
 }
 
+/** The block kinds Asciidoctor captions with a number, by the context it gives them. */
+const CAPTIONED: Record<string, keyof GeneratedNumbering["captions"]> = {
+  image: "figure",
+  table: "table",
+  example: "example",
+  listing: "listing",
+};
+
 /**
- * The words the document numbers things with, read after conversion, when every attribute the
- * document set is in place (roadmap 7.3.2). An attribute turned off (`:figure-caption!:`) has no
- * number to find.
+ * The numbers Asciidoctor generated, read from the document's model after conversion (roadmap
+ * 7.3.2). A section's prefix is its caption when it has one (`Appendix A: `), else its number
+ * (`A.1. `) when it is numbered; a cross-reference to it starts with its signifier and that
+ * number, `Section A.1` or `Appendix A`.
  */
 function numberingOf(doc: Document): GeneratedNumbering {
-  const word = (name: string): string | undefined => {
+  type Node = {
+    getContext(): string;
+    getCaption?(): unknown;
+    isNumbered?(): boolean;
+    getSectionNumeral?(): unknown;
+    getSectionName?(): unknown;
+    getLevel?(): number;
+  };
+  const attribute = (name: string): string | undefined => {
     const value = doc.getAttribute(name) as unknown;
     return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
   };
-  const words = (names: string[]) =>
-    names.map(word).filter((value): value is string => value !== undefined);
-  const appendixCaption = word("appendix-caption");
+  const text = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
+  const sections: (string | null)[] = [];
   const captions: GeneratedNumbering["captions"] = {};
-  for (const kind of ["figure", "table", "example", "listing"] as const) {
-    const caption = word(`${kind}-caption`);
-    if (caption !== undefined) captions[kind] = caption;
+  const references = new Set<string>();
+  for (const node of doc.findBy({}) as unknown as Node[]) {
+    const context = node.getContext();
+    if (context === "section") {
+      // The document header is a section of level 0; its title is the page's, not numbered.
+      if (node.getLevel?.() === 0) continue;
+      const caption = text(node.getCaption?.());
+      const numeral = node.isNumbered?.() === true ? text(node.getSectionNumeral?.()) : undefined;
+      sections.push(caption ?? (numeral === undefined ? null : `${numeral} `));
+      if (numeral !== undefined) {
+        const name = text(node.getSectionName?.());
+        const refsig = attribute(
+          `${name === "appendix" ? "appendix" : name === "chapter" ? "chapter" : "section"}-refsig`,
+        );
+        const bare = numeral.replace(/\.$/, "");
+        if (refsig !== undefined) references.add(`${refsig} ${bare}`);
+      }
+      continue;
+    }
+    const kind = CAPTIONED[context];
+    const caption = text(node.getCaption?.());
+    if (kind === undefined || caption === undefined) continue;
+    (captions[kind] ??= []).push(caption);
+    // A cross-reference to a captioned block reads as its caption without the full stop.
+    references.add(caption.replace(/[.:]\s*$/, "").trim());
   }
-  return {
-    sectnums: doc.hasAttribute("sectnums"),
-    captions,
-    ...(appendixCaption === undefined ? {} : { appendixCaption }),
-    refsigs: words([
-      "section-refsig",
-      "appendix-refsig",
-      "chapter-refsig",
-      "part-refsig",
-      "figure-caption",
-      "table-caption",
-      "example-caption",
-      "listing-caption",
-    ]),
-  };
+  return { sections, captions, references: [...references] };
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

@@ -129,4 +129,34 @@ describe("marking generated numbers", () => {
     const recorded = await preparePages(config, dir, { record: true });
     expect(recorded.pages.map((p) => p.html)).toEqual(plain.pages.map((p) => p.html));
   });
+
+  it("marks an appendix's subsections, and its letter with the caption turned off", async () => {
+    const found = await marked({
+      "p.adoc": "= P\n:sectnums:\n\n[appendix]\n== Extra\n\n=== Sub\n",
+      "q.adoc": "= Q\n:sectnums:\n:appendix-caption!:\n\n[appendix]\n== Extra\n\n=== Sub\n",
+    });
+    expect(found["p.adoc"]).toEqual(["Appendix A: ", "A.1. "]);
+    expect(found["q.adoc"]).toEqual(["A. ", "A.1. "]);
+  });
+
+  it("marks only the sections numbered before :sectnums! turned numbering off", async () => {
+    const found = await marked({
+      "c.adoc": "= C\n:sectnums:\n\n== One\n\n:sectnums!:\n\n== Refs\n",
+    });
+    expect(found["c.adoc"]).toEqual(["1. "]);
+  });
+
+  it("marks a named footnote referred to again", async () => {
+    const found = await marked({
+      "f.adoc": "= F\n\nOne.footnote:n1[Shared.] Two.footnote:n1[]\n",
+    });
+    expect(found["f.adoc"]).toEqual(["1", "1", "1"]);
+  });
+
+  it("does not take a section's own title for a reference to a numbered block", async () => {
+    const found = await marked({
+      "t.adoc": "= T\n\nSee <<sum>>.\n\n[#sum]\n== Table 1 summary\n",
+    });
+    expect(found["t.adoc"]).toEqual([]);
+  });
 });

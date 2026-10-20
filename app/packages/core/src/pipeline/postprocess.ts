@@ -579,20 +579,26 @@ function carriedData(node: ElementContent | undefined): { data?: Element["data"]
   return node?.type === "element" && node.data !== undefined ? { data: node.data } : {};
 }
 
-/** Record every code block's source and language, before Mermaid and highlighting replace them. */
-function recordSources(tree: HastRoot): void {
+/**
+ * Record every code block's source and language, before Mermaid and highlighting replace them. A
+ * `mermaid` block is a diagram only where the version has Mermaid on (7.3.2: what the text means);
+ * elsewhere it is code in that language. A `pre` with no `code` — an AsciiDoc listing without a
+ * language — is code with none.
+ */
+function recordSources(tree: HastRoot, mermaidEnabled: boolean): void {
   visit(tree, "element", (node) => {
     if (node.tagName !== "pre") return;
-    const code = node.children.find(
-      (child): child is Element => child.type === "element" && child.tagName === "code",
-    );
-    if (code === undefined) return;
-    const lang = languageOf(code);
+    const code =
+      node.children.find(
+        (child): child is Element => child.type === "element" && child.tagName === "code",
+      ) ?? node;
+    const lang = code === node ? undefined : languageOf(code);
+    const diagram = lang === "mermaid" && mermaidEnabled;
     const recorded: RecordedData = {
       monodocsSource: {
-        kind: lang === "mermaid" ? "mermaid" : "code",
+        kind: diagram ? "mermaid" : "code",
         source: toText(code, { whitespace: "pre" }),
-        ...(lang === undefined || lang === "mermaid" ? {} : { lang }),
+        ...(lang === undefined || diagram ? {} : { lang }),
       },
     };
     node.data = { ...node.data, ...recorded } as Element["data"];
@@ -633,10 +639,12 @@ async function recordImages(
       continue;
     }
     const pathPart = value.split("#")[0]?.split("?")[0] ?? value;
-    let real: string;
-    try {
-      real = await realpath(resolve(baseDir, pathPart));
-    } catch {
+    // Markdown writes a name with spaces or other than ASCII percent-encoded (`%E5%9B%B3.png`);
+    // the file is found under the name as written or as decoded.
+    const real =
+      (await realpath(resolve(baseDir, pathPart)).catch(() => undefined)) ??
+      (await realpath(resolve(baseDir, decodePathPart(pathPart))).catch(() => undefined));
+    if (real === undefined) {
       record({ src: value });
       continue;
     }
@@ -1217,7 +1225,7 @@ export async function postprocessPages(
     // admonition を共通構造へ正規化してから Mermaid / ハイライト / リンク変換にかける
     // （正規化後も内部の <pre>/<a>/<img> は後続処理の対象になる）。
     processAdmonitions(tree);
-    if (trees !== undefined) recordSources(tree);
+    if (trees !== undefined) recordSources(tree, options.mermaidEnabled);
     if (options.mermaidEnabled) {
       if (options.mermaidMode === "pre-render" && options.mermaidPrerenderer) {
         if (

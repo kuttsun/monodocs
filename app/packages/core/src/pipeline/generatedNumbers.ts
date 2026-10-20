@@ -90,62 +90,59 @@ function markGfm(tree: HastRoot): void {
 }
 
 function markAsciidoc(tree: HastRoot, numbering: GeneratedNumbering | undefined): void {
-  const sectnum = /(?:\d+\.)+ /;
-  const appendix =
-    numbering?.appendixCaption === undefined
-      ? undefined
-      : new RegExp(`${escapeRegExp(numbering.appendixCaption)} [A-Z]+: `);
-  const either = (words: string[], tail: string) =>
-    words.length === 0
+  if (numbering === undefined) return;
+  const startingWith = (prefixes: string[]) =>
+    prefixes.length === 0
       ? undefined
       : new RegExp(
-          `(?:${[...words]
+          `(?:${[...new Set(prefixes)]
             .sort((a, b) => b.length - a.length)
             .map(escapeRegExp)
-            .join("|")}) ${tail}`,
+            .join("|")})`,
         );
-  const captions = numbering?.captions ?? {};
-  const caption = (word: string | undefined) =>
-    either(word === undefined ? [] : [word], "\\d+\\. ");
-  // The block a title belongs to decides which caption it can carry.
   const captionFor: [string, RegExp | undefined][] = [
-    ["imageblock", caption(captions.figure)],
-    ["tableblock", caption(captions.table)],
-    ["exampleblock", caption(captions.example)],
-    ["listingblock", caption(captions.listing)],
+    ["imageblock", startingWith(numbering.captions.figure ?? [])],
+    ["tableblock", startingWith(numbering.captions.table ?? [])],
+    ["exampleblock", startingWith(numbering.captions.example ?? [])],
+    ["listingblock", startingWith(numbering.captions.listing ?? [])],
   ];
-  // `Section 2.3`, `Appendix B`, `Figure 1`: the word and the number or letter after it.
-  const reference = either(numbering?.refsigs ?? [], "(?:[A-Z]|\\d+)(?:\\.\\d+)*");
+  // A reference is marked only where it is followed by what ends a number, so `Section 1` is not
+  // taken from `Section 12`.
+  const reference =
+    numbering.references.length === 0
+      ? undefined
+      : new RegExp(
+          `(?:${[...numbering.references]
+            .sort((a, b) => b.length - a.length)
+            .map(escapeRegExp)
+            .join("|")})(?![0-9A-Za-z.])`,
+        );
+  let section = 0;
 
   visit(tree, "element", (node, _index, parent) => {
     const own = classes(node);
-    // A section's heading, numbered by `:sectnums:` or lettered as an appendix.
+    // A section's heading, in document order: the prefix Asciidoctor wrote, if it wrote one.
     if (
       HEADING.test(node.tagName) &&
       parent?.type === "element" &&
       classes(parent).some((c) => SECTION.test(c))
     ) {
-      if (
-        appendix !== undefined &&
-        firstText(node) !== undefined &&
-        appendix.test(firstText(node)!.text.value.trimStart())
-      ) {
-        markPrefix(node, appendix);
-      } else if (numbering?.sectnums === true) {
-        markPrefix(node, sectnum);
+      const prefix = numbering.sections[section++];
+      if (prefix !== undefined && prefix !== null) {
+        markPrefix(node, new RegExp(escapeRegExp(prefix)));
       }
       return;
     }
-    // A block's title: `Figure 1. ` on an image, `Table 1. ` on a table, `Example 1. ` on an
-    // example, each only on its own kind of block.
+    // A block's title, with the caption Asciidoctor wrote on that kind of block.
     if (own.includes("title") && parent?.type === "element") {
       const block = classes(parent);
       const pattern = captionFor.find(([kind]) => block.includes(kind))?.[1];
       if (pattern !== undefined) markPrefix(node, pattern);
       return;
     }
-    // A footnote's number, where it is referred to and where it is listed.
-    if (node.tagName === "sup" && own.includes("footnote")) {
+    // A footnote's number, where it is referred to — the first time and again by name — and where
+    // it is listed.
+    if (node.tagName === "sup" && (own.includes("footnote") || own.includes("footnoteref"))) {
       for (const child of node.children) {
         if (child.type === "element" && child.tagName === "a") markAll(child);
       }
@@ -156,7 +153,7 @@ function markAsciidoc(tree: HastRoot, numbering: GeneratedNumbering | undefined)
       if (link?.tagName === "a") markAll(link);
       return;
     }
-    // A cross-reference's text.
+    // A cross-reference's text, where it names a numbered target.
     if (node.tagName === "a" && reference !== undefined) {
       const href = node.properties.href;
       if (typeof href === "string" && href.startsWith("#")) markPrefix(node, reference);

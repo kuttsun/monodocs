@@ -161,6 +161,55 @@ describe("recording what comparison needs", () => {
   });
 });
 
+describe("round 1: what else is recorded", () => {
+  it("records sources from AsciiDoc, a listing with no language, and a mermaid block with Mermaid off", async () => {
+    const page =
+      "= A\n\n[source,js]\n----\nconst a = 1;\n----\n\n----\nplain\n----\n\n[source,mermaid]\n----\ngraph TD; A-->B\n----\n";
+    for (const root of [now, then]) await writeFile(join(root, "docs", "a.adoc"), page);
+    await writeFile(join(then, "monodocs.config.yml"), "mermaid:\n  enabled: false\n");
+    const sites = await prepared();
+    expect(sources(sites.new, "a.adoc")).toEqual([
+      { kind: "code", source: "const a = 1;", lang: "js" },
+      { kind: "code", source: "plain" },
+      { kind: "mermaid", source: "graph TD; A-->B" },
+    ]);
+    // Off in the earlier version, so there it is code in that language.
+    expect(sources(sites.earlier, "a.adoc")[2]).toEqual({
+      kind: "code",
+      source: "graph TD; A-->B",
+      lang: "mermaid",
+    });
+  });
+
+  it("hashes what :data-uri: embeds, as an img and as an object", async () => {
+    for (const root of [now, then]) {
+      await writeFile(
+        join(root, "docs", "a.adoc"),
+        "= A\n:data-uri:\n\nimage::p.png[P]\n\nimage::s.svg[S,opts=interactive]\n",
+      );
+      await writeFile(join(root, "docs", "p.png"), "PNG");
+      await writeFile(join(root, "docs", "s.svg"), "<svg/>");
+    }
+    await writeFile(join(then, "docs", "s.svg"), "<svg><g/></svg>");
+    const sites = await prepared();
+    const [newP, newS] = images(sites.new, "a.adoc");
+    const [oldP, oldS] = images(sites.earlier, "a.adoc");
+    expect(newP).toHaveProperty("hash");
+    expect(newP).toEqual(oldP);
+    expect(newS).toHaveProperty("hash");
+    expect(newS).not.toEqual(oldS);
+  });
+
+  it("finds an image whose name Markdown percent-encoded", async () => {
+    await writeFile(join(now, "docs", "index.md"), "# I\n");
+    await writeFile(join(then, "docs", "index.md"), "# I\n\n![x](図.png) ![y](<a b.png>)\n");
+    await writeFile(join(then, "docs", "図.png"), "PNG");
+    await writeFile(join(then, "docs", "a b.png"), "PNG");
+    const sites = await prepared();
+    for (const image of images(sites.earlier, "index.md")) expect(image).toHaveProperty("hash");
+  });
+});
+
 describe("a build without a difference", () => {
   it("writes every page as it does without recording, and keeps no trees", async () => {
     await writeFile(
@@ -174,5 +223,16 @@ describe("a build without a difference", () => {
     expect(plain.trees).toBeUndefined();
     expect(recorded.trees?.size).toBe(1);
     expect(recorded.pages.map((p) => p.html)).toEqual(plain.pages.map((p) => p.html));
+    // And with the diagrams pre-rendered.
+    const fake = () => ({
+      async render(id: string) {
+        return `<svg id="${id}"><g/></svg>`;
+      },
+      async close() {},
+    });
+    const pre = { ...config, mermaidMode: "pre-render" as const };
+    const plainPre = await preparePages(pre, now, { mermaidPrerenderer: fake() });
+    const recordedPre = await preparePages(pre, now, { mermaidPrerenderer: fake(), record: true });
+    expect(recordedPre.pages.map((p) => p.html)).toEqual(plainPre.pages.map((p) => p.html));
   });
 });

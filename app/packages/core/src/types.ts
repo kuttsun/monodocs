@@ -198,21 +198,21 @@ export type RenderedContent = {
 };
 
 /**
- * How an AsciiDoc document writes the numbers Asciidoctor generates, read from the document itself
- * so that a caption it renamed (`:figure-caption: 図`) is still found (roadmap 7.3.2).
+ * The numbers Asciidoctor generated for an AsciiDoc document, read from its model after
+ * conversion, so that what is marked is what Asciidoctor wrote: a section numbered before the
+ * document turned `:sectnums:` off, an appendix's letter, a caption the document renamed
+ * (`:figure-caption: 図`), and nothing the author wrote that only looks like one (roadmap 7.3.2).
  */
 export type GeneratedNumbering = {
-  /** `:sectnums:` was set: section headings start with `1.2. `. */
-  sectnums: boolean;
   /**
-   * The caption word each kind of block's title is numbered with: `Figure` for an image, `Table`,
-   * `Example`, and `Listing` only where the document turned listing captions on.
+   * For each section heading, in document order, the text Asciidoctor put before its title —
+   * `1.2. `, `Appendix A: `, `A.1. ` — or null for one it left unnumbered.
    */
-  captions: Partial<Record<"figure" | "table" | "example" | "listing", string>>;
-  /** The word an appendix heading starts with, `Appendix` unless renamed or turned off. */
-  appendixCaption?: string;
-  /** The words a cross-reference's text names its target with: `Section`, `Appendix`, ... */
-  refsigs: string[];
+  sections: (string | null)[];
+  /** The captions it wrote, by the block they are on: `Figure 1. ` on an image, and so on. */
+  captions: Partial<Record<"figure" | "table" | "example" | "listing", string[]>>;
+  /** The text a cross-reference to a numbered target starts with: `Section 2`, `Figure 1`. */
+  references: string[];
 };
 
 /**
