@@ -1,4 +1,5 @@
 import type { Element, ElementContent, Root as HastRoot, Text } from "hast";
+import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
 import type { GeneratedNumbering, Page } from "../types.js";
 
@@ -159,10 +160,15 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
     typeof id === "string" && anonymous.test(id) && targetOf(id) === undefined;
   let unidentified = 0;
   // The document's own table of contents links a section without an ID as `#null`. Which sections
-  // it lists depends on more than one limit (`toclevels`, a `toc::[levels=]`, a section's own), but
-  // all of it is Asciidoctor's, so an entry is marked where it starts with one of their prefixes.
-  const listed = referencePattern(
-    numbering.unidentified.filter((heading): heading is string => heading !== null),
+  // it lists depends on more than one limit (`toclevels`, a `toc::[levels=]`, a section's own), so
+  // an entry is matched to its section by its text — the prefix and the title — not by its place.
+  const listed = new Map(
+    numbering.unidentified
+      .filter((section): section is { heading: string; title: string } => section.heading !== null)
+      .map((section) => [
+        `${section.heading}${section.title}`.replace(/\s+/g, " ").trim(),
+        section.heading,
+      ]),
   );
 
   visit(tree, "element", (node, _index, parent) => {
@@ -173,7 +179,7 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
       const id = node.properties.id;
       const heading =
         isAnonymous(id) && isSectionHeading(node, parent)
-          ? (numbering.unidentified[unidentified++] ?? undefined)
+          ? (numbering.unidentified[unidentified++]?.heading ?? undefined)
           : targetOf(id)?.heading;
       if (heading !== undefined && heading !== null) {
         markPrefix(node, new RegExp(escapeRegExp(heading)));
@@ -202,7 +208,8 @@ function markAsciidoc(tree: HastRoot, page: Page): void {
     // A link to a numbered target — the table of contents, a cross-reference — where its text
     // starts with what Asciidoctor wrote for it, and the number ends there.
     if (node.tagName === "a" && node.properties.href === "#null") {
-      if (listed !== undefined) markPrefix(node, listed);
+      const heading = listed.get(toText(node).replace(/\s+/g, " ").trim());
+      if (heading !== undefined) markPrefix(node, new RegExp(escapeRegExp(heading)));
       return;
     }
     if (node.tagName === "a") {

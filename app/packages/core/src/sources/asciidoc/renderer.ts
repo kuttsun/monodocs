@@ -3,6 +3,7 @@ import { load, LoggerManager, NullLogger, type Document, type Section } from "@a
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
+import { toText } from "hast-util-to-text";
 import type { Root as HastRoot } from "hast";
 import type {
   GeneratedNumbering,
@@ -293,6 +294,13 @@ export async function withoutAsciidoctorLog<T>(run: () => Promise<T>): Promise<T
   }
 }
 
+/** A converted title's text, as the HTML gives it: its markup and entities read. */
+function textOf(html: unknown): string {
+  if (typeof html !== "string") return "";
+  const tree = unified().use(rehypeParse, { fragment: true }).parse(html);
+  return toText(tree).replace(/\s+/g, " ").trim();
+}
+
 /** The block kinds Asciidoctor captions with a number, by the context it gives them. */
 const CAPTIONED: Record<string, keyof GeneratedNumbering["captions"]> = {
   image: "figure",
@@ -318,6 +326,7 @@ function numberingOf(doc: Document): GeneratedNumbering {
     sectnum?(delimiter?: string, append?: string): unknown;
     getSectionName?(): unknown;
     getLevel?(): number;
+    getTitle?(): unknown;
     /** The number Asciidoctor gave a captioned block; null where the author wrote the caption. */
     numeral?: unknown;
     rows?: Record<
@@ -357,7 +366,12 @@ function numberingOf(doc: Document): GeneratedNumbering {
         heading = `${signifier === undefined ? "" : `${signifier} `}${number} `;
       }
       // A section without an ID is found by its place among the others without one.
-      if (id === undefined) return void unidentified.push(heading ?? null);
+      if (id === undefined) {
+        return void unidentified.push({
+          heading: heading ?? null,
+          title: textOf(node.getTitle?.()),
+        });
+      }
       // Every section with an ID is a target, numbered or not, so its ID is known to be
       // Asciidoctor's and not one monodocs gave a heading without one.
       const refsig = attribute(`${name}-refsig`);

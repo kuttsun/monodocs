@@ -278,4 +278,12 @@ describe("marking generated numbers", () => {
     expect(found["m.adoc"]).toEqual(["1. ", "2. ", "1. ", "1.1. ", "2. "]);
     expect(found["z.adoc"]).toEqual(["1. ", "2. ", "1. ", "2. "]);
   });
+
+  it("leaves an author's number in an ID-less unnumbered section's contents entry", async () => {
+    const found = await marked({
+      "l.adoc": "= L\n:sectnums:\n:sectids!:\n:toc:\n\n== One\n\n:sectnums!:\n\n== 1. Literal\n",
+    });
+    // The contents entry and the heading of One; nothing of "1. Literal".
+    expect(found["l.adoc"]).toEqual(["1. ", "1. "]);
+  });
 });

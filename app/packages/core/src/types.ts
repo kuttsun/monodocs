@@ -212,10 +212,11 @@ export type GeneratedNumbering = {
    */
   targets: Record<string, { heading?: string; references: string[] }>;
   /**
-   * The heading prefix of each section Asciidoctor gave no ID (`:sectids!:`), in document order,
-   * null for one it left unnumbered.
+   * Each section Asciidoctor gave no ID (`:sectids!:`), in document order: its heading prefix,
+   * null for one it left unnumbered, and its title as text, by which its entry in the document's
+   * own table of contents (linked `#null`) is told from another's.
    */
-  unidentified: (string | null)[];
+  unidentified: { heading: string | null; title: string }[];
   /**
    * The captions it wrote, by the kind of block they are on: `Figure 1. ` on an image, and so on.
    * A caption the author wrote (`[caption="Mine: "]`) is the author's, and is not among them.
