@@ -73,12 +73,13 @@ pnpm cutoff when their CI runs.
 
 ### Site Dependency Security Override
 
-The standalone package under `site/` temporarily overrides Vite to `~6.4.3`: VitePress 1.6.4 declares Vite
+The standalone package under `site/` temporarily overrides Vite to `~6.4.4`: VitePress 1.6.4 declares Vite
 `^5.4.14`, which resolves to versions covered by the Vite and esbuild advisories Dependabot detects. The
 override is limited to Vite 6.4 patch releases and must keep passing `npm ci`, `npm audit`, and the VitePress
 production build. Revisit and remove it when upgrading to a stable VitePress release whose declared Vite
-range includes a secure version. Last checked 2026-10-01: stable is still VitePress 1.6.4 with `vite ^5.4.14` (VitePress 2 is alpha only,
-`2.0.0-alpha.20` on `next`), and `6.4.3` is still the newest Vite 6.4 patch, so the override stays.
+range includes a secure version. Last checked 2026-10-21: stable is still VitePress 1.6.4 with `vite ^5.4.14` (VitePress 2 is alpha only,
+`2.0.0-alpha.20` on `next`), so the override stays. It moved from `~6.4.3` to `~6.4.4` for the launch-editor advisories
+published 2026-10-20 (GHSA-587h-7wmj-h5pm, GHSA-698v-4r3x-3vcv, GHSA-r825-w8mm-5pxw), which cover Vite up to 6.4.3.
 
 ### Site Theme
 
