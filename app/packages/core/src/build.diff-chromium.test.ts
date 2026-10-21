@@ -377,6 +377,19 @@ describe.skipIf(!chromium)("a page whose only change is its note", () => {
           };
         });
         expect(at).toEqual({ hash: "#/new", shown: true });
+
+        // A marked block the navigation is on is ringed in the plain view too, its mark off.
+        await page.goto(`${pathToFileURL(html).href}#/a`);
+        await page.click('[data-monodocs-diff-view="current"]');
+        const ring = await page.evaluate(() => {
+          const block = document.createElement("p");
+          block.setAttribute("data-monodocs-diff-block", "ins");
+          block.className = "monodocs-diff-change-current";
+          document.querySelector("article:not([hidden])")!.appendChild(block);
+          const style = getComputedStyle(block);
+          return `${style.outlineStyle} ${style.backgroundColor}`;
+        });
+        expect(ring).toBe("solid rgba(0, 0, 0, 0)");
       } finally {
         await browser.close();
       }

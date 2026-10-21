@@ -327,6 +327,10 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
   color: inherit;
   text-decoration: none;
 }
+/* What the plain view takes off a block, the ring of the change the navigation is on puts back. */
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .monodocs-diff-change-current {
+  outline: 2px solid var(--color-accent, Highlight);
+}
 /* The in-page table of contents of a changed page: both versions' headings, the added and the
    deleted marked, each with the number of changes in its section. */
 .monodocs-diff-columns :is(h2, h3, h4, h5, h6) {
