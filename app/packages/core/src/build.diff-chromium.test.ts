@@ -207,3 +207,69 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
     }
   });
 });
+
+describe.skipIf(!chromium)("the in-page table of contents of a changed page", () => {
+  it("lists both versions' headings, marks the added and deleted, and counts each section", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-diff-toc-"));
+    try {
+      await write(join(dir, "then"), {
+        "docs/a.md": "# A\n\n## Kept\n\nOne.\n\nTwo.\n\n## Gone\n\nOld.\n",
+      });
+      await write(join(dir, "now"), {
+        "docs/a.md": "# A\n\n## Kept\n\nOne.\n\nNew.\n\n## Added\n\nFresh.\n",
+      });
+      const html = join(dir, "out.html");
+      vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
+      await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
+      vi.restoreAllMocks();
+      const puppeteer = await import("puppeteer-core");
+      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      try {
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1500, height: 900 });
+        await page.goto(`${pathToFileURL(html).href}#/a`);
+        const toc = () =>
+          page.evaluate(() =>
+            [...document.querySelectorAll("#toc-nav a[data-monodocs-diff-toc]")].map((a) =>
+              a.textContent!.replace(/\s+/g, " ").trim(),
+            ),
+          );
+        const settled = async (want: string[]) => {
+          for (let waited = 0; waited < 5000; waited += 100) {
+            if (JSON.stringify(await toc()) === JSON.stringify(want)) break;
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+          return toc();
+        };
+        // Side by side: Kept with its two changes, the deleted Gone and the added Added, each with
+        // itself and its paragraph.
+        expect(await settled(["Kept2", "−Gone2", "+Added2"])).toEqual([
+          "Kept2",
+          "−Gone2",
+          "+Added2",
+        ]);
+        // The new version's own view, plain: its headings alone, unmarked.
+        await page.click('[data-monodocs-diff-view="current"]');
+        expect(await settled(["Kept", "Added"])).toEqual(["Kept", "Added"]);
+        // A heading in the list opens its section.
+        await page.click('[data-monodocs-diff-toc="1"]');
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        const opened = await page.evaluate(() => {
+          const heading = [...document.querySelectorAll(".monodocs-diff-current h2")].find(
+            (h) => h.textContent === "Added",
+          )!;
+          const box = heading.getBoundingClientRect();
+          return {
+            inView: box.top >= 0 && box.bottom <= window.innerHeight,
+            active: document.querySelector("#toc-nav a.active")?.textContent?.trim(),
+          };
+        });
+        expect(opened).toEqual({ inView: true, active: "Added" });
+      } finally {
+        await browser.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

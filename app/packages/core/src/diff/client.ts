@@ -123,7 +123,6 @@ del[data-monodocs-diff] {
   grid-template-columns: minmax(0, 1fr);
   background: none;
 }
-:root[data-monodocs-diff-view="earlier"] #toc { visibility: hidden; }
 :root:not([data-monodocs-diff-view]) #content:has(.page:not([hidden]) .monodocs-diff-columns),
 :root[data-monodocs-diff-view="both"] #content:has(.page:not([hidden]) .monodocs-diff-columns) {
   max-width: none;
@@ -310,6 +309,32 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .sidebar-page[data-monodocs-diff-page="deleted"] > a {
   color: inherit;
   text-decoration: none;
+}
+/* The in-page table of contents of a changed page: both versions' headings, the added and the
+   deleted marked, each with the number of changes in its section. */
+.monodocs-diff-columns :is(h2, h3, h4, h5, h6) {
+  scroll-margin-top: calc(var(--monodocs-diff-bar-height) + 3.5rem);
+}
+.monodocs-diff-toc a { display: flex; align-items: baseline; gap: 0.4em; }
+.monodocs-diff-toc-text { min-width: 0; }
+.monodocs-diff-toc-sign { flex: none; font-weight: 700; }
+.monodocs-diff-toc-ins .monodocs-diff-toc-sign { color: var(--monodocs-diff-added); }
+.monodocs-diff-toc-del .monodocs-diff-toc-sign { color: var(--monodocs-diff-deleted); }
+.monodocs-diff-toc-del .monodocs-diff-toc-text {
+  text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 70%, transparent);
+}
+.monodocs-diff-toc-count {
+  margin-inline-start: auto;
+  flex: none;
+  min-width: 1.4em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  font-size: 0.75em;
+  line-height: 1.6;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--monodocs-diff-changed);
+  background: color-mix(in srgb, var(--monodocs-diff-changed) 14%, transparent);
 }
 @media print { .monodocs-diff-bar { display: none; } }
 `;
@@ -547,6 +572,120 @@ export const DIFF_SCRIPT = `(function () {
     reveal();
     align();
     count();
+    drawToc();
+  }
+
+  // The in-page table of contents of a changed page, drawn into the theme's own place for it: the
+  // headings of the columns shown, in the order the alignment puts them, a pair once; side by side,
+  // or with the changes shown, the added and deleted marked and each with the changes in its section.
+  var tocEntries = [];
+  function tocLevel() {
+    var data = window.__MONODOCS_DATA__;
+    return data && typeof data.tocMaxLevel === "number" ? data.tocMaxLevel : 3;
+  }
+  function marksShown() {
+    return view === "both" || marks;
+  }
+  function escapeText(text) {
+    return text.replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function drawToc() {
+    var nav = document.getElementById("toc-nav");
+    var article = shown();
+    tocEntries = [];
+    if (!nav || !article) return;
+    var columns = article.querySelector(".monodocs-diff-columns");
+    if (!columns) return;
+    var levels = [];
+    for (var level = 2; level <= tocLevel(); level++) levels.push("h" + level);
+    var visible = function (node) { return node.offsetParent !== null; };
+    var seen = {};
+    var headings = own(columns, levels.join(",")).filter(visible).filter(function (heading) {
+      var pair = heading.getAttribute("data-monodocs-diff-pair");
+      if (pair === null) return true;
+      if (seen[pair]) return false;
+      seen[pair] = true;
+      return true;
+    });
+    var top = function (node) { return node.getBoundingClientRect().top; };
+    headings.sort(function (a, b) {
+      var d = top(a) - top(b);
+      if (Math.abs(d) >= 1) return d;
+      return a.closest(".monodocs-diff-earlier") ? -1 : 1;
+    });
+    var shownMarks = marksShown();
+    var changed = changes(article).filter(function (node) {
+      return node.hasAttribute("data-monodocs-diff-block");
+    });
+    // A section's changes are counted in its own column, up to the column's next heading; an
+    // unchanged heading's, in both columns.
+    var inColumn = function (column) {
+      return own(column, levels.join(",")).filter(visible);
+    };
+    var lists = [inColumn(columns.children[0]), inColumn(columns.children[1])];
+    var section = function (heading) {
+      var column = heading.closest(".monodocs-diff-earlier") ? 0 : 1;
+      var list = lists[column];
+      var at = list.indexOf(heading);
+      var from = top(heading);
+      var to = at + 1 < list.length ? top(list[at + 1]) : Infinity;
+      return changed.filter(function (node) {
+        var place = top(node);
+        return node.closest(".monodocs-diff-columns > div") === columns.children[column] &&
+          place >= from - 1 && place < to - 1;
+      }).length;
+    };
+    var partner = function (heading) {
+      var pair = heading.getAttribute("data-monodocs-diff-pair");
+      if (pair === null) return null;
+      var other = heading.closest(".monodocs-diff-earlier") ? columns.children[1] : columns.children[0];
+      var found = other.querySelector('[data-monodocs-diff-pair="' + pair + '"]');
+      return found && visible(found) ? found : null;
+    };
+    var html = '<ul class="toc-list monodocs-diff-toc">';
+    headings.forEach(function (heading, i) {
+      var state = heading.getAttribute("data-monodocs-diff-block");
+      var other = partner(heading);
+      var count = section(heading) + (other ? section(other) : 0);
+      var number = heading.querySelector(".section-number");
+      var text = (heading.textContent || "").replace(number ? number.textContent : "", "").trim();
+      var kind = shownMarks && state ? " monodocs-diff-toc-" + state : "";
+      tocEntries.push(heading);
+      html +=
+        '<li class="toc-item toc-level-' + heading.tagName.slice(1) + kind + '">' +
+        '<a href="#" data-monodocs-diff-toc="' + i + '">' +
+        (shownMarks && state ? '<span class="monodocs-diff-toc-sign" aria-hidden="true">' + (state === "ins" ? "+" : "−") + "</span>" : "") +
+        '<span class="monodocs-diff-toc-text">' +
+        (number ? '<span class="section-number">' + escapeText(number.textContent) + "</span> " : "") +
+        escapeText(text) + "</span>" +
+        (shownMarks && count > 0 ? '<span class="monodocs-diff-toc-count">' + count + "</span>" : "") +
+        "</a></li>";
+    });
+    html += "</ul>";
+    var toc = document.getElementById("toc");
+    if (toc) toc.hidden = headings.length === 0;
+    if (nav.innerHTML !== html) nav.innerHTML = html;
+    spyToc();
+  }
+  // The heading read now: the last whose top has passed under the bar and the column headings.
+  function spyToc() {
+    var nav = document.getElementById("toc-nav");
+    if (!nav || tocEntries.length === 0) return;
+    var line = (parseFloat(getComputedStyle(root).getPropertyValue("--monodocs-diff-bar-height")) || 52) + 80;
+    var current = -1;
+    tocEntries.forEach(function (heading, i) {
+      if (heading.getBoundingClientRect().top <= line) current = i;
+    });
+    // At the end of the page the last headings can rise no further: the last is the one read.
+    var scroller = document.scrollingElement || root;
+    if (scroller.scrollTop + window.innerHeight >= scroller.scrollHeight - 2) {
+      current = tocEntries.length - 1;
+    }
+    Array.prototype.forEach.call(nav.querySelectorAll("a[data-monodocs-diff-toc]"), function (link) {
+      link.classList.toggle("active", Number(link.getAttribute("data-monodocs-diff-toc")) === Math.max(current, 0));
+    });
   }
 
   // The search highlight does not stay in the earlier column (22.5).
@@ -568,7 +707,7 @@ export const DIFF_SCRIPT = `(function () {
   var pending = 0;
   function later() {
     clearTimeout(pending);
-    pending = setTimeout(function () { measure(); align(); count(); }, 60);
+    pending = setTimeout(function () { measure(); align(); count(); drawToc(); }, 60);
   }
 
   function start() {
@@ -581,6 +720,13 @@ export const DIFF_SCRIPT = `(function () {
       }
     });
     document.addEventListener("click", function (event) {
+      var entry = event.target.closest && event.target.closest("a[data-monodocs-diff-toc]");
+      if (entry) {
+        event.preventDefault();
+        var heading = tocEntries[Number(entry.getAttribute("data-monodocs-diff-toc"))];
+        if (heading) heading.scrollIntoView({ block: "start" });
+        return;
+      }
       var button = event.target.closest && event.target.closest(".monodocs-diff-bar button");
       if (!button) return;
       if (button.hasAttribute("data-monodocs-diff-view")) setView(button.getAttribute("data-monodocs-diff-view"));
@@ -592,6 +738,12 @@ export const DIFF_SCRIPT = `(function () {
       later();
     });
     window.addEventListener("resize", later);
+    var spying = false;
+    window.addEventListener("scroll", function () {
+      if (spying) return;
+      spying = true;
+      requestAnimationFrame(function () { spying = false; spyToc(); });
+    }, { passive: true });
     document.addEventListener("load", later, true);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
     // What changes in the page — a diagram drawn, the search highlight — calls for the columns to be

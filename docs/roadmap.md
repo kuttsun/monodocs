@@ -1437,12 +1437,22 @@ version — for `--diff-from`, a directory that no longer exists. The build fail
 `internal/unexpected` if an ID from the earlier tree survived without being renamed, inside an SVG
 or outside one.
 
-**What the reader navigates by is the new version's.** The in-page table of contents, search, and
-the printed table of contents (24.9) are built from `Page.headings` and `Page.text`, which are the
-new version's and are not touched; the PDF outline is built from the sidebar and lists pages only. A
-heading only the earlier column has is therefore in none of them, and in the earlier-version view
-the in-page table of contents is not shown. The in-body search highlight (22.5) does not stay in the
-earlier column, so the highlight agrees with the index about what the document contains.
+**What the reader searches is the new version's.** Search and the printed table of contents (24.9)
+are built from `Page.headings` and `Page.text`, which are the new version's and are not touched; the
+PDF outline is built from the sidebar and lists pages only. A heading only the earlier column has is
+therefore in none of them. The in-body search highlight (22.5) does not stay in the earlier column,
+so the highlight agrees with the index about what the document contains.
+
+**The in-page table of contents follows the view, as the sidebar does.** On a changed page, side by
+side, it lists both versions' headings in the order the alignment puts them, an unchanged pair once,
+an added heading marked `+` in green and a deleted one struck through and marked `−` in red, each
+with the number of changes in its section — counted in its own column up to that column's next
+heading, both columns for an unchanged pair. In a version's own view it lists that version's
+headings, marked and counted only when the box shows the changes. A heading in it opens its section
+in the columns shown, the earlier column's included, though that has no ID. The difference's script
+draws it into the theme's own place for it, `#toc-nav`, in the theme's markup (`ul.toc-list`,
+`li.toc-item.toc-level-N`, the `active` class on the heading read); a page that did not change keeps
+the theme's own table of contents, and a theme without `#toc-nav` keeps its own on every page.
 
 **The list of changes is the first page.** It is generated, not read from a file, and the document
 opens on it. Its route is `//changes`: a route built from a path never has an empty segment (15.1),

@@ -432,11 +432,11 @@ describe("pages and the sidebar carry their state", () => {
     await write(now, files);
     await buildSite({ outputFile: out() });
     const plain = await readFile(out(), "utf8");
-    // In the body: the sidebar shows them too, once a view.
     const numbers = (html: string) =>
       [
         ...html
-          .slice(html.indexOf('<main id="content"'))
+          // The body alone: the sidebar shows them once a view, and the script spells the markup.
+          .slice(html.indexOf('<main id="content"'), html.indexOf("</main>"))
           .matchAll(/<span class="section-number"[^>]*>([^<]*)<\/span> ([^<]*)/g),
       ]
         .map((m) => `${m[1]} ${m[2]}`)
