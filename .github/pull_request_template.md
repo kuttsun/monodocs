@@ -26,6 +26,8 @@
 
 ## Checklist
 
+<!-- The description becomes the body of the commit on main. Before merging, remove this checklist, the template's comments (including this one), and empty sections, and bring the description up to date with the final change. -->
+
 - [ ] I kept this change focused and excluded unrelated formatting or refactoring.
 - [ ] I added or updated tests for behavior changes, or explained why tests are not needed.
 - [ ] I updated both English and Japanese versions of the README and relevant documentation for user-facing changes, or the change does not require documentation updates.

@@ -73,13 +73,25 @@ scripts/app.sh pnpm exec vitest run -t "rewrites links"
 - 依存関係を追加する前に、目的、バンドルサイズ、ライセンス互換性、単一ファイル配布への影響を確認してください。
 - 変更範囲を絞り、無関係なフォーマット変更やリファクタリングを混在させないでください。
 
-機能はロードマップのバージョン単位で整理します。バージョンの区切りでは `docs/status.md` / `docs/ja/status.md` と `docs/testing.md` / `docs/ja/testing.md` を更新してください。コミットメッセージは Conventional Commits の接頭辞、英語の説明、末尾の対象バージョンを使用します。
+機能はロードマップのバージョン単位で整理します。バージョンの区切りでは `docs/status.md` / `docs/ja/status.md` と `docs/testing.md` / `docs/ja/testing.md` を更新してください。
+
+## Pull Request
+
+### 範囲
+
+1 つの Pull Request は、1 つの目的で説明でき、単独でマージに必要なステータスチェック（[マージ](#マージ)を参照）を通る変更にしてください。大きな機能は、この条件を満たす段階ごとの Pull Request に分けます。
+
+### タイトル
+
+Pull Request のタイトルが `main` 上のコミットの件名になります。Conventional Commits の接頭辞、英語の説明、末尾の対象ロードマップバージョンを使用します。
 
 ```text
 feat: add search indexing (v0.4)
 ```
 
-## Pull Request
+マージ時に GitHub がバージョンの後ろに Pull Request 番号を付けるので、`main` 上のコミットは `feat: add search indexing (v0.4) (#123)` になります。この規約は Pull Request のタイトルにだけ適用し、Pull Request 内のコミットには適用しません。Dependabot などの自動化が作る Pull Request も同じ規約に従い、マージ前にタイトルと説明を直します。
+
+### 説明
 
 Pull Request の説明には少なくとも次を含めてください。
 
@@ -87,6 +99,14 @@ Pull Request の説明には少なくとも次を含めてください。
 - 主な実装変更
 - 実施した検証
 - 既知の制限または後続作業
+
+説明は `main` 上のコミットの本文になります。マージ前に、変更の理由、主な設計判断、検証結果を最終的な変更に合わせて書き直し、テンプレートのチェックリスト、HTML コメント、空のままの節、変更に合わなくなった説明を取り除いてください。HTML コメントは GitHub の画面には表示されませんが、コミット本文には残ります。議論は Pull Request の会話に残し、今後の保守に必要な理由は説明に残します。
+
+### マージ
+
+`main` へは squash merge で取り込みます。1 つの Pull Request が `main` 上の 1 つのコミットになります。Pull Request 内のコミット数、メッセージ、途中のコミットがチェックを通るかどうかは問いません。提出前に squash したり履歴を整理したりする必要はありません。ただし、競合の解消は必要になることがあります。また、ほかの Pull Request に依存する Pull Request は、依存先がマージされた後に新しい `main` へ rebase し直す必要があることがあります。
+
+マージするには、必須のステータスチェック（App CI (Linux)、App CI (Windows)、Site CI）が通り、ブランチが `main` に追従し、レビューの会話が解決済みである必要があります。Pull Request の CI は、ブランチを `main` にマージした結果を検証します。Pull Request 内の個々のコミットは検証しません。Pull Request が 1 つの目的にまとまっていれば、`main` 上のそのコミットを revert するとその変更だけを取り除けます。`git bisect` では回帰をその Pull Request まで絞り込めますが、Pull Request 内のコミットまでは絞り込めません。
 
 ## ライセンス
 
