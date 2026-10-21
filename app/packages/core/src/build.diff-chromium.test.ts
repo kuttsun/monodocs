@@ -212,6 +212,14 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       await new Promise((resolve) => setTimeout(resolve, 300));
       await page.click('[data-monodocs-diff-view="earlier"]');
       expect(await marked()).toEqual({ band: false, badge: false, box: "clear" });
+      // The bar names the version; the column's own heading is for telling two apart.
+      expect(
+        await page.evaluate(() =>
+          [...document.querySelectorAll("article:not([hidden]) .monodocs-diff-column-title")].every(
+            (title) => getComputedStyle(title).display === "none",
+          ),
+        ),
+      ).toBe(true);
       await page.click("[data-monodocs-diff-marks-toggle]");
       expect(await marked()).toEqual({ band: true, badge: true, box: "ticked" });
       // Side by side always marks: the box stays in view, ticked and fixed; the choice comes back.

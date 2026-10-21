@@ -1428,8 +1428,9 @@ route を続けたものにする。`//changes` が取られないのと同じ�
 数えない。
 
 残りは段階 1 で次のように決めた。2 つの列は、`div.monodocs-diff-columns` の中の
-`div.monodocs-diff-earlier` と `div.monodocs-diff-current` で、それぞれの先頭に版の名前——
-`labels.diffViewEarlier` または `labels.diffViewCurrent`——を置く。ビューポートの幅が 1000px 未満では
+`div.monodocs-diff-earlier` と `div.monodocs-diff-current` で、左右で比較する表示では、それぞれの
+先頭に版の名前——`labels.diffViewEarlier` または `labels.diffViewCurrent`——を置く。片方の版の表示では
+バーが版を示すので、この見出しは出さない。ビューポートの幅が 1000px 未満では
 上下に並ぶ。対はページごとに、高さをそろえる順で 1 から番号を振る。スクリプトは、高い位置にある方の
 ブロックの上の余白を足し、2 つの差が 1 ピクセル以内になるまで測り直してそろえる。表の行は 1 行ずつは
 そろえず、表はその後ろにあるもので位置がそろう。旧版の列は、`markup` が削除された内容を書くのと同じ規則（7.3.5）で

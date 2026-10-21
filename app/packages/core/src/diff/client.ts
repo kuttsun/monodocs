@@ -118,6 +118,9 @@ del[data-monodocs-diff] {
 .monodocs-diff-current .monodocs-diff-column-title::before { background: var(--monodocs-diff-added); }
 :root[data-monodocs-diff-view="current"] .monodocs-diff-earlier,
 :root[data-monodocs-diff-view="earlier"] .monodocs-diff-current { display: none; }
+/* A column's heading tells the two apart; a version's own view is that version, named by the bar. */
+:root[data-monodocs-diff-view="current"] .monodocs-diff-column-title,
+:root[data-monodocs-diff-view="earlier"] .monodocs-diff-column-title { display: none; }
 :root[data-monodocs-diff-view="current"] .monodocs-diff-columns,
 :root[data-monodocs-diff-view="earlier"] .monodocs-diff-columns {
   grid-template-columns: minmax(0, 1fr);

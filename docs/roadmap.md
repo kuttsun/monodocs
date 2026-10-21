@@ -1560,8 +1560,9 @@ image is counted once under `images`, whichever version it came from, and nothin
 lines.
 
 Stage 1 decided the rest this way. The columns are a `div.monodocs-diff-columns` holding a
-`div.monodocs-diff-earlier` and a `div.monodocs-diff-current`, each headed by its version's name,
-`labels.diffViewEarlier` or `labels.diffViewCurrent`; they stand one above the other below 1000px of
+`div.monodocs-diff-earlier` and a `div.monodocs-diff-current`, each headed, side by side, by its
+version's name, `labels.diffViewEarlier` or `labels.diffViewCurrent` — in a version's own view the
+bar names the version and the heading is not shown; they stand one above the other below 1000px of
 viewport width. The pairs are numbered from 1 on each page, in the order of the alignment, and the
 script lines a pair up by adding to the top margin of the higher block, measuring again until the
 two are within a pixel; a table's rows are not lined up one by one — a table is lined up by what
