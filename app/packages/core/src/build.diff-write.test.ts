@@ -146,8 +146,12 @@ function violations(html: string): string[] {
         out.push(`two ${tag} in ${node.tagName}`);
     }
     if (node.tagName === "table") {
-      const caption = children.findIndex((c) => c.tagName === "caption");
-      if (caption > 0) out.push("caption not first");
+      // caption, colgroup, thead, tbody, tfoot, in that order.
+      const order = ["caption", "colgroup", "thead", "tbody", "tfoot"];
+      const ranks = children.map((c) => order.indexOf(c.tagName));
+      if (ranks.some((rank, i) => i > 0 && rank < ranks[i - 1]!)) {
+        out.push(`table parts out of order: ${children.map((c) => c.tagName).join(" ")}`);
+      }
     }
   });
   return out;
@@ -273,6 +277,16 @@ describe("where a deleted block goes", () => {
     expect(html).toMatch(/<div class="admonition admonition-note"><p class="admonition-title">/);
     expect(html).toContain('<div class="openblock">');
     expectValid(html);
+    // A whole table deleted keeps its caption, columns, and rows in the order a table has them.
+    const table = await onePage(
+      "docs/a.adoc",
+      "= A\n\nKeep.\n\n.Old table\n[cols=2]\n|===\n|H1 |H2\n\n|a |b\n|===\n",
+      "= A\n\nKeep.\n",
+    );
+    expect(table).toMatch(
+      /<table[^>]*><caption[\s\S]*<\/caption><colgroup>[\s\S]*<\/colgroup><thead>/,
+    );
+    expectValid(table);
   });
 
   it("joins a deleted caption to the table's one caption, before the new text", async () => {

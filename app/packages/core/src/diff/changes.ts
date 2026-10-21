@@ -154,22 +154,23 @@ export function writeDiffDocument(
   };
   const sections: string[] = [];
   const headings: Page["headings"] = [];
-  const section = (key: string, label: string, body: string) => {
+  const section = (key: string, label: string, body: () => string) => {
     const sectionId = `${id}-${key}`;
+    // The section's heading before the ones its body adds, as the reader meets them.
     headings.push({ level: 2, id: sectionId, text: label });
-    sections.push(`<h2 id="${sectionId}">${escapeHtml(label)}</h2>\n${body}`);
+    sections.push(`<h2 id="${sectionId}">${escapeHtml(label)}</h2>\n${body()}`);
   };
   const list = (items: string[]) =>
     `<ul>\n${items.map((item) => `<li>${item}</li>`).join("\n")}\n</ul>`;
   const ordered = inSidebarOrder(next.pages, next.sidebar);
 
   const addedPages = ordered.filter((page) => states.get(page.id) === "added");
-  if (addedPages.length > 0) section("added", labels.diffAddedPages, list(addedPages.map(link)));
+  if (addedPages.length > 0) {
+    section("added", labels.diffAddedPages, () => list(addedPages.map(link)));
+  }
   const movedPages = ordered.flatMap((page) => moved.get(page.id) ?? []);
   if (movedPages.length > 0) {
-    section(
-      "moved",
-      labels.diffMovedPages,
+    section("moved", labels.diffMovedPages, () =>
       list(
         movedPages.map(
           (page) =>
@@ -181,9 +182,7 @@ export function writeDiffDocument(
   }
   const changedPages = ordered.flatMap((page) => changed.get(page.id) ?? []);
   if (changedPages.length > 0) {
-    section(
-      "changed",
-      labels.diffChangedPages,
+    section("changed", labels.diffChangedPages, () =>
       list(
         changedPages.map(
           (page) =>
@@ -201,29 +200,30 @@ export function writeDiffDocument(
   );
   let deletedDiagrams = 0;
   if (deletedPages.length > 0) {
-    const parts = deletedPages.map((page, i) => {
-      const tree = old.trees.get(page.old.id);
-      let content = "";
-      if (tree !== undefined) {
-        const target: HastRoot = { type: "root", children: [] };
-        const blocks = blocksOf(tree, page.old.id);
-        deletedDiagrams += writeDifference(
-          target,
-          tree,
-          blocks.map((block) => ({ op: "delete" as const, old: block })),
-          context.write,
-        );
-        content = toHtml(target, { allowDangerousHtml: true });
-      }
-      const headingId = `${id}-deleted-${i + 1}`;
-      headings.push({ level: 3, id: headingId, text: page.old.title });
-      const merged =
-        page.mergedInto === undefined
-          ? ""
-          : `<p>${escapeHtml(labels.diffMergedInto)} ${link(page.mergedInto)}</p>\n`;
-      return `<h3 id="${headingId}">${escapeHtml(page.old.title)}</h3>\n${merged}${content}`;
-    });
-    section("deleted", labels.diffDeletedPages, parts.join("\n"));
+    const parts = () =>
+      deletedPages.map((page, i) => {
+        const tree = old.trees.get(page.old.id);
+        let content = "";
+        if (tree !== undefined) {
+          const target: HastRoot = { type: "root", children: [] };
+          const blocks = blocksOf(tree, page.old.id);
+          deletedDiagrams += writeDifference(
+            target,
+            tree,
+            blocks.map((block) => ({ op: "delete" as const, old: block })),
+            context.write,
+          );
+          content = toHtml(target, { allowDangerousHtml: true });
+        }
+        const headingId = `${id}-deleted-${i + 1}`;
+        headings.push({ level: 3, id: headingId, text: page.old.title });
+        const merged =
+          page.mergedInto === undefined
+            ? ""
+            : `<p>${escapeHtml(labels.diffMergedInto)} ${link(page.mergedInto)}</p>\n`;
+        return `<h3 id="${headingId}">${escapeHtml(page.old.title)}</h3>\n${merged}${content}`;
+      });
+    section("deleted", labels.diffDeletedPages, () => parts().join("\n"));
   }
   const nothing = states.size === 0 && deleted.size === 0;
   const tail =

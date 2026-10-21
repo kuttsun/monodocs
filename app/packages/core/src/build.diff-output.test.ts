@@ -60,7 +60,14 @@ async function built(
 type SiteData = {
   initialRoute: string;
   labels: Record<string, string>;
-  pages: { route: string; title: string; hidden: boolean; diff?: string; number?: string }[];
+  pages: {
+    route: string;
+    title: string;
+    hidden: boolean;
+    diff?: string;
+    number?: string;
+    headings: { text: string; level: number }[];
+  }[];
 };
 
 function siteData(html: string): SiteData {
@@ -146,6 +153,14 @@ describe("the list of changes", () => {
       '<p data-monodocs-diff-block="del"><del data-monodocs-diff="">Gone text.</del></p>',
     );
     expect(list).not.toContain("No changes.");
+    // Its table of contents reads the sections in order, each deleted page under its own.
+    expect(data.pages[0]!.headings.map((h) => `${h.level} ${h.text}`)).toEqual([
+      "2 Added pages",
+      "2 Moved pages",
+      "2 Changed pages",
+      "2 Deleted pages",
+      "3 Gone",
+    ]);
   });
 
   it("says when nothing changed, and names both versions in its title", async () => {

@@ -472,6 +472,8 @@ export function writeDifference(
       }
     }
     at ??= parent.children.length;
+    if (parent.type === "element" && parent.tagName === "table")
+      at = inTableOrder(parent, at, node);
     return node.tagName === "tr" ? afterSpans(parent, at) : at;
   };
 
@@ -569,6 +571,33 @@ export function writeDifference(
   for (const list of lists) numberItems(list);
   for (const node of fromEarlier) assertNoEarlierId(node, options);
   return edits.filter((edit) => edit.op === "delete" && edit.old.kind === "diagram").length;
+}
+
+/** Where each part of a table stands among the others: its caption, columns, head, body, foot. */
+const TABLE_ORDER: Record<string, number> = {
+  caption: 0,
+  colgroup: 1,
+  thead: 2,
+  tbody: 3,
+  tr: 3,
+  tfoot: 4,
+};
+
+/** `at`, moved so that `node` stands in a table where its content model puts it. */
+function inTableOrder(table: Element, at: number, node: Element): number {
+  const rank = TABLE_ORDER[node.tagName];
+  if (rank === undefined) return at;
+  const children = kids(table);
+  let after = 0;
+  let before = children.length;
+  children.forEach((child, i) => {
+    if (child.type !== "element") return;
+    const other = TABLE_ORDER[child.tagName];
+    if (other === undefined) return;
+    if (other < rank) after = i + 1;
+    else if (other > rank && i < before) before = i;
+  });
+  return Math.min(Math.max(at, after), before);
 }
 
 /**
