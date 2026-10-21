@@ -107,7 +107,7 @@ On success it prints the number of pages generated and the output path. Warnings
 
 ### The difference from an earlier version {#difference}
 
-When a revised document is handed over, `--diff-from` and `--diff-from-dir` build the HTML with the difference from an earlier version written into it, for readers who do not look at Git. See the [difference sample](https://kuttsun.github.io/monodocs/diff-sample.html).
+When a revised document is handed over, `--diff-from` and `--diff-from-dir` build the HTML with the difference from an earlier version written into it, for readers who do not look at Git. See the <a href="../diff-sample.html" target="_blank" rel="noopener">difference sample</a>.
 
 ```bash
 # The earlier version as a git tag, branch, or commit
@@ -130,7 +130,7 @@ A block is compared by what it reads as: a link's target, emphasis, a table's fr
 
 - `--diff-from <ref>` reads the files a checkout of the ref would give, from the repository the current directory is in, without touching its working tree, index, or refs. It needs `git` on `PATH`, and, in CI, the history: check out with `fetch-depth: 0`. Files stored in LFS need git-lfs; a page, include, or image that comes out as an LFS pointer is `diff/lfs-pointer`. Submodules come out empty, as in a checkout without `--recurse-submodules`.
 - `--diff-from-dir <dir>` names the earlier version's counterpart of the **current directory**, not of the input: run from a project's root with `./docs` as the input, `--diff-from-dir ../project-1.2` reads `../project-1.2/docs`. The input argument and `-c` are mapped the same way. Its name in the output is the path as written, so prefer a relative path or a `document.version`.
-- The earlier version uses its own configuration for what the document contains — `input`, `root`, `sources.*`, the sidebar's settings, `math.enabled`, `mermaid.enabled` — and the new one for how the output looks. A path the earlier version does not have, or one that leaves it, is `diff/outside-version`: a version whose document directory was later renamed is passed as a copy laid out as the new one, with `--diff-from-dir`.
+- The earlier version uses its own configuration for what the document contains — `input`, `root`, `sources.*`, `sidebar.mode`, `sidebar.items`, `sidebar.titleFrom`, `sidebar.titleTransform`, `sidebar.flattenSingleChild`, `math.enabled`, `mermaid.enabled` — and the new one for how the output looks. A path the earlier version does not have, or one that leaves it, is `diff/outside-version`: a version whose document directory was later renamed is passed as a copy laid out as the new one, with `--diff-from-dir`.
 - Warnings from the earlier build are not reported, since a released version cannot be fixed; an error in it stops the build.
 
 The two options cannot be used together (`diff/conflicting-options`), exist on `build` only, and have no key in the configuration file. The difference is HTML only for now: with a PDF output, from `-f pdf`, `-f both`, or `output.format`, the build stops with `diff/unsupported`. The wording of the bar, the list, and the notes follows `lang` and can be changed with [`html.labels`](/docs/configuration#html-labels); the [size report](/docs/configuration#assets) gains a `difference` line.

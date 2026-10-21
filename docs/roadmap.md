@@ -1581,9 +1581,10 @@ script lines a pair up by adding to the top margin of the higher block, measurin
 two are within a pixel; a table's rows are not lined up one by one — a table is lined up by what
 follows it. The earlier column is cloned by the rules `markup` writes deleted
 content by (7.3.5) — how an SVG's IDs, a diagram's, links, generated numbers, and files are handled
-is recorded there. The list of changes' page ID is `diff-changes`, with `-x` added
-until no page has it, no element has its article's ID, and no element ID starts with it followed by
-a hyphen, as a page's own IDs do. A
+is recorded there. The list of changes' page ID is `diff-changes`, and a deleted
+page's is `deleted-` followed by its earlier page ID, each with `-x` added until no page has it, no
+element has it or its article's ID, and no element ID starts with it followed by a hyphen, as a
+page's own IDs do. A
 page's note is a `div.monodocs-diff-note` at the top of its article, one paragraph per thing it says,
 and a moved page whose front-matter title also changed says both in one note. The sidebar's symbol is
 a `span.monodocs-diff-mark` with `aria-hidden`, and its label a `span.monodocs-diff-label`, which the

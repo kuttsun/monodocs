@@ -100,7 +100,7 @@ monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 
 ### 以前の版との差分 {#difference}
 
-改訂した文書を渡すとき、`--diff-from` と `--diff-from-dir` は、以前の版との差分を書き込んだ HTML をビルドします。Git を見ない読み手のためのものです。[差分のサンプル](https://kuttsun.github.io/monodocs/ja/diff-sample.html)を見てください。
+改訂した文書を渡すとき、`--diff-from` と `--diff-from-dir` は、以前の版との差分を書き込んだ HTML をビルドします。Git を見ない読み手のためのものです。<a href="../diff-sample.html" target="_blank" rel="noopener">差分のサンプル</a>を見てください。
 
 ```bash
 # 以前の版を git のタグ、ブランチ、コミットで指定する
@@ -123,10 +123,10 @@ monodocs build ./docs -o ./dist/docs.html --diff-from-dir ../project-1.2
 
 - `--diff-from <ref>` は、その ref をチェックアウトしたときに得られるファイルを、現在のディレクトリがあるリポジトリから読みます。作業ツリー、インデックス、ref には触れません。`PATH` に `git` が必要で、CI では履歴も要ります。`fetch-depth: 0` でチェックアウトしてください。LFS に置いたファイルには git-lfs が要り、ページ、include、画像が LFS のポインタのまま出てくると `diff/lfs-pointer` になります。サブモジュールは、`--recurse-submodules` を付けないチェックアウトと同じく空で出ます。
 - `--diff-from-dir <dir>` は、入力ではなく**現在のディレクトリ**に当たる以前の版のディレクトリを指します。プロジェクトのルートで `./docs` を入力として実行すると、`--diff-from-dir ../project-1.2` は `../project-1.2/docs` を読みます。入力の引数と `-c` も同じように読み替えます。出力での名前は書いたとおりのパスなので、相対パスか `document.version` を使ってください。
-- 以前の版は、文書が何を含むか——`input`、`root`、`sources.*`、サイドバーの設定、`math.enabled`、`mermaid.enabled`——を自分の設定から取り、出力の見た目は新しい版の設定に従います。以前の版に無いパスや、以前の版の外に出るパスは `diff/outside-version` になります。文書のディレクトリをあとで改名した版は、新しい版と同じ配置にした写しを `--diff-from-dir` で渡してください。
+- 以前の版は、文書が何を含むか——`input`、`root`、`sources.*`、`sidebar.mode`、`sidebar.items`、`sidebar.titleFrom`、`sidebar.titleTransform`、`sidebar.flattenSingleChild`、`math.enabled`、`mermaid.enabled`——を自分の設定から取り、出力の見た目は新しい版の設定に従います。以前の版に無いパスや、以前の版の外に出るパスは `diff/outside-version` になります。文書のディレクトリをあとで改名した版は、新しい版と同じ配置にした写しを `--diff-from-dir` で渡してください。
 - 以前の版のビルドが出す警告は報告しません。リリースした版は直せないからです。以前の版のビルドのエラーはビルドを止めます。
 
-2 つのオプションは同時に使えず（`diff/conflicting-options`）、`build` にだけあり、設定ファイルのキーはありません。差分は今のところ HTML だけです。`-f pdf`、`-f both`、`output.format` のどれで PDF を出力しても、ビルドは `diff/unsupported` で止まります。バー、一覧、注記の文言は `lang` に従い、[`html.labels`](/ja/docs/configuration#html-labels) で変えられます。[サイズの報告](/ja/docs/configuration#assets)には `difference` の行が加わります。
+2 つのオプションは同時に使えず（`diff/conflicting-options`）、`build` にだけあり、設定ファイルのキーはありません。差分は今のところ HTML だけです。`-f pdf`、`-f both`、`output.format` のどれで PDF を出力しても、ビルドは `diff/unsupported` で止まります。バー、一覧、注記の文言は `lang` に従い、[`html.labels`](/ja/docs/configuration#html-labels) で変えられます。[サイズの報告](/ja/docs/configuration#assets)には `差分` の行が加わります。
 
 ## `watch`
 

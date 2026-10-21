@@ -13,7 +13,7 @@ import {
   type ResolvedConfig,
 } from "./config";
 import { DIAGNOSTIC_CODES, DIAGNOSTICS_SCHEMA_VERSION } from "./diagnostics";
-import { allocatePageId, CHANGES_ROUTE, changesPageId, DELETED_ROUTE } from "./diff/changes";
+import { CHANGES_ROUTE, changesPageId, DELETED_ROUTE, deletedPageId } from "./diff/changes";
 import { DEFAULT_MESSAGE_LANG, resolveMessageLang } from "./messages";
 import { DEFAULT_PDF_FOOTER, EMPTY_PDF_BAND } from "./pipeline/pdfBands";
 import { toPageId, toRoute } from "./route";
@@ -417,7 +417,10 @@ describe("the surfaces 1.0 freezes (v0.16)", () => {
     expect(changesPageId(["diff-changes"], [])).toBe("diff-changes-x");
     expect(changesPageId([], ["page-diff-changes"])).toBe("diff-changes-x");
     expect(changesPageId([], ["diff-changes-intro"])).toBe("diff-changes-x");
-    expect(allocatePageId(`deleted-${toPageId("/guide/old")}`, [], [])).toBe("deleted-guide-old");
+    // A heading "Changes" on a page diff.md has the ID diff-changes.
+    expect(changesPageId([], ["diff-changes"])).toBe("diff-changes-x");
+    expect(deletedPageId(toPageId("/guide/old"), [], [])).toBe("deleted-guide-old");
+    expect(deletedPageId("guide-old", ["deleted-guide-old"], [])).toBe("deleted-guide-old-x");
     for (const page of Object.values(PAGES)) {
       const text = section(page, "also");
       for (const example of [

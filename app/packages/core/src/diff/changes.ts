@@ -95,6 +95,15 @@ export function changesPageId(pageIds: Iterable<string>, elementIds: Iterable<st
   return allocatePageId("diff-changes", pageIds, elementIds);
 }
 
+/** A deleted page's page ID: `deleted-` and its earlier page ID, allocated as the list's is. */
+export function deletedPageId(
+  earlierId: string,
+  pageIds: Iterable<string>,
+  elementIds: Iterable<string>,
+): string {
+  return allocatePageId(`deleted-${earlierId}`, pageIds, elementIds);
+}
+
 /** The pages of `sidebar` in its order, then the pages it leaves out in theirs. */
 function inSidebarOrder(pages: readonly Page[], sidebar: readonly SidebarNode[]): Page[] {
   const byId = new Map(pages.map((page) => [page.id, page]));
@@ -300,7 +309,7 @@ export function writeDiffDocument(
   earlierOrder.forEach((oldPage, index) => {
     const entry = deleted.get(oldPage.id);
     if (entry === undefined) return;
-    const pageId = allocatePageId(`deleted-${oldPage.id}`, pageIds, elementIds);
+    const pageId = deletedPageId(oldPage.id, pageIds, elementIds);
     pageIds.add(pageId);
     const tree = old.trees.get(oldPage.id);
     let content = "";
