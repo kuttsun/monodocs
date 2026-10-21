@@ -25,6 +25,11 @@ export type Block = {
   node: Element;
   /** The containers around it, outermost first, for writing a deleted block where it stood. */
   ancestors: Element[];
+  /**
+   * For text read from a run of text and inline elements between blocks, the run's nodes: the
+   * block is those, and {@link node} is the element that holds them.
+   */
+  run?: ElementContent[];
 };
 
 /**
@@ -204,6 +209,20 @@ function link(node: Element): string {
   return [node.tagName, ...own].join(".");
 }
 
+/** Whether `node` is a section or the wrapper of a section's body. */
+export function isSectionWrapper(node: Element): boolean {
+  return classes(node).some((c) => SECTION_WRAPPER.test(c));
+}
+
+/**
+ * A container as the two versions' trees are matched by when a deleted block is written back: its
+ * link, with a section's classes, which a chain leaves out.
+ */
+export function containerLink(node: Element): string {
+  const sections = classes(node).filter((c) => SECTION_WRAPPER.test(c));
+  return [link(node), ...sections.sort()].join(".");
+}
+
 /** Whitespace runs collapsed, as a reader sees the text. */
 function collapse(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -321,12 +340,19 @@ function only(node: Element): Element | undefined {
 export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
   pagePrefix = pageId === "" ? "" : `${pageId}-`;
   const blocks: Block[] = [];
-  const add = (kind: string, key: string, node: Element, ancestors: Element[]) => {
+  const add = (
+    kind: string,
+    key: string,
+    node: Element,
+    ancestors: Element[],
+    run?: ElementContent[],
+  ) => {
     blocks.push({
       kind,
       key,
       node,
       ancestors,
+      ...(run === undefined ? {} : { run }),
       chain: ancestors
         .filter((a) => !classes(a).some((c) => SECTION_WRAPPER.test(c)))
         .map(link)
@@ -344,7 +370,7 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
       items.length === 1 && items[0]!.type === "element" ? soleImage(items[0]!) : undefined;
     if (image !== undefined) return visit(image, inside);
     const text = textOf(run);
-    if (text !== "") add("text", text, holder, inside);
+    if (text !== "") add("text", text, holder, inside, run);
   };
 
   const visit = (node: Element, ancestors: Element[]): void => {

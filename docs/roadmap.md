@@ -1414,6 +1414,22 @@ rows is decided in stage 1. The output is valid HTML: re-parsing it gives the sa
 moved by the parser, as an element inside a `tbody` would be — and no element sits where its
 parent's content model forbids it.
 
+Stage 1 decided it this way. A deleted row goes after every row a cell above it spans, and its own
+cells span no further than the deleted rows written right after it: no span is extended, and no cell
+of either version covers a row of the other. A deleted item takes no number because every item of
+the new version in its list carries its number as `value`. Each container of the earlier tree is
+paired with the new one that an unchanged block inside it sits in, matched from the block outwards;
+a container with no pair is cloned around the deleted blocks it held, with what in it is not a block
+— a table's `colgroup`, an admonition's title — and a section's body that the new version has with
+nothing unchanged in it is used rather than cloned. A deleted caption, figure caption, or summary
+joins the one its container has, before the new text, its `<del>` carrying the block's mark; a
+deleted header row joins the table's head. A generated number in deleted content goes with the
+separator after it, and with the label before it when that starts the element, so `Figure 1. Title`
+reads `Title`; inside a cross-reference, whose text stays, nothing is dropped. The IDs inside a
+deleted SVG are renamed with `earlier-`, or `earlier-2-` and on, the first prefix no ID of the new
+version starts with; the earlier version's pre-rendered diagrams carry a prefix of their own already
+(7.3.2).
+
 **The mark is an attribute and an element.** Every added or deleted block carries
 `data-monodocs-diff-block="ins"` or `"del"`, and its content is wrapped in `<ins>` or `<del>`, so
 the change is in the document's semantics, survives black-and-white printing and copying into a

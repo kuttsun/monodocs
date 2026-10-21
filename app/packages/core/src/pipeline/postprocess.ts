@@ -1086,7 +1086,7 @@ function formatBytes(bytes: number): string {
   return `${bytes}B`;
 }
 
-function isExternalSrc(src: string): boolean {
+export function isExternalSrc(src: string): boolean {
   return /^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith("//") || src.startsWith("/");
 }
 

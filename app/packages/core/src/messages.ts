@@ -149,6 +149,8 @@ const EN = {
     "it is in; in GitHub Actions, actions/checkout with fetch-depth: 0.",
   "diff.gitFailed": "git failed while reading the earlier version {ref}: {detail}",
   "diff.inEarlier": "In the earlier version ({label}): {message}",
+  "diff.earlierIdKept":
+    "An ID from the earlier version was written into the difference without being renamed: {id}",
   "diff.lfsPointer":
     "{path} is a Git LFS pointer, not the file it stands for. Give the earlier version its files' " +
     "content: install git-lfs and do not skip its smudge (GIT_LFS_SKIP_SMUDGE), or, with " +
@@ -529,6 +531,7 @@ const JA: Record<MessageKey, string> = {
     "含む履歴を取得してください。GitHub Actions では actions/checkout に fetch-depth: 0 を指定します。",
   "diff.gitFailed": "以前の版 {ref} を読む途中で git が失敗しました: {detail}",
   "diff.inEarlier": "以前の版（{label}）: {message}",
+  "diff.earlierIdKept": "以前の版の ID が、付け替えられないまま差分に書き込まれました: {id}",
   "diff.lfsPointer":
     "{path} は Git LFS のポインタのままで、中身ではありません。以前の版のファイルに中身を与えて" +
     "ください。git-lfs を入れ、その smudge を飛ばさない（GIT_LFS_SKIP_SMUDGE）か、" +

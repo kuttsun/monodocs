@@ -27,6 +27,7 @@ import {
   sharedClockAttributes,
 } from "./diff/earlierLocation.js";
 import { refuseLfsPointer } from "./diff/lfsPointer.js";
+import { earlierIdPrefix, writeChangedPages } from "./diff/write.js";
 import {
   documentAuthor,
   documentCoverParts,
@@ -277,6 +278,8 @@ export type BuildInternals = {
   onCompared?: (pages: PageComparison[]) => void;
   /** Called with each version's pages once they are built, in a build with a difference. */
   onPrepared?: (version: "new" | "earlier", site: PreparedSite) => void;
+  /** Called with the new version's pages once the difference is written into them. For tests. */
+  onWritten?: (pages: Page[]) => void;
 };
 
 /**
@@ -389,12 +392,25 @@ export async function buildSite(
   if (options.diff !== undefined) {
     internals.onPrepared?.("new", prepared);
     if (earlierSite !== undefined) {
-      internals.onCompared?.(
-        compareVersions(
-          { pages: prepared.pages, trees: prepared.trees ?? new Map() },
-          { pages: earlierSite.pages, trees: earlierSite.trees ?? new Map() },
-        ),
+      const next = prepared.trees ?? new Map<string, HastRoot>();
+      const old = earlierSite.trees ?? new Map<string, HastRoot>();
+      const comparison = compareVersions(
+        { pages: prepared.pages, trees: next },
+        { pages: earlierSite.pages, trees: old },
       );
+      internals.onCompared?.(comparison);
+      writeChangedPages(
+        comparison,
+        { next, old },
+        {
+          svgIdPrefix: earlierIdPrefix(
+            next.values(),
+            prepared.pages.map((page) => page.id),
+          ),
+          earlierDiagramPrefix: EARLIER_MERMAID_ID_PREFIX,
+        },
+      );
+      internals.onWritten?.(prepared.pages);
     }
     // Both versions are built (7.3.2), but nothing compares and writes them yet, and a difference
     // asked for and not output would be accepted and ignored (7.3).
