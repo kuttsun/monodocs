@@ -740,15 +740,16 @@ into it.
 | `diffDeletedPages` | Deleted pages | 削除されたページ | Section of the list of changes |
 | `diffUnchangedPages` | Unchanged pages: | 変更のないページ: | Before the number of unchanged pages |
 | `diffNoChanges` | No changes. | 変更はありません。 | The list of changes when nothing changed |
-| `diffPageAdded` | This page was added. | このページは追加されました。 | Note at the top of an added page |
+| `diffPageAdded` | This page was added. | このページは追加されました。 | Note in the earlier column of an added page |
+| `diffPageDeleted` | This page was deleted. | このページは削除されました。 | Note in the new column of a deleted page |
 | `diffPageMoved` | This page moved. Its earlier route: | このページは移動しました。以前の場所: | Note at the top of a moved page, before its earlier route |
-| `diffViewChanges` | Changes | 変更点 | The view that shows the changes |
+| `diffViewSideBySide` | Side by side | 左右に並べる | The view that shows the two versions side by side |
 | `diffViewCurrent` | New version | 新しい版 | The view that shows the new version |
 | `diffViewEarlier` | Earlier version | 以前の版 | The view that shows the earlier version |
 | `diffPrevious` | Previous change | 前の変更 | The button to the previous change |
 | `diffNext` | Next change | 次の変更 | The button to the next change |
 | `diffAdded` | Added | 追加 | A changed page's count of added blocks, and the sidebar's mark of an added page |
-| `diffDeleted` | Deleted | 削除 | A changed page's count of deleted blocks |
+| `diffDeleted` | Deleted | 削除 | A changed page's count of deleted blocks, and the sidebar's mark of a deleted page |
 | `diffChanged` | Changed | 変更 | The sidebar's mark of a changed page |
 | `diffMoved` | Moved | 移動 | The sidebar's mark of a moved page |
 | `diffTitleChanged` | The title changed. Its earlier title: | タイトルが変わりました。以前のタイトル: | Note of a page whose front-matter title changed, before the earlier title |

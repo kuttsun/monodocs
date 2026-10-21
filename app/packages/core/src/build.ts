@@ -280,6 +280,11 @@ export type BuildInternals = {
   onCompared?: (pages: PageComparison[]) => void;
   /** Called with each version's pages once they are built, in a build with a difference. */
   onPrepared?: (version: "new" | "earlier", site: PreparedSite) => void;
+  /**
+   * Write the difference into one column, as the markup PDF will (7.3.5), rather than side by side.
+   * For tests, until the PDF uses it.
+   */
+  writeInline?: boolean;
   /** Called with the new version's pages once the difference is written into them. For tests. */
   onWritten?: (pages: Page[]) => void;
 };
@@ -399,7 +404,7 @@ export async function buildSite(
   // The document as it would be without the difference, which the size report measures against.
   let withoutDiff: { pages: Page[]; sidebar: SidebarNode[] } | undefined;
   let earlierImages: PreparedSite["embeddedImages"] = [];
-  let deletedDiagrams = 0;
+  let earlierDiagrams = 0;
   if (options.diff !== undefined && earlierSite !== undefined) {
     internals.onPrepared?.("new", prepared);
     const next = prepared.trees ?? new Map<string, HastRoot>();
@@ -410,15 +415,6 @@ export async function buildSite(
     );
     internals.onCompared?.(comparison);
     withoutDiff = { pages: prepared.pages.map((page) => ({ ...page })), sidebar: prepared.sidebar };
-    // The list of changes' route is one no path gives but a name beginning with a backslash, which
-    // `toRoute` reads as a separator (7.3.4).
-    const taken = prepared.pages.find((page) => page.route === CHANGES_ROUTE);
-    if (taken !== undefined) {
-      throw new MonodocsError(
-        "page/duplicate-route",
-        t("pages.changesRouteCollision", { route: CHANGES_ROUTE, path: taken.relativePath }),
-      );
-    }
     // The IDs the list of changes and deleted SVGs avoid: the pages' and the theme template's own.
     const theme = await loadTheme(config.theme);
     const ids = [
@@ -435,10 +431,11 @@ export async function buildSite(
         ? undefined
         : EARLIER_MERMAID_ID_PREFIX,
     };
-    deletedDiagrams = writeChangedPages(comparison, { next, old }, write);
+    // Until the markup PDF uses it, the one-column writing is reached by tests alone (7.3.5).
+    if (internals.writeInline === true) writeChangedPages(comparison, { next, old }, write);
     diffDocument = writeDiffDocument(
       comparison,
-      { pages: prepared.pages, sidebar: prepared.sidebar },
+      { pages: prepared.pages, sidebar: prepared.sidebar, trees: next },
       { pages: earlierSite.pages, sidebar: earlierSite.sidebar, trees: old },
       {
         labels: resolveDiffLabels(config.lang, config.labelOverrides),
@@ -450,9 +447,22 @@ export async function buildSite(
         },
         write,
         elementIds: ids,
+        columns: internals.writeInline !== true,
       },
     );
-    deletedDiagrams += diffDocument.deletedDiagrams;
+    earlierDiagrams = diffDocument.earlierDiagrams;
+    // The generated pages' routes are ones no path gives but a name beginning with a backslash,
+    // which `toRoute` reads as a separator (7.3.4).
+    const generated = new Set(
+      diffDocument.pages.filter((page) => page.sourcePath === "").map((page) => page.route),
+    );
+    const taken = prepared.pages.find((page) => generated.has(page.route));
+    if (taken !== undefined) {
+      throw new MonodocsError(
+        "page/duplicate-route",
+        t("pages.generatedRouteCollision", { route: taken.route, path: taken.relativePath }),
+      );
+    }
     // An image both versions embed is counted once, under the new version's path (20.5).
     const shared = new Set(prepared.embeddedImages.map((image) => image.dataUri));
     earlierImages = earlierSite.embeddedImages.filter((image) => !shared.has(image.dataUri));
@@ -469,7 +479,7 @@ export async function buildSite(
   // A deleted diagram is drawn in the browser too, when the new version has none or has Mermaid
   // off (7.3.2).
   const ownMermaid = hasMermaid && config.mermaidEnabled && config.mermaidMode === "client";
-  const clientMermaid = ownMermaid || (deletedDiagrams > 0 && config.mermaidMode === "client");
+  const clientMermaid = ownMermaid || (earlierDiagrams > 0 && config.mermaidMode === "client");
   const bodyScripts = clientMermaid ? await mermaidRuntimeScript(config.mermaidRuntime) : "";
 
   // ラベルの解決はここで 1 度だけ行う。同梱の表が無いタグの警告も、ビルド 1 回につき 1 度になる。

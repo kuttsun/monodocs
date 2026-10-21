@@ -102,8 +102,9 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `html.labels.diffUnchangedPages` | from `lang` |
 | `html.labels.diffNoChanges` | from `lang` |
 | `html.labels.diffPageAdded` | from `lang` |
+| `html.labels.diffPageDeleted` | from `lang` |
 | `html.labels.diffPageMoved` | from `lang` |
-| `html.labels.diffViewChanges` | from `lang` |
+| `html.labels.diffViewSideBySide` | from `lang` |
 | `html.labels.diffViewCurrent` | from `lang` |
 | `html.labels.diffViewEarlier` | from `lang` |
 | `html.labels.diffPrevious` | from `lang` |

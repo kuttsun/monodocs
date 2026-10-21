@@ -146,21 +146,14 @@ describe("the list of changes", () => {
     expect(list).toContain(
       '<a href="#/retitled">New title</a> (The title changed. Its earlier title: Old title) — Added 0 / Deleted 0',
     );
-    // A deleted page under its title, its blocks marked deleted.
-    expect(list).toMatch(
-      /<h3 id="diff-changes-deleted-1">Gone<\/h3>\n<h1 data-monodocs-diff-block="del">/,
-    );
-    expect(list).toContain(
-      '<p data-monodocs-diff-block="del"><del data-monodocs-diff="">Gone text.</del></p>',
-    );
+    // A deleted page is a page of its own, linked.
+    expect(list).toContain('<a href="#//deleted/gone">Gone</a>');
     expect(list).not.toContain("No changes.");
-    // Its table of contents reads the sections in order, each deleted page under its own.
     expect(data.pages[0]!.headings.map((h) => `${h.level} ${h.text}`)).toEqual([
       "2 Added pages",
       "2 Moved pages",
       "2 Changed pages",
       "2 Deleted pages",
-      "3 Gone",
     ]);
   });
 
@@ -189,7 +182,7 @@ describe("the list of changes", () => {
       { "docs/c.md": "---\naliases: [/a, /b]\n---\n\n# C\n" },
     );
     const list = article(html, "//changes");
-    expect(list).toContain('<p>Merged into: <a href="#/c">C</a></p>');
+    expect(list).toContain('<a href="#//deleted/b">B</a> (Merged into: <a href="#/c">C</a>)');
   });
 
   it.skipIf(process.platform === "win32")(
@@ -253,6 +246,86 @@ describe("the list of changes", () => {
   });
 });
 
+describe("the two versions side by side", () => {
+  it("writes a changed page as the earlier page beside the new one, pairs and marks in each", async () => {
+    const { html } = await built(
+      { "docs/a.md": "# A\n\nKeep.\n\nGone.\n\n[Link](b.md)\n", "docs/b.md": "# B\n" },
+      { "docs/a.md": "# A\n\nKeep.\n\nNew.\n\n[Link](b.md)\n", "docs/b.md": "# B\n" },
+    );
+    const page = article(html, "/a");
+    const earlier = page.slice(
+      page.indexOf('class="monodocs-diff-earlier"'),
+      page.indexOf('class="monodocs-diff-current"'),
+    );
+    const current = page.slice(page.indexOf('class="monodocs-diff-current"'));
+    expect(earlier).toContain(
+      '<p data-monodocs-diff-block="del"><del data-monodocs-diff="">Gone.</del></p>',
+    );
+    expect(current).toContain(
+      '<p data-monodocs-diff-block="ins"><ins data-monodocs-diff="">New.</ins></p>',
+    );
+    expect(earlier).toContain('<p data-monodocs-diff-pair="2">Keep.</p>');
+    expect(current).toContain('<p data-monodocs-diff-pair="2">Keep.</p>');
+    // The earlier column has no address: no ID, no link.
+    expect(earlier).not.toMatch(/\sid="/);
+    expect(earlier).toContain('<p data-monodocs-diff-pair="3">Link</p>');
+    expect(current).toContain('<h1 id="a-a" data-monodocs-diff-pair="1">A</h1>');
+    // A page that did not change is not doubled.
+    expect(article(html, "/b")).not.toContain("monodocs-diff-columns");
+    const all = ids(html);
+    expect(all.filter((id, i) => all.indexOf(id) !== i)).toEqual([]);
+  });
+
+  it("makes a deleted page a page of its own where it stood in the earlier sidebar", async () => {
+    const { html } = await built(
+      { "docs/a.md": "# A\n", "docs/b.md": "# B\n\nText.\n", "docs/c.md": "# C\n" },
+      { "docs/a.md": "# A\n", "docs/c.md": "# C\n" },
+    );
+    expect(sidebarEntries(html).map((entry) => entry.split(" ")[0])).toEqual([
+      "//changes",
+      "/a",
+      "//deleted/b",
+      "/c",
+    ]);
+    expect(html).toContain(
+      '<li class="sidebar-page" data-monodocs-diff-page="deleted"><a href="#//deleted/b" data-route="//deleted/b">B<span class="monodocs-diff-mark" aria-hidden="true">−</span><span class="monodocs-diff-label">Deleted</span></a></li>',
+    );
+    const page = article(html, "//deleted/b");
+    expect(page).toContain('data-monodocs-diff-page="deleted"');
+    expect(page).toContain("<p>Text.</p>");
+    expect(page).toContain('<div class="monodocs-diff-note"><p>This page was deleted.</p></div>');
+    expect(siteData(html).pages.find((p) => p.route === "//deleted/b")).toMatchObject({
+      hidden: true,
+      diff: "deleted",
+      title: "B",
+    });
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "reports a page whose name gives it a deleted page's route as page/duplicate-route",
+    async () => {
+      await write(then, { "docs/a.md": "# A\n", "docs/b.md": "# B\n" });
+      await write(now, { "docs/a.md": "# A\n", "docs/\\deleted\\b.md": "# X\n" });
+      await expect(
+        buildSite({ outputFile: out(), diff: { dir: "../then", label: "v1" } }),
+      ).rejects.toMatchObject({ code: "page/duplicate-route" });
+    },
+  );
+
+  it("brings the bar and its script with a difference, and neither without one", async () => {
+    const { html } = await built({ "docs/a.md": "# A\n" }, { "docs/a.md": "# A\n\nNew.\n" });
+    expect(html).toContain('<div class="monodocs-diff-bar" role="toolbar"');
+    expect(html).toContain(
+      'data-monodocs-diff-view="both" aria-pressed="true">Side by side</button>',
+    );
+    expect(html).toContain("data-monodocs-diff-pair");
+    expect(html).toMatch(/<script>\(function \(\) \{\n {2}var root = document\.documentElement;/);
+    await buildSite({ outputFile: out() });
+    const plain = await readFile(out(), "utf8");
+    expect(plain).not.toContain("monodocs-diff");
+  });
+});
+
 describe("a moved page whose title changed", () => {
   it("is listed with its earlier title", async () => {
     const { html } = await built(
@@ -287,16 +360,20 @@ describe("pages and the sidebar carry their state", () => {
       "/moved |2| Moved|→|Moved|",
       "/zadded |3| Added|+|Added|",
     ]);
+    expect(html).toContain('<li class="sidebar-page" data-monodocs-diff-page="added">');
     expect(html).toContain(
       '<span class="monodocs-diff-mark" aria-hidden="true">+</span><span class="monodocs-diff-label">Added</span>',
     );
-    expect(article(html, "/zadded")).toContain(
-      'data-monodocs-diff-page="added">\n<div class="monodocs-diff-note"><p>This page was added.</p></div>',
+    // An added page: its note in the earlier column, beside the page.
+    expect(article(html, "/zadded")).toMatch(
+      /data-monodocs-diff-page="added">\n<div class="monodocs-diff-columns"><div class="monodocs-diff-earlier">\n<p class="monodocs-diff-column-title">Earlier version<\/p>\n<div class="monodocs-diff-note"><p>This page was added.<\/p><\/div>/,
     );
     expect(article(html, "/moved")).toContain(
       'data-monodocs-diff-page="moved">\n<div class="monodocs-diff-note"><p>This page moved. Its earlier route: <code>/moved-old</code></p></div>',
     );
-    expect(article(html, "/changed")).toContain('data-monodocs-diff-page="changed">\n<h1');
+    expect(article(html, "/changed")).toContain(
+      'data-monodocs-diff-page="changed">\n<div class="monodocs-diff-columns">',
+    );
     const data = siteData(html);
     expect(data.pages.map((p) => [p.route, p.diff ?? "", p.number ?? ""])).toEqual([
       ["//changes", "", ""],

@@ -1527,7 +1527,13 @@ build with many changed pages close to twice the size — and its lines still ad
 image is counted once under `images`, whichever version it came from, and nothing is counted on two
 lines.
 
-Stage 1 decided the rest this way. The earlier column is cloned by the rules `markup` writes deleted
+Stage 1 decided the rest this way. The columns are a `div.monodocs-diff-columns` holding a
+`div.monodocs-diff-earlier` and a `div.monodocs-diff-current`, each headed by its version's name,
+`labels.diffViewEarlier` or `labels.diffViewCurrent`; they stand one above the other below 1000px of
+viewport width. The pairs are numbered from 1 on each page, in the order of the alignment, and the
+script lines a pair up by adding to the top margin of the higher block, measuring again until the
+two are within a pixel; a table's rows are not lined up one by one — a table is lined up by what
+follows it. The earlier column is cloned by the rules `markup` writes deleted
 content by (7.3.5) — how an SVG's IDs, a diagram's, links, generated numbers, and files are handled
 is recorded there. The list of changes' page ID is `diff-changes`, with `-x` added
 until no page has it, no element has its article's ID, and no element ID starts with it followed by

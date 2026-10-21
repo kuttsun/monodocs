@@ -65,6 +65,7 @@ async function difference(
     { outputFile: join(base, "out.html"), diff: { dir: "../then", label: "v1" } },
     {
       onWritten: (written) => (pages = written),
+      writeInline: true,
       ...(options.prerender === true ? { mermaidPrerenderer: fakePrerenderer() } : {}),
     },
   );

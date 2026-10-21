@@ -16,6 +16,7 @@ import {
   type Labels,
 } from "../labels.js";
 import type { PageState } from "../diff/changes.js";
+import { DIFF_SCRIPT, DIFF_STYLE, diffBar } from "../diff/client.js";
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, escapeLabel, renderTemplate } from "../util/html.js";
 import { documentFooterLine, type DocumentMetadata } from "../documentMeta.js";
@@ -79,28 +80,10 @@ export type RenderHtmlInput = {
   diff?: { states: ReadonlyMap<string, PageState>; labels: DiffLabels };
 };
 
-/** The rules a difference adds to `{{style}}`, from core, so every theme gets them (7.3.4). */
-const DIFF_STYLE = `
-/* monodocs: difference from an earlier version */
-.monodocs-diff-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-.monodocs-diff-mark { margin-inline-start: 0.4em; }
-.monodocs-diff-note { border-inline-start: 4px solid currentColor; padding: 0.25em 1em; margin: 0 0 1em; }
-ol > li[data-monodocs-diff-block="del"] { list-style-type: none; }
-`;
-
 /** The sidebar's symbol for each state; hidden from assistive technology, which reads the label. */
 const DIFF_MARKS: Record<PageState, { symbol: string; label: keyof DiffLabels }> = {
   added: { symbol: "+", label: "diffAdded" },
+  deleted: { symbol: "−", label: "diffDeleted" },
   moved: { symbol: "→", label: "diffMoved" },
   changed: { symbol: "•", label: "diffChanged" },
 };
@@ -161,8 +144,9 @@ function renderSidebar(
           `</li>`
         );
       }
+      const state = diff?.states.get(node.pageId);
       return (
-        `<li class="sidebar-page">` +
+        `<li class="sidebar-page"${state === undefined ? "" : ` data-monodocs-diff-page="${state}"`}>` +
         // href は encodeURI（route の "/" は保持）。data-route はクライアントで
         // decode 後に比較するため生の route を保持する。
         `<a href="#${escapeAttr(encodeURI(node.route))}" data-route="${escapeAttr(node.route)}">` +
@@ -488,9 +472,9 @@ export async function renderSingleHtmlParts(
 
   const diff = input.diff;
   const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth, 1, diff);
-  const pagesHtml = input.pages
-    .map((page, index) => renderArticle(page, index, diff?.states))
-    .join("\n");
+  const pagesHtml =
+    (diff === undefined ? "" : diffBar(diff.labels)) +
+    input.pages.map((page, index) => renderArticle(page, index, diff?.states)).join("\n");
   const siteData = safeJson({
     title: input.title,
     initialRoute: input.pages[0]?.route ?? "/",
@@ -553,7 +537,8 @@ export async function renderSingleHtmlParts(
     pages: pagesHtml,
     siteDataJson: siteData,
     appJs: theme.appJs,
-    bodyScripts: input.bodyScripts ?? "",
+    bodyScripts:
+      (input.bodyScripts ?? "") + (diff === undefined ? "" : `<script>${DIFF_SCRIPT}</script>`),
   });
   return { html: rendered, siteDataJson: siteData };
 }

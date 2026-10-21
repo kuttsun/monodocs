@@ -33,6 +33,8 @@ type Node = ElementContent;
 const DIFF = "dataMonodocsDiff";
 /** The attribute an added or deleted block carries. */
 const DIFF_BLOCK = "dataMonodocsDiffBlock";
+/** The attribute the two blocks of an unchanged pair carry, with the same value. */
+const DIFF_PAIR = "dataMonodocsDiffPair";
 
 /** Elements marked by wrapping the element itself: they hold no content to wrap. */
 const WRAP_WHOLE = new Set([
@@ -231,6 +233,31 @@ function unlinkSvg(svg: Element): void {
     for (const child of elements(node)) walk(child);
   };
   walk(svg);
+}
+
+/**
+ * Mark a block where it stands in its tree, and return what stands for it: for text read from a
+ * run, the wrapper around the run, which carries the block's mark.
+ */
+function markInPlace(block: Block, mark: Mark, parents: Parents, nested: ReadonlySet<Node>): Node {
+  if (block.run !== undefined) {
+    const parent = parents.get(block.run[0]!)!;
+    const at = kids(parent).indexOf(block.run[0]!);
+    const end = kids(parent).indexOf(block.run.at(-1)!);
+    const run = kids(parent).slice(at, end + 1);
+    const marked = wrapper(mark, run, true);
+    parents.splice(parent, at, run.length, marked);
+    for (const node of run) parents.set(node, marked);
+    return marked;
+  }
+  const parent = parents.get(block.node)!;
+  const marked = markBlock(block.node, mark, nested);
+  parents.index(block.node);
+  if (marked !== block.node) {
+    parents.splice(parent, kids(parent).indexOf(block.node), 1, marked);
+    parents.set(block.node, marked);
+  }
+  return block.node;
 }
 
 /** Rename every ID in an SVG and every reference to one inside it. */
@@ -598,25 +625,8 @@ export function writeDifference(
   // Additions first: a deleted block written into an added caption goes before its mark.
   edits.forEach((edit, i) => {
     if (edit.op !== "insert") return;
-    const block = edit.new;
-    if (block.run !== undefined) {
-      const parent = newParents.get(block.run[0]!)!;
-      const at = kids(parent).indexOf(block.run[0]!);
-      const end = kids(parent).indexOf(block.run.at(-1)!);
-      const run = kids(parent).slice(at, end + 1) as ElementContent[];
-      const marked = wrapper("ins", run, true);
-      newParents.splice(parent, at, run.length, marked);
-      for (const node of run) newParents.set(node, marked);
-      items[i] = marked;
-      return;
-    }
-    const parent = newParents.get(block.node)!;
-    const marked = markBlock(block.node, "ins", newStructure);
-    newParents.index(block.node);
-    if (marked !== block.node) {
-      newParents.splice(parent, kids(parent).indexOf(block.node), 1, marked);
-      newParents.set(block.node, marked);
-    }
+    const marked = markInPlace(edit.new, "ins", newParents, newStructure);
+    if (edit.new.run !== undefined) items[i] = marked;
   });
 
   // Where to put a node written for edit `i` in `parent`: after what stands for the edits before it
@@ -787,6 +797,53 @@ function inTableOrder(table: Element, at: number, node: Element): number {
     else if (other > rank && i < before) before = i;
   });
   return Math.min(Math.max(at, after), before);
+}
+
+/**
+ * Write a page's difference as two columns (roadmap 7.3.4): the added blocks marked in the new
+ * version's tree, `next`, and the deleted ones in the earlier tree, `old`, which is returned cloned
+ * without an address — no ID but an SVG's, renamed, no link, no generated number — to stand beside
+ * it. The two blocks of each unchanged pair carry the same `data-monodocs-diff-pair`, by which the
+ * script lines them up; text read from a run has no element of its own to carry it.
+ */
+export function writeColumns(
+  next: HastRoot,
+  old: HastRoot,
+  edits: readonly BlockEdit[],
+  options: WriteOptions,
+): HastRoot {
+  const newParents = new Parents(next);
+  const oldParents = new Parents(old);
+  const newStructure = structure(
+    edits.flatMap((edit) => (edit.op === "delete" ? [] : [edit.new])),
+    newParents,
+  );
+  const oldStructure = structure(
+    edits.flatMap((edit) => (edit.op === "insert" ? [] : [edit.old])),
+    oldParents,
+  );
+  let pair = 0;
+  for (const edit of edits) {
+    if (edit.op === "equal") {
+      if (edit.old.run !== undefined || edit.new.run !== undefined) continue;
+      pair++;
+      edit.old.node.properties[DIFF_PAIR] = String(pair);
+      edit.new.node.properties[DIFF_PAIR] = String(pair);
+    } else if (edit.op === "insert") markInPlace(edit.new, "ins", newParents, newStructure);
+    else markInPlace(edit.old, "del", oldParents, oldStructure);
+  }
+  return earlierColumn(old, options);
+}
+
+/** The earlier tree cloned without an address, checked for any ID that kept one. */
+export function earlierColumn(old: HastRoot, options: WriteOptions): HastRoot {
+  const cloner = new Cloner(options.svgIdPrefix, options.earlierDiagramPrefix);
+  const column: HastRoot = {
+    type: "root",
+    children: kids(old).flatMap((node) => cloner.clean(node)),
+  };
+  for (const node of elements(column)) assertNoEarlierId(node, options);
+  return column;
 }
 
 /**

@@ -686,15 +686,16 @@ html:
 | `diffDeletedPages` | Deleted pages | 削除されたページ | 変更点の一覧の節 |
 | `diffUnchangedPages` | Unchanged pages: | 変更のないページ: | 変更のないページの数の前 |
 | `diffNoChanges` | No changes. | 変更はありません。 | 何も変わっていないときの変更点の一覧 |
-| `diffPageAdded` | This page was added. | このページは追加されました。 | 追加されたページの先頭の注記 |
+| `diffPageAdded` | This page was added. | このページは追加されました。 | 追加されたページの旧版の列の注記 |
+| `diffPageDeleted` | This page was deleted. | このページは削除されました。 | 削除されたページの新版の列の注記 |
 | `diffPageMoved` | This page moved. Its earlier route: | このページは移動しました。以前の場所: | 移動したページの先頭の注記。以前の route の前 |
-| `diffViewChanges` | Changes | 変更点 | 変更点を見せる表示 |
+| `diffViewSideBySide` | Side by side | 左右に並べる | 2 つの版を左右に並べる表示 |
 | `diffViewCurrent` | New version | 新しい版 | 新しい版を見せる表示 |
 | `diffViewEarlier` | Earlier version | 以前の版 | 以前の版を見せる表示 |
 | `diffPrevious` | Previous change | 前の変更 | 前の変更へのボタン |
 | `diffNext` | Next change | 次の変更 | 次の変更へのボタン |
 | `diffAdded` | Added | 追加 | 変更されたページの追加ブロック数と、サイドバーの追加ページの印 |
-| `diffDeleted` | Deleted | 削除 | 変更されたページの削除ブロック数 |
+| `diffDeleted` | Deleted | 削除 | 変更されたページの削除ブロック数と、サイドバーの削除ページの印 |
 | `diffChanged` | Changed | 変更 | サイドバーの変更ページの印 |
 | `diffMoved` | Moved | 移動 | サイドバーの移動ページの印 |
 | `diffTitleChanged` | The title changed. Its earlier title: | タイトルが変わりました。以前のタイトル: | front matter のタイトルが変わったページの注記。以前のタイトルの前 |
