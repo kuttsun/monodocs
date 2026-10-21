@@ -445,7 +445,7 @@ export async function buildSite(
         // The earlier version is named by its own `document.version`, else by the argument that
         // named it, as written.
         names: {
-          from: earlierVersion ?? earlierLabel(options.diff),
+          from: earlierVersion?.trim() || earlierLabel(options.diff),
           to: config.documentMetadata.version,
         },
         write,

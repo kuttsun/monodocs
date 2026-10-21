@@ -50,6 +50,10 @@ describe("an SVG in deleted content", () => {
     expect(html).toContain("stroke: url(&#x27;#earlier-p-g&#x27;)");
     expect(html).toContain('<use href="#earlier-p-r">');
     expect(html).toContain('<use xlink:href="#earlier-p-r">');
+    // An empty ID names nothing: it is dropped rather than kept.
+    expect(written('<p>Keep.</p><div><svg><g id=""></g></svg></div>', "<p>Keep.</p>")).toContain(
+      '<svg data-monodocs-diff-block="del"><g></g></svg>',
+    );
     // A reference to an ID the SVG does not have is not its own, and is left alone.
     expect(html).toContain('<use href="#elsewhere">');
   });

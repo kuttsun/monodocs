@@ -172,6 +172,13 @@ describe("the list of changes", () => {
     );
     const list = article(html, "//changes");
     expect(list).toContain(">Changes 1.0 → 2.0</h1>");
+    // A version that is only whitespace names nothing: the argument names the earlier one.
+    await rm(out());
+    const blank = await built(
+      { ...files, "monodocs.config.yml": "document:\n  version: ' '\n" },
+      { ...files, "monodocs.config.yml": "document:\n  version: '2.0'\n" },
+    );
+    expect(article(blank.html, "//changes")).toContain(">Changes v1 → 2.0</h1>");
     expect(list).toContain("<p>Unchanged pages: 1</p>\n<p>No changes.</p>");
     expect(siteData(html).pages.find((p) => p.route === "/a")?.diff).toBeUndefined();
   });

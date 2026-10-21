@@ -237,9 +237,9 @@ function unlinkSvg(svg: Element): void {
 function renameSvgIds(svg: Element, prefix: string): void {
   const ids = new Set<string>();
   const collect = (node: Element) => {
-    if (typeof node.properties.id === "string" && node.properties.id !== "") {
-      ids.add(node.properties.id);
-    }
+    // An empty ID names nothing, and is not an address to keep.
+    if (node.properties.id === "") delete node.properties.id;
+    if (typeof node.properties.id === "string") ids.add(node.properties.id);
     for (const child of elements(node)) collect(child);
   };
   collect(svg);
