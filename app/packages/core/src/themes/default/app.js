@@ -723,9 +723,19 @@
 
   // 検索対象（畳んだ文字列）を初回検索時に一度だけ構築する。
   var searchIndex = null;
+  // The pages search covers: the reading pages, unless a script hands it others — a difference's
+  // view of one version (roadmap 7.3.4) — through window.__monodocsSearchPages, which takes a list
+  // of pages shaped as the data's are, or null for the reading pages again, and searches anew.
+  var searchPages = navPages;
+  window.__monodocsSearchPages = function (list) {
+    searchPages = Array.isArray(list) ? list : navPages;
+    searchIndex = null;
+    var input = document.getElementById("search-input");
+    if (input && input.value) renderSearchResults(input.value);
+  };
   function buildSearchIndex() {
     if (searchIndex) return searchIndex;
-    searchIndex = navPages.map(function (p) {
+    searchIndex = searchPages.map(function (p) {
       var title = p.title || "";
       var text = p.text || "";
       return {

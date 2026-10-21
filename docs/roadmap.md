@@ -1437,11 +1437,16 @@ version — for `--diff-from`, a directory that no longer exists. The build fail
 `internal/unexpected` if an ID from the earlier tree survived without being renamed, inside an SVG
 or outside one.
 
-**What the reader searches is the new version's.** Search and the printed table of contents (24.9)
-are built from `Page.headings` and `Page.text`, which are the new version's and are not touched; the
-PDF outline is built from the sidebar and lists pages only. A heading only the earlier column has is
-therefore in none of them. The in-body search highlight (22.5) does not stay in the earlier column,
-so the highlight agrees with the index about what the document contains.
+**Search reads the version the view reads.** Side by side and in the new version's view, search
+covers the new version: it is built from `Page.headings` and `Page.text`, which are the new
+version's and are not touched. In the earlier version's view it covers the earlier version: its
+pages in its own sidebar's order, each by the route of the page that shows it now — a changed page
+by its new route, a deleted one by its own — with its title, its text, and its formulas. The earlier
+headings have no ID, so an earlier result opens its page rather than a section. `siteDataJson`
+carries those pages, as `diffEarlierPages`, only with a difference. Changing the view searches anew
+what the box holds. The in-body search highlight (22.5) stays in the column of the version searched,
+so the highlight agrees with the index about what the version contains. The printed table of
+contents is the new version's, and the PDF outline is built from the sidebar and lists pages only.
 
 **The in-page table of contents follows the view, as the sidebar does.** On a changed page, side by
 side, it lists both versions' headings in the order the alignment puts them, an unchanged pair once,
@@ -1536,11 +1541,14 @@ scrolls it into view in both columns, and reaches each change without an ID on t
 **What the difference adds reaches every theme and no build without it.** The rules and the script
 come from core, through tokens every template is required to have (`{{style}}`, `{{bodyScripts}}`,
 `{{pages}}`, 23.3), so a custom theme gets them without carrying them. The default theme's `app.js`
-does not change: it is written into every build, so a change to it would change the bytes of builds
-without a difference. What the theme would otherwise have to learn, the difference's own script does
-— it takes the marks the highlight puts inside the earlier column back out — and the list of changes
-and the deleted pages stay out of search through `hidden`, which the default theme's `app.js`
-already honours. A custom `app.js` is not held to it (23.4: delivery, not application).
+learns one thing, a hook the script hands the pages search covers to,
+`window.__monodocsSearchPages(pages)` — null for the reading pages again — after which it searches
+anew; the hook is in every build, so builds without a difference change by its bytes, once, in this
+release. Everything else the theme would otherwise have to learn, the difference's own script does —
+it takes the marks the highlight puts in the column not searched back out — and the list of changes
+and the deleted pages stay out of the new version's search through `hidden`, which the default
+theme's `app.js` already honours. A custom `app.js` is not held to it (23.4: delivery, not
+application); without the hook, its search stays the new version's in every view.
 `siteDataJson` gains the pages' states only when there is a difference.
 
 **The wording joins the label table (23.4)** and follows `lang` and `html.labels`: `diffChanges`,

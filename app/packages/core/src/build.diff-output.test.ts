@@ -362,6 +362,27 @@ describe("the two versions side by side", () => {
     },
   );
 
+  it("carries the earlier version's pages for its view's search, only with a difference", async () => {
+    const { html } = await built(
+      { "docs/a.md": "# A\n\nOld words.\n", "docs/b.md": "# B\n\nGone words.\n" },
+      { "docs/a.md": "# A\n\nNew words.\n" },
+    );
+    const data = siteData(html) as unknown as {
+      diffEarlierPages: { route: string; text: string }[];
+    };
+    expect(
+      data.diffEarlierPages.map((p) => [
+        p.route,
+        p.text.includes("Old words") || p.text.includes("Gone words"),
+      ]),
+    ).toEqual([
+      ["/a", true],
+      ["//deleted/b", true],
+    ]);
+    await buildSite({ outputFile: out() });
+    expect(await readFile(out(), "utf8")).not.toContain("diffEarlierPages");
+  });
+
   it("brings the bar and its script with a difference, and neither without one", async () => {
     const { html } = await built({ "docs/a.md": "# A\n" }, { "docs/a.md": "# A\n\nNew.\n" });
     expect(html).toContain('<div class="monodocs-diff-bar" role="toolbar"');

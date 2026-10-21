@@ -15,7 +15,7 @@ import {
   type DiffLabels,
   type Labels,
 } from "../labels.js";
-import type { PageState } from "../diff/changes.js";
+import type { EarlierSearchPage, PageState } from "../diff/changes.js";
 import { DIFF_SCRIPT, DIFF_STYLE, diffBar } from "../diff/client.js";
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, escapeLabel, renderTemplate } from "../util/html.js";
@@ -82,6 +82,8 @@ export type RenderHtmlInput = {
     labels: DiffLabels;
     /** Each version's own sidebar, shown in its view; `sidebar` is the difference's. */
     sidebars?: { current: SidebarNode[]; earlier: SidebarNode[] };
+    /** What search covers in the earlier version's view. */
+    earlierSearch?: EarlierSearchPage[];
   };
 };
 
@@ -516,6 +518,8 @@ export async function renderSingleHtmlParts(
     // サイドバー・検索・前後ナビにも現れない。どの route にも当たらなかった hash だけが
     // ここを引く。別名が無ければ空オブジェクトなので、出力はほとんど変わらない。
     aliases: aliasTable(input.pages),
+    // The earlier version's pages as search reads them, in a build with a difference only (7.3.4).
+    ...(diff?.earlierSearch === undefined ? {} : { diffEarlierPages: diff.earlierSearch }),
   });
 
   let html = renderConditionalBlock(

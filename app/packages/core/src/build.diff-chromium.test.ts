@@ -651,3 +651,51 @@ describe.skipIf(!chromium)("a change inside a collapsed block, and the earlier f
     }
   });
 });
+
+describe.skipIf(!chromium)("search in each view", () => {
+  it("searches the version the view reads, and searches anew when the view changes", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      await page.goto(`${pathToFileURL(out).href}#/a`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      // "two" is a step only the earlier version has.
+      await page.type("#search-input", "two");
+      const results = () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll("#search-results a[data-route]")].map((a) =>
+            a.getAttribute("data-route"),
+          ),
+        );
+      const settled = async (want: string[]) => {
+        for (let waited = 0; waited < 3000; waited += 100) {
+          if (JSON.stringify(await results()) === JSON.stringify(want)) break;
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        return results();
+      };
+      expect(await settled([])).toEqual([]);
+      await page.click('[data-monodocs-diff-view="earlier"]');
+      expect(await settled(["/a"])).toEqual(["/a"]);
+      // A result opens the page, and the highlight stays in the column of the version searched.
+      await page.click('#search-results a[data-route="/a"]');
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      const marks = await page.evaluate(() => ({
+        earlier: document.querySelectorAll(
+          "article:not([hidden]) .monodocs-diff-earlier mark.search-hit",
+        ).length,
+        current: document.querySelectorAll(
+          "article:not([hidden]) .monodocs-diff-current mark.search-hit",
+        ).length,
+      }));
+      expect(marks.earlier).toBeGreaterThan(0);
+      expect(marks.current).toBe(0);
+      await page.focus("#search-input");
+      await page.click('[data-monodocs-diff-view="current"]');
+      expect(await settled([])).toEqual([]);
+    } finally {
+      await closePages(browser);
+    }
+  });
+});

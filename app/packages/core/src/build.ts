@@ -529,6 +529,7 @@ export async function buildSite(
             states: diffDocument.states,
             labels: diffDocument.labels,
             sidebars: diffDocument.sidebars,
+            earlierSearch: diffDocument.earlierSearch,
           },
         }),
   });

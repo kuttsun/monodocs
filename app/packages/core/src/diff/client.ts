@@ -692,6 +692,8 @@ export const DIFF_SCRIPT = `(function () {
     }
     showBox();
     reveal();
+    searchView();
+    unhighlight();
     // The diagrams of a column just shown, which a render left out while it was hidden.
     if (typeof window.__sdRenderMermaid === "function") window.__sdRenderMermaid().then(later);
     align();
@@ -859,9 +861,18 @@ export const DIFF_SCRIPT = `(function () {
     if (nav.innerHTML !== html) nav.innerHTML = html;
   }
 
-  // The search highlight does not stay in the earlier column (22.5).
+  // Search covers the version a view reads (7.3.4): the earlier one in its own view, the new one
+  // otherwise. The theme's app.js is handed the pages through its hook, where it has one.
+  function searchView() {
+    if (typeof window.__monodocsSearchPages !== "function") return;
+    var data = window.__MONODOCS_DATA__;
+    window.__monodocsSearchPages(view === "earlier" && data ? data.diffEarlierPages : null);
+  }
+
+  // The search highlight stays in the column of the version searched (22.5).
   function unhighlight() {
-    Array.prototype.forEach.call(document.querySelectorAll(".monodocs-diff-earlier mark.search-hit"), function (mark) {
+    var other = view === "earlier" ? ".monodocs-diff-current" : ".monodocs-diff-earlier";
+    Array.prototype.forEach.call(document.querySelectorAll(other + " mark.search-hit"), function (mark) {
       var parent = mark.parentNode;
       while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
       parent.removeChild(mark);

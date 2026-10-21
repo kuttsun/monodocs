@@ -50,6 +50,22 @@ export type DiffDocument = {
   changesPageId: string;
   /** How many of the earlier version's diagrams the earlier columns hold. */
   earlierDiagrams: number;
+  /**
+   * What search covers in the earlier version's view (7.3.4): the earlier version's pages in its
+   * sidebar's order, each by the route of the page that shows it, as `siteDataJson` lists pages.
+   * Their headings carry no ID, so a result opens the page.
+   */
+  earlierSearch: EarlierSearchPage[];
+};
+
+/** A page of the earlier version as search reads it. */
+export type EarlierSearchPage = {
+  route: string;
+  title: string;
+  hidden: false;
+  headings: [];
+  text: string;
+  formulas?: { tex: string }[];
 };
 
 /** The two versions' names, as the list of changes' title shows them. */
@@ -441,6 +457,25 @@ export function writeDiffDocument(
         ? []
         : [{ type: "page", title: node.title, route: target.route, pageId: target.id }];
     });
+  // The earlier version as search reads it, in its own order, each page by what shows it now.
+  const earlierSearch = inSidebarOrder(old.pages, old.sidebar).flatMap(
+    (oldPage): EarlierSearchPage[] => {
+      if (oldPage.hidden === true) return [];
+      const shows = matchedOld.get(oldPage.id) ?? deletedByOld.get(oldPage.id);
+      if (shows === undefined) return [];
+      const formulas = (oldPage.formulas ?? []).map((formula) => ({ tex: formula.tex }));
+      return [
+        {
+          route: shows.route,
+          title: oldPage.title,
+          hidden: false,
+          headings: [],
+          text: oldPage.text,
+          ...(formulas.length > 0 ? { formulas } : {}),
+        },
+      ];
+    },
+  );
   return {
     pages: [changes, ...pages],
     sidebar: [listEntry, ...sidebar],
@@ -452,6 +487,7 @@ export function writeDiffDocument(
     labels,
     changesPageId: id,
     earlierDiagrams,
+    earlierSearch,
   };
 }
 
