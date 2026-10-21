@@ -161,8 +161,8 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       expect(seen.some((s) => s.endsWith("#/c"))).toBe(true);
       expect(seen[total]!.startsWith("1 /")).toBe(true);
 
-      // The earlier version's view hides the new column and counts what it shows: the four
-      // deletions, and the added and deleted pages by the earlier column.
+      // The earlier version's view hides the new column and counts what it shows, through the
+      // pages the earlier version has: the four deletions, and the deleted page by its column.
       await page.click('[data-monodocs-diff-view="earlier"]');
       const earlier = await page.evaluate(() => ({
         view: document.documentElement.getAttribute("data-monodocs-diff-view"),
@@ -171,7 +171,7 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
           (node) => getComputedStyle(node).display === "none",
         ),
       }));
-      expect(earlier).toEqual({ view: "earlier", count: "– / 6", current: true });
+      expect(earlier).toEqual({ view: "earlier", count: "– / 5", current: true });
 
       // Leaving the list of changes for a version's own view opens that version's first page.
       await page.goto(`${pathToFileURL(out).href}#//changes`);
@@ -496,6 +496,52 @@ describe.skipIf(!chromium)("an image the earlier column shows as its path", () =
           if (Math.abs(gap) > 1) await new Promise((resolve) => setTimeout(resolve, 100));
         }
         expect(Math.abs(gap)).toBeLessThanOrEqual(1);
+      } finally {
+        await browser.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe.skipIf(!chromium)("the way through the changes in a version's own view", () => {
+  it("follows that version's order, as its sidebar lists the pages", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-diff-order-"));
+    try {
+      await write(join(dir, "then"), {
+        "docs/a.md": "# A\n\nOld A.\n",
+        "docs/b.md": "# B\n\nOld B.\n",
+        "docs/c.md": "# C\n\nOld C.\n",
+      });
+      // The new version reverses the order: C, B, A.
+      await write(join(dir, "now"), {
+        "docs/a.md": "---\norder: 3\n---\n\n# A\n\nNew A.\n",
+        "docs/b.md": "---\norder: 2\n---\n\n# B\n\nNew B.\n",
+        "docs/c.md": "---\norder: 1\n---\n\n# C\n\nNew C.\n",
+      });
+      const html = join(dir, "out.html");
+      vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
+      await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
+      vi.restoreAllMocks();
+      const puppeteer = await import("puppeteer-core");
+      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      try {
+        const page = await browser.newPage();
+        const walk = async (view: string) => {
+          await page.goto(`${pathToFileURL(html).href}#//changes`);
+          await page.click('[data-monodocs-diff-view="both"]');
+          await page.click(`[data-monodocs-diff-view="${view}"]`);
+          const seen: string[] = [];
+          for (let step = 0; step < 3; step++) {
+            await page.click('[data-monodocs-diff-go="1"]');
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            seen.push(await page.evaluate(() => decodeURI(location.hash)));
+          }
+          return seen;
+        };
+        expect(await walk("earlier")).toEqual(["#/a", "#/b", "#/c"]);
+        expect(await walk("current")).toEqual(["#/c", "#/b", "#/a"]);
       } finally {
         await browser.close();
       }

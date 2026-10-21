@@ -426,6 +426,24 @@ export const DIFF_SCRIPT = `(function () {
   function articles() {
     return Array.prototype.slice.call(document.querySelectorAll("article.page[data-route]"));
   }
+  // The pages the changes are walked through: side by side, every page in the document's order; in a
+  // version's own view, the pages that version's sidebar lists, in its order — as the previous and
+  // next pages under a page go.
+  function walked() {
+    var all = articles();
+    if (view === "both") return all;
+    var byRoute = {};
+    all.forEach(function (article) { byRoute[article.getAttribute("data-route")] = article; });
+    var out = [];
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-monodocs-diff-sidebar="' + view + '"] a[data-route]'),
+      function (link) {
+        var article = byRoute[link.getAttribute("data-route")];
+        if (article && out.indexOf(article) === -1) out.push(article);
+      },
+    );
+    return out;
+  }
   function shown() {
     var list = articles();
     for (var i = 0; i < list.length; i++) if (!list[i].hidden) return list[i];
@@ -527,7 +545,7 @@ export const DIFF_SCRIPT = `(function () {
     return marks;
   }
   function total() {
-    return articles().reduce(function (sum, article) { return sum + changes(article).length; }, 0);
+    return walked().reduce(function (sum, article) { return sum + changes(article).length; }, 0);
   }
   function count() {
     var out = document.querySelector(".monodocs-diff-count");
@@ -536,7 +554,7 @@ export const DIFF_SCRIPT = `(function () {
     var before = 0;
     var text = "– / " + all;
     if (position.article && position.index >= 0) {
-      var list = articles();
+      var list = walked();
       for (var i = 0; i < list.length && list[i] !== position.article; i++) before += changes(list[i]).length;
       text = before + position.index + 1 + " / " + all;
     }
@@ -568,7 +586,7 @@ export const DIFF_SCRIPT = `(function () {
     })();
   }
   function go(step) {
-    var list = articles().filter(function (article) { return changes(article).length > 0; });
+    var list = walked().filter(function (article) { return changes(article).length > 0; });
     if (list.length === 0) return;
     var at = list.indexOf(position.article);
     var index = position.index + step;
@@ -576,7 +594,7 @@ export const DIFF_SCRIPT = `(function () {
       var current = shown();
       at = step > 0 ? -1 : list.length;
       if (current) {
-        var all = articles();
+        var all = walked();
         var here = all.indexOf(current);
         for (var i = 0; i < list.length; i++) {
           if (all.indexOf(list[i]) >= here) { at = step > 0 ? i - 1 : i; break; }
@@ -607,6 +625,10 @@ export const DIFF_SCRIPT = `(function () {
   function setMarks(on) {
     marks = on;
     root.setAttribute("data-monodocs-diff-marks", on ? "on" : "off");
+    // What stands for a change may differ with the marks: the position starts again.
+    var old = document.querySelector(".monodocs-diff-change-current");
+    if (old) old.classList.remove("monodocs-diff-change-current");
+    position = { article: null, index: -1 };
     later();
   }
   function showBox() {

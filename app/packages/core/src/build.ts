@@ -542,7 +542,17 @@ export async function buildSite(
     await mkdir(dirname(outputs.html), { recursive: true });
     await writeFile(outputs.html, html, "utf8");
     written.push(outputs.html);
-    const runtime = (on: boolean) => (on && config.mermaidRuntime === "inline" ? bodyScripts : "");
+    // The runtime a build without the difference writes; the difference's own selector is not part of
+    // the runtime's line but of the difference's (7.3.4), so the runtime counted is what the two share.
+    const ownScripts =
+      withoutDiff !== undefined && ownMermaid
+        ? await mermaidRuntimeScript(config.mermaidRuntime)
+        : bodyScripts;
+    let shared = 0;
+    while (shared < bodyScripts.length && bodyScripts[shared] === ownScripts[shared]) shared++;
+    const counted =
+      withoutDiff !== undefined && ownMermaid ? bodyScripts.slice(0, shared) : bodyScripts;
+    const runtime = (on: boolean) => (on && config.mermaidRuntime === "inline" ? counted : "");
     const images = [...prepared.embeddedImages, ...earlierImages];
     // With a difference, the same document without it, rendered for the size report alone: what
     // the file holds beyond it is the difference's line (20.5, 7.3.4).
@@ -553,7 +563,7 @@ export async function buildSite(
             ...renderInput,
             pages: withoutDiff.pages,
             sidebar: withoutDiff.sidebar,
-            bodyScripts: ownMermaid ? bodyScripts : "",
+            bodyScripts: ownMermaid ? ownScripts : "",
           });
     const size = await measureHtml(
       outputs.html,

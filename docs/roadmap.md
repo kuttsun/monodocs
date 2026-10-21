@@ -1527,7 +1527,10 @@ stays in view, ticked, and cannot be changed. The changes are, in reading order,
 puts them, the deletion first where a block is replaced — the added and the deleted pages, and the
 pages whose change no block carries — a front-matter title, or a move with no block changed — each
 of the last three counted once at its note. In a view that hides a column, the changes in that
-column are skipped and the count is of those shown. The navigation opens the page a change is on,
+column are skipped and the count is of those shown. A version's own view walks the pages its sidebar
+lists, in its order, as the previous and next pages under a page do: an added page is not in the
+earlier version's, nor a deleted one in the new version's. Where the plain view hides a page's
+note, the first block of what is shown stands for it. The navigation opens the page a change is on,
 scrolls it into view in both columns, and reaches each change without an ID on the earlier column.
 
 **What the difference adds reaches every theme and no build without it.** The rules and the script
