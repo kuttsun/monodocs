@@ -341,6 +341,8 @@ export function writeDiffDocument(
     const edits = page.edits ?? [];
     const plus = edits.filter((edit) => edit.op === "insert").length;
     const minus = edits.filter((edit) => edit.op === "delete").length;
+    // A page changed only in its title has no block to count.
+    if (plus === 0 && minus === 0) return "";
     return ` — ${escapeHtml(labels.diffAdded)} ${plus} / ${escapeHtml(labels.diffDeleted)} ${minus}`;
   };
   const withTitle = (page: PageComparison & { state: "matched" }) => {

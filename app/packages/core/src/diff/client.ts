@@ -81,6 +81,9 @@ del[data-monodocs-diff] {
   text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 75%, transparent);
   text-decoration-thickness: 1px;
 }
+/* Code struck through or underlined line by line cannot be read; its band and edge say what changed. */
+pre :is(ins, del)[data-monodocs-diff],
+:is(ins, del)[data-monodocs-diff] pre { text-decoration: none; }
 
 /* Two columns, and the line between them that every change leans towards. */
 .monodocs-diff-columns {

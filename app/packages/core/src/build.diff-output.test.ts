@@ -145,7 +145,7 @@ describe("the list of changes", () => {
     );
     expect(list).toContain('<a href="#/changed">Changed</a> — Added 2 / Deleted 1');
     expect(list).toContain(
-      '<a href="#/retitled">New title</a> (The title changed. Its earlier title: Old title) — Added 0 / Deleted 0',
+      '<a href="#/retitled">New title</a> (The title changed. Its earlier title: Old title)</li>',
     );
     // A deleted page is a page of its own, linked.
     expect(list).toContain('<a href="#//deleted/gone">Gone</a>');
