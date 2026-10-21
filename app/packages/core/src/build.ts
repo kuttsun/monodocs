@@ -548,10 +548,21 @@ export async function buildSite(
       withoutDiff !== undefined && ownMermaid
         ? await mermaidRuntimeScript(config.mermaidRuntime)
         : bodyScripts;
-    let shared = 0;
-    while (shared < bodyScripts.length && bodyScripts[shared] === ownScripts[shared]) shared++;
+    // What the two share at the start and at the end: the selector between is the difference's.
+    let head = 0;
+    while (head < bodyScripts.length && bodyScripts[head] === ownScripts[head]) head++;
+    let tail = 0;
+    while (
+      tail < bodyScripts.length - head &&
+      tail < ownScripts.length - head &&
+      bodyScripts[bodyScripts.length - 1 - tail] === ownScripts[ownScripts.length - 1 - tail]
+    ) {
+      tail++;
+    }
     const counted =
-      withoutDiff !== undefined && ownMermaid ? bodyScripts.slice(0, shared) : bodyScripts;
+      withoutDiff !== undefined && ownMermaid && ownScripts !== bodyScripts
+        ? [bodyScripts.slice(0, head), bodyScripts.slice(bodyScripts.length - tail)]
+        : bodyScripts;
     const runtime = (on: boolean) => (on && config.mermaidRuntime === "inline" ? counted : "");
     const images = [...prepared.embeddedImages, ...earlierImages];
     // With a difference, the same document without it, rendered for the size report alone: what

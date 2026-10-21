@@ -24,7 +24,12 @@ export type HtmlBreakdown = {
 };
 
 /** What a single HTML is measured against: its images, its inline runtime, and its page data. */
-export type HtmlParts = { images: EmbeddedImage[]; mermaidRuntime: string; siteDataJson: string };
+export type HtmlParts = {
+  images: EmbeddedImage[];
+  /** The inline runtime, or its pieces where only those are the runtime's (7.3.4). */
+  mermaidRuntime: string | string[];
+  siteDataJson: string;
+};
 
 export type OutputSize = {
   path: string;
@@ -110,7 +115,9 @@ function breakdownOf(html: string, bytes: number, parts: HtmlParts): HtmlBreakdo
     if (!largest || copyBytes > largest.bytes) largest = { path: first!, bytes: copyBytes };
   }
 
-  const mermaid = occurrenceBytes(html, parts.mermaidRuntime);
+  const mermaid = (
+    Array.isArray(parts.mermaidRuntime) ? parts.mermaidRuntime : [parts.mermaidRuntime]
+  ).reduce((sum, piece) => sum + occurrenceBytes(html, piece), 0);
   const pageData = occurrenceBytes(html, parts.siteDataJson);
   return {
     images: { bytes: imageBytes, files: fileCount, largest },
