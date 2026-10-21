@@ -407,6 +407,18 @@ describe("numbers", () => {
     expect(html).toMatch(/<li id="a-user-content-fn-b" value="1">/);
   });
 
+  it("writes no number on a deleted AsciiDoc footnote, and keeps the new ones agreeing", async () => {
+    const html = await onePage(
+      "docs/a.adoc",
+      "= A\n\nOne.footnote:[First.] Two.footnote:[Second.]\n",
+      "= A\n\nOne. Two.footnote:[Second.]\n",
+    );
+    expect(marks(html)).toEqual(["-div First."]);
+    expect(html).toMatch(
+      /<div class="footnote"[^>]*data-monodocs-diff-block="del"><del[^>]*>\s*First\.\s*<\/del><\/div>/,
+    );
+  });
+
   it("writes no generated number in deleted content, but keeps a cross-reference's text", async () => {
     const html = await onePage(
       "docs/a.adoc",

@@ -348,7 +348,12 @@ class Cloner {
     const out: ElementContent[] = [];
     let after = false;
     for (const child of children) {
-      if (child.type === "text" && isGenerated(child) && !inLink) {
+      // A link that is a generated number and nothing else — the number a footnote is listed
+      // with — is that number, not a cross-reference's text.
+      const number =
+        (child.type === "text" && isGenerated(child)) ||
+        (child.type === "element" && child.tagName === "a" && onlyGenerated(child));
+      if (number && !inLink) {
         if (out.length === 1 && out[0]!.type === "text" && /^\S+\s+$/.test(out[0]!.value)) {
           out.length = 0;
         }
@@ -388,6 +393,21 @@ class Cloner {
       ),
     };
   }
+}
+
+/** Whether all the text in `node` is generated numbers, and there is some. */
+function onlyGenerated(node: Element): boolean {
+  let some = false;
+  const walk = (list: readonly ElementContent[]): boolean =>
+    list.every((child) => {
+      if (child.type === "text") {
+        if (child.value.trim() === "") return true;
+        some = true;
+        return isGenerated(child);
+      }
+      return child.type === "element" ? walk(child.children) : true;
+    });
+  return walk(node.children) && some;
 }
 
 /** Elements that play a file of their own, which a deleted clone does not read. */
