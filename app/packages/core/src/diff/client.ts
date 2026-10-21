@@ -104,8 +104,14 @@ pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
   column-gap: 3rem;
   background: linear-gradient(var(--monodocs-diff-line), var(--monodocs-diff-line)) center / 1px 100% no-repeat;
 }
-.monodocs-diff-earlier [data-monodocs-diff-block="del"] { margin-inline-end: -0.75rem; }
-.monodocs-diff-current [data-monodocs-diff-block="ins"] { margin-inline-end: 0; }
+/* While the band is shown, a deleted block's reaches towards the line between the columns, and an
+   added block's stops at its column's edge. */
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"])
+  .monodocs-diff-earlier
+  [data-monodocs-diff-block="del"] { margin-inline-end: -0.75rem; }
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"])
+  .monodocs-diff-current
+  [data-monodocs-diff-block="ins"] { margin-inline-end: 0; }
 .monodocs-diff-column-title {
   position: sticky;
   top: var(--monodocs-diff-bar-height, 3.25rem);

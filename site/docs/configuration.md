@@ -605,6 +605,10 @@ it also says where the bytes went, and the parts sum to the file:
   is of distinct files, and the largest image is named by its path relative to the root, with the
   size of one copy.
 - `mermaid` appears only when `mermaid.runtime: inline` put the runtime in the file.
+- `difference` appears only in a build with a difference from an earlier version (`--diff-from`,
+  `--diff-from-dir`): what the difference added — the earlier columns, the deleted pages, the list of
+  changes, the marks, and their rules and script. An image the earlier version embeds is counted under
+  `images`, and the difference's page data under `page data`, not on this line.
 - Code highlighting has no line: it happens at build time and leaves only markup in the document.
 
 Under `onBudget: error` the build fails with this report in the error message (a failed build prints
