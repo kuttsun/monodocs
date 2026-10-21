@@ -182,6 +182,11 @@ del[data-monodocs-diff] {
   text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 60%, transparent);
 }
 
+/* The bar and the column headings stay in view while the page scrolls. The default theme's
+   content clips what overflows sideways with overflow-x: hidden, which would make it the box they
+   stick to; clip cuts the same overflow without that. */
+#content:has(> .monodocs-diff-bar) { overflow-x: clip; }
+
 /* The bar: the views as one segmented control, the way through the changes beside it. */
 .monodocs-diff-bar {
   position: sticky;
@@ -194,8 +199,7 @@ del[data-monodocs-diff] {
   justify-content: space-between;
   margin: -1rem 0 1.5rem;
   padding: 0.6rem 0;
-  background: color-mix(in srgb, var(--monodocs-diff-paper) 88%, transparent);
-  backdrop-filter: blur(8px);
+  background: var(--monodocs-diff-paper);
   border-bottom: 1px solid var(--monodocs-diff-line);
 }
 .monodocs-diff-views {
@@ -265,8 +269,9 @@ export function diffBar(labels: DiffLabels): string {
     `<div class="monodocs-diff-bar" role="toolbar" aria-label="${escapeAttr(labels.diffChanges)}">` +
     `<div class="monodocs-diff-views" role="group">` +
     view("both", labels.diffViewSideBySide, true) +
-    view("current", labels.diffViewCurrent, false) +
+    // In the order the columns stand: the earlier version on the left, the new on the right.
     view("earlier", labels.diffViewEarlier, false) +
+    view("current", labels.diffViewCurrent, false) +
     `</div><div class="monodocs-diff-nav">` +
     `<button type="button" data-monodocs-diff-go="-1">${arrow(true)}${escapeHtml(labels.diffPrevious)}</button>` +
     `<span class="monodocs-diff-count" aria-live="polite"></span>` +
@@ -450,10 +455,16 @@ export const DIFF_SCRIPT = `(function () {
     });
   }
 
+  // The column headings stick right under the bar, whatever its height once it wraps.
+  function measure() {
+    var bar = document.querySelector(".monodocs-diff-bar");
+    if (bar) root.style.setProperty("--monodocs-diff-bar-height", bar.offsetHeight + "px");
+  }
+
   var pending = 0;
   function later() {
     clearTimeout(pending);
-    pending = setTimeout(function () { align(); count(); }, 60);
+    pending = setTimeout(function () { measure(); align(); count(); }, 60);
   }
 
   function start() {

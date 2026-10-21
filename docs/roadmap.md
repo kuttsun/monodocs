@@ -1486,7 +1486,7 @@ changed, and blue with `→` for moved. The symbol is hidden from assistive tech
 hidden label says the state, so the mark is not colour alone.
 
 **Three views and a way through the changes.** A bar prepended to `{{pages}}` holds three buttons —
-side by side, the new version, the earlier version — and previous/next buttons with a count,
+side by side, the earlier version, the new version, in the order the columns stand — and previous/next buttons with a count,
 `3 / 17`. The view is not stored: the next person to open the file starts side by side. The new
 version's view shows the right column alone, its additions marked; the earlier version's view the
 left column alone, its deletions marked, so an added page shows only its note there and a deleted

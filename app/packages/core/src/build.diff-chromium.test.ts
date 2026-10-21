@@ -84,6 +84,17 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       expect((await offsets()).every((gap) => Math.abs(gap) <= 1)).toBe(true);
       await page.setViewport({ width: 1500, height: 900 });
 
+      // The bar stays at the top while the page scrolls, its views in the order of the columns.
+      await page.evaluate(() => window.scrollTo(0, 600));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const bar = await page.evaluate(() => ({
+        top: Math.round(document.querySelector(".monodocs-diff-bar")!.getBoundingClientRect().top),
+        views: [...document.querySelectorAll(".monodocs-diff-views button")].map((b) =>
+          b.getAttribute("data-monodocs-diff-view"),
+        ),
+      }));
+      expect(bar).toEqual({ top: 0, views: ["both", "earlier", "current"] });
+
       // Next reaches every change once, across pages, and comes round.
       const seen: string[] = [];
       for (let i = 0; i < 12; i++) {
