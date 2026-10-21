@@ -13,7 +13,6 @@
 - 📖 **[Documentation](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference
 - 🌐 **[HTML sample](https://kuttsun.github.io/monodocs/sample.html)** — a single self-contained HTML file built from [`examples/en`](examples/en)
 - 📄 **[PDF sample](https://kuttsun.github.io/monodocs/sample.pdf)** — the same examples as a PDF with a cover, a table of contents, and formulas
-- 🔀 **[Difference sample](https://kuttsun.github.io/monodocs/diff-sample.html)** — two versions of [`examples/diff/en`](examples/diff/en) compared: side by side, either version alone, and the changes one by one
 
 ## Features
 
@@ -82,6 +81,19 @@ monodocs validate ./docs                              # report broken links / mi
 ```
 
 Commands, options, and the `monodocs.config.yml` reference are on the [documentation site](https://kuttsun.github.io/monodocs/docs/getting-started).
+
+## Advanced usage
+
+### What changed since the last version
+
+When a revised document is handed over, its readers want to know what changed. `--diff-from` builds the HTML with the difference from an earlier version written into it: the two versions side by side, a list of changes, and a way through them one by one. Readers who never look at Git can see what changed.
+
+```bash
+monodocs build ./docs -o ./dist/doc.html --diff-from v1.2                 # an earlier version by Git tag or commit
+monodocs build ./docs -o ./dist/doc.html --diff-from-dir ../project-1.2   # an earlier version as a directory
+```
+
+See the [difference sample](https://kuttsun.github.io/monodocs/diff-sample.html), built from the two versions in [`examples/diff/en`](examples/diff/en).
 
 ## Project documentation
 
