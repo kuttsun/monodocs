@@ -873,6 +873,7 @@ export const DIFF_SCRIPT = `(function () {
   function unhighlight() {
     var other = view === "earlier" ? ".monodocs-diff-current" : ".monodocs-diff-earlier";
     Array.prototype.forEach.call(document.querySelectorAll(other + " mark.search-hit"), function (mark) {
+      if (!mark.__monodocsSearchHit) return;
       var parent = mark.parentNode;
       while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
       parent.removeChild(mark);

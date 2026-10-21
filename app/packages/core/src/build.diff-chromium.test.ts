@@ -48,10 +48,11 @@ beforeAll(async () => {
   vi.restoreAllMocks();
 });
 
+// Closing the browser can outlast the default hook timeout when the suite runs under load.
 afterAll(async () => {
   await rm(base, { recursive: true, force: true });
   await shared?.close();
-});
+}, 60_000);
 
 /**
  * One browser for every test here, each opening and closing its own pages: launching one per test
@@ -691,9 +692,24 @@ describe.skipIf(!chromium)("search in each view", () => {
       }));
       expect(marks.earlier).toBeGreaterThan(0);
       expect(marks.current).toBe(0);
+      // A document's own <mark class="search-hit"> is not a highlight, and stays.
+      await page.evaluate(() => {
+        const own = document.createElement("mark");
+        own.className = "search-hit";
+        own.id = "own-mark";
+        own.textContent = "own";
+        document.querySelector("article:not([hidden]) .monodocs-diff-earlier p")!.appendChild(own);
+      });
       await page.focus("#search-input");
       await page.click('[data-monodocs-diff-view="current"]');
       expect(await settled([])).toEqual([]);
+      const left = await page.evaluate(() => ({
+        own: document.getElementById("own-mark") !== null,
+        highlights: document.querySelectorAll(
+          "article:not([hidden]) .monodocs-diff-earlier mark.search-hit",
+        ).length,
+      }));
+      expect(left).toEqual({ own: true, highlights: 1 });
     } finally {
       await closePages(browser);
     }

@@ -6214,7 +6214,7 @@ Completion criteria:
 - `-f html --diff-from v1.2` builds; `diff.pdf` passed to core is `diff/unsupported`
 - Changing a table's frame, grid, stripes, or width, or a block's role, changes no block; moving a
   cell's span (AsciiDoc `2+|a |b` to `|a 2+|b`) with the same texts changes that row; changing one
-  row under another cell's `rowspan` keeps every new value in its column in every view
+  row under another cell's `rowspan` keeps every new value in its column in both columns
 - An image outside the root, or missing, unchanged between the versions is not a difference with
   either `--diff-from` or `--diff-from-dir`
 - A change of link target or emphasis with the same text is not a difference; a paragraph moved into
@@ -6225,24 +6225,40 @@ Completion criteria:
 - Turning one item of a list into a task, in Markdown and in AsciiDoc, changes that item alone
 - Splitting an AsciiDoc section with a new subheading, and changing a heading's level, adds or
   changes that heading alone
-- In the earlier-version view, an added page shows only its note
+- In the earlier-version view, an added page shows only its note; each version's own view is plain —
+  no mark, page note, or sidebar badge — until the bar's box marks its changes, and the navigation
+  reaches each change either way
 - Fixing a figure's caption changes the caption alone, and the figure is not shown twice
 - Changing `sidebar.titleTransform` or `sidebar.titleFrom` alone produces no change; changing a
   page's front-matter `title` lists that page
 - Whitespace between elements is never a block or a change, and the bar's count of changes equals
-  the number of marked blocks, added pages, and pages changed only in their front-matter title or
-  moved without a block changed, each of which the navigation reaches
-- Deleting an item of an ordered list, and deleting a footnote, leaves every new item and footnote
-  showing its new number in every view, and references and footnotes agreeing
-- The output for fixtures covering a nested list with an item deleted at each depth, a table with a
-  changed caption, header row, and `colgroup` (AsciiDoc), a deleted anonymous block, and a deleted
-  `div.title` and `summary`, re-parses to the same tree and violates no content model; a deleted
-  nested item appears at its own depth
-- Deleted headings have no ID, do not appear in the in-page table of contents, and are not found by
-  search or highlighted; no ID from the earlier tree survives without being renamed, and fixtures
-  with pre-rendered diagrams in both versions and with an inline SVG carrying IDs moved within an
-  AsciiDoc page have no duplicate ID, and every renamed reference — `url(#…)`, `href`, a `<style>`
-  selector, an ID-naming attribute — still resolves inside its SVG
+  the number of marked blocks, added and deleted pages, and pages changed only in their front-matter
+  title or moved without a block changed, each of which the navigation reaches; in a view that hides
+  a column, the count is of the changes shown
+- Side by side, every unchanged block starts at the same height in both columns, for fixtures with a
+  nested list, a table, an admonition, a code block, and a diagram changed around it, and again
+  after the window is resized; a page that did not change is shown once; on a screen too narrow for
+  two columns, the columns stand one above the other
+- The sidebar shows added pages in green with `+`, deleted pages in red with `−`, changed pages in
+  orange with `•`, and moved pages in blue with `→`, each with a visually hidden label, the sidebar
+  being the new version's in the new version's view and the earlier version's, in its order and
+  titles, in the earlier version's; the bar stays fixed at the top of the window above the sidebar
+  and the content; a deleted page stands where it stood in the earlier sidebar, at `//deleted`
+  followed by its earlier route, and a source page taking that route or `//changes` is
+  `page/duplicate-route`
+- The earlier column, for fixtures covering a nested list, an AsciiDoc table with a caption, header
+  row, and `colgroup`, an anonymous block, and a `div.title` and `summary`, re-parses to the same
+  tree and violates no content model
+- On a changed page, the in-page table of contents lists both versions' headings side by side, the
+  added and deleted marked and each with the changes in its section, and each version's own headings
+  in its view; a heading in it opens its section, in the earlier column too; the previous and next
+  pages under a page are not shown side by side, and follow each version's own order in its view
+- Headings only the earlier column has carry no ID, are found by search only in the earlier
+  version's own view, and are highlighted in the earlier column alone; no ID from the earlier tree
+  survives without being renamed, and fixtures with pre-rendered diagrams in both versions and with
+  an inline SVG carrying IDs moved within an AsciiDoc page have no duplicate ID, and every renamed
+  reference — `url(#…)`, `href`, a `<style>` selector, an ID-naming attribute — still resolves
+  inside its SVG
 - A page including an example of an LFS pointer's first line is not `diff/lfs-pointer`
 - A document's own `~~struck~~` text and raw `<ins>` are shown in every view
 - A tree extracted from a ref matches a checkout of that ref for the files under the earlier root,
@@ -6271,20 +6287,23 @@ Completion criteria:
   and no deleted heading carries a number
 - A diagram deleted along with the new version's last one is drawn in `client` mode, and an earlier
   version with diagrams against a new one with Mermaid off builds in `pre-render` mode
-- A difference with a PDF output is `diff/unsupported`, whether the PDF comes from `-f pdf`,
-  `-f both`, or `output.format`; `watch`, `serve`, and `validate` reject the options as unknown, and
+- A difference with a PDF output is `diff/unsupported`, whether the PDF comes from `-f pdf`, `-f
+  both`, or `output.format`; `watch`, `serve`, and `validate` reject the options as unknown, and
   `watchSite`, `serveSite`, and `validateSite` reject `diff`
 - Tests confirm that the same old and new inputs give the same HTML bytes, and that a build without
-  a difference gives the bytes it gave before the feature, labels in `siteDataJson` included; the
-  size report's lines add up to the file, with an image shared by both versions and the same block
-  deleted on two pages
+  a difference gives the bytes it gave before the feature but for the default theme's `app.js`,
+  labels in `siteDataJson` included; the size report's lines add up to the file, with an image
+  shared by both versions and the same block deleted on two pages
 - With `numbering.sections` on, every number shown is the number the same page gets in a build
   without a difference
+- The list of changes is listed in the side-by-side sidebar only, and choosing a version's own view
+  from it opens that version's first page
 - The list of changes gets a page ID that collides with neither a page named `diff-changes.md` nor a
   heading whose ID matches the article's, and is in neither search nor the previous/next navigation;
   the bar's navigation lands on each change after the page has been shown
-- The default theme's `app.js` is byte for byte what it was before the feature, and a search term
-  found on a page is not left highlighted inside its deleted content
+- The default theme's `app.js` gains only the search hook (`window.__monodocsSearchPages`); search
+  covers the earlier version in its own view and the new version otherwise, searches anew when the
+  view changes, and leaves no highlight in the column not searched
 - A custom theme with its own `template.html`, `style.css`, and `app.js` gets the bar, the marks,
   and the navigation
 - The command reference and the single HTML invariants in architecture.md describe the difference,
@@ -6332,6 +6351,12 @@ Completion criteria:
   across a page carries its bar on both pages
 - The HTML of `-f both --diff-pdf bars`, printed from Chromium, gives the bars, including with a
   custom template that has no `{{bodyAttrs}}`
+- In `markup`, deleting an item of an ordered list, and deleting a footnote, leaves every new item
+  and footnote showing its new number, and references and footnotes agreeing
+- In `markup`, the output for fixtures covering a nested list with an item deleted at each depth, a
+  table with a changed caption, header row, and `colgroup` (AsciiDoc), a deleted anonymous block,
+  and a deleted `div.title` and `summary`, re-parses to the same tree and violates no content model;
+  a deleted nested item appears at its own depth
 - In `markup`, a deleted image appears even when the HTML configuration would not embed it; in
   `bars`, the list of changes names deleted pages without their content, and every block of an added
   page carries a bar
