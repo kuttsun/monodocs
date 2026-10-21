@@ -111,8 +111,9 @@ document, and keeps these:
   (`assertNoEarlierId` in [`diff/write.ts`](../app/packages/core/src/diff/write.ts)).
 - **Generated pages cannot collide.** The list of changes is at `//changes` and a deleted page at `//deleted`
   followed by its earlier route; no alias yields an empty segment, and a source page that takes one — only a
-  file whose name begins with a backslash, which `toRoute` reads as a separator — is `page/duplicate-route`. Their page IDs are allocated against every page ID, element ID, and the template's
-  IDs (`allocatePageId` in [`diff/changes.ts`](../app/packages/core/src/diff/changes.ts)).
+  path that begins with a backslash, which `toRoute` reads as a separator — is `page/duplicate-route`. Their
+  page IDs are allocated against every page ID, element ID, and the template's IDs (`allocatePageId` in
+  [`diff/changes.ts`](../app/packages/core/src/diff/changes.ts)).
 - **Marks are the difference's alone.** Every `<ins>` and `<del>` monodocs writes carries `data-monodocs-diff`,
   and the stylesheet and script act on those and on `data-monodocs-diff-block`, `-page`, and `-pair` only; a
   document's own `<del>`, `<ins>`, or `mark.search-hit` is left as it is in every view.
