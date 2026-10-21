@@ -83,14 +83,30 @@ The complete test policy and coverage map are in [docs/testing.md](docs/testing.
 - Keep changes focused. Do not mix unrelated formatting or refactoring into a pull request.
 
 Features are organized by roadmap version. At a version boundary, update [docs/status.md](docs/status.md) and
-[docs/testing.md](docs/testing.md). Commit messages use a Conventional Commits prefix, an English description,
-and the target version at the end, for example:
+[docs/testing.md](docs/testing.md).
+
+## Pull Requests
+
+### Scope
+
+Make each pull request a change that can be explained by a single purpose and passes the status checks
+required for merging (see [Merging](#merging)) on its own. Split a large feature into stages that each meet this condition.
+
+### Title
+
+The pull request title becomes the subject of the commit on `main`. Use a Conventional Commits prefix, an
+English description, and the target roadmap version at the end:
 
 ```text
 feat: add search indexing (v0.4)
 ```
 
-## Pull Requests
+GitHub appends the pull request number after the version when merging, so the commit on `main` reads
+`feat: add search indexing (v0.4) (#123)`. These conventions apply to the pull request title only, not to the
+commits inside the pull request. Pull requests opened by automation, such as Dependabot, follow the same
+conventions: edit their title and description before merging.
+
+### Description
 
 Include at least the following in the pull request description:
 
@@ -98,6 +114,26 @@ Include at least the following in the pull request description:
 - Main implementation changes
 - Verification performed
 - Known limitations or follow-up work
+
+The description becomes the body of the commit on `main`. Before merging, bring it up to date with the final
+change: the reason for the change, the main design decisions, and the verification results. Remove the
+template's checklist, its HTML comments, sections left empty, and any explanation that no longer matches the
+change; the comments are hidden on GitHub but are kept in the commit body. Leave discussion in the pull request
+conversation, and keep the reasoning that future maintenance needs in the description.
+
+### Merging
+
+Pull requests are merged into `main` by squash merge, so each pull request becomes one commit on `main`. The
+number of commits in a pull request, their messages, and whether each intermediate commit passes the checks do
+not matter, and you do not need to squash or rewrite history before submitting. You may still need to resolve
+conflicts, or to rebase a pull request that depends on another one onto the updated `main` after that one is
+merged.
+
+Merging a pull request requires the required status checks — App CI (Linux), App CI (Windows), and Site CI —
+to pass, the branch to be up to date with `main`, and review conversations to be resolved. Pull request CI
+checks the result of merging the branch into `main`, not the individual commits in the pull request. When a
+pull request is focused on one purpose, reverting its commit on `main` removes exactly that change, and
+`git bisect` can narrow a regression down to that pull request, though not to a commit inside it.
 
 ## License
 
