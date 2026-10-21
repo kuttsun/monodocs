@@ -121,15 +121,25 @@ function note(lines: string[]): string {
  * A page's two columns, each under the name of its version: the earlier page, or a note, beside
  * the new page, or a note.
  */
-function columns(labels: DiffLabels, earlier: string, current: string): string {
-  const title = (label: string) =>
-    `<p class="monodocs-diff-column-title">${escapeHtml(label)}</p>\n`;
+function columns(
+  heads: { earlier: string; current: string },
+  earlier: string,
+  current: string,
+): string {
   return (
     `<div class="${COLUMNS_CLASS}">` +
-    `<div class="${EARLIER_CLASS}">\n${title(labels.diffViewEarlier)}${earlier}\n</div>` +
-    `<div class="${CURRENT_CLASS}">\n${title(labels.diffViewCurrent)}${current}\n</div>` +
+    `<div class="${EARLIER_CLASS}">\n${heads.earlier}${earlier}\n</div>` +
+    `<div class="${CURRENT_CLASS}">\n${heads.current}${current}\n</div>` +
     `</div>`
   );
+}
+
+/** A column's heading: its version's label, and the version's name when it has one. */
+function columnHead(label: string, name: string | undefined): string {
+  const named = name?.trim()
+    ? ` <span class="monodocs-diff-version">${escapeHtml(name.trim())}</span>`
+    : "";
+  return `<p class="monodocs-diff-column-title">${escapeHtml(label)}${named}</p>\n`;
 }
 
 /** Put `entry` in the sidebar after the page's entry, wherever that is; false if there is none. */
@@ -183,6 +193,10 @@ export function writeDiffDocument(
   },
 ): DiffDocument {
   const { labels } = context;
+  const heads = {
+    earlier: columnHead(labels.diffViewEarlier, context.names.from),
+    current: columnHead(labels.diffViewCurrent, context.names.to),
+  };
   const html = (tree: HastRoot) => toHtml(tree, { allowDangerousHtml: true });
   const states = new Map<string, PageState>();
   const moved = new Map<string, PageComparison & { state: "matched" }>();
@@ -195,7 +209,7 @@ export function writeDiffDocument(
   for (const page of comparison) {
     if (page.state === "added") {
       states.set(page.new.id, "added");
-      page.new.html = columns(labels, note([escapeHtml(labels.diffPageAdded)]), page.new.html);
+      page.new.html = columns(heads, note([escapeHtml(labels.diffPageAdded)]), page.new.html);
       continue;
     }
     if (page.state === "deleted") {
@@ -226,7 +240,7 @@ export function writeDiffDocument(
     ) {
       const earlier = writeColumns(nextTree, oldTree, edits, context.write);
       earlierDiagrams += diagramsIn(earlier);
-      page.new.html = columns(labels, html(earlier), html(nextTree));
+      page.new.html = columns(heads, html(earlier), html(nextTree));
     }
   }
 
@@ -282,7 +296,7 @@ export function writeDiffDocument(
       hidden: true,
       aliases: [],
       rawSource: "",
-      html: columns(labels, content, note([escapeHtml(labels.diffPageDeleted)])),
+      html: columns(heads, content, note([escapeHtml(labels.diffPageDeleted)])),
       text: "",
       headings: [],
       anchors: [],

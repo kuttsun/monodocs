@@ -10,34 +10,143 @@ import { escapeAttr, escapeHtml } from "../util/html.js";
 
 /** The rules a difference adds to `{{style}}`. */
 export const DIFF_STYLE = `
-/* monodocs: difference from an earlier version */
+/* monodocs: difference from an earlier version. The states take the default theme's admonition
+   colours, so they follow its light and dark schemes; a custom theme without them gets the
+   fallbacks. */
 :root {
-  --monodocs-diff-ins: rgba(46, 160, 67, 0.18);
-  --monodocs-diff-del: rgba(248, 81, 73, 0.18);
-  --monodocs-diff-added: #1a7f37;
-  --monodocs-diff-deleted: #cf222e;
-  --monodocs-diff-changed: #bc4c00;
-  --monodocs-diff-moved: #0969da;
+  --monodocs-diff-added: var(--color-adm-tip, #1a7f37);
+  --monodocs-diff-deleted: var(--color-adm-caution, #cf222e);
+  --monodocs-diff-changed: var(--color-adm-warning, #9a6700);
+  --monodocs-diff-moved: var(--color-adm-note, #0969da);
+  --monodocs-diff-paper: var(--color-bg, Canvas);
+  --monodocs-diff-line: var(--color-border, rgba(127, 127, 127, 0.4));
+  --monodocs-diff-muted: var(--color-muted, GrayText);
+  --monodocs-diff-tint: var(--admonition-tint, 10%);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --monodocs-diff-added: #3fb950;
-    --monodocs-diff-deleted: #f85149;
-    --monodocs-diff-changed: #f0883e;
-    --monodocs-diff-moved: #58a6ff;
-  }
+
+/* Marked blocks: a tinted band, edged towards the middle of the two columns. */
+[data-monodocs-diff-block] {
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
-:root[data-theme="dark"] {
-  --monodocs-diff-added: #3fb950;
-  --monodocs-diff-deleted: #f85149;
-  --monodocs-diff-changed: #f0883e;
-  --monodocs-diff-moved: #58a6ff;
+[data-monodocs-diff-block="ins"] {
+  background: color-mix(in srgb, var(--monodocs-diff-added) var(--monodocs-diff-tint), transparent);
+  box-shadow: inset 3px 0 0 var(--monodocs-diff-added);
 }
-ins[data-monodocs-diff] { background: var(--monodocs-diff-ins); text-decoration: none; }
-del[data-monodocs-diff] { background: var(--monodocs-diff-del); text-decoration: line-through; }
-[data-monodocs-diff-block="ins"] { box-shadow: -4px 0 0 var(--monodocs-diff-added); }
-[data-monodocs-diff-block="del"] { box-shadow: -4px 0 0 var(--monodocs-diff-deleted); }
-.monodocs-diff-change-current { outline: 2px solid var(--monodocs-diff-changed); outline-offset: 2px; }
+[data-monodocs-diff-block="del"] {
+  background: color-mix(in srgb, var(--monodocs-diff-deleted) var(--monodocs-diff-tint), transparent);
+  box-shadow: inset -3px 0 0 var(--monodocs-diff-deleted);
+}
+p[data-monodocs-diff-block], li[data-monodocs-diff-block], h1[data-monodocs-diff-block],
+h2[data-monodocs-diff-block], h3[data-monodocs-diff-block], h4[data-monodocs-diff-block],
+h5[data-monodocs-diff-block], h6[data-monodocs-diff-block], dt[data-monodocs-diff-block],
+dd[data-monodocs-diff-block], div[data-monodocs-diff-block], span[data-monodocs-diff-block] {
+  padding-inline: 0.5rem;
+  margin-inline: -0.5rem;
+}
+tr[data-monodocs-diff-block] { box-shadow: none; }
+tr[data-monodocs-diff-block="ins"] > * {
+  background: color-mix(in srgb, var(--monodocs-diff-added) var(--monodocs-diff-tint), var(--monodocs-diff-paper));
+}
+tr[data-monodocs-diff-block="del"] > * {
+  background: color-mix(in srgb, var(--monodocs-diff-deleted) var(--monodocs-diff-tint), var(--monodocs-diff-paper));
+}
+/* The text keeps a mark of its own, so black and white still tells the two apart. */
+ins[data-monodocs-diff] {
+  background: none;
+  text-decoration: underline dotted color-mix(in srgb, var(--monodocs-diff-added) 70%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+del[data-monodocs-diff] {
+  background: none;
+  text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 75%, transparent);
+  text-decoration-thickness: 1px;
+}
+
+/* Two columns, and the line between them that every change leans towards. */
+.monodocs-diff-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 3rem;
+  background: linear-gradient(var(--monodocs-diff-line), var(--monodocs-diff-line)) center / 1px 100% no-repeat;
+}
+.monodocs-diff-earlier [data-monodocs-diff-block="del"] { margin-inline-end: -0.75rem; }
+.monodocs-diff-current [data-monodocs-diff-block="ins"] { margin-inline-end: 0; }
+.monodocs-diff-column-title {
+  position: sticky;
+  top: var(--monodocs-diff-bar-height, 3.25rem);
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  margin: 0 0 1.25rem;
+  padding: 0.4rem 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--monodocs-diff-muted);
+  background: var(--monodocs-diff-paper);
+  border-bottom: 1px solid var(--monodocs-diff-line);
+}
+.monodocs-diff-version {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+}
+.monodocs-diff-earlier .monodocs-diff-column-title::before,
+.monodocs-diff-current .monodocs-diff-column-title::before {
+  content: "";
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  align-self: center;
+}
+.monodocs-diff-earlier .monodocs-diff-column-title::before { background: var(--monodocs-diff-deleted); }
+.monodocs-diff-current .monodocs-diff-column-title::before { background: var(--monodocs-diff-added); }
+:root[data-monodocs-diff-view="current"] .monodocs-diff-earlier,
+:root[data-monodocs-diff-view="earlier"] .monodocs-diff-current { display: none; }
+:root[data-monodocs-diff-view="current"] .monodocs-diff-columns,
+:root[data-monodocs-diff-view="earlier"] .monodocs-diff-columns {
+  grid-template-columns: minmax(0, 1fr);
+  background: none;
+}
+:root[data-monodocs-diff-view="earlier"] #toc { visibility: hidden; }
+:root:not([data-monodocs-diff-view]) #content:has(.page:not([hidden]) .monodocs-diff-columns),
+:root[data-monodocs-diff-view="both"] #content:has(.page:not([hidden]) .monodocs-diff-columns) {
+  max-width: none;
+}
+@media (max-width: 1000px) {
+  .monodocs-diff-columns { grid-template-columns: minmax(0, 1fr); background: none; }
+  .monodocs-diff-current { border-top: 1px solid var(--monodocs-diff-line); padding-top: 1.5rem; margin-top: 1.5rem; }
+}
+
+/* A note stands for a change no block carries: an added, deleted, moved, or retitled page. */
+.monodocs-diff-note {
+  --monodocs-diff-note: var(--monodocs-diff-changed);
+  margin: 0 0 1.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--monodocs-diff-note) 35%, transparent);
+  background: color-mix(in srgb, var(--monodocs-diff-note) var(--monodocs-diff-tint), transparent);
+}
+.monodocs-diff-note p { margin: 0.2em 0; }
+.page[data-monodocs-diff-page="moved"] > .monodocs-diff-note { --monodocs-diff-note: var(--monodocs-diff-moved); }
+.monodocs-diff-earlier > .monodocs-diff-note { --monodocs-diff-note: var(--monodocs-diff-added); }
+.monodocs-diff-current > .monodocs-diff-note { --monodocs-diff-note: var(--monodocs-diff-deleted); }
+
+/* The change the navigation is on. */
+.monodocs-diff-change-current {
+  outline: 2px solid var(--color-accent, Highlight);
+  outline-offset: 3px;
+  border-radius: 4px;
+  scroll-margin-top: 6rem;
+}
+
+/* The sidebar: a badge for each state, its name told to assistive technology alone. */
 .monodocs-diff-label {
   position: absolute;
   width: 1px;
@@ -49,39 +158,31 @@ del[data-monodocs-diff] { background: var(--monodocs-diff-del); text-decoration:
   white-space: nowrap;
   border: 0;
 }
-.monodocs-diff-mark { margin-inline-start: 0.4em; font-weight: 700; }
-.sidebar-page[data-monodocs-diff-page="added"] > a { color: var(--monodocs-diff-added); }
-.sidebar-page[data-monodocs-diff-page="deleted"] > a { color: var(--monodocs-diff-deleted); }
-.sidebar-page[data-monodocs-diff-page="changed"] > a { color: var(--monodocs-diff-changed); }
-.sidebar-page[data-monodocs-diff-page="moved"] > a { color: var(--monodocs-diff-moved); }
-.monodocs-diff-note {
-  border-inline-start: 4px solid var(--monodocs-diff-changed);
-  padding: 0.25em 1em;
-  margin: 0 0 1em;
-}
-.monodocs-diff-note p { margin: 0.25em 0; }
-.monodocs-diff-earlier > .monodocs-diff-note { border-color: var(--monodocs-diff-added); }
-.monodocs-diff-current > .monodocs-diff-note { border-color: var(--monodocs-diff-deleted); }
-.monodocs-diff-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.5rem; }
-.monodocs-diff-column-title {
-  font-size: 0.8em;
+.sidebar-page[data-monodocs-diff-page] > a { display: flex; align-items: center; gap: 0.5em; }
+.monodocs-diff-mark {
+  --monodocs-diff-mark: var(--monodocs-diff-changed);
+  margin-inline-start: auto;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
   font-weight: 700;
-  opacity: 0.7;
-  margin: 0 0 0.5em;
-  border-bottom: 1px solid currentColor;
+  line-height: 1;
+  color: var(--monodocs-diff-mark);
+  background: color-mix(in srgb, var(--monodocs-diff-mark) 16%, transparent);
 }
-:root[data-monodocs-diff-view="current"] .monodocs-diff-earlier,
-:root[data-monodocs-diff-view="earlier"] .monodocs-diff-current { display: none; }
-:root[data-monodocs-diff-view="current"] .monodocs-diff-columns,
-:root[data-monodocs-diff-view="earlier"] .monodocs-diff-columns { grid-template-columns: minmax(0, 1fr); }
-:root[data-monodocs-diff-view="earlier"] #toc { visibility: hidden; }
-:root:not([data-monodocs-diff-view]) #content:has(.page:not([hidden]) .monodocs-diff-columns),
-:root[data-monodocs-diff-view="both"] #content:has(.page:not([hidden]) .monodocs-diff-columns) {
-  max-width: none;
+[data-monodocs-diff-page="added"] .monodocs-diff-mark { --monodocs-diff-mark: var(--monodocs-diff-added); }
+[data-monodocs-diff-page="deleted"] .monodocs-diff-mark { --monodocs-diff-mark: var(--monodocs-diff-deleted); }
+[data-monodocs-diff-page="moved"] .monodocs-diff-mark { --monodocs-diff-mark: var(--monodocs-diff-moved); }
+.sidebar-page[data-monodocs-diff-page="deleted"] > a {
+  color: var(--monodocs-diff-muted);
+  text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 60%, transparent);
 }
-@media (max-width: 1000px) {
-  .monodocs-diff-columns { grid-template-columns: minmax(0, 1fr); }
-}
+
+/* The bar: the views as one segmented control, the way through the changes beside it. */
 .monodocs-diff-bar {
   position: sticky;
   top: 0;
@@ -91,27 +192,69 @@ del[data-monodocs-diff] { background: var(--monodocs-diff-del); text-decoration:
   gap: 0.5rem 1rem;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0;
   margin: -1rem 0 1.5rem;
-  background: var(--bg, Canvas);
-  border-bottom: 1px solid rgba(127, 127, 127, 0.35);
+  padding: 0.6rem 0;
+  background: color-mix(in srgb, var(--monodocs-diff-paper) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--monodocs-diff-line);
+}
+.monodocs-diff-views {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--monodocs-diff-line);
+  border-radius: 8px;
+  background: var(--color-sidebar-bg, transparent);
 }
 .monodocs-diff-bar button {
   font: inherit;
-  font-size: 0.85em;
-  padding: 0.3em 0.8em;
-  border: 1px solid rgba(127, 127, 127, 0.5);
-  border-radius: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  color: var(--monodocs-diff-muted);
   background: transparent;
-  color: inherit;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.35rem 0.8rem;
   cursor: pointer;
 }
-.monodocs-diff-bar button[aria-pressed="true"] { background: rgba(127, 127, 127, 0.2); font-weight: 700; }
-.monodocs-diff-bar .monodocs-diff-views,
-.monodocs-diff-bar .monodocs-diff-nav { display: flex; gap: 0.4rem; align-items: center; }
-.monodocs-diff-count { font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: center; }
+.monodocs-diff-bar button:hover { color: var(--color-text, CanvasText); }
+.monodocs-diff-bar button:focus-visible { outline: 2px solid var(--color-accent, Highlight); outline-offset: 1px; }
+.monodocs-diff-views button[aria-pressed="true"] {
+  color: var(--color-text, CanvasText);
+  background: var(--monodocs-diff-paper);
+  box-shadow: 0 0 0 1px var(--monodocs-diff-line), 0 1px 2px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+.monodocs-diff-nav { display: inline-flex; align-items: center; gap: 0.25rem; }
+.monodocs-diff-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  border: 1px solid var(--monodocs-diff-line);
+}
+.monodocs-diff-nav svg { width: 0.9em; height: 0.9em; }
+.monodocs-diff-count {
+  min-width: 4.5em;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--monodocs-diff-muted);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .monodocs-diff-bar button { transition: color 0.15s, background-color 0.15s; }
+}
 @media print { .monodocs-diff-bar { display: none; } }
 `;
+
+/** An arrow for the way through the changes, up for the previous one and down for the next. */
+function arrow(up: boolean): string {
+  return (
+    `<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="` +
+    (up
+      ? "M3.47 9.53a.75.75 0 0 0 1.06 0L8 6.06l3.47 3.47a.75.75 0 1 0 1.06-1.06l-4-4a.75.75 0 0 0-1.06 0l-4 4a.75.75 0 0 0 0 1.06Z"
+      : "M12.53 6.47a.75.75 0 0 0-1.06 0L8 9.94 4.53 6.47a.75.75 0 0 0-1.06 1.06l4 4a.75.75 0 0 0 1.06 0l4-4a.75.75 0 0 0 0-1.06Z") +
+    `"/></svg>`
+  );
+}
 
 /** The bar prepended to `{{pages}}`: the three views, and the way through the changes. */
 export function diffBar(labels: DiffLabels): string {
@@ -125,9 +268,9 @@ export function diffBar(labels: DiffLabels): string {
     view("current", labels.diffViewCurrent, false) +
     view("earlier", labels.diffViewEarlier, false) +
     `</div><div class="monodocs-diff-nav">` +
-    `<button type="button" data-monodocs-diff-go="-1">${escapeHtml(labels.diffPrevious)}</button>` +
+    `<button type="button" data-monodocs-diff-go="-1">${arrow(true)}${escapeHtml(labels.diffPrevious)}</button>` +
     `<span class="monodocs-diff-count" aria-live="polite"></span>` +
-    `<button type="button" data-monodocs-diff-go="1">${escapeHtml(labels.diffNext)}</button>` +
+    `<button type="button" data-monodocs-diff-go="1">${escapeHtml(labels.diffNext)}${arrow(false)}</button>` +
     `</div></div>\n`
   );
 }

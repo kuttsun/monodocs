@@ -366,7 +366,7 @@ describe("pages and the sidebar carry their state", () => {
     );
     // An added page: its note in the earlier column, beside the page.
     expect(article(html, "/zadded")).toMatch(
-      /data-monodocs-diff-page="added">\n<div class="monodocs-diff-columns"><div class="monodocs-diff-earlier">\n<p class="monodocs-diff-column-title">Earlier version<\/p>\n<div class="monodocs-diff-note"><p>This page was added.<\/p><\/div>/,
+      /data-monodocs-diff-page="added">\n<div class="monodocs-diff-columns"><div class="monodocs-diff-earlier">\n<p class="monodocs-diff-column-title">Earlier version <span class="monodocs-diff-version">v1<\/span><\/p>\n<div class="monodocs-diff-note"><p>This page was added.<\/p><\/div>/,
     );
     expect(article(html, "/moved")).toContain(
       'data-monodocs-diff-page="moved">\n<div class="monodocs-diff-note"><p>This page moved. Its earlier route: <code>/moved-old</code></p></div>',
