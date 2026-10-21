@@ -697,12 +697,12 @@ Every PDF with a formula changes, but this release skips the beta 0.15.0 and 0.1
 - [ ] The list of changes gets a page ID that collides with neither a page named `diff-changes.md` nor a heading whose ID matches the article's, and is in neither search nor the previous/next navigation; the bar's navigation lands on each change after the page has been shown
 - [ ] The default theme's `app.js` gains only the search hook (`window.__monodocsSearchPages`); search covers the earlier version in its own view and the new version otherwise, searches anew when the view changes, and leaves no highlight in the column not searched
 - [ ] A custom theme with its own `template.html`, `style.css`, and `app.js` gets the bar, the marks, and the navigation
-- [ ] The command reference and the single HTML invariants in [architecture.md](architecture.md) describe the difference, in English and Japanese
-- [ ] The "What 1.0 Freezes" page ([roadmap.md](roadmap.md) 12.4) lists the two options, the new diagnostic codes, the new `html.labels` keys, `//changes`, the `//deleted` routes, and how the list of changes and the deleted pages get their page IDs among the addresses, and the `data-monodocs-diff`, `data-monodocs-diff-block`, `data-monodocs-diff-page`, and `data-monodocs-diff-pair` attributes, and `surfaces.test.ts` passes
+- [x] The command reference and the single HTML invariants in [architecture.md](architecture.md) describe the difference, in English and Japanese — the `build` section of the command reference gains the two options and a section on the difference; architecture.md gains the difference's invariants under the single HTML ones
+- [x] The "What 1.0 Freezes" page ([roadmap.md](roadmap.md) 12.4) lists the two options, the new diagnostic codes, the new `html.labels` keys, `//changes`, the `//deleted` routes, and how the list of changes and the deleted pages get their page IDs among the addresses, and the `data-monodocs-diff`, `data-monodocs-diff-block`, `data-monodocs-diff-page`, and `data-monodocs-diff-pair` attributes, and `surfaces.test.ts` passes — under "Also frozen", with the examples checked against `diff/changes.ts` by `surfaces.test.ts`
 
 **Documentation and tests**
 
-- [ ] [testing.md](testing.md) lists the new tests in English and Japanese
+- [x] [testing.md](testing.md) lists the new tests in English and Japanese — the diff tests, and the search hook in `app.search.test.ts`
 
 **Release**
 

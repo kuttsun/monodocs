@@ -79,6 +79,8 @@ monodocs build [input] [options]
 | `-o, --output <file>`   | `./dist/docs.html`   | 出力ファイルパス。`output.path` を上書き。                 |
 | `-c, --config <file>`   | 自動検出               | 設定ファイル。`monodocs.config.yml` があれば使用。         |
 | `-f, --format <format>` | `html`                 | 出力形式: `html` \| `pdf` \| `both`。`output.format` を上書き。 |
+| `--diff-from <ref>` | — | git の ref で指定した以前の版との差分を HTML に書き込む。[下記](#difference)を参照。 |
+| `--diff-from-dir <dir>` | — | 以前の版との差分を HTML に書き込む。以前の版は、現在のディレクトリに当たるディレクトリから読む。[下記](#difference)を参照。 |
 
 ```bash
 # ./docs を ./dist/docs.html にビルド
@@ -95,6 +97,36 @@ monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 ```
 
 成功すると生成ページ数と出力パスを表示します。警告（リンク切れ・タイトル欠落など）は表示されますがビルドは失敗しません。エラーで失敗させたいときは [`validate`](#validate) を、警告でも失敗させたいときは `validate --strict` を使います。唯一の例外は [`fontCheck: error`](/ja/docs/configuration#font-check) で、そのマシンにフォントが無い文字を成果物が抱えることになるビルドを止めます。
+
+### 以前の版との差分 {#difference}
+
+改訂した文書を渡すとき、`--diff-from` と `--diff-from-dir` は、以前の版との差分を書き込んだ HTML をビルドします。Git を見ない読み手のためのものです。[差分のサンプル](https://kuttsun.github.io/monodocs/ja/diff-sample.html)を見てください。
+
+```bash
+# 以前の版を git のタグ、ブランチ、コミットで指定する
+monodocs build ./docs -o ./dist/docs.html --diff-from v1.2
+
+# 以前の版をディレクトリで指定する
+monodocs build ./docs -o ./dist/docs.html --diff-from-dir ../project-1.2
+```
+
+読み手が得るもの：
+
+- **変更の一覧**：文書を開くと最初に出るページです。追加、移動、変更、削除されたページをそれぞれのページへのリンクで並べ、変わっていないページの数を添えます。タイトルは 2 つの版をそれぞれの [`document.version`](/ja/docs/configuration#document) で示します。それを持たない以前の版は、書いたとおりの引数（`v1.2`、`../project-1.2`）で示します。
+- **変わったページの左右での比較**：左に以前のページ、右に新しいページを並べ、共通する部分の高さを揃えます。削除されたブロックは左の列で、追加されたブロックは右の列で印が付きます。変わっていないページは 1 つだけ出ます。削除されたページは、以前の版のサイドバーでいた場所に 1 つのページとして出て、追加されたページには注記が付きます。
+- **上端に固定されたバー**：3 つの表示——左右で比較、以前の版、新しい版——と、すべての変更を数を示しながら順にたどる前後のボタンを持ちます。片方の版の表示は、その版をプレーンに見せます。「変更を表示」で、その版の変更に印が付きます。検索は表示が読む版を対象にします。以前の版の表示では以前の版、それ以外では新しい版です。
+- **サイドバー**：追加されたページを緑と `+`、削除されたページを赤と `−`、変更されたページをオレンジと `•`、移動したページを青と `→` で示します。片方の版の表示では、その版のサイドバーになります。
+
+ブロックは読んだときの内容で比べます。リンク先、強調、表の枠、ビルドが振る番号（節、図、脚注）は差分になりません。新しい route に移したページは [`aliases`](/ja/docs/configuration#aliases) で対応付けます。そうしなければ削除と追加になります。
+
+**以前の版の見つけ方。** 2 つの版はどちらもこの monodocs でビルドし、以前の版はそれ自身のソースから組みます。
+
+- `--diff-from <ref>` は、その ref をチェックアウトしたときに得られるファイルを、現在のディレクトリがあるリポジトリから読みます。作業ツリー、インデックス、ref には触れません。`PATH` に `git` が必要で、CI では履歴も要ります。`fetch-depth: 0` でチェックアウトしてください。LFS に置いたファイルには git-lfs が要り、ページ、include、画像が LFS のポインタのまま出てくると `diff/lfs-pointer` になります。サブモジュールは、`--recurse-submodules` を付けないチェックアウトと同じく空で出ます。
+- `--diff-from-dir <dir>` は、入力ではなく**現在のディレクトリ**に当たる以前の版のディレクトリを指します。プロジェクトのルートで `./docs` を入力として実行すると、`--diff-from-dir ../project-1.2` は `../project-1.2/docs` を読みます。入力の引数と `-c` も同じように読み替えます。出力での名前は書いたとおりのパスなので、相対パスか `document.version` を使ってください。
+- 以前の版は、文書が何を含むか——`input`、`root`、`sources.*`、サイドバーの設定、`math.enabled`、`mermaid.enabled`——を自分の設定から取り、出力の見た目は新しい版の設定に従います。以前の版に無いパスや、以前の版の外に出るパスは `diff/outside-version` になります。文書のディレクトリをあとで改名した版は、新しい版と同じ配置にした写しを `--diff-from-dir` で渡してください。
+- 以前の版のビルドが出す警告は報告しません。リリースした版は直せないからです。以前の版のビルドのエラーはビルドを止めます。
+
+2 つのオプションは同時に使えず（`diff/conflicting-options`）、`build` にだけあり、設定ファイルのキーはありません。差分は今のところ HTML だけです。`-f pdf`、`-f both`、`output.format` のどれで PDF を出力しても、ビルドは `diff/unsupported` で止まります。バー、一覧、注記の文言は `lang` に従い、[`html.labels`](/ja/docs/configuration#html-labels) で変えられます。[サイズの報告](/ja/docs/configuration#assets)には `difference` の行が加わります。
 
 ## `watch`
 

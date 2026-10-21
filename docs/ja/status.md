@@ -691,12 +691,12 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] 変更の一覧のページ ID が、`diff-changes.md` というページとも、記事の ID と一致する ID の見出しとも衝突しない。変更の一覧は検索にも前後のナビゲーションにも入らない。バーのナビゲーションは、ページを出したあとにそれぞれの変更に着く
 - [ ] 既定のテーマの `app.js` に加わるのは検索の口（`window.__monodocsSearchPages`）だけである。検索は旧版の表示では旧版を、それ以外では新版を対象にし、表示を変えると検索し直し、検索していない列にハイライトを残さない
 - [ ] `template.html`、`style.css`、`app.js` を自前で持つ独自テーマでも、バー、印、ナビゲーションが出る
-- [ ] コマンドのリファレンスと、[architecture.md](architecture.md) の単一 HTML の不変条件が、英語と日本語で差分を説明する
-- [ ] 「1.0 が凍結するもの」のページ（[roadmap.md](roadmap.md) 12.4）が、2 つのオプション、新しい診断のコード、新しい `html.labels` のキー、アドレスとしての `//changes` と `//deleted` の route、変更の一覧と削除されたページのページ ID の決め方、`data-monodocs-diff`、`data-monodocs-diff-block`、`data-monodocs-diff-page`、`data-monodocs-diff-pair` の属性を載せ、`surfaces.test.ts` が通る
+- [x] コマンドのリファレンスと、[architecture.md](architecture.md) の単一 HTML の不変条件が、英語と日本語で差分を説明する——コマンドのリファレンスの `build` の節に 2 つのオプションと差分の節を足し、architecture.md の単一 HTML の不変条件に差分の不変条件を足した
+- [x] 「1.0 が凍結するもの」のページ（[roadmap.md](roadmap.md) 12.4）が、2 つのオプション、新しい診断のコード、新しい `html.labels` のキー、アドレスとしての `//changes` と `//deleted` の route、変更の一覧と削除されたページのページ ID の決め方、`data-monodocs-diff`、`data-monodocs-diff-block`、`data-monodocs-diff-page`、`data-monodocs-diff-pair` の属性を載せ、`surfaces.test.ts` が通る——「そのほかに凍結するもの」に載せ、例は `surfaces.test.ts` が `diff/changes.ts` と照らし合わせる
 
 **ドキュメントとテスト**
 
-- [ ] [testing.md](testing.md) が、新しいテストを英語と日本語で載せる
+- [x] [testing.md](testing.md) が、新しいテストを英語と日本語で載せる——差分のテストと、`app.search.test.ts` の検索の口
 
 **リリース**
 

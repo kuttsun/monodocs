@@ -95,6 +95,36 @@ All sources share one HTML document, so every element ID must be globally unique
 Document supported, unsupported, and intentionally constrained syntax in [syntax.md](syntax.md), and update it
 whenever syntax support changes.
 
+### The difference from an earlier version
+
+A build with `--diff-from` or `--diff-from-dir` ([roadmap.md](roadmap.md) 7.3) writes two versions into one
+document, and keeps these:
+
+- **Nothing without a difference.** A build without one gives the bytes it gave before the feature, but for
+  the default theme's `app.js`, which gained the search hook once. The difference's labels are a table of their
+  own (`DIFF_LABEL_KEYS`) and join `siteDataJson` only with a difference, as do the pages' states and the
+  earlier version's search pages; what comparison records on the HAST is recorded only with a difference.
+- **The earlier column has no address.** It is cloned from the earlier tree without IDs, links, or generated
+  numbers, and a local file it would leave external is shown as its path. Inside an SVG, every ID and every
+  reference to one is renamed with a prefix only the earlier column uses (an earlier diagram's
+  `mermaid-earlier-N`). The build fails with `internal/unexpected` if any earlier ID survives unrenamed
+  (`assertNoEarlierId` in [`diff/write.ts`](../app/packages/core/src/diff/write.ts)).
+- **Generated pages cannot collide.** The list of changes is at `//changes` and a deleted page at `//deleted`
+  followed by its earlier route; no path or alias yields an empty segment, and a source page that takes one is
+  `page/duplicate-route`. Their page IDs are allocated against every page ID, element ID, and the template's
+  IDs (`allocatePageId` in [`diff/changes.ts`](../app/packages/core/src/diff/changes.ts)).
+- **Marks are the difference's alone.** Every `<ins>` and `<del>` monodocs writes carries `data-monodocs-diff`,
+  and the stylesheet and script act on those and on `data-monodocs-diff-block`, `-page`, and `-pair` only; a
+  document's own `<del>`, `<ins>`, or `mark.search-hit` is left as it is in every view.
+- **Every theme gets it, through the required tokens.** The bar goes before the pages through `{{pages}}`, the
+  rules through `{{style}}`, and the script through `{{bodyScripts}}`. The script
+  ([`diff/client.ts`](../app/packages/core/src/diff/client.ts)) is plain ES5 inside a template literal, so a
+  backslash in it is written twice. It hands the default theme's search the pages to cover through
+  `window.__monodocsSearchPages(pages)` (null for the reading pages); a custom `app.js` without the hook keeps
+  searching the new version.
+- **The size report adds up.** The `difference` line is measured against the same document rendered once more
+  without the difference, so images, the Mermaid runtime, and `siteDataJson` stay on their own lines.
+
 ## Mermaid
 
 Mermaid supports `client` and `pre-render` modes.
