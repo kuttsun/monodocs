@@ -351,10 +351,12 @@ describe.skipIf(!chromium)("a page whose only change is its note", () => {
     try {
       await write(join(dir, "then"), {
         "docs/a.md": "# A\n\nText.\n",
+        "docs/d.md": "# D\n\nKept.\n\nGone.\n",
         "docs/old.md": "# Moved\n\nText.\n",
       });
       await write(join(dir, "now"), {
         "docs/a.md": "# A\n\nText.\n",
+        "docs/d.md": "# D\n\nKept.\n",
         "docs/new.md": "---\naliases: [/old]\n---\n\n# Moved\n\nText.\n",
       });
       const html = join(dir, "out.html");
@@ -367,6 +369,10 @@ describe.skipIf(!chromium)("a page whose only change is its note", () => {
         const page = await browser.newPage();
         await page.goto(`${pathToFileURL(html).href}#/a`);
         await page.click('[data-monodocs-diff-view="current"]');
+        // D's one change, a deletion, is in the column this view hides: the move alone is counted.
+        expect(
+          await page.evaluate(() => document.querySelector(".monodocs-diff-count")!.textContent),
+        ).toBe("– / 1");
         await page.click('[data-monodocs-diff-go="1"]');
         await new Promise((resolve) => setTimeout(resolve, 600));
         const at = await page.evaluate(() => {
@@ -397,4 +403,49 @@ describe.skipIf(!chromium)("a page whose only change is its note", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+});
+
+describe.skipIf(!chromium)("a diagram in a column a view hides", () => {
+  it("is drawn when its column is shown, not while it is hidden", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-diff-mermaid-"));
+    try {
+      const diagram = (to: string) => `# A\n\n\`\`\`mermaid\ngraph LR\n  Start --> ${to}\n\`\`\`\n`;
+      await write(join(dir, "then"), { "docs/a.md": diagram("Old") });
+      await write(join(dir, "now"), { "docs/a.md": diagram("New") });
+      const html = join(dir, "out.html");
+      vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
+      await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
+      vi.restoreAllMocks();
+      const puppeteer = await import("puppeteer-core");
+      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      try {
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1500, height: 900 });
+        await page.goto(pathToFileURL(html).href);
+        await page.click('[data-monodocs-diff-view="current"]');
+        await page.evaluate(() => {
+          location.hash = "#/a";
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await page.click('[data-monodocs-diff-view="both"]');
+        const width = async () =>
+          page.evaluate(() => {
+            const svg = document.querySelector(
+              "article:not([hidden]) .monodocs-diff-earlier .mermaid svg",
+            );
+            return svg ? Math.round(svg.getBoundingClientRect().width) : 0;
+          });
+        let drawn = 0;
+        for (let waited = 0; waited < 5000 && drawn === 0; waited += 200) {
+          drawn = await width();
+          if (drawn === 0) await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+        expect(drawn).toBeGreaterThan(20);
+      } finally {
+        await browser.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 30000);
 });

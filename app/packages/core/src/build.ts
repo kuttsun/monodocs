@@ -29,6 +29,7 @@ import {
 import { refuseLfsPointer } from "./diff/lfsPointer.js";
 import { earlierIdPrefix, elementIds, writeChangedPages } from "./diff/write.js";
 import { CHANGES_ROUTE, writeDiffDocument, type DiffDocument } from "./diff/changes.js";
+import { DIFF_MERMAID } from "./diff/client.js";
 import { loadTheme } from "./themes/index.js";
 import {
   documentAuthor,
@@ -483,7 +484,13 @@ export async function buildSite(
   // off (7.3.2).
   const ownMermaid = hasMermaid && config.mermaidEnabled && config.mermaidMode === "client";
   const clientMermaid = ownMermaid || (earlierDiagrams > 0 && config.mermaidMode === "client");
-  const bodyScripts = clientMermaid ? await mermaidRuntimeScript(config.mermaidRuntime) : "";
+  // With a difference, a render leaves out a column the view hides (7.3.4).
+  const bodyScripts = clientMermaid
+    ? await mermaidRuntimeScript(
+        config.mermaidRuntime,
+        ...(diffDocument === undefined ? [] : [DIFF_MERMAID]),
+      )
+    : "";
 
   // ラベルの解決はここで 1 度だけ行う。同梱の表が無いタグの警告も、ビルド 1 回につき 1 度になる。
   const resolvedLabels = resolveLabels(config.lang, config.labelOverrides);

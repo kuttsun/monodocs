@@ -8,6 +8,16 @@ import { escapeAttr, escapeHtml } from "../util/html.js";
  * stays byte for byte what it was.
  */
 
+/**
+ * The diagrams a render draws in a build with a difference: those of the page shown, as in any build,
+ * but not those in a column the view hides, which would be laid out at no size and kept that way.
+ * The script draws them when their column is shown.
+ */
+export const DIFF_MERMAID =
+  "#content article:not([hidden]) .mermaid" +
+  ':not(:root[data-monodocs-diff-view="current"] .monodocs-diff-earlier .mermaid)' +
+  ':not(:root[data-monodocs-diff-view="earlier"] .monodocs-diff-current .mermaid)';
+
 /** The rules a difference adds to `{{style}}`. */
 export const DIFF_STYLE = `
 /* monodocs: difference from an earlier version. The states take the default theme's admonition
@@ -320,7 +330,8 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
   text-decoration: none;
 }
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .page > .monodocs-diff-note,
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .monodocs-diff-mark {
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .monodocs-diff-mark,
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .monodocs-diff-label {
   display: none;
 }
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .sidebar-page[data-monodocs-diff-page="deleted"] > a {
@@ -492,6 +503,8 @@ export const DIFF_SCRIPT = `(function () {
         if (first) return [first];
       }
       // An added or deleted page whose note is in the column hidden: the column shown stands for it.
+      // Another page whose changes are all in the hidden column has none in this view.
+      if (state !== "added" && state !== "deleted") return [];
       return own(article, ".monodocs-diff-columns > div").filter(visible).slice(0, 1);
     }
     if (!article.hidden) {
@@ -612,6 +625,8 @@ export const DIFF_SCRIPT = `(function () {
     }
     showBox();
     reveal();
+    // The diagrams of a column just shown, which a render left out while it was hidden.
+    if (typeof window.__sdRenderMermaid === "function") window.__sdRenderMermaid().then(later);
     align();
     count();
     drawToc();
@@ -790,6 +805,7 @@ export const DIFF_SCRIPT = `(function () {
     root.setAttribute("data-monodocs-diff-view", view);
     root.setAttribute("data-monodocs-diff-marks", "off");
     showBox();
+    setTimeout(reveal, 0);
     document.addEventListener("change", function (event) {
       if (event.target.hasAttribute && event.target.hasAttribute("data-monodocs-diff-marks-toggle")) {
         setMarks(event.target.checked);
