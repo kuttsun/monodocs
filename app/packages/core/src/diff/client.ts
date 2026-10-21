@@ -550,10 +550,22 @@ export const DIFF_SCRIPT = `(function () {
       return own(article, ".monodocs-diff-columns > div").filter(visible).slice(0, 1);
     }
     if (!article.hidden) {
+      // A change inside a collapsible block stands where the block does, open or not: it has no place
+      // of its own while the block is closed, and the order must not change when the navigation
+      // opens it, in one column and not yet in the other.
+      var place = function (node) {
+        var block = null;
+        for (var at = node.parentElement; at; at = at.parentElement) {
+          if (at.tagName === "DETAILS") block = at;
+        }
+        return (block || node).getBoundingClientRect().top;
+      };
+      var earlier = function (node) { return node.closest(".monodocs-diff-earlier") ? 0 : 1; };
       marks.sort(function (a, b) {
-        var d = a.getBoundingClientRect().top - b.getBoundingClientRect().top;
+        var d = place(a) - place(b);
         if (Math.abs(d) >= 1) return d;
-        return a.closest(".monodocs-diff-earlier") ? -1 : 1;
+        // Level: the deletion first, and otherwise the order the page has them in.
+        return earlier(a) - earlier(b);
       });
     }
     return marks;

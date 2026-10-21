@@ -50,12 +50,29 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await rm(base, { recursive: true, force: true });
+  await shared?.close();
 });
+
+/**
+ * One browser for every test here, each opening and closing its own pages: launching one per test
+ * slows the whole suite enough, under load, to time other browser tests out.
+ */
+let shared: import("puppeteer-core").Browser | undefined;
+async function sharedBrowser(): Promise<import("puppeteer-core").Browser> {
+  if (shared === undefined) {
+    const puppeteer = await import("puppeteer-core");
+    shared = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+  }
+  return shared;
+}
+
+async function closePages(browser: import("puppeteer-core").Browser): Promise<void> {
+  for (const page of await browser.pages()) await page.close();
+}
 
 describe.skipIf(!chromium)("the difference in a real browser", () => {
   it("lines up every unchanged pair, walks every change, and switches the view", async () => {
-    const puppeteer = await import("puppeteer-core");
-    const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+    const browser = await sharedBrowser();
     try {
       const page = await browser.newPage();
       await page.setViewport({ width: 1500, height: 900 });
@@ -239,7 +256,7 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       await page.click('[data-monodocs-diff-view="current"]');
       expect((await marked()).box).toBe("ticked");
     } finally {
-      await browser.close();
+      await closePages(browser);
     }
   });
 });
@@ -260,8 +277,7 @@ describe.skipIf(!chromium)("the in-page table of contents of a changed page", ()
       vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
       await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
       vi.restoreAllMocks();
-      const puppeteer = await import("puppeteer-core");
-      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      const browser = await sharedBrowser();
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: 1500, height: 900 });
@@ -306,7 +322,7 @@ describe.skipIf(!chromium)("the in-page table of contents of a changed page", ()
         });
         expect(opened).toEqual({ inView: true, active: "Cost $x^2$" });
       } finally {
-        await browser.close();
+        await closePages(browser);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -332,8 +348,7 @@ describe.skipIf(!chromium)("an image replaced under the same name", () => {
       vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
       await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
       vi.restoreAllMocks();
-      const puppeteer = await import("puppeteer-core");
-      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      const browser = await sharedBrowser();
       try {
         const page = await browser.newPage();
         await page.goto(`${pathToFileURL(html).href}#/a`);
@@ -345,7 +360,7 @@ describe.skipIf(!chromium)("an image replaced under the same name", () => {
         );
         expect(rings).toEqual(["del solid", "ins solid"]);
       } finally {
-        await browser.close();
+        await closePages(browser);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -371,8 +386,7 @@ describe.skipIf(!chromium)("a page whose only change is its note", () => {
       vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
       await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
       vi.restoreAllMocks();
-      const puppeteer = await import("puppeteer-core");
-      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      const browser = await sharedBrowser();
       try {
         const page = await browser.newPage();
         await page.goto(`${pathToFileURL(html).href}#/a`);
@@ -405,7 +419,7 @@ describe.skipIf(!chromium)("a page whose only change is its note", () => {
         });
         expect(ring).toBe("solid rgba(0, 0, 0, 0)");
       } finally {
-        await browser.close();
+        await closePages(browser);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -424,8 +438,7 @@ describe.skipIf(!chromium)("a diagram in a column a view hides", () => {
       vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
       await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
       vi.restoreAllMocks();
-      const puppeteer = await import("puppeteer-core");
-      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      const browser = await sharedBrowser();
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: 1500, height: 900 });
@@ -450,7 +463,7 @@ describe.skipIf(!chromium)("a diagram in a column a view hides", () => {
         }
         expect(drawn).toBeGreaterThan(20);
       } finally {
-        await browser.close();
+        await closePages(browser);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -483,8 +496,7 @@ describe.skipIf(!chromium)("an image the earlier column shows as its path", () =
       vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
       await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
       vi.restoreAllMocks();
-      const puppeteer = await import("puppeteer-core");
-      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      const browser = await sharedBrowser();
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: 1500, height: 900 });
@@ -505,7 +517,7 @@ describe.skipIf(!chromium)("an image the earlier column shows as its path", () =
         }
         expect(Math.abs(gap)).toBeLessThanOrEqual(1);
       } finally {
-        await browser.close();
+        await closePages(browser);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -532,8 +544,7 @@ describe.skipIf(!chromium)("the way through the changes in a version's own view"
       vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
       await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
       vi.restoreAllMocks();
-      const puppeteer = await import("puppeteer-core");
-      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      const browser = await sharedBrowser();
       try {
         const page = await browser.newPage();
         const walk = async (view: string) => {
@@ -551,7 +562,7 @@ describe.skipIf(!chromium)("the way through the changes in a version's own view"
         expect(await walk("earlier")).toEqual(["#/a", "#/b", "#/c"]);
         expect(await walk("current")).toEqual(["#/c", "#/b", "#/a"]);
       } finally {
-        await browser.close();
+        await closePages(browser);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -575,8 +586,7 @@ describe.skipIf(!chromium)("a change inside a collapsed block, and the earlier f
       vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
       await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
       vi.restoreAllMocks();
-      const puppeteer = await import("puppeteer-core");
-      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      const browser = await sharedBrowser();
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: 1500, height: 900 });
@@ -592,6 +602,18 @@ describe.skipIf(!chromium)("a change inside a collapsed block, and the earlier f
           };
         });
         expect(opened).toEqual({ inside: true, visible: true });
+        // The deletion and the addition inside the block, in each column, are reached once each:
+        // opening one column's block does not change their order.
+        await page.click('[data-monodocs-diff-go="1"]');
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        const second = await page.evaluate(() => {
+          const ring = document.querySelector(".monodocs-diff-change-current")!;
+          return {
+            mark: ring.getAttribute("data-monodocs-diff-block"),
+            count: document.querySelector(".monodocs-diff-count")!.textContent,
+          };
+        });
+        expect(second).toEqual({ mark: "ins", count: "2 / 3" });
         await page.goto(`${pathToFileURL(html).href}#/b`);
         await new Promise((resolve) => setTimeout(resolve, 300));
         const markers = await page.evaluate(() =>
@@ -604,7 +626,7 @@ describe.skipIf(!chromium)("a change inside a collapsed block, and the earlier f
         );
         expect(markers).toEqual(["none", "decimal"]);
       } finally {
-        await browser.close();
+        await closePages(browser);
       }
     } finally {
       await rm(dir, { recursive: true, force: true });
