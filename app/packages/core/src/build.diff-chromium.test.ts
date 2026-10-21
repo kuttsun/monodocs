@@ -84,6 +84,33 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       expect((await offsets()).every((gap) => Math.abs(gap) <= 1)).toBe(true);
       await page.setViewport({ width: 1500, height: 900 });
 
+      // Left alone, the page is left alone: nothing is lined up again over and over — the count it
+      // writes is in the page it watches — and a reader scrolled to the end stays there.
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      const idle = await page.evaluate(async () => {
+        let changes = 0;
+        const watcher = new MutationObserver((records) => (changes += records.length));
+        watcher.observe(document.body, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+          attributes: true,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        watcher.disconnect();
+        return changes;
+      });
+      expect(idle).toBe(0);
+      const end = await page.evaluate(async () => {
+        const scroller = document.scrollingElement!;
+        scroller.scrollTop = scroller.scrollHeight;
+        const bottom = scroller.scrollTop;
+        window.dispatchEvent(new Event("resize"));
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        return { bottom, after: scroller.scrollTop };
+      });
+      expect(end.after).toBe(end.bottom);
+
       // The bar stays at the top while the page scrolls, its views in the order of the columns.
       await page.evaluate(() => window.scrollTo(0, 600));
       await new Promise((resolve) => setTimeout(resolve, 200));

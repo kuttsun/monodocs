@@ -337,10 +337,16 @@ export const DIFF_SCRIPT = `(function () {
       earlier.getBoundingClientRect().left !== current.getBoundingClientRect().left;
   }
   function align() {
-    unpad();
+    // The columns keep their height while their space is taken off and put back, so the page never
+    // grows shorter under a reader scrolled to its end, which the browser would answer by moving
+    // the reader up.
+    var scroller = document.scrollingElement || root;
+    var top = scroller.scrollTop;
     var article = shown();
-    if (!article) return;
-    own(article, ".monodocs-diff-columns").forEach(function (columns) {
+    var held = article ? own(article, ".monodocs-diff-columns") : [];
+    held.forEach(function (columns) { columns.style.minHeight = columns.offsetHeight + "px"; });
+    unpad();
+    held.forEach(function (columns) {
       if (!sideBySide(columns)) return;
       var right = {};
       own(columns.children[1], "[data-monodocs-diff-pair]").forEach(function (node) {
@@ -363,6 +369,8 @@ export const DIFF_SCRIPT = `(function () {
         }
       });
     });
+    held.forEach(function (columns) { columns.style.minHeight = ""; });
+    if (scroller.scrollTop !== top) scroller.scrollTop = top;
   }
 
   // The changes: a page's marked blocks in the columns shown, in the order the alignment puts them,
@@ -396,11 +404,14 @@ export const DIFF_SCRIPT = `(function () {
     if (!out) return;
     var all = total();
     var before = 0;
+    var text = "– / " + all;
     if (position.article && position.index >= 0) {
       var list = articles();
       for (var i = 0; i < list.length && list[i] !== position.article; i++) before += changes(list[i]).length;
-      out.textContent = before + position.index + 1 + " / " + all;
-    } else out.textContent = "– / " + all;
+      text = before + position.index + 1 + " / " + all;
+    }
+    // Written only when it changes: the page is watched for changes, and this is in it.
+    if (out.textContent !== text) out.textContent = text;
   }
   function select(article, index) {
     var old = document.querySelector(".monodocs-diff-change-current");
@@ -515,7 +526,17 @@ export const DIFF_SCRIPT = `(function () {
     window.addEventListener("resize", later);
     document.addEventListener("load", later, true);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
-    new MutationObserver(function () { unhighlight(); later(); }).observe(document.getElementById("content") || document.body, {
+    // What changes in the page — a diagram drawn, the search highlight — calls for the columns to be
+    // lined up again; what the bar shows does not.
+    new MutationObserver(function (records) {
+      var outside = records.some(function (record) {
+        var node = record.target.nodeType === 1 ? record.target : record.target.parentElement;
+        return !(node && node.closest && node.closest(".monodocs-diff-bar"));
+      });
+      if (!outside) return;
+      unhighlight();
+      later();
+    }).observe(document.getElementById("content") || document.body, {
       childList: true,
       subtree: true,
     });
