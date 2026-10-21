@@ -13,6 +13,7 @@
 - 📖 **[Documentation](https://kuttsun.github.io/monodocs/)** — getting started, command options, and the configuration reference
 - 🌐 **[HTML sample](https://kuttsun.github.io/monodocs/sample.html)** — a single self-contained HTML file built from [`examples/en`](examples/en)
 - 📄 **[PDF sample](https://kuttsun.github.io/monodocs/sample.pdf)** — the same examples as a PDF with a cover, a table of contents, and formulas
+- 🔀 **[Difference sample](https://kuttsun.github.io/monodocs/diff-sample.html)** — two versions of [`examples/diff/en`](examples/diff/en) compared: side by side, either version alone, and the changes one by one
 
 ## Features
 

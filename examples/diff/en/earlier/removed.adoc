@@ -1,0 +1,12 @@
+= A withdrawn feature
+:sectnums:
+
+== Overview
+
+This feature has been withdrawn.
+
+.The old table
+|===
+|Item |Value
+|A |1
+|===

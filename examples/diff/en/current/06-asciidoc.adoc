@@ -1,0 +1,16 @@
+= An AsciiDoc page
+:sectnums:
+
+== Overview
+
+The device is used on factory and warehouse conveyor lines.
+
+== Specification
+
+.Main figures
+|===
+|Item |Value
+
+|Weight |12 kg
+|Power consumption |200 W
+|===

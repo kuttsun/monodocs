@@ -13,6 +13,7 @@
 - 📖 **[ドキュメント](https://kuttsun.github.io/monodocs/ja/)** — はじめに・コマンドオプション・設定リファレンス
 - 🌐 **[HTML のサンプル](https://kuttsun.github.io/monodocs/ja/sample.html)** — [`examples/ja`](examples/ja) から生成した自己完結の単一 HTML
 - 📄 **[PDF のサンプル](https://kuttsun.github.io/monodocs/ja/sample.pdf)** — 同じサンプルを表紙・目次・数式入りの PDF にしたもの
+- 🔀 **[差分のサンプル](https://kuttsun.github.io/monodocs/ja/diff-sample.html)** — [`examples/diff/ja`](examples/diff/ja) の 2 つの版を比べたもの。左右に並べた表示、片方の版だけの表示、変更を 1 つずつたどる操作を試せます
 
 ## 特徴
 
