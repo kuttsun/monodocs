@@ -698,7 +698,7 @@ html:
 | `diffChanged` | Changed | 変更 | サイドバーの変更ページの印 |
 | `diffMoved` | Moved | 移動 | サイドバーの移動ページの印 |
 | `diffTitleChanged` | The title changed. Its earlier title: | タイトルが変わりました。以前のタイトル: | front matter のタイトルが変わったページの注記。以前のタイトルの前 |
-| `diffMergedInto` | Merged into | 統合先: | 別のページが aliases で route を引き継いだ、削除されたページ |
+| `diffMergedInto` | Merged into: | 統合先: | 別のページが aliases で route を引き継いだ、削除されたページ |
 
 カスタムテーマがラベルを受け取る方法は次のとおりです。
 

@@ -319,6 +319,37 @@ describe("where a deleted block goes", () => {
     expectValid(html);
   });
 
+  it("keeps deleted rows that span one another together, in reading order", async () => {
+    const html = await onePage(
+      "docs/a.adoc",
+      "= A\n\n[cols=2]\n|===\n|a |x\n.2+|B |b1\n|c1\n|d |y\n|===\n",
+      "= A\n\n[cols=2]\n|===\n|a |x\n|d |y\n|===\n",
+    );
+    const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].map((m) =>
+      m[1]!
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
+    expect(rows).toEqual(["a x", "B b1", "c1", "d y"]);
+    expect(html).toMatch(/rowspan="2"[^>]*>(?:<[^>]+>)*B</);
+    expectValid(html);
+  });
+
+  it("writes a deleted AsciiDoc section before the one it preceded, not into a later one", async () => {
+    const html = await onePage(
+      "docs/a.adoc",
+      "= A\n\n== One\n\nfirst.\n\n== Two\n\nsecond.\n",
+      "= A\n\n== Two\n\nsecond.\n\n== Three\n\nthird.\n",
+    );
+    const at = (text: string) => html.indexOf(text);
+    expect(at("One")).toBeLessThan(at("first."));
+    expect(at("first.")).toBeLessThan(at("Two"));
+    expect(at("Two")).toBeLessThan(at("Three"));
+    expect(at("Three")).toBeLessThan(at("third."));
+    expectValid(html);
+  });
+
   it("places a deleted row after the rows a new cell spans", async () => {
     const html = await onePage(
       "docs/a.adoc",
@@ -435,6 +466,18 @@ describe("deleted content has no address", () => {
     expect(html).toMatch(
       /<del data-monodocs-diff=""><figure class="mermaid"[^>]*data-monodocs-diff-block="del"><svg id="mermaid-earlier-0">/,
     );
+  });
+
+  it("shows a video the earlier version kept as a file by its path", async () => {
+    const html = await onePage(
+      "docs/a.adoc",
+      "= A\n\nKeep.\n\nvideo::media/demo.mp4[]\n",
+      "= A\n\nKeep.\n",
+    );
+    expect(html).toContain(
+      '<span data-monodocs-diff-block="del"><del data-monodocs-diff="">media/demo.mp4</del></span>',
+    );
+    expect(html).not.toContain("<video");
   });
 
   it("keeps an embedded image's data, and shows one left as a file by its alt and path", async () => {

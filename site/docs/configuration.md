@@ -751,7 +751,7 @@ label, never into it.
 | `diffChanged` | Changed | 変更 | The sidebar's mark of a changed page |
 | `diffMoved` | Moved | 移動 | The sidebar's mark of a moved page |
 | `diffTitleChanged` | The title changed. Its earlier title: | タイトルが変わりました。以前のタイトル: | Note of a page whose front-matter title changed, before the earlier title |
-| `diffMergedInto` | Merged into | 統合先: | A deleted page whose route another page took through its aliases |
+| `diffMergedInto` | Merged into: | 統合先: | A deleted page whose route another page took through its aliases |
 
 How a custom theme gets the labels:
 

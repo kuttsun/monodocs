@@ -1427,8 +1427,11 @@ deleted header row joins the table's head. A generated number in deleted content
 separator after it, and with the label before it when that starts the element, so `Figure 1. Title`
 reads `Title`; inside a cross-reference, whose text stays, nothing is dropped. The IDs inside a
 deleted SVG are renamed with `earlier-`, or `earlier-2-` and on, the first prefix no ID of the new
-version starts with; the earlier version's pre-rendered diagrams carry a prefix of their own already
-(7.3.2).
+version starts with. The earlier version's pre-rendered diagrams carry a prefix of their own (7.3.2),
+but Mermaid puts it on only some of a diagram's IDs — a sequence diagram's lifelines are `actor0` and
+on — so every other ID in one, and every reference to it, is renamed with the same prefix. A
+deleted video, audio clip, or player whose file is the earlier version's is shown as its path, as an
+image is.
 
 **The mark is an attribute and an element.** Every added or deleted block carries
 `data-monodocs-diff-block="ins"` or `"del"`, and its content is wrapped in `<ins>` or `<del>`, so

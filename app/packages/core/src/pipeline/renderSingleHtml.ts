@@ -95,7 +95,7 @@ const DIFF_STYLE = `
 }
 .monodocs-diff-mark { margin-inline-start: 0.4em; }
 .monodocs-diff-note { border-inline-start: 4px solid currentColor; padding: 0.25em 1em; margin: 0 0 1em; }
-li[data-monodocs-diff-block="del"] { list-style-type: none; }
+ol > li[data-monodocs-diff-block="del"] { list-style-type: none; }
 `;
 
 /** The sidebar's symbol for each state; hidden from assistive technology, which reads the label. */

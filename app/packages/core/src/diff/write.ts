@@ -259,7 +259,10 @@ function renameSvgIds(svg: Element, prefix: string): void {
 
 /** The writer for one version's clones, with the prefix its SVG IDs are renamed with. */
 class Cloner {
-  constructor(private readonly svgPrefix: string) {}
+  constructor(
+    private readonly svgPrefix: string,
+    private readonly diagramPrefix: string,
+  ) {}
 
   /**
    * A copy of `node` with no address: no ID, link, ID-naming attribute, or generated number, and an
@@ -270,7 +273,11 @@ class Cloner {
     if (node.type === "text") {
       return isGenerated(node) && !inLink ? [] : [{ type: "text", value: node.value }];
     }
-    if ((node as { type: string }).type === "raw") return [{ ...node } as ElementContent];
+    if ((node as { type: string }).type === "raw") {
+      const raw = node as unknown as { type: "raw"; value: string };
+      const value = renameRawIds(raw.value, this.svgPrefix, this.diagramPrefix);
+      return [{ ...raw, value } as unknown as ElementContent];
+    }
     if (node.type !== "element") return [];
     if (node.tagName === "svg") {
       const svg = this.copy(node);
@@ -280,23 +287,30 @@ class Cloner {
     if (isGeneratedElement(node)) return [];
     // A cross-reference's text stays as the earlier version wrote it, its numbers with it.
     if (node.tagName === "a") return node.children.flatMap((child) => this.clean(child, true));
+    // A video, an audio clip, or a player the earlier version kept as a file is shown as its path,
+    // as an image is: the file is in the earlier version.
+    if (MEDIA_FILES.has(node.tagName)) {
+      const paths = [node, ...node.children.filter((c): c is Element => c.type === "element")]
+        .map((element) => element.properties.src)
+        .filter((src): src is string => typeof src === "string" && isLocal(src));
+      if (paths.length > 0) return [textSpan(paths.join(" "))];
+    }
     if (node.tagName === "img" || node.tagName === "object") {
       const src = String(
         (node.tagName === "img" ? node.properties.src : node.properties.data) ?? "",
       );
-      if (src !== "" && !src.startsWith("data:") && !isExternalSrc(src)) {
+      if (isLocal(src)) {
         const alt = String(node.properties.alt ?? "");
-        return [
-          {
-            type: "element",
-            tagName: "span",
-            properties: {},
-            children: [{ type: "text", value: alt === "" ? src : `${alt} (${src})` }],
-          },
-        ];
+        return [textSpan(alt === "" ? src : `${alt} (${src})`)];
       }
     }
-    return [this.shell(node, this.cleanChildren(node.children, inLink))];
+    const shell = this.shell(node, this.cleanChildren(node.children, inLink));
+    // Other sources of the image, and a video's poster, would be read from the new version too.
+    delete shell.properties.srcSet;
+    if (typeof shell.properties.poster === "string" && isLocal(shell.properties.poster)) {
+      delete shell.properties.poster;
+    }
+    return [shell];
   }
 
   /**
@@ -350,6 +364,50 @@ class Cloner {
   }
 }
 
+/** Elements that play a file of their own, which a deleted clone does not read. */
+const MEDIA_FILES = new Set(["video", "audio", "iframe", "embed"]);
+
+/** Whether `src` names a file of the version, rather than data or a URL. */
+function isLocal(src: string): boolean {
+  return src !== "" && !src.startsWith("data:") && !isExternalSrc(src);
+}
+
+function textSpan(text: string): Element {
+  return {
+    type: "element",
+    tagName: "span",
+    properties: {},
+    children: [{ type: "text", value: text }],
+  };
+}
+
+/**
+ * A pre-rendered diagram's markup with every ID that does not start with the earlier version's
+ * diagram prefix renamed with `prefix`, and every reference to one: Mermaid gives only some of a
+ * diagram's elements IDs under its own (a sequence diagram's `actor0` is not).
+ */
+function renameRawIds(markup: string, prefix: string, keep: string): string {
+  const ids = new Set<string>();
+  for (const match of markup.matchAll(/\sid\s*=\s*"([^"]*)"/g)) {
+    if (!match[1]!.startsWith(keep)) ids.add(match[1]!);
+  }
+  if (ids.size === 0) return markup;
+  const rename = (id: string) => (ids.has(id) ? `${prefix}${id}` : id);
+  return markup
+    .replace(/(\sid\s*=\s*")([^"]*)"/g, (_, head: string, id: string) => `${head}${rename(id)}"`)
+    .replace(
+      /(\s(?:xlink:)?href\s*=\s*"#)([^"]*)"/g,
+      (_, head: string, id: string) => `${head}${rename(id)}"`,
+    )
+    .replace(
+      /url\((['"]?)#([^)'"]+)\1\)/g,
+      (_, q: string, id: string) => `url(${q}#${rename(id)}${q})`,
+    )
+    .replace(/#([A-Za-z_][\w-]*)(?![\w-])/g, (whole: string, id: string) =>
+      ids.has(id) ? `#${prefix}${id}` : whole,
+    );
+}
+
 /**
  * The numbers the renderers generated, as elements, which a deleted block does not keep: section
  * numbers, footnote references, and their back-references.
@@ -396,7 +454,7 @@ export function writeDifference(
     edits.flatMap((edit) => (edit.op === "insert" ? [] : [edit.old])),
     oldParents,
   );
-  const cloner = new Cloner(options.svgIdPrefix);
+  const cloner = new Cloner(options.svgIdPrefix, options.earlierDiagramPrefix);
 
   // Each earlier container paired with the new one an unchanged block inside it is in, matched from
   // the block outwards. A section and a link may stand on one side and not the other.
@@ -505,7 +563,7 @@ export function writeDifference(
       // unchanged in it to pair it by.
       const existing = ONE_OF.has(container.tagName)
         ? elements(target).find((child) => child.tagName === container.tagName)
-        : isSectionWrapper(container)
+        : classes(container).includes("sectionbody")
           ? elements(target).find(
               (child) =>
                 containerLink(child) === containerLink(container) &&
@@ -612,7 +670,9 @@ function afterSpans(section: Parent, at: number): number {
     if (k >= at && covered <= row) break;
     const child = section.children[k]!;
     if (child.type !== "element" || child.tagName !== "tr") continue;
-    for (const cell of elements(child)) {
+    // A deleted row's own spans are clamped once every row is in; they never cover a new row.
+    const deleted = child.properties[DIFF_BLOCK] === "del";
+    for (const cell of deleted ? [] : elements(child)) {
       if (cell.tagName !== "td" && cell.tagName !== "th") continue;
       const span = Number(cell.properties.rowSpan ?? 1);
       covered = Math.max(covered, span === 0 ? Infinity : row + Math.max(span, 1));
@@ -667,7 +727,7 @@ function numberItems(list: Element): void {
  * Fail the build when an ID of the earlier tree survived in what was written without being renamed:
  * every ID written from the earlier tree is inside an SVG and carries a prefix only it uses.
  */
-function assertNoEarlierId(node: Element, options: WriteOptions): void {
+export function assertNoEarlierId(node: Element, options: WriteOptions): void {
   const fail = (id: string) => {
     throw new MonodocsError("internal/unexpected", t("diff.earlierIdKept", { id }));
   };

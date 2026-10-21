@@ -1,4 +1,4 @@
-import type { ElementContent, Root as HastRoot } from "hast";
+import type { Element, ElementContent, Root as HastRoot } from "hast";
 import { toHtml } from "hast-util-to-html";
 import rehypeParse from "rehype-parse";
 import { unified } from "unified";
@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { blocksOf, sameBlock } from "./blocks";
 import type { BlockEdit } from "./compare";
 import { diffSequences } from "./myers";
-import { earlierIdPrefix, elementIds, writeDifference } from "./write";
+import { assertNoEarlierId, earlierIdPrefix, elementIds, writeDifference } from "./write";
 
 const parser = unified().use(rehypeParse, { fragment: true });
 
@@ -50,15 +50,40 @@ describe("an SVG in deleted content", () => {
 });
 
 describe("the check that no earlier ID survives", () => {
-  it("fails the build on a diagram whose ID carries neither earlier prefix", () => {
+  it("fails the build on an ID that carries neither earlier prefix", () => {
+    const options = { svgIdPrefix: "earlier-", earlierDiagramPrefix: "mermaid-earlier-" };
+    const node = (id: string, raw = false): Element => ({
+      type: "element",
+      tagName: "div",
+      properties: raw ? {} : { id },
+      children: raw ? [{ type: "raw", value: `<svg id="${id}"></svg>` } as never] : [],
+    });
+    expect(() => assertNoEarlierId(node("a-x"), options)).toThrow(
+      expect.objectContaining({ code: "internal/unexpected" }),
+    );
+    expect(() => assertNoEarlierId(node("mermaid-3", true), options)).toThrow(
+      expect.objectContaining({ code: "internal/unexpected" }),
+    );
+    expect(() => assertNoEarlierId(node("earlier-a-x"), options)).not.toThrow();
+    expect(() => assertNoEarlierId(node("mermaid-earlier-3", true), options)).not.toThrow();
+  });
+
+  it("renames the IDs Mermaid writes without the diagram's prefix, and references to them", () => {
     const old = parser.parse('<p>Keep.</p><div class="mermaid"></div>');
     const diagram = old.children.find(
       (child) => child.type === "element" && child.tagName === "div",
     ) as { children: ElementContent[]; data?: unknown };
-    diagram.children.push({ type: "raw", value: '<svg id="mermaid-3"></svg>' } as never);
-    diagram.data = { monodocsSource: { kind: "mermaid", source: "graph TD" } };
-    expect(() => written(old, "<p>Keep.</p>")).toThrow(
-      expect.objectContaining({ code: "internal/unexpected" }),
+    diagram.children.push({
+      type: "raw",
+      value:
+        '<svg id="mermaid-earlier-3"><style>#mermaid-earlier-3 .a{} #actor0{}</style>' +
+        '<line id="actor0"></line><g id="root-0" fill="url(#actor0)"><use href="#actor0"></use></g></svg>',
+    } as never);
+    diagram.data = { monodocsSource: { kind: "mermaid", source: "sequenceDiagram" } };
+    const html = written(old, "<p>Keep.</p>");
+    expect(html).toContain(
+      '<svg id="mermaid-earlier-3"><style>#mermaid-earlier-3 .a{} #earlier-actor0{}</style>' +
+        '<line id="earlier-actor0"></line><g id="earlier-root-0" fill="url(#earlier-actor0)"><use href="#earlier-actor0"></use></g></svg>',
     );
   });
 

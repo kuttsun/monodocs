@@ -435,7 +435,9 @@ export async function buildSite(
       },
     );
     deletedDiagrams += diffDocument.deletedDiagrams;
-    earlierImages = earlierSite.embeddedImages;
+    // An image both versions embed is counted once, under the new version's path (20.5).
+    const shared = new Set(prepared.embeddedImages.map((image) => image.dataUri));
+    earlierImages = earlierSite.embeddedImages.filter((image) => !shared.has(image.dataUri));
     internals.onWritten?.(diffDocument.pages);
   }
   const { warnings, hasMermaid } = prepared;

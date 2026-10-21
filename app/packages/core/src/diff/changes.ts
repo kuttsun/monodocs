@@ -152,6 +152,11 @@ export function writeDiffDocument(
     const minus = edits.filter((edit) => edit.op === "delete").length;
     return ` — ${escapeHtml(labels.diffAdded)} ${plus} / ${escapeHtml(labels.diffDeleted)} ${minus}`;
   };
+  // A page whose front-matter title changed is listed with its earlier one, moved or not (7.3.3).
+  const earlierTitle = (page: PageComparison & { state: "matched" }) =>
+    page.titleChanged === undefined
+      ? ""
+      : ` (${escapeHtml(labels.diffTitleChanged)} ${escapeHtml(page.titleChanged.from ?? page.old.title)})`;
   const sections: string[] = [];
   const headings: Page["headings"] = [];
   const section = (key: string, label: string, body: () => string) => {
@@ -175,6 +180,7 @@ export function writeDiffDocument(
         movedPages.map(
           (page) =>
             `${link(page.new)} (<code>${escapeHtml(page.movedFrom!)}</code> → <code>${escapeHtml(page.new.route)}</code>)` +
+            earlierTitle(page) +
             (page.changed ? counts(page) : ""),
         ),
       ),
@@ -183,16 +189,7 @@ export function writeDiffDocument(
   const changedPages = ordered.flatMap((page) => changed.get(page.id) ?? []);
   if (changedPages.length > 0) {
     section("changed", labels.diffChangedPages, () =>
-      list(
-        changedPages.map(
-          (page) =>
-            link(page.new) +
-            (page.titleChanged === undefined
-              ? ""
-              : ` (${escapeHtml(labels.diffTitleChanged)} ${escapeHtml(page.titleChanged.from ?? page.old.title)})`) +
-            counts(page),
-        ),
-      ),
+      list(changedPages.map((page) => link(page.new) + earlierTitle(page) + counts(page))),
     );
   }
   const deletedPages = inSidebarOrder(old.pages, old.sidebar).flatMap(

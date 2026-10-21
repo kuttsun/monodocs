@@ -165,7 +165,7 @@ const DIFF_EN: DiffLabels = {
   diffChanged: "Changed",
   diffMoved: "Moved",
   diffTitleChanged: "The title changed. Its earlier title:",
-  diffMergedInto: "Merged into",
+  diffMergedInto: "Merged into:",
 };
 
 const DIFF_JA: DiffLabels = {

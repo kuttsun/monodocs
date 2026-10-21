@@ -181,7 +181,7 @@ describe("the list of changes", () => {
       { "docs/c.md": "---\naliases: [/a, /b]\n---\n\n# C\n" },
     );
     const list = article(html, "//changes");
-    expect(list).toContain('<p>Merged into <a href="#/c">C</a></p>');
+    expect(list).toContain('<p>Merged into: <a href="#/c">C</a></p>');
   });
 
   it("takes its title from the label and whichever version has a name", () => {
@@ -210,6 +210,18 @@ describe("the list of changes", () => {
     expect(all.filter((id, i) => all.indexOf(id) !== i)).toEqual([]);
     expect(html).toContain(
       '<article class="page" data-route="//changes" id="page-diff-changes-x-x"',
+    );
+  });
+});
+
+describe("a moved page whose title changed", () => {
+  it("is listed with its earlier title", async () => {
+    const { html } = await built(
+      { "docs/old.md": "---\ntitle: Before\n---\n\nText.\n" },
+      { "docs/new.md": "---\ntitle: After\naliases: [/old]\n---\n\nText.\n" },
+    );
+    expect(article(html, "//changes")).toContain(
+      '<a href="#/new">After</a> (<code>/old</code> → <code>/new</code>) (The title changed. Its earlier title: Before)',
     );
   });
 });
@@ -352,6 +364,13 @@ describe("the size report", () => {
     ).toBe(size.bytes);
     // The image is in both versions and in the new one once: counted once, under images.
     expect(parts.images.files).toBe(1);
+    // Moved to another path, the same image is still one file.
+    await rm(out());
+    const moved = await built(
+      { "docs/dot.png": png, "docs/a.md": "# A\n\n![dot](dot.png)\n" },
+      { "docs/img/dot.png": png, "docs/a.md": "# A\n\n![dot](img/dot.png)\n" },
+    );
+    expect(moved.result.sizes[0]!.breakdown!.images.files).toBe(1);
     expect(parts.difference).toBeGreaterThan(0);
     expect(sizeReportLines(result.sizes).some((line) => line.trim().startsWith("difference"))).toBe(
       true,
