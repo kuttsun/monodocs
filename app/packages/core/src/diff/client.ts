@@ -575,6 +575,12 @@ export const DIFF_SCRIPT = `(function () {
     var old = document.querySelector(".monodocs-diff-change-current");
     if (old) old.classList.remove("monodocs-diff-change-current");
     position = { article: null, index: -1 };
+    // The list of changes is the side-by-side view's: leaving it, a version's view opens its first page.
+    var article = shown();
+    if (name !== "both" && article && article.getAttribute("data-route") === "//changes") {
+      var first = document.querySelector('[data-monodocs-diff-sidebar="' + name + '"] a[data-route]');
+      if (first) location.hash = "#" + encodeURI(first.getAttribute("data-route"));
+    }
     showBox();
     reveal();
     align();

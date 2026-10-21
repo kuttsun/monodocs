@@ -38,7 +38,8 @@ export type DiffDocument = {
   sidebar: SidebarNode[];
   /**
    * The sidebar of each version's own view: the new version's, and the earlier version's in its
-   * order and titles, each page linking to the page that shows it. Both start with the list.
+   * order and titles, each page linking to the page that shows it. Neither lists the list of
+   * changes, which is the side-by-side view's.
    */
   sidebars: { current: SidebarNode[]; earlier: SidebarNode[] };
   /** Each page that changed, by page ID. */
@@ -442,8 +443,8 @@ export function writeDiffDocument(
     pages: [changes, ...pages],
     sidebar: [listEntry, ...sidebar],
     sidebars: {
-      current: [listEntry, ...copySidebar(next.sidebar)],
-      earlier: [listEntry, ...earlierSidebar(old.sidebar)],
+      current: copySidebar(next.sidebar),
+      earlier: earlierSidebar(old.sidebar),
     },
     states,
     labels,

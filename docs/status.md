@@ -693,6 +693,7 @@ Every PDF with a formula changes, but this release skips the beta 0.15.0 and 0.1
 - [x] A difference with a PDF output is `diff/unsupported`, whether the PDF comes from `-f pdf`, `-f both`, or `output.format`; `watch`, `serve`, and `validate` reject the options as unknown, and `watchSite`, `serveSite`, and `validateSite` reject `diff`
 - [ ] Tests confirm that the same old and new inputs give the same HTML bytes, and that a build without a difference gives the bytes it gave before the feature, labels in `siteDataJson` included; the size report's lines add up to the file, with an image shared by both versions and the same block deleted on two pages
 - [ ] With `numbering.sections` on, every number shown is the number the same page gets in a build without a difference
+- [ ] The list of changes is listed in the side-by-side sidebar only, and choosing a version's own view from it opens that version's first page
 - [ ] The list of changes gets a page ID that collides with neither a page named `diff-changes.md` nor a heading whose ID matches the article's, and is in neither search nor the previous/next navigation; the bar's navigation lands on each change after the page has been shown
 - [ ] The default theme's `app.js` is byte for byte what it was before the feature, and a search term found on a page is not left highlighted inside its deleted content
 - [ ] A custom theme with its own `template.html`, `style.css`, and `app.js` gets the bar, the marks, and the navigation

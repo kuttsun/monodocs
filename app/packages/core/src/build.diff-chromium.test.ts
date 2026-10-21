@@ -173,6 +173,13 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       }));
       expect(earlier).toEqual({ view: "earlier", count: "– / 6", current: true });
 
+      // Leaving the list of changes for a version's own view opens that version's first page.
+      await page.goto(`${pathToFileURL(out).href}#//changes`);
+      await page.click('[data-monodocs-diff-view="both"]');
+      await page.click('[data-monodocs-diff-view="earlier"]');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(await page.evaluate(() => decodeURI(location.hash))).toBe("#/a");
+
       // The previous and next pages: none side by side; each version's own order in its view.
       const next = () =>
         page.evaluate(() => {

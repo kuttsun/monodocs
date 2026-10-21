@@ -305,14 +305,10 @@ describe("the two versions side by side", () => {
       "/c C",
       "/new New",
     ]);
-    expect(sidebar("current")).toEqual(["//changes Changes v1", "/a A", "/c C", "/new New"]);
+    // Neither version's own lists the list of changes, which is the side-by-side view's.
+    expect(sidebar("current")).toEqual(["/a A", "/c C", "/new New"]);
     // The earlier version's: its titles, its order, the deleted page's own, a moved page's new route.
-    expect(sidebar("earlier")).toEqual([
-      "//changes Changes v1",
-      "/a A",
-      "//deleted/b B",
-      "/new Old",
-    ]);
+    expect(sidebar("earlier")).toEqual(["/a A", "//deleted/b B", "/new Old"]);
   });
 
   it("makes a deleted page a page of its own where it stood in the earlier sidebar", async () => {

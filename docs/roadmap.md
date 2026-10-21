@@ -1481,7 +1481,9 @@ the label alone. It lists, each linking to its page:
 
 It is in the sidebar, first and unnumbered — no page's number shifts because it is there — and in
 neither search nor the previous/next navigation: its entry in `siteDataJson` is `hidden`, which
-takes it out of both, because the default theme builds the two from one list of pages.
+takes it out of both, because the default theme builds the two from one list of pages. It belongs
+to the side-by-side view, which surveys the two versions: a version's own sidebar does not list it,
+and choosing a version's own view from it opens that version's first page.
 
 **A deleted page is a page of the document.** It keeps its earlier title and gets the route
 `//deleted` followed by its earlier route, which no path or alias can give, for the reason
