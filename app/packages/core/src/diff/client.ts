@@ -94,6 +94,9 @@ del[data-monodocs-diff] {
 /* Code struck through or underlined line by line cannot be read; its band and edge say what changed. */
 pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
 
+/* A file the earlier column shows as its path stands in a span; lining it up takes its top margin. */
+.monodocs-diff-columns span[data-monodocs-diff-pair] { display: inline-block; }
+
 /* Two columns, and the line between them that every change leans towards. */
 .monodocs-diff-columns {
   display: grid;
@@ -500,6 +503,13 @@ export const DIFF_SCRIPT = `(function () {
         var first = Array.prototype.filter.call(article.children, function (child) {
           return !child.classList.contains("monodocs-diff-note");
         })[0];
+        // On a page in two columns, the first block of the column shown, not the columns whole.
+        if (first && first.classList.contains("monodocs-diff-columns")) {
+          var column = Array.prototype.filter.call(first.children, visible)[0];
+          first = column && Array.prototype.filter.call(column.children, function (child) {
+            return !child.classList.contains("monodocs-diff-column-title");
+          })[0];
+        }
         if (first) return [first];
       }
       // An added or deleted page whose note is in the column hidden: the column shown stands for it.

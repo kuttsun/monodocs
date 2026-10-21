@@ -449,3 +449,58 @@ describe.skipIf(!chromium)("a diagram in a column a view hides", () => {
     }
   }, 30000);
 });
+
+describe.skipIf(!chromium)("an image the earlier column shows as its path", () => {
+  it("is lined up with its pair, whichever side stands lower", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-diff-path-"));
+    try {
+      const png = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "base64",
+      );
+      const config = "assets:\n  embedImages: false\n";
+      await mkdir(join(dir, "then", "docs"), { recursive: true });
+      await mkdir(join(dir, "now", "docs"), { recursive: true });
+      for (const version of ["then", "now"]) {
+        await writeFile(join(dir, version, "docs", "dot.png"), png);
+        await writeFile(join(dir, version, "monodocs.config.yml"), config);
+      }
+      // Paragraphs added above the image in the new version: the earlier side is the higher one.
+      await writeFile(join(dir, "then", "docs", "a.md"), "# A\n\n![dot](dot.png)\n");
+      await writeFile(
+        join(dir, "now", "docs", "a.md"),
+        "# A\n\nOne.\n\nTwo.\n\nThree.\n\n![dot](dot.png)\n",
+      );
+      const html = join(dir, "out.html");
+      vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
+      await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
+      vi.restoreAllMocks();
+      const puppeteer = await import("puppeteer-core");
+      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      try {
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1500, height: 900 });
+        await page.goto(`${pathToFileURL(html).href}#/a`);
+        let gap = Infinity;
+        for (let waited = 0; waited < 5000 && Math.abs(gap) > 1; waited += 100) {
+          gap = await page.evaluate(() => {
+            const left = document.querySelector(
+              ".monodocs-diff-earlier span[data-monodocs-diff-pair]",
+            )!;
+            const pair = left.getAttribute("data-monodocs-diff-pair");
+            const right = document.querySelector(
+              `.monodocs-diff-current [data-monodocs-diff-pair="${pair}"]`,
+            )!;
+            return Math.round(left.getBoundingClientRect().top - right.getBoundingClientRect().top);
+          });
+          if (Math.abs(gap) > 1) await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        expect(Math.abs(gap)).toBeLessThanOrEqual(1);
+      } finally {
+        await browser.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
