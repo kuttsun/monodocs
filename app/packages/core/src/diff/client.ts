@@ -547,7 +547,12 @@ export const DIFF_SCRIPT = `(function () {
       // An added or deleted page whose note is in the column hidden: the column shown stands for it.
       // Another page whose changes are all in the hidden column has none in this view.
       if (state !== "added" && state !== "deleted") return [];
-      return own(article, ".monodocs-diff-columns > div").filter(visible).slice(0, 1);
+      // Its first block, not the column whole, which on a long page would be scrolled to its middle.
+      var column = own(article, ".monodocs-diff-columns > div").filter(visible)[0];
+      var block = column && Array.prototype.filter.call(column.children, function (child) {
+        return !child.classList.contains("monodocs-diff-column-title");
+      })[0];
+      return block ? [block] : column ? [column] : [];
     }
     if (!article.hidden) {
       // A change inside a collapsible block stands where the block does, open or not: it has no place

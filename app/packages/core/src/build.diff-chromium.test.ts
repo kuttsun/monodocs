@@ -180,6 +180,24 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       );
       expect(seen.some((s) => s.endsWith("#//deleted/b"))).toBe(true);
       expect(seen.some((s) => s.endsWith("#/c"))).toBe(true);
+      // The added page is reached at its first block, its note being in the column the new view hides.
+      await page.click('[data-monodocs-diff-view="current"]');
+      await page.evaluate(() => {
+        location.hash = "#/a";
+      });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      let added = "";
+      for (let step = 0; step < 8 && added === ""; step++) {
+        await page.click('[data-monodocs-diff-go="1"]');
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        added = await page.evaluate(() =>
+          decodeURI(location.hash) === "#/c"
+            ? document.querySelector(".monodocs-diff-change-current")!.tagName
+            : "",
+        );
+      }
+      expect(added).toBe("H1");
+      await page.click('[data-monodocs-diff-view="both"]');
       expect(seen[total]!.startsWith("1 /")).toBe(true);
 
       // The earlier version's view hides the new column and counts what it shows, through the
