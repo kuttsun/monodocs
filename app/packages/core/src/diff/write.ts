@@ -208,6 +208,31 @@ function markBlock(node: Element, mark: Mark, nested: ReadonlySet<Node>): Elemen
   return node;
 }
 
+/**
+ * A link inside an SVG points into the earlier version, as any other does — a page's route is a
+ * `#/…` too — and is not kept; one to an element of the same SVG is a reference, and stays.
+ */
+function unlinkSvg(svg: Element): void {
+  const ids = new Set<string>();
+  const collect = (node: Element) => {
+    if (typeof node.properties.id === "string") ids.add(node.properties.id);
+    for (const child of elements(node)) collect(child);
+  };
+  collect(svg);
+  const walk = (node: Element) => {
+    if (node.tagName === "a") {
+      for (const key of ["href", "xLinkHref"]) {
+        const value = node.properties[key];
+        if (typeof value === "string" && !(value.startsWith("#") && ids.has(value.slice(1)))) {
+          delete node.properties[key];
+        }
+      }
+    }
+    for (const child of elements(node)) walk(child);
+  };
+  walk(svg);
+}
+
 /** Rename every ID in an SVG and every reference to one inside it. */
 function renameSvgIds(svg: Element, prefix: string): void {
   const ids = new Set<string>();
@@ -261,7 +286,7 @@ function renameSvgIds(svg: Element, prefix: string): void {
 class Cloner {
   constructor(
     private readonly svgPrefix: string,
-    private readonly diagramPrefix: string,
+    private readonly diagramPrefix: string | undefined,
   ) {}
 
   /**
@@ -282,6 +307,7 @@ class Cloner {
     if (node.tagName === "svg") {
       const svg = this.copy(node);
       renameSvgIds(svg, this.svgPrefix);
+      unlinkSvg(svg);
       return [svg];
     }
     if (isGeneratedElement(node)) return [];
@@ -404,11 +430,25 @@ export function rawIds(markup: string): string[] {
  * one). Each is renamed with `prefix` and the diagram's own ID, so two deleted diagrams never share
  * one. Only start tags and `<style>` are read: a label's text is never taken for an attribute.
  */
-function renameRawIds(markup: string, prefix: string, keep: string): string {
+function renameRawIds(markup: string, prefix: string, keep: string | undefined): string {
+  // A link, a diagram's `click`, points into the earlier version: it is not kept, unless it is a
+  // reference to an element of the diagram itself.
+  const own = new Set(rawIds(markup));
+  markup = markup.replace(RAW_PARTS, (part) =>
+    /^<a[\s>]/.test(part)
+      ? part.replace(
+          /\s(?:xlink:)?href\s*=\s*(["'])([^"']*)\1/g,
+          (whole: string, _q: string, value: string) =>
+            value.startsWith("#") && own.has(value.slice(1)) ? whole : "",
+        )
+      : part,
+  );
+  const kept = (id: string) => keep !== undefined && id.startsWith(keep);
   const all = rawIds(markup);
-  const ids = new Set(all.filter((id) => !id.startsWith(keep)));
+  const ids = new Set(all.filter((id) => !kept(id)));
   if (ids.size === 0) return markup;
-  const root = all.find((id) => id.startsWith(keep));
+  // The diagram's own ID, its root's, which every other is renamed under.
+  const root = all[0];
   const full = root === undefined ? prefix : `${prefix}${root}-`;
   const rename = (id: string) => (ids.has(id) ? `${full}${id}` : id);
   const urls = (text: string) =>
@@ -454,8 +494,11 @@ function isGeneratedElement(node: Element): boolean {
 export type WriteOptions = {
   /** What the IDs inside a deleted SVG start with: a prefix no ID of the new version starts with. */
   svgIdPrefix: string;
-  /** What the earlier version's pre-rendered diagrams' IDs start with (7.3.2). */
-  earlierDiagramPrefix: string;
+  /**
+   * What the earlier version's pre-rendered diagrams' IDs start with (7.3.2), kept as they are; or
+   * undefined when an ID of the new version starts with it too, and every diagram ID is renamed.
+   */
+  earlierDiagramPrefix: string | undefined;
 };
 
 /**
@@ -482,20 +525,26 @@ export function writeDifference(
   );
   const cloner = new Cloner(options.svgIdPrefix, options.earlierDiagramPrefix);
 
-  // Each earlier container paired with the new one an unchanged block inside it is in, matched from
-  // the block outwards. A section and a link may stand on one side and not the other.
-  const paired = new Map<Node, Parent>();
+  // Each earlier container paired with the new ones the unchanged blocks inside it are in, matched
+  // from the block outwards — several, where the new version split it in two. A section and a link
+  // may stand on one side and not the other.
+  const paired = new Map<Node, Parent[]>();
+  const pair = (old: Node, node: Parent) => {
+    const list = paired.get(old) ?? [];
+    if (!list.includes(node)) list.push(node);
+    paired.set(old, list);
+  };
   const transparent = (node: Element) => isSectionWrapper(node) || node.tagName === "a";
   for (const edit of edits) {
     if (edit.op !== "equal") continue;
     if (edit.old.run === undefined && edit.new.run === undefined) {
-      paired.set(edit.old.node, edit.new.node);
+      pair(edit.old.node, edit.new.node);
     }
     const before = oldParents.chain(firstNode(edit.old));
     const after = newParents.chain(firstNode(edit.new));
     for (let i = 0, j = 0; i < before.length && j < after.length;) {
       if (containerLink(before[i]!) === containerLink(after[j]!)) {
-        if (!paired.has(before[i]!)) paired.set(before[i]!, after[j]!);
+        pair(before[i]!, after[j]!);
         i++;
         j++;
       } else if (transparent(before[i]!)) i++;
@@ -504,7 +553,7 @@ export function writeDifference(
     }
   }
 
-  const pairedNew = new Set<Parent>(paired.values());
+  const pairedNew = new Set<Parent>([...paired.values()].flat());
 
   // What stands for each edit in the written tree, in order: where a deletion goes is read from it.
   const items: (Node | undefined)[] = edits.map((edit) =>
@@ -561,6 +610,27 @@ export function writeDifference(
     return node.tagName === "tr" ? afterSpans(parent, at) : at;
   };
 
+  // The new container an earlier one stands for at edit `i`: of those it was paired with, the one
+  // holding what stands for the nearest edit before it, else after it — where the block stood among
+  // its unchanged neighbours.
+  const counterpart = (old: Node, i: number): Parent | undefined => {
+    const candidates = paired.get(old);
+    if (candidates === undefined || candidates.length < 2) return candidates?.[0];
+    const holding = (j: number) =>
+      items[j] === undefined
+        ? undefined
+        : candidates.find((candidate) => newParents.childOf(candidate, items[j]!) !== undefined);
+    for (let j = i - 1; j >= 0; j--) {
+      const found = holding(j);
+      if (found !== undefined) return found;
+    }
+    for (let j = i + 1; j < edits.length; j++) {
+      const found = holding(j);
+      if (found !== undefined) return found;
+    }
+    return candidates[0];
+  };
+
   const clones = new Map<Node, Parent>();
   // Every node written from the earlier tree, for the check that none kept an ID.
   const fromEarlier: Element[] = [];
@@ -574,7 +644,7 @@ export function writeDifference(
     const missing: Element[] = [];
     let target: Parent = next;
     for (let at = oldParents.get(firstNode(block)); at !== undefined && at.type === "element";) {
-      const found = paired.get(at) ?? clones.get(at);
+      const found = counterpart(at, i) ?? clones.get(at);
       if (found !== undefined) {
         target = found;
         break;
@@ -764,10 +834,10 @@ export function assertNoEarlierId(node: Element, options: WriteOptions): void {
     else if ((child as { type: string }).type === "raw") {
       const raw = (child as unknown as { value: string }).value;
       for (const found of rawIds(raw)) {
-        if (
-          !found.startsWith(options.earlierDiagramPrefix) &&
-          !found.startsWith(options.svgIdPrefix)
-        ) {
+        const kept =
+          options.earlierDiagramPrefix !== undefined &&
+          found.startsWith(options.earlierDiagramPrefix);
+        if (!kept && !found.startsWith(options.svgIdPrefix)) {
           fail(found);
         }
       }

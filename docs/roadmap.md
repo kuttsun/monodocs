@@ -1421,7 +1421,9 @@ the new version in its list carries its number as `value`. Each container of the
 paired with the new one that an unchanged block inside it sits in, matched from the block outwards;
 a container with no pair is cloned around the deleted blocks it held, with what in it is not a block
 — a table's `colgroup`, an admonition's title — and a section's body that the new version has with
-nothing unchanged in it is used rather than cloned. A deleted caption, figure caption, or summary
+nothing unchanged in it is used rather than cloned. Where the new version split a container — a
+list broken by a paragraph — the earlier one is paired with each part, and a deleted block goes into
+the part that holds its nearest unchanged neighbour. A deleted caption, figure caption, or summary
 joins the one its container has, before the new text, its `<del>` carrying the block's mark; a
 deleted header row joins the table's head. A generated number in deleted content goes with the
 separator after it, and with the label before it when that starts the element, so `Figure 1. Title`
@@ -1430,7 +1432,9 @@ deleted SVG are renamed with `earlier-`, or `earlier-2-` and on, the first prefi
 version starts with. The earlier version's pre-rendered diagrams carry a prefix of their own (7.3.2),
 but Mermaid puts it on only some of a diagram's IDs — a sequence diagram's lifelines are `actor0` and
 on — so every other ID in one, and every reference to it, is renamed with the same prefix followed
-by the diagram's own ID, so two deleted diagrams never share one. A
+by the diagram's own ID, so two deleted diagrams never share one; should an ID of the new version
+start with the diagrams' prefix, every one of their IDs is renamed. A link inside a deleted SVG or
+diagram is dropped, as any other is, unless it refers to an element of the same SVG. A
 deleted video, audio clip, or player whose file is the earlier version's is shown as its path, as an
 image is.
 

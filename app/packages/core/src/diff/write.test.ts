@@ -11,7 +11,13 @@ import { assertNoEarlierId, earlierIdPrefix, elementIds, writeDifference } from 
 const parser = unified().use(rehypeParse, { fragment: true });
 
 /** The new version's HTML with the difference from `earlier` written into it. */
-function written(earlier: HastRoot | string, current: string, svgIdPrefix = "earlier-"): string {
+function written(
+  earlier: HastRoot | string,
+  current: string,
+  svgIdPrefix = "earlier-",
+  diagramPrefix: string | null = "mermaid-earlier-",
+): string {
+  const earlierDiagramPrefix = diagramPrefix ?? undefined;
   const old = typeof earlier === "string" ? parser.parse(earlier) : earlier;
   const next = parser.parse(current);
   const before = blocksOf(old);
@@ -23,7 +29,7 @@ function written(earlier: HastRoot | string, current: string, svgIdPrefix = "ear
         ? { op: "delete", old: before[edit.old]! }
         : { op: "insert", new: after[edit.new]! },
   );
-  writeDifference(next, old, edits, { svgIdPrefix, earlierDiagramPrefix: "mermaid-earlier-" });
+  writeDifference(next, old, edits, { svgIdPrefix, earlierDiagramPrefix });
   return toHtml(next, { allowDangerousHtml: true });
 }
 
@@ -103,6 +109,43 @@ describe("the check that no earlier ID survives", () => {
     expect(html).toContain('<line id="earlier-mermaid-earlier-0-actor0">');
     expect(html).toContain('<line id="earlier-mermaid-earlier-1-actor0">');
     expect(html.match(/user id = 5, set id="x"/g)?.length).toBe(2);
+  });
+
+  it("renames a diagram's own ID too when a new ID shares the earlier diagrams' prefix", () => {
+    const old = parser.parse('<p>Keep.</p><div class="mermaid"></div>');
+    const diagram = old.children.find(
+      (child) => child.type === "element" && child.tagName === "div",
+    ) as { children: ElementContent[]; data?: unknown };
+    diagram.children.push({
+      type: "raw",
+      value: '<svg id="mermaid-earlier-0"><style>#mermaid-earlier-0 .a{}</style></svg>',
+    } as never);
+    diagram.data = { monodocsSource: { kind: "mermaid", source: "graph TD" } };
+    const html = written(old, "<p>Keep.</p>", "earlier-", null);
+    expect(html).toContain(
+      '<svg id="earlier-mermaid-earlier-0-mermaid-earlier-0"><style>#earlier-mermaid-earlier-0-mermaid-earlier-0 .a{}</style>',
+    );
+  });
+
+  it("keeps no link inside a deleted SVG or diagram, but keeps references within it", () => {
+    const inline =
+      '<svg viewBox="0 0 1 1"><a href="#/other"><text>t</text></a><a href="#p-x"><rect id="p-x"></rect></a></svg>';
+    const html = written(`<p>Keep.</p><div>${inline}</div>`, "<p>Keep.</p>");
+    expect(html).toContain("<a><text>t</text></a>");
+    expect(html).toContain('<a href="#earlier-p-x">');
+    const old = parser.parse('<p>Keep.</p><div class="mermaid"></div>');
+    const diagram = old.children.find(
+      (child) => child.type === "element" && child.tagName === "div",
+    ) as { children: ElementContent[]; data?: unknown };
+    diagram.children.push({
+      type: "raw",
+      value:
+        '<svg id="mermaid-earlier-0"><a xlink:href="https://example.com" href="page.html"><g></g></a></svg>',
+    } as never);
+    diagram.data = { monodocsSource: { kind: "mermaid", source: "graph TD" } };
+    expect(written(old, "<p>Keep.</p>")).toContain(
+      '<svg id="mermaid-earlier-0"><a><g></g></a></svg>',
+    );
   });
 
   it("passes an earlier diagram's own prefix", () => {

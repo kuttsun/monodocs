@@ -350,6 +350,21 @@ describe("where a deleted block goes", () => {
     expectValid(html);
   });
 
+  it("writes a deleted item into the part of a split list it stood in", async () => {
+    for (const marker of ["-", "1."]) {
+      const item = (text: string) => `${marker} ${text}\n`;
+      const html = await onePage(
+        "docs/a.md",
+        `# A\n\n${["a", "b", "c", "d"].map(item).join("")}`,
+        `# A\n\n${item("a")}\npara\n\n${["b", "c"].map(item).join("")}`,
+      );
+      const at = (text: string) => html.indexOf(`>${text}<`);
+      expect(at("para")).toBeLessThan(at("b"));
+      expect(at("c")).toBeLessThan(at("d"));
+      expectValid(html);
+    }
+  });
+
   it("places a deleted row after the rows a new cell spans", async () => {
     const html = await onePage(
       "docs/a.adoc",

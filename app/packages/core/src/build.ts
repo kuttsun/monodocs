@@ -415,7 +415,10 @@ export async function buildSite(
         ids,
         prepared.pages.map((page) => page.id),
       ),
-      earlierDiagramPrefix: EARLIER_MERMAID_ID_PREFIX,
+      // Kept only while no ID of the new version shares it.
+      earlierDiagramPrefix: ids.some((id) => id.startsWith(EARLIER_MERMAID_ID_PREFIX))
+        ? undefined
+        : EARLIER_MERMAID_ID_PREFIX,
     };
     deletedDiagrams = writeChangedPages(comparison, { next, old }, write);
     diffDocument = writeDiffDocument(
