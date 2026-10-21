@@ -812,7 +812,8 @@ function inTableOrder(table: Element, at: number, node: Element): number {
  * version's tree, `next`, and the deleted ones in the earlier tree, `old`, which is returned cloned
  * without an address — no ID but an SVG's, renamed, no link, no generated number — to stand beside
  * it. The two blocks of each unchanged pair carry the same `data-monodocs-diff-pair`, by which the
- * script lines them up; text read from a run has no element of its own to carry it.
+ * script lines them up; text read from a run is given an element of its own to carry it, a
+ * `span.monodocs-diff-run`.
  */
 export function writeColumns(
   next: HastRoot,
@@ -833,10 +834,26 @@ export function writeColumns(
   let pair = 0;
   for (const edit of edits) {
     if (edit.op === "equal") {
-      if (edit.old.run !== undefined || edit.new.run !== undefined) continue;
       pair++;
-      edit.old.node.properties[DIFF_PAIR] = String(pair);
-      edit.new.node.properties[DIFF_PAIR] = String(pair);
+      // Text read from a run has no element of its own: it is given one, in each column.
+      const carrier = (block: Block, parents: Parents): Element => {
+        if (block.run === undefined) return block.node;
+        const parent = parents.get(block.run[0]!)!;
+        const at = kids(parent).indexOf(block.run[0]!);
+        const end = kids(parent).indexOf(block.run.at(-1)!);
+        const run = kids(parent).slice(at, end + 1);
+        const span: Element = {
+          type: "element",
+          tagName: "span",
+          properties: { className: ["monodocs-diff-run"] },
+          children: run,
+        };
+        parents.splice(parent, at, run.length, span);
+        for (const node of run) parents.set(node, span);
+        return span;
+      };
+      carrier(edit.old, oldParents).properties[DIFF_PAIR] = String(pair);
+      carrier(edit.new, newParents).properties[DIFF_PAIR] = String(pair);
     } else if (edit.op === "insert") markInPlace(edit.new, "ins", newParents, newStructure);
     else markInPlace(edit.old, "del", oldParents, oldStructure);
   }

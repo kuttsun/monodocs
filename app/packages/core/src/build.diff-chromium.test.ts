@@ -558,3 +558,56 @@ describe.skipIf(!chromium)("the way through the changes in a version's own view"
     }
   });
 });
+
+describe.skipIf(!chromium)("a change inside a collapsed block, and the earlier footnotes", () => {
+  it("opens the block to show the change, and lists the earlier footnotes with no number", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-diff-details-"));
+    try {
+      await write(join(dir, "then"), {
+        "docs/a.adoc": "= A\n\n.More\n[%collapsible]\n====\nOld inside.\n====\n",
+        "docs/b.md": "# B\n\nOne[^a] and two[^b].\n\n[^a]: First.\n[^b]: Second.\n",
+      });
+      await write(join(dir, "now"), {
+        "docs/a.adoc": "= A\n\n.More\n[%collapsible]\n====\nNew inside.\n====\n",
+        "docs/b.md": "# B\n\nOne and two[^b].\n\n[^b]: Second.\n",
+      });
+      const html = join(dir, "out.html");
+      vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
+      await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
+      vi.restoreAllMocks();
+      const puppeteer = await import("puppeteer-core");
+      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      try {
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1500, height: 900 });
+        await page.goto(`${pathToFileURL(html).href}#/a`);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await page.click('[data-monodocs-diff-go="1"]');
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        const opened = await page.evaluate(() => {
+          const ring = document.querySelector(".monodocs-diff-change-current")!;
+          return {
+            inside: ring.closest("details")?.open,
+            visible: (ring as HTMLElement).offsetParent !== null,
+          };
+        });
+        expect(opened).toEqual({ inside: true, visible: true });
+        await page.goto(`${pathToFileURL(html).href}#/b`);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        const markers = await page.evaluate(() =>
+          [...document.querySelectorAll("article:not([hidden]) .monodocs-diff-columns > div")].map(
+            (column) => {
+              const list = column.querySelector(":is(section.footnotes, [data-footnotes]) > ol");
+              return list ? getComputedStyle(list).listStyleType : "";
+            },
+          ),
+        );
+        expect(markers).toEqual(["none", "decimal"]);
+      } finally {
+        await browser.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

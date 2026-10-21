@@ -97,6 +97,13 @@ pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
 /* A file the earlier column shows as its path stands in a span; lining it up takes its top margin. */
 .monodocs-diff-columns span[data-monodocs-diff-pair] { display: inline-block; }
 
+/* The earlier column's footnotes are listed with no number: the numbers a reader goes by are the
+   new version's (19.1), and the earlier references' are taken off. */
+.monodocs-diff-earlier :is(section.footnotes, [data-footnotes]) > ol { list-style-type: none; }
+
+/* Text standing between blocks, wrapped so that its pair can be lined up as a block's is. */
+.monodocs-diff-columns span.monodocs-diff-run { display: block; }
+
 /* Two columns, and the line between them that every change leans towards. */
 .monodocs-diff-columns {
   display: grid;
@@ -574,6 +581,10 @@ export const DIFF_SCRIPT = `(function () {
     position = { article: article, index: index };
     var target = changes(article)[index];
     if (target) {
+      // A change inside a collapsed block is shown by opening it.
+      for (var node = target.parentElement; node; node = node.parentElement) {
+        if (node.tagName === "DETAILS" && !node.open) node.open = true;
+      }
       target.classList.add("monodocs-diff-change-current");
       target.scrollIntoView({ block: "center" });
     }

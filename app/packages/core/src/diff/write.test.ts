@@ -6,7 +6,13 @@ import { describe, expect, it } from "vitest";
 import { blocksOf, sameBlock } from "./blocks";
 import type { BlockEdit } from "./compare";
 import { diffSequences } from "./myers";
-import { assertNoEarlierId, earlierIdPrefix, elementIds, writeDifference } from "./write";
+import {
+  assertNoEarlierId,
+  earlierIdPrefix,
+  elementIds,
+  writeColumns,
+  writeDifference,
+} from "./write";
 
 const parser = unified().use(rehypeParse, { fragment: true });
 
@@ -196,5 +202,28 @@ describe("the prefix of a deleted SVG's IDs", () => {
     );
     // A page called `earlier` has the article ID `page-earlier`, which does not take the prefix.
     expect(earlierIdPrefix([], ["earlier"])).toBe("earlier-");
+  });
+});
+
+describe("two columns", () => {
+  it("pairs text between blocks by an element of its own in each column", () => {
+    const old = parser.parse("<div><p>Old.</p>Shared text<p>End.</p></div>");
+    const next = parser.parse("<div><p>New.</p>Shared text<p>End.</p></div>");
+    const before = blocksOf(old);
+    const after = blocksOf(next);
+    const edits = diffSequences(before, after, sameBlock).map((edit): BlockEdit =>
+      edit.op === "equal"
+        ? { op: "equal", old: before[edit.old]!, new: after[edit.new]! }
+        : edit.op === "delete"
+          ? { op: "delete", old: before[edit.old]! }
+          : { op: "insert", new: after[edit.new]! },
+    );
+    const earlier = writeColumns(next, old, edits, {
+      svgIdPrefix: "earlier-",
+      earlierDiagramPrefix: "mermaid-earlier-",
+    });
+    const run = '<span class="monodocs-diff-run" data-monodocs-diff-pair="1">Shared text</span>';
+    expect(toHtml(earlier)).toContain(run);
+    expect(toHtml(next)).toContain(run);
   });
 });
