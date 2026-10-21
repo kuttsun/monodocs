@@ -90,6 +90,10 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       // Lined up again at another width, which wraps the added paragraph differently.
       await page.setViewport({ width: 1100, height: 900 });
       expect((await lined()).every((gap) => Math.abs(gap) <= 1)).toBe(true);
+      // And when the content's width changes with the window's the same: the sidebar closed.
+      await page.evaluate(() => document.body.classList.toggle("sidebar-collapsed"));
+      expect((await lined()).every((gap) => Math.abs(gap) <= 1)).toBe(true);
+      await page.evaluate(() => document.body.classList.toggle("sidebar-collapsed"));
       await page.setViewport({ width: 1500, height: 900 });
 
       // Left alone, the page is left alone: nothing is lined up again over and over — the count it
@@ -245,10 +249,12 @@ describe.skipIf(!chromium)("the in-page table of contents of a changed page", ()
     const dir = await mkdtemp(join(tmpdir(), "monodocs-diff-toc-"));
     try {
       await write(join(dir, "then"), {
-        "docs/a.md": "# A\n\n## Kept\n\nOne.\n\nTwo.\n\n## Gone\n\nOld.\n",
+        "docs/a.md":
+          "# A\n\n## Kept\n\nOne.\n\nTwo.\n\n## Gone\n\nOld.\n\n## Cost $x^2$\n\nSame.\n",
       });
       await write(join(dir, "now"), {
-        "docs/a.md": "# A\n\n## Kept\n\nOne.\n\nNew.\n\n## Added\n\nFresh.\n",
+        "docs/a.md":
+          "# A\n\n## Kept\n\nOne.\n\nNew.\n\n## Added\n\nFresh.\n\n## Cost $x^2$\n\nSame.\n",
       });
       const html = join(dir, "out.html");
       vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
@@ -275,20 +281,22 @@ describe.skipIf(!chromium)("the in-page table of contents of a changed page", ()
         };
         // Side by side: Kept with its two changes, the deleted Gone and the added Added, each with
         // itself and its paragraph.
-        expect(await settled(["Kept2", "−Gone2", "+Added2"])).toEqual([
-          "Kept2",
-          "−Gone2",
-          "+Added2",
-        ]);
+        // A formula in a heading reads as its TeX, as the theme's table of contents writes it.
+        const both = ["Kept2", "−Gone2", "+Added2", "Cost $x^2$"];
+        expect(await settled(both)).toEqual(both);
         // The new version's own view, plain: its headings alone, unmarked.
         await page.click('[data-monodocs-diff-view="current"]');
-        expect(await settled(["Kept", "Added"])).toEqual(["Kept", "Added"]);
+        expect(await settled(["Kept", "Added", "Cost $x^2$"])).toEqual([
+          "Kept",
+          "Added",
+          "Cost $x^2$",
+        ]);
         // A heading in the list opens its section.
-        await page.click('[data-monodocs-diff-toc="1"]');
+        await page.click('[data-monodocs-diff-toc="2"]');
         await new Promise((resolve) => setTimeout(resolve, 300));
         const opened = await page.evaluate(() => {
-          const heading = [...document.querySelectorAll(".monodocs-diff-current h2")].find(
-            (h) => h.textContent === "Added",
+          const heading = [...document.querySelectorAll(".monodocs-diff-current h2")].find((h) =>
+            h.textContent!.startsWith("Cost"),
           )!;
           const box = heading.getBoundingClientRect();
           return {
@@ -296,7 +304,7 @@ describe.skipIf(!chromium)("the in-page table of contents of a changed page", ()
             active: document.querySelector("#toc-nav a.active")?.textContent?.trim(),
           };
         });
-        expect(opened).toEqual({ inView: true, active: "Added" });
+        expect(opened).toEqual({ inView: true, active: "Cost $x^2$" });
       } finally {
         await browser.close();
       }

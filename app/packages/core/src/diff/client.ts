@@ -504,6 +504,7 @@ export const DIFF_SCRIPT = `(function () {
       });
     });
     held.forEach(function (columns) { columns.style.minHeight = ""; });
+    watchSizes(held);
     if (scroller.scrollTop !== top) scroller.scrollTop = top;
   }
 
@@ -687,6 +688,19 @@ export const DIFF_SCRIPT = `(function () {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
     });
   }
+  // A heading as the theme's table of contents reads it: its words, a formula as its TeX between
+  // dollars, without its section number, which is written beside it.
+  function headingText(heading) {
+    var copy = heading.cloneNode(true);
+    Array.prototype.forEach.call(copy.querySelectorAll(".section-number"), function (node) {
+      node.parentNode.removeChild(node);
+    });
+    Array.prototype.forEach.call(copy.querySelectorAll("[data-math-tex]"), function (node) {
+      node.parentNode.replaceChild(document.createTextNode("$" + node.getAttribute("data-math-tex") + "$"), node);
+    });
+    // Escaped twice: this script is a template literal, which would turn a lone backslash-s into "s".
+    return (copy.textContent || "").replace(/\\s+/g, " ").trim();
+  }
   function drawToc() {
     var nav = document.getElementById("toc-nav");
     var article = shown();
@@ -746,7 +760,7 @@ export const DIFF_SCRIPT = `(function () {
       var other = partner(heading);
       var count = section(heading) + (other ? section(other) : 0);
       var number = heading.querySelector(".section-number");
-      var text = (heading.textContent || "").replace(number ? number.textContent : "", "").trim();
+      var text = headingText(heading);
       var kind = shownMarks && state ? " monodocs-diff-toc-" + state : "";
       tocEntries.push(heading);
       html +=
@@ -831,6 +845,35 @@ export const DIFF_SCRIPT = `(function () {
   function measure() {
     var bar = document.querySelector(".monodocs-diff-bar");
     if (bar) root.style.setProperty("--monodocs-diff-bar-height", bar.offsetHeight + "px");
+  }
+
+  // A column's width or height changed by anything but this script — the sidebar opened or closed,
+  // a code block's lines wrapped, a font come in — calls for lining up again. Its size once lined
+  // up is kept, so the space this script adds is not taken for a change.
+  var sizes = typeof WeakMap === "function" ? new WeakMap() : null;
+  var resized =
+    typeof ResizeObserver === "function" && sizes
+      ? new ResizeObserver(function (entries) {
+          var moved = entries.some(function (entry) {
+            var last = sizes.get(entry.target);
+            var box = entry.contentRect;
+            return !last || Math.abs(last.width - box.width) > 1 || Math.abs(last.height - box.height) > 1;
+          });
+          if (moved) later();
+        })
+      : null;
+  function watchSizes(list) {
+    if (!resized) return;
+    list.forEach(function (columns) {
+      Array.prototype.forEach.call(columns.children, function (column) {
+        // The content box, as the observer reports it.
+        var style = getComputedStyle(column);
+        var across = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+        var down = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+        sizes.set(column, { width: column.clientWidth - across, height: column.clientHeight - down });
+        resized.observe(column);
+      });
+    });
   }
 
   var pending = 0;
