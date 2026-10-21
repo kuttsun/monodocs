@@ -173,6 +173,23 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       }));
       expect(earlier).toEqual({ view: "earlier", count: "– / 6", current: true });
 
+      // The previous and next pages: none side by side; each version's own order in its view.
+      const next = () =>
+        page.evaluate(() => {
+          const nav = document.getElementById("page-nav")!;
+          if (getComputedStyle(nav).display === "none") return "hidden";
+          return nav.querySelector(".page-nav-next")?.getAttribute("data-route") ?? "none";
+        });
+      await page.goto(`${pathToFileURL(out).href}#/a`);
+      await page.click('[data-monodocs-diff-view="both"]');
+      expect(await next()).toBe("hidden");
+      await page.click('[data-monodocs-diff-view="earlier"]');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(await next()).toBe("//deleted/b");
+      await page.click('[data-monodocs-diff-view="current"]');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(await next()).toBe("/c");
+
       // That view is the earlier version, plain, until the box marks its changes.
       const marked = () =>
         page.evaluate(() => {

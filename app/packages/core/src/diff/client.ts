@@ -336,6 +336,10 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
   color: var(--monodocs-diff-changed);
   background: color-mix(in srgb, var(--monodocs-diff-changed) 14%, transparent);
 }
+/* The previous and next pages: none side by side, where two versions' orders meet; in a
+   version's own view, that version's order, which the script writes. */
+:root:not([data-monodocs-diff-view]) #page-nav,
+:root[data-monodocs-diff-view="both"] #page-nav { display: none; }
 @media print { .monodocs-diff-bar { display: none; } }
 `;
 
@@ -573,6 +577,7 @@ export const DIFF_SCRIPT = `(function () {
     align();
     count();
     drawToc();
+    drawPageNav();
   }
 
   // The in-page table of contents of a changed page, drawn into the theme's own place for it: the
@@ -688,6 +693,39 @@ export const DIFF_SCRIPT = `(function () {
     });
   }
 
+  // The previous and next pages in a version's own view: that version's order, as its sidebar
+  // lists it, the list of changes left out; written in the theme's markup for them.
+  function drawPageNav() {
+    var nav = document.getElementById("page-nav");
+    var article = shown();
+    if (!nav || !article || view === "both") return;
+    var links = Array.prototype.slice
+      .call(document.querySelectorAll('[data-monodocs-diff-sidebar="' + view + '"] a[data-route]'))
+      .filter(function (link) { return link.getAttribute("data-route") !== "//changes"; });
+    var route = article.getAttribute("data-route");
+    var at = -1;
+    links.forEach(function (link, i) { if (link.getAttribute("data-route") === route) at = i; });
+    var data = window.__MONODOCS_DATA__;
+    var labels = (data && data.labels) || {};
+    var item = function (link, side, label) {
+      var copy = link.cloneNode(true);
+      Array.prototype.forEach.call(copy.querySelectorAll(".monodocs-diff-mark, .monodocs-diff-label, .section-number"), function (node) {
+        node.parentNode.removeChild(node);
+      });
+      var target = link.getAttribute("data-route");
+      return '<div class="page-nav-item page-nav-item-' + side + '"><span class="page-nav-dir">' +
+        escapeText(label || "") + '</span><a class="page-nav-link page-nav-' + side +
+        '" data-route="' + escapeText(target) + '" href="#' + escapeText(encodeURI(target)) + '">' +
+        escapeText((copy.textContent || "").trim()) + "</a></div>";
+    };
+    var html = "";
+    if (at !== -1) {
+      html += at > 0 ? item(links[at - 1], "prev", labels.prev) : '<span class="page-nav-spacer"></span>';
+      if (at < links.length - 1) html += item(links[at + 1], "next", labels.next);
+    }
+    if (nav.innerHTML !== html) nav.innerHTML = html;
+  }
+
   // The search highlight does not stay in the earlier column (22.5).
   function unhighlight() {
     Array.prototype.forEach.call(document.querySelectorAll(".monodocs-diff-earlier mark.search-hit"), function (mark) {
@@ -707,7 +745,7 @@ export const DIFF_SCRIPT = `(function () {
   var pending = 0;
   function later() {
     clearTimeout(pending);
-    pending = setTimeout(function () { measure(); align(); count(); drawToc(); }, 60);
+    pending = setTimeout(function () { measure(); align(); count(); drawToc(); drawPageNav(); }, 60);
   }
 
   function start() {

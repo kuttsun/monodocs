@@ -1454,6 +1454,12 @@ draws it into the theme's own place for it, `#toc-nav`, in the theme's markup (`
 `li.toc-item.toc-level-N`, the `active` class on the heading read); a page that did not change keeps
 the theme's own table of contents, and a theme without `#toc-nav` keeps its own on every page.
 
+**So do the previous and next pages under a page.** Side by side, where the two versions' orders
+meet, there are none. In a version's own view they follow that version's order, as its sidebar
+lists it, the list of changes left out: in the earlier version's view a deleted page is reached in
+its place and an added one is not. The script writes them into the theme's own place, `#page-nav`,
+in the theme's markup.
+
 **The list of changes is the first page.** It is generated, not read from a file, and the document
 opens on it. Its route is `//changes`: a route built from a path never has an empty segment (15.1),
 and an alias loses its leading slashes, so no alias can take it, and no source file can but one
