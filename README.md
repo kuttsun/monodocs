@@ -82,9 +82,9 @@ monodocs validate ./docs                              # report broken links / mi
 
 Commands, options, and the `monodocs.config.yml` reference are on the [documentation site](https://kuttsun.github.io/monodocs/docs/getting-started).
 
-## Advanced usage
+## Going further
 
-### What changed since the last version
+### The difference from an earlier version
 
 When a revised document is handed over, its readers want to know what changed. `--diff-from` builds the HTML with the difference from an earlier version written into it: the two versions side by side, a list of changes, and a way through them one by one. Readers who never look at Git can see what changed.
 
