@@ -305,3 +305,42 @@ describe.skipIf(!chromium)("the in-page table of contents of a changed page", ()
     }
   });
 });
+
+describe.skipIf(!chromium)("an image replaced under the same name", () => {
+  it("is ringed in each column, its colour that of its change", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-diff-image-"));
+    try {
+      const svg = (fill: string) =>
+        `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40"><rect width="80" height="40" fill="${fill}"/></svg>`;
+      await write(join(dir, "then"), {
+        "docs/a.md": "# A\n\n![x](x.svg)\n",
+        "docs/x.svg": svg("blue"),
+      });
+      await write(join(dir, "now"), {
+        "docs/a.md": "# A\n\n![x](x.svg)\n",
+        "docs/x.svg": svg("orange"),
+      });
+      const html = join(dir, "out.html");
+      vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
+      await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
+      vi.restoreAllMocks();
+      const puppeteer = await import("puppeteer-core");
+      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      try {
+        const page = await browser.newPage();
+        await page.goto(`${pathToFileURL(html).href}#/a`);
+        const rings = await page.evaluate(() =>
+          [...document.querySelectorAll("article:not([hidden]) img[data-monodocs-diff-block]")].map(
+            (img) =>
+              `${img.getAttribute("data-monodocs-diff-block")} ${getComputedStyle(img).outlineStyle}`,
+          ),
+        );
+        expect(rings).toEqual(["del solid", "ins solid"]);
+      } finally {
+        await browser.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

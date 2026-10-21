@@ -55,6 +55,14 @@ export const DIFF_STYLE = `
   margin-inline: -0.5rem;
 }
 tr[data-monodocs-diff-block] { box-shadow: none; }
+/* An image, a diagram drawn inline, or a player covers its own background: it is ringed instead. */
+:is(img, svg, object, video, audio, iframe, embed)[data-monodocs-diff-block] {
+  box-shadow: none;
+  outline: 3px solid var(--monodocs-diff-ring);
+  outline-offset: 3px;
+}
+:is(img, svg, object, video, audio, iframe, embed)[data-monodocs-diff-block="ins"] { --monodocs-diff-ring: var(--monodocs-diff-added); }
+:is(img, svg, object, video, audio, iframe, embed)[data-monodocs-diff-block="del"] { --monodocs-diff-ring: var(--monodocs-diff-deleted); }
 tr[data-monodocs-diff-block="ins"] > * {
   background: color-mix(in srgb, var(--monodocs-diff-added) var(--monodocs-diff-tint), var(--monodocs-diff-paper));
 }
@@ -159,6 +167,9 @@ del[data-monodocs-diff] {
 /* A table scrolls sideways in its own box, which would cut a ring drawn outside a row: a row's is
    drawn inside it. */
 tr.monodocs-diff-change-current { outline-offset: -2px; border-radius: 0; }
+:is(img, svg, object, video, audio, iframe, embed).monodocs-diff-change-current {
+  --monodocs-diff-ring: var(--color-accent, Highlight);
+}
 
 /* The sidebar: a badge for each state, its name told to assistive technology alone. */
 .monodocs-diff-label {
@@ -300,6 +311,7 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) tr[data-monodocs-diff-block] > * {
   background: none;
   box-shadow: none;
+  outline: none;
 }
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) ins[data-monodocs-diff],
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) del[data-monodocs-diff] {
