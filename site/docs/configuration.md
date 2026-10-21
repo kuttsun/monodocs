@@ -747,7 +747,7 @@ into it.
 | `diffViewSideBySideHint` | Show the difference with the two versions side by side | 差分を左右に並べて表示 | The tooltip of that view's button |
 | `diffViewCurrent` | New version | 新しい版 | The view that shows the new version |
 | `diffViewEarlier` | Earlier version | 以前の版 | The view that shows the earlier version |
-| `diffShowMarks` | Show changes | 変更の印 | The box that marks the changes in a version's own view |
+| `diffShowMarks` | Show changes | 変更を表示 | The box that marks the changes in a version's own view |
 | `diffPrevious` | Previous change | 前の変更 | The button to the previous change |
 | `diffNext` | Next change | 次の変更 | The button to the next change |
 | `diffAdded` | Added | 追加 | A changed page's count of added blocks, and the sidebar's mark of an added page |

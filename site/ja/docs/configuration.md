@@ -693,7 +693,7 @@ html:
 | `diffViewSideBySideHint` | Show the difference with the two versions side by side | 差分を左右に並べて表示 | その表示のボタンのツールチップ |
 | `diffViewCurrent` | New version | 新しい版 | 新しい版を見せる表示 |
 | `diffViewEarlier` | Earlier version | 以前の版 | 以前の版を見せる表示 |
-| `diffShowMarks` | Show changes | 変更の印 | 片方の版の表示で変更に印を付けるチェック |
+| `diffShowMarks` | Show changes | 変更を表示 | 片方の版の表示で変更に印を付けるチェック |
 | `diffPrevious` | Previous change | 前の変更 | 前の変更へのボタン |
 | `diffNext` | Next change | 次の変更 | 次の変更へのボタン |
 | `diffAdded` | Added | 追加 | 変更されたページの追加ブロック数と、サイドバーの追加ページの印 |

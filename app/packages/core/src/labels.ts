@@ -189,7 +189,7 @@ const DIFF_JA: DiffLabels = {
   diffViewSideBySideHint: "差分を左右に並べて表示",
   diffViewCurrent: "新しい版",
   diffViewEarlier: "以前の版",
-  diffShowMarks: "変更の印",
+  diffShowMarks: "変更を表示",
   diffPrevious: "前の変更",
   diffNext: "次の変更",
   diffAdded: "追加",
