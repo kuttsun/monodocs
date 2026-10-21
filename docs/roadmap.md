@@ -6287,8 +6287,8 @@ Completion criteria:
   and no deleted heading carries a number
 - A diagram deleted along with the new version's last one is drawn in `client` mode, and an earlier
   version with diagrams against a new one with Mermaid off builds in `pre-render` mode
-- A difference with a PDF output is `diff/unsupported`, whether the PDF comes from `-f pdf`, `-f
-  both`, or `output.format`; `watch`, `serve`, and `validate` reject the options as unknown, and
+- A difference with a PDF output is `diff/unsupported`, whether the PDF comes from `-f pdf`,
+  `-f both`, or `output.format`; `watch`, `serve`, and `validate` reject the options as unknown, and
   `watchSite`, `serveSite`, and `validateSite` reject `diff`
 - Tests confirm that the same old and new inputs give the same HTML bytes, and that a build without
   a difference gives the bytes it gave before the feature but for the default theme's `app.js`,
@@ -6309,9 +6309,10 @@ Completion criteria:
 - The command reference and the single HTML invariants in architecture.md describe the difference,
   in both languages
 - The "What 1.0 Freezes" page (12.4) lists the two options, the new diagnostic codes, the new
-  `html.labels` keys, `//changes` and how the list of changes gets its page ID among the addresses,
-  and the `data-monodocs-diff`, `data-monodocs-diff-block`, and `data-monodocs-diff-page`
-  attributes, and `surfaces.test.ts` passes
+  `html.labels` keys, `//changes`, the `//deleted` routes, and how the list of changes and the
+  deleted pages get their page IDs among the addresses, and the `data-monodocs-diff`,
+  `data-monodocs-diff-block`, `data-monodocs-diff-page`, and `data-monodocs-diff-pair` attributes,
+  and `surfaces.test.ts` passes
 - testing.md lists the new tests in both languages
 - Nothing changes for an existing document, so 0.18.0 goes to `latest` without a beta, as 0.13.0 and
   0.14.0 did, with the verification 0.16.0 had: the published package on Linux x64 and Windows x64
