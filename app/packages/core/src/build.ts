@@ -28,7 +28,8 @@ import {
 } from "./diff/earlierLocation.js";
 import { refuseLfsPointer } from "./diff/lfsPointer.js";
 import { earlierIdPrefix, elementIds, writeChangedPages } from "./diff/write.js";
-import { writeDiffDocument, type DiffDocument } from "./diff/changes.js";
+import { CHANGES_ROUTE, writeDiffDocument, type DiffDocument } from "./diff/changes.js";
+import { loadTheme } from "./themes/index.js";
 import {
   documentAuthor,
   documentCoverParts,
@@ -409,7 +410,21 @@ export async function buildSite(
     );
     internals.onCompared?.(comparison);
     withoutDiff = { pages: prepared.pages.map((page) => ({ ...page })), sidebar: prepared.sidebar };
-    const ids = elementIds(next.values());
+    // The list of changes' route is one no path gives but a name beginning with a backslash, which
+    // `toRoute` reads as a separator (7.3.4).
+    const taken = prepared.pages.find((page) => page.route === CHANGES_ROUTE);
+    if (taken !== undefined) {
+      throw new MonodocsError(
+        "page/duplicate-route",
+        t("pages.changesRouteCollision", { route: CHANGES_ROUTE, path: taken.relativePath }),
+      );
+    }
+    // The IDs the list of changes and deleted SVGs avoid: the pages' and the theme template's own.
+    const theme = await loadTheme(config.theme);
+    const ids = [
+      ...elementIds(next.values()),
+      ...[...theme.template.matchAll(/\sid\s*=\s*["']([^"']+)["']/g)].map((match) => match[1]!),
+    ];
     const write = {
       svgIdPrefix: earlierIdPrefix(
         ids,

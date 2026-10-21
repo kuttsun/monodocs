@@ -148,6 +148,26 @@ describe("the check that no earlier ID survives", () => {
     );
   });
 
+  it("renames the attributes that name a renamed ID, so a diagram keeps its accessible name", () => {
+    const old = parser.parse('<p>Keep.</p><div class="mermaid"></div>');
+    const diagram = old.children.find(
+      (child) => child.type === "element" && child.tagName === "div",
+    ) as { children: ElementContent[]; data?: unknown };
+    diagram.children.push({
+      type: "raw",
+      value:
+        '<svg id="mermaid-earlier-3" aria-labelledby="chart-title-mermaid-earlier-3" aria-describedby="chart-desc-mermaid-earlier-3 other">' +
+        '<title id="chart-title-mermaid-earlier-3">T</title><desc id="chart-desc-mermaid-earlier-3">D</desc></svg>',
+    } as never);
+    diagram.data = { monodocsSource: { kind: "mermaid", source: "graph TD" } };
+    const html = written(old, "<p>Keep.</p>");
+    const title = "earlier-mermaid-earlier-3-chart-title-mermaid-earlier-3";
+    const desc = "earlier-mermaid-earlier-3-chart-desc-mermaid-earlier-3";
+    expect(html).toContain(`aria-labelledby="${title}" aria-describedby="${desc} other"`);
+    expect(html).toContain(`<title id="${title}">`);
+    expect(html).toContain(`<desc id="${desc}">`);
+  });
+
   it("passes an earlier diagram's own prefix", () => {
     const old = parser.parse('<p>Keep.</p><div class="mermaid"></div>');
     const diagram = old.children.find(

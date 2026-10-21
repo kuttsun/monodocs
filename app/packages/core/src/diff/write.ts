@@ -470,9 +470,24 @@ function renameRawIds(markup: string, prefix: string, keep: string | undefined):
       .replace(
         /(\s(?:xlink:)?href\s*=\s*)(["'])#([^"']*)\2/g,
         (_, head: string, q: string, id: string) => `${head}${q}#${rename(id)}${q}`,
+      )
+      .replace(
+        RAW_ID_REFERENCES,
+        (_, head: string, q: string, names: string) =>
+          `${head}${q}${names
+            .split(/(\s+)/)
+            .map((name) => (/\s/.test(name) ? name : rename(name)))
+            .join("")}${q}`,
       );
   });
 }
+
+/**
+ * Attributes in markup that name IDs — a diagram's `aria-labelledby` names its `chart-title-…` —
+ * renamed with them.
+ */
+const RAW_ID_REFERENCES =
+  /(\s(?:aria-(?:labelledby|describedby|controls|owns|details|flowto|activedescendant|errormessage)|for|headers)\s*=\s*)(["'])([^"']*)\2/g;
 
 /**
  * The numbers the renderers generated, as elements, which a deleted block does not keep: section

@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import rehypeParse from "rehype-parse";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
@@ -182,6 +183,37 @@ describe("the list of changes", () => {
     );
     const list = article(html, "//changes");
     expect(list).toContain('<p>Merged into: <a href="#/c">C</a></p>');
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "reports a page whose name gives it the list's route as page/duplicate-route",
+    async () => {
+      await write(then, { "docs/a.md": "# A\n" });
+      await write(now, { "docs/a.md": "# A\n", "docs/\\changes.md": "# Changes\n" });
+      await expect(
+        buildSite({ outputFile: out(), diff: { dir: "../then", label: "v1" } }),
+      ).rejects.toMatchObject({ code: "page/duplicate-route" });
+    },
+  );
+
+  it("avoids the IDs a custom theme's template has", async () => {
+    const theme = join(base, "theme");
+    const shipped = join(dirname(fileURLToPath(import.meta.url)), "themes", "default");
+    await mkdir(theme);
+    for (const file of ["style.css", "app.js"]) {
+      await writeFile(join(theme, file), await readFile(join(shipped, file)));
+    }
+    const template = await readFile(join(shipped, "template.html"), "utf8");
+    await writeFile(
+      join(theme, "template.html"),
+      template.replace("<body", '<div id="diff-changes"></div><div id="earlier-x"></div><body'),
+    );
+    const config = { "monodocs.config.yml": `html:\n  theme: ${theme}\n` };
+    const { html } = await built(
+      { ...config, "docs/a.md": "# A\n" },
+      { ...config, "docs/a.md": "# A\n\nNew.\n" },
+    );
+    expect(html).toContain('<article class="page" data-route="//changes" id="page-diff-changes-x"');
   });
 
   it("takes its title from the label and whichever version has a name", () => {
