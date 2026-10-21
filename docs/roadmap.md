@@ -1429,7 +1429,8 @@ reads `Title`; inside a cross-reference, whose text stays, nothing is dropped. T
 deleted SVG are renamed with `earlier-`, or `earlier-2-` and on, the first prefix no ID of the new
 version starts with. The earlier version's pre-rendered diagrams carry a prefix of their own (7.3.2),
 but Mermaid puts it on only some of a diagram's IDs — a sequence diagram's lifelines are `actor0` and
-on — so every other ID in one, and every reference to it, is renamed with the same prefix. A
+on — so every other ID in one, and every reference to it, is renamed with the same prefix followed
+by the diagram's own ID, so two deleted diagrams never share one. A
 deleted video, audio clip, or player whose file is the earlier version's is shown as its path, as an
 image is.
 

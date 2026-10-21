@@ -82,9 +82,27 @@ describe("the check that no earlier ID survives", () => {
     diagram.data = { monodocsSource: { kind: "mermaid", source: "sequenceDiagram" } };
     const html = written(old, "<p>Keep.</p>");
     expect(html).toContain(
-      '<svg id="mermaid-earlier-3"><style>#mermaid-earlier-3 .a{} #earlier-actor0{}</style>' +
-        '<line id="earlier-actor0"></line><g id="earlier-root-0" fill="url(#earlier-actor0)"><use href="#earlier-actor0"></use></g></svg>',
+      '<svg id="mermaid-earlier-3"><style>#mermaid-earlier-3 .a{} #earlier-mermaid-earlier-3-actor0{}</style>' +
+        '<line id="earlier-mermaid-earlier-3-actor0"></line><g id="earlier-mermaid-earlier-3-root-0" fill="url(#earlier-mermaid-earlier-3-actor0)"><use href="#earlier-mermaid-earlier-3-actor0"></use></g></svg>',
     );
+  });
+
+  it("reads IDs from tags alone, and gives two diagrams' IDs their own names", () => {
+    const old = parser.parse('<p>Keep.</p><div class="mermaid"></div><div class="mermaid"></div>');
+    const diagrams = old.children.filter(
+      (child) => child.type === "element" && child.tagName === "div",
+    ) as { children: ElementContent[]; data?: unknown }[];
+    diagrams.forEach((diagram, n) => {
+      diagram.children.push({
+        type: "raw",
+        value: `<svg id="mermaid-earlier-${n}"><line id="actor0"></line><text>user id = 5, set id="x"</text></svg>`,
+      } as never);
+      diagram.data = { monodocsSource: { kind: "mermaid", source: `sequenceDiagram ${n}` } };
+    });
+    const html = written(old, "<p>Keep.</p>");
+    expect(html).toContain('<line id="earlier-mermaid-earlier-0-actor0">');
+    expect(html).toContain('<line id="earlier-mermaid-earlier-1-actor0">');
+    expect(html.match(/user id = 5, set id="x"/g)?.length).toBe(2);
   });
 
   it("passes an earlier diagram's own prefix", () => {

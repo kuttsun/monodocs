@@ -727,8 +727,9 @@ key set:
 
 A build with a difference from an earlier version (`--diff-from`, `--diff-from-dir`) uses these
 keys too. They are accepted in any configuration, and reach <span v-pre>`{{siteDataJson}}`</span> only in a
-build with a difference, so setting them changes nothing else. A count or a route is put next to a
-label, never into it.
+build with a difference, so setting them changes nothing else. They have no <span v-pre>`{{label…}}`</span>
+template tokens: a theme reads them from that data. A count or a route is put next to a label, never
+into it.
 
 | Key                  | `en`                         | `ja`                       | Where it appears |
 | -------------------- | ---------------------------- | -------------------------- | ---------------- |

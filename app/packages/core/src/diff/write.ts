@@ -381,31 +381,57 @@ function textSpan(text: string): Element {
   };
 }
 
+/** The start tags in a diagram's markup, and its `<style>` elements whole: never its text. */
+const RAW_PARTS = /<style\b[^>]*>[\s\S]*?<\/style>|<[A-Za-z][^>]*>/g;
+
+/** An `id` attribute in a start tag. */
+const ID_ATTRIBUTE = /(\sid\s*=\s*)(["'])([^"']*)\2/g;
+
+/** The IDs a diagram's markup gives its elements, read from its start tags alone. */
+export function rawIds(markup: string): string[] {
+  const ids: string[] = [];
+  for (const [part] of markup.matchAll(RAW_PARTS)) {
+    if (part.startsWith("<style")) continue;
+    for (const match of part.matchAll(ID_ATTRIBUTE)) ids.push(match[3]!);
+  }
+  return ids;
+}
+
 /**
  * A pre-rendered diagram's markup with every ID that does not start with the earlier version's
- * diagram prefix renamed with `prefix`, and every reference to one: Mermaid gives only some of a
- * diagram's elements IDs under its own (a sequence diagram's `actor0` is not).
+ * diagram prefix renamed, and every reference to one: Mermaid gives only some of a diagram's
+ * elements IDs under its own (a sequence diagram's `actor0` is not, and every sequence diagram has
+ * one). Each is renamed with `prefix` and the diagram's own ID, so two deleted diagrams never share
+ * one. Only start tags and `<style>` are read: a label's text is never taken for an attribute.
  */
 function renameRawIds(markup: string, prefix: string, keep: string): string {
-  const ids = new Set<string>();
-  for (const match of markup.matchAll(/\sid\s*=\s*"([^"]*)"/g)) {
-    if (!match[1]!.startsWith(keep)) ids.add(match[1]!);
-  }
+  const all = rawIds(markup);
+  const ids = new Set(all.filter((id) => !id.startsWith(keep)));
   if (ids.size === 0) return markup;
-  const rename = (id: string) => (ids.has(id) ? `${prefix}${id}` : id);
-  return markup
-    .replace(/(\sid\s*=\s*")([^"]*)"/g, (_, head: string, id: string) => `${head}${rename(id)}"`)
-    .replace(
-      /(\s(?:xlink:)?href\s*=\s*"#)([^"]*)"/g,
-      (_, head: string, id: string) => `${head}${rename(id)}"`,
-    )
-    .replace(
+  const root = all.find((id) => id.startsWith(keep));
+  const full = root === undefined ? prefix : `${prefix}${root}-`;
+  const rename = (id: string) => (ids.has(id) ? `${full}${id}` : id);
+  const urls = (text: string) =>
+    text.replace(
       /url\((['"]?)#([^)'"]+)\1\)/g,
       (_, q: string, id: string) => `url(${q}#${rename(id)}${q})`,
-    )
-    .replace(/#([A-Za-z_][\w-]*)(?![\w-])/g, (whole: string, id: string) =>
-      ids.has(id) ? `#${prefix}${id}` : whole,
     );
+  return markup.replace(RAW_PARTS, (part) => {
+    if (part.startsWith("<style")) {
+      return urls(part).replace(/#([A-Za-z_][\w-]*)(?![\w-])/g, (whole: string, id: string) =>
+        ids.has(id) ? `#${full}${id}` : whole,
+      );
+    }
+    return urls(part)
+      .replace(
+        ID_ATTRIBUTE,
+        (_, head: string, q: string, id: string) => `${head}${q}${rename(id)}${q}`,
+      )
+      .replace(
+        /(\s(?:xlink:)?href\s*=\s*)(["'])#([^"']*)\2/g,
+        (_, head: string, q: string, id: string) => `${head}${q}#${rename(id)}${q}`,
+      );
+  });
 }
 
 /**
@@ -737,8 +763,7 @@ export function assertNoEarlierId(node: Element, options: WriteOptions): void {
     if (child.type === "element") assertNoEarlierId(child, options);
     else if ((child as { type: string }).type === "raw") {
       const raw = (child as unknown as { value: string }).value;
-      for (const match of raw.matchAll(/\sid\s*=\s*["']?([^"'\s>]*)/g)) {
-        const found = match[1]!;
+      for (const found of rawIds(raw)) {
         if (
           !found.startsWith(options.earlierDiagramPrefix) &&
           !found.startsWith(options.svgIdPrefix)
@@ -760,7 +785,7 @@ export function elementIds(trees: Iterable<HastRoot>): string[] {
         walk(child);
       } else if ((child as { type: string }).type === "raw") {
         const raw = (child as unknown as { value: string }).value;
-        for (const match of raw.matchAll(/\sid\s*=\s*["']?([^"'\s>]*)/g)) ids.push(match[1]!);
+        ids.push(...rawIds(raw));
       }
     }
   };
