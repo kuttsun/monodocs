@@ -346,7 +346,7 @@ class Cloner {
       const paths = [node, ...node.children.filter((c): c is Element => c.type === "element")]
         .map((element) => element.properties.src)
         .filter((src): src is string => typeof src === "string" && isLocal(src));
-      if (paths.length > 0) return [textSpan(paths.join(" "))];
+      if (paths.length > 0) return [textSpan(paths.join(" "), node)];
     }
     if (node.tagName === "img" || node.tagName === "object") {
       const src = String(
@@ -354,7 +354,7 @@ class Cloner {
       );
       if (isLocal(src)) {
         const alt = String(node.properties.alt ?? "");
-        return [textSpan(alt === "" ? src : `${alt} (${src})`)];
+        return [textSpan(alt === "" ? src : `${alt} (${src})`, node)];
       }
     }
     const shell = this.shell(node, this.cleanChildren(node.children, inLink));
@@ -445,11 +445,19 @@ function isLocal(src: string): boolean {
   return src !== "" && !src.startsWith("data:") && !isExternalSrc(src);
 }
 
-function textSpan(text: string): Element {
+/**
+ * A file the earlier version holds, shown as text in its element's place, keeping the element's mark
+ * and its pair, so the change stays marked and the pair lined up.
+ */
+function textSpan(text: string, from: Element): Element {
+  const properties: Properties = {};
+  for (const key of [DIFF_BLOCK, DIFF_PAIR]) {
+    if (from.properties[key] !== undefined) properties[key] = from.properties[key];
+  }
   return {
     type: "element",
     tagName: "span",
-    properties: {},
+    properties,
     children: [{ type: "text", value: text }],
   };
 }

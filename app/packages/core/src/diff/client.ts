@@ -82,8 +82,7 @@ del[data-monodocs-diff] {
   text-decoration-thickness: 1px;
 }
 /* Code struck through or underlined line by line cannot be read; its band and edge say what changed. */
-pre :is(ins, del)[data-monodocs-diff],
-:is(ins, del)[data-monodocs-diff] pre { text-decoration: none; }
+pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
 
 /* Two columns, and the line between them that every change leans towards. */
 .monodocs-diff-columns {
@@ -475,8 +474,19 @@ export const DIFF_SCRIPT = `(function () {
     var visible = function (node) { return !hidden || !node.closest(hidden); };
     var marks = own(article, "[data-monodocs-diff-block]").filter(visible);
     if (marks.length === 0) {
-      var notes = own(article, ".monodocs-diff-note").filter(visible);
+      // A note above the page is hidden in a version's plain view: the page's first block shows
+      // where its change is.
+      var plain = !marksShown();
+      var notes = own(article, ".monodocs-diff-note").filter(visible).filter(function (note) {
+        return !(plain && note.parentNode === article);
+      });
       if (notes.length > 0) return notes.slice(0, 1);
+      if (plain && own(article, ":scope > .monodocs-diff-note").length > 0) {
+        var first = Array.prototype.filter.call(article.children, function (child) {
+          return !child.classList.contains("monodocs-diff-note");
+        })[0];
+        if (first) return [first];
+      }
       // An added or deleted page whose note is in the column hidden: the column shown stands for it.
       return own(article, ".monodocs-diff-columns > div").filter(visible).slice(0, 1);
     }

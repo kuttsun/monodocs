@@ -344,3 +344,44 @@ describe.skipIf(!chromium)("an image replaced under the same name", () => {
     }
   });
 });
+
+describe.skipIf(!chromium)("a page whose only change is its note", () => {
+  it("is shown where it is in a version's plain view, where the note is hidden", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "monodocs-diff-note-"));
+    try {
+      await write(join(dir, "then"), {
+        "docs/a.md": "# A\n\nText.\n",
+        "docs/old.md": "# Moved\n\nText.\n",
+      });
+      await write(join(dir, "now"), {
+        "docs/a.md": "# A\n\nText.\n",
+        "docs/new.md": "---\naliases: [/old]\n---\n\n# Moved\n\nText.\n",
+      });
+      const html = join(dir, "out.html");
+      vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
+      await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
+      vi.restoreAllMocks();
+      const puppeteer = await import("puppeteer-core");
+      const browser = await puppeteer.launch({ executablePath: chromium, args: ["--no-sandbox"] });
+      try {
+        const page = await browser.newPage();
+        await page.goto(`${pathToFileURL(html).href}#/a`);
+        await page.click('[data-monodocs-diff-view="current"]');
+        await page.click('[data-monodocs-diff-go="1"]');
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        const at = await page.evaluate(() => {
+          const ring = document.querySelector(".monodocs-diff-change-current");
+          return {
+            hash: decodeURI(location.hash),
+            shown: ring !== null && (ring as HTMLElement).offsetParent !== null,
+          };
+        });
+        expect(at).toEqual({ hash: "#/new", shown: true });
+      } finally {
+        await browser.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

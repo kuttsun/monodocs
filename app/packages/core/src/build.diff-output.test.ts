@@ -311,6 +311,21 @@ describe("the two versions side by side", () => {
     expect(sidebar("earlier")).toEqual(["/a A", "//deleted/b B", "/new Old"]);
   });
 
+  it("keeps the mark of a deleted image the earlier column shows as its path", async () => {
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    const config = { "monodocs.config.yml": "assets:\n  embedImages: false\n" };
+    const { html } = await built(
+      { ...config, "docs/dot.png": png, "docs/a.md": "# A\n\nKeep.\n\n![dot](dot.png)\n" },
+      { ...config, "docs/dot.png": png, "docs/a.md": "# A\n\nKeep.\n" },
+    );
+    expect(article(html, "/a")).toContain(
+      '<del data-monodocs-diff=""><span data-monodocs-diff-block="del">dot (dot.png)</span></del>',
+    );
+  });
+
   it("makes a deleted page a page of its own where it stood in the earlier sidebar", async () => {
     const { html } = await built(
       { "docs/a.md": "# A\n", "docs/b.md": "# B\n\nText.\n", "docs/c.md": "# C\n" },
