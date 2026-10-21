@@ -182,21 +182,26 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
           const badge = document.querySelector(
             '[data-monodocs-diff-sidebar="earlier"] .monodocs-diff-mark',
           )!;
+          const box = document.querySelector<HTMLInputElement>(
+            "[data-monodocs-diff-marks-toggle]",
+          )!;
           return {
             band: getComputedStyle(block).backgroundColor !== "rgba(0, 0, 0, 0)",
             badge: getComputedStyle(badge).display !== "none",
-            box:
-              getComputedStyle(document.querySelector(".monodocs-diff-marks")!).display !== "none",
+            box: `${box.checked ? "ticked" : "clear"}${box.disabled ? ", fixed" : ""}`,
           };
         });
       await page.goto(`${pathToFileURL(out).href}#/a`);
       await new Promise((resolve) => setTimeout(resolve, 300));
       await page.click('[data-monodocs-diff-view="earlier"]');
-      expect(await marked()).toEqual({ band: false, badge: false, box: true });
+      expect(await marked()).toEqual({ band: false, badge: false, box: "clear" });
       await page.click("[data-monodocs-diff-marks-toggle]");
-      expect(await marked()).toEqual({ band: true, badge: true, box: true });
+      expect(await marked()).toEqual({ band: true, badge: true, box: "ticked" });
+      // Side by side always marks: the box stays in view, ticked and fixed; the choice comes back.
       await page.click('[data-monodocs-diff-view="both"]');
-      expect((await marked()).box).toBe(false);
+      expect((await marked()).box).toBe("ticked, fixed");
+      await page.click('[data-monodocs-diff-view="current"]');
+      expect((await marked()).box).toBe("ticked");
     } finally {
       await browser.close();
     }

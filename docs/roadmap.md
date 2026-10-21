@@ -1501,9 +1501,11 @@ buttons with a count, `3 / 17`. The view is not stored: the next person to open 
 version's view shows the right column alone, and the earlier version's view the left column alone,
 so an added page shows only its note there and a deleted page its content. A version's own view is
 that version, plain, as a word processor's "no markup" is: no mark on a block, no note above the
-page, no badge in the sidebar. A box in the bar, `labels.diffShowMarks`, marks its changes — the
-deletions in the earlier version, the additions in the new — and the navigation shows where each
-change is either way. The box starts unticked whenever the file is opened. The changes are, in reading order, the marked blocks — in the order the alignment
+page, no badge in the sidebar. A box in the bar beside the views, `labels.diffShowMarks`, marks its
+changes — the deletions in the earlier version, the additions in the new — and the navigation shows
+where each change is either way. The box starts unticked whenever the file is opened and keeps its
+choice between the two versions' views; side by side, where both columns are always marked, it
+stays in view, ticked, and cannot be changed. The changes are, in reading order, the marked blocks — in the order the alignment
 puts them, the deletion first where a block is replaced — the added and the deleted pages, and the
 pages whose change no block carries — a front-matter title, or a move with no block changed — each
 of the last three counted once at its note. In a view that hides a column, the changes in that

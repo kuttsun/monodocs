@@ -279,7 +279,8 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
   .monodocs-diff-bar button { transition: color 0.15s, background-color 0.15s; }
 }
 .monodocs-diff-marks {
-  display: none;
+  display: inline-flex;
+  margin-inline-end: auto;
   align-items: center;
   gap: 0.4em;
   font-size: 0.8125rem;
@@ -288,9 +289,8 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
   user-select: none;
 }
 .monodocs-diff-marks input { margin: 0; accent-color: var(--color-accent, auto); }
-:root[data-monodocs-diff-view="earlier"] .monodocs-diff-marks,
-:root[data-monodocs-diff-view="current"] .monodocs-diff-marks { display: inline-flex; }
-.monodocs-diff-bar .monodocs-diff-views { margin-inline-end: auto; }
+/* Side by side, both columns are always marked: the box is ticked and cannot be changed. */
+.monodocs-diff-marks:has(input:disabled) { opacity: 0.55; cursor: default; }
 
 /* A version's own view with its marks off is that version, plain: no band, no line, no note above
    the page, no badge in the sidebar. The way through the changes still shows where each one is. */
@@ -339,7 +339,7 @@ export function diffBar(labels: DiffLabels): string {
     view("current", labels.diffViewCurrent, false) +
     `</div>` +
     // In a version's own view, whether its changes are marked: plain by default (7.3.4).
-    `<label class="monodocs-diff-marks"><input type="checkbox" data-monodocs-diff-marks-toggle>` +
+    `<label class="monodocs-diff-marks"><input type="checkbox" data-monodocs-diff-marks-toggle checked disabled>` +
     `${escapeHtml(labels.diffShowMarks)}</label>` +
     `<div class="monodocs-diff-nav">` +
     `<button type="button" data-monodocs-diff-go="-1">${arrow(true)}${escapeHtml(labels.diffPrevious)}</button>` +
@@ -518,9 +518,18 @@ export const DIFF_SCRIPT = `(function () {
     }
   }
 
+  // Whether a version's own view marks its changes; side by side always does.
+  var marks = false;
   function setMarks(on) {
+    marks = on;
     root.setAttribute("data-monodocs-diff-marks", on ? "on" : "off");
     later();
+  }
+  function showBox() {
+    var box = document.querySelector("[data-monodocs-diff-marks-toggle]");
+    if (!box) return;
+    box.disabled = view === "both";
+    box.checked = view === "both" || marks;
   }
 
   function setView(name) {
@@ -534,6 +543,7 @@ export const DIFF_SCRIPT = `(function () {
     var old = document.querySelector(".monodocs-diff-change-current");
     if (old) old.classList.remove("monodocs-diff-change-current");
     position = { article: null, index: -1 };
+    showBox();
     reveal();
     align();
     count();
@@ -564,6 +574,7 @@ export const DIFF_SCRIPT = `(function () {
   function start() {
     root.setAttribute("data-monodocs-diff-view", view);
     root.setAttribute("data-monodocs-diff-marks", "off");
+    showBox();
     document.addEventListener("change", function (event) {
       if (event.target.hasAttribute && event.target.hasAttribute("data-monodocs-diff-marks-toggle")) {
         setMarks(event.target.checked);
