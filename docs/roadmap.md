@@ -1400,43 +1400,19 @@ bounded — six thousand blocks rewritten on each side would otherwise take giga
 
 ### 7.3.4 Writing the Difference into the HTML
 
-**The new version's tree is the frame.** Unchanged and added blocks are the new version's elements,
-untouched apart from their mark. A deleted block is cloned from the earlier tree and appears where
-it stood relative to its unchanged neighbours, inside the containers it had: a deleted list item
-stays in its list at its depth, a deleted row in its table, a deleted caption in the table's one
-`caption`. In an ordered list a deleted item takes no number, and every other item shows the number
-it has in the new version, in every view — so deleting step 2 of three does not show the new step 2
-as `3.`, and deleting a footnote leaves the references and the list of footnotes agreeing. Likewise
-in a table, a deleted row never changes which columns and rows a cell of the new version covers:
-where it falls inside a cell's `rowspan`, the row is placed so that the new values stay in their
-columns in every view — whether by extending the span over it or by placing it after the spanned
-rows is decided in stage 1. The output is valid HTML: re-parsing it gives the same tree — nothing is
-moved by the parser, as an element inside a `tbody` would be — and no element sits where its
-parent's content model forbids it.
-
-Stage 1 decided it this way. A deleted row goes after every row a cell above it spans, and its own
-cells span no further than the deleted rows written right after it: no span is extended, and no cell
-of either version covers a row of the other. A deleted item takes no number because every item of
-the new version in its list carries its number as `value`. Each container of the earlier tree is
-paired with the new one that an unchanged block inside it sits in, matched from the block outwards;
-a container with no pair is cloned around the deleted blocks it held, with what in it is not a block
-— a table's `colgroup`, an admonition's title — and a section's body that the new version has with
-nothing unchanged in it is used rather than cloned. Where the new version split a container — a
-list broken by a paragraph — the earlier one is paired with each part, and a deleted block goes into
-the part that holds its nearest unchanged neighbour. A deleted caption, figure caption, or summary
-joins the one its container has, before the new text, its `<del>` carrying the block's mark; a
-deleted header row joins the table's head. A generated number in deleted content goes with the
-separator after it, and with the label before it when that starts the element, so `Figure 1. Title`
-reads `Title`; inside a cross-reference, whose text stays, nothing is dropped. The IDs inside a
-deleted SVG are renamed with `earlier-`, or `earlier-2-` and on, the first prefix no ID of the new
-version starts with. The earlier version's pre-rendered diagrams carry a prefix of their own (7.3.2),
-but Mermaid puts it on only some of a diagram's IDs — a sequence diagram's lifelines are `actor0` and
-on — so every other ID in one, and every reference to it, is renamed with the same prefix followed
-by the diagram's own ID, so two deleted diagrams never share one; should an ID of the new version
-start with the diagrams' prefix, every one of their IDs is renamed. A link inside a deleted SVG or
-diagram is dropped, as any other is, unless it refers to an element of the same SVG. A
-deleted video, audio clip, or player whose file is the earlier version's is shown as its path, as an
-image is.
+**The two versions stand side by side.** A page that changed is shown in two columns: the earlier
+page on the left, the new page on the right, each as its own version wrote it, so a list, a table,
+or a section reads whole in either column. The blocks the two have in common (7.3.3) are lined up:
+the script that comes with the difference measures each pair and adds space above the higher one, so
+an unchanged block starts at the same height on both sides and a block that only one side has
+leaves a gap on the other, as a file comparison tool shows lines. The alignment is redone when the
+width or the fonts change the layout. A deleted block is marked in the left column, an added one in
+the right; a block deleted and another added at the same place sit opposite each other. A page that
+did not change is not doubled: it is the new page alone. An added page is the new page with a note
+in the left column, `labels.diffPageAdded`; a deleted page is the earlier page with a note in the
+right column, `labels.diffPageDeleted`. Side by side, a page takes the whole width the layout gives
+the body rather than `html.contentWidth`, and where the screen is too narrow for two columns, the
+columns are shown one above the other; where that width lies is decided in stage 1 and measured.
 
 **The mark is an attribute and an element.** Every added or deleted block carries
 `data-monodocs-diff-block="ins"` or `"del"`, and its content is wrapped in `<ins>` or `<del>`, so
@@ -1444,27 +1420,29 @@ the change is in the document's semantics, survives black-and-white printing and
 mail, and reaches readers who cannot tell the colours apart. Every `<ins>` and `<del>` monodocs
 writes carries `data-monodocs-diff`, and the stylesheet, the script, and the highlight act on those
 alone: a document's own `~~struck~~` text, which GFM writes as `<del>`, or a raw `<ins>`, is left as
-it is in every view.
+it is in every view. The two blocks of an unchanged pair carry the same
+`data-monodocs-diff-pair` value, by which the script lines them up.
 
-**Deleted content has no address.** Element IDs in the single HTML must be globally unique, and old
-elements kept with their IDs could collide with new ones. A deleted clone keeps no ID — except
-inside an SVG, a pre-rendered diagram or one an AsciiDoc document writes inline, whose references
-need them — `url(#…)`, `href="#…"`, `#id` selectors in its `<style>`, and attributes such as
-`aria-labelledby` that name IDs: there every ID and every reference to it is renamed with a prefix
-only the earlier version's clones use; no link, since it points into the earlier version — its text
-stays; and no generated number — section, caption, appendix, or footnote — since beside the new
-version's numbers it would read as one of them. A cross-reference's text inside deleted content
-stays as the earlier version wrote it, struck through with the rest. An image the new configuration
-embeds keeps its data URI; one it would leave as an external file is shown as its `alt` and path,
-because the file is in the earlier version — for `--diff-from`, a directory that no longer exists.
-After merging, the build fails with `internal/unexpected` if an ID from the earlier tree survived
-without being renamed, inside an SVG or outside one.
+**The earlier column has no address.** Element IDs in the single HTML must be globally unique, and
+the earlier page's elements kept with their IDs would collide with the new page's. The earlier
+column keeps no ID — except inside an SVG, a pre-rendered diagram or one an AsciiDoc document writes
+inline, whose references need them — `url(#…)`, `href="#…"`, `#id` selectors in its `<style>`, and
+attributes such as `aria-labelledby` that name IDs: there every ID and every reference to it is
+renamed with a prefix only the earlier column uses; no link, since it points into the earlier
+version — its text stays; and no generated number — section, caption, appendix, or footnote — since
+the numbers a reader goes by are the new version's (19.1). A cross-reference's text stays as the
+earlier version wrote it. An image the new configuration embeds keeps its data URI; one it would
+leave as an external file is shown as its `alt` and path, because the file is in the earlier
+version — for `--diff-from`, a directory that no longer exists. The build fails with
+`internal/unexpected` if an ID from the earlier tree survived without being renamed, inside an SVG
+or outside one.
 
 **What the reader navigates by is the new version's.** The in-page table of contents, search, and
 the printed table of contents (24.9) are built from `Page.headings` and `Page.text`, which are the
 new version's and are not touched; the PDF outline is built from the sidebar and lists pages only. A
-deleted heading is therefore in none of them. The in-body search highlight (22.5) does not stay in
-deleted content, so the highlight agrees with the index about what the document contains.
+heading only the earlier column has is therefore in none of them, and in the earlier-version view
+the in-page table of contents is not shown. The in-body search highlight (22.5) does not stay in the
+earlier column, so the highlight agrees with the index about what the document contains.
 
 **The list of changes is the first page.** It is generated, not read from a file, and the document
 opens on it. Its route is `//changes`: a route built from a path never has an empty segment (15.1),
@@ -1476,71 +1454,84 @@ against the page IDs and element IDs the document contains, as the search result
 to match, and the same input gives the same ID. Its title is `labels.diffChanges` followed by
 `from → to` (13.5): `from` is the earlier `document.version`, or `diff.label`; `to` is the new
 `document.version`. Whichever is missing is left out with the arrow, and with neither, the title is
-the label alone. It lists, in the new sidebar's order followed by pages with no place in it (hidden
-pages, pages a custom sidebar leaves out):
+the label alone. It lists, each linking to its page:
 
-- added, moved (old route → new route), and changed pages, each linking to the page, a changed page
-  with the number of blocks added and deleted
-- deleted pages, in the earlier version's order by the same rule, each under its title with its
-  blocks marked deleted
+- added, moved (old route → new route), and changed pages, in the new sidebar's order followed by
+  pages with no place in it (hidden pages, pages a custom sidebar leaves out), a changed page with
+  the number of blocks added and deleted
+- deleted pages, in the earlier version's order by the same rule, a page another took over through
+  its aliases naming that page
 - the number of unchanged pages, and `labels.diffNoChanges` when nothing changed
 
 It is in the sidebar, first and unnumbered — no page's number shifts because it is there — and in
 neither search nor the previous/next navigation: its entry in `siteDataJson` is `hidden`, which
-takes it out of both, because the default theme builds the two from one list of pages. Its text is
-the titles of pages that are searchable themselves, or deleted content, and the sidebar and the bar
-reach it.
+takes it out of both, because the default theme builds the two from one list of pages.
 
-**Pages and the sidebar carry their state.** An added page is marked once — its article carries
-`data-monodocs-diff-page="added"` and starts with a note, `labels.diffPageAdded` — rather than
-marking every block, which would underline every word of a new chapter. A moved page carries
-`"moved"` whether or not its blocks changed, and its note names the route it had; a page changed in
-place carries `"changed"`. The blocks carry their own marks either way. The sidebar marks pages that
-changed with a symbol (`+` added, `→` moved, `•` changed) hidden from assistive technology and a
-visually hidden label, so the mark is not colour alone.
+**A deleted page is a page of the document.** It keeps its earlier title and gets the route
+`//deleted` followed by its earlier route, which no path or alias can give, for the reason
+`//changes` cannot be given, and which no other page has, since the earlier routes were unique; a
+source page that takes one is `page/duplicate-route`. Its page ID is allocated as the list's is. It
+stands in the sidebar where it stood in the earlier one: after the nearest page before it there that
+the new version still has, in that page's directory, or first after the list of changes when there
+is none. It has no number, and like the list it is `hidden`, out of search and the previous/next
+navigation, which are the new version's.
+
+**Pages and the sidebar carry their state.** A page's article carries `data-monodocs-diff-page`:
+`"added"`, `"deleted"`, `"moved"` whether or not its blocks changed — its note names the route it
+had — or `"changed"`. A page whose front-matter title changed says so in a note with the earlier
+title. An added page is marked once, by its note, rather than by marking every block, which would
+underline every word of a new chapter; a deleted page likewise. The sidebar shows each changed page
+in its colour with a symbol: green with `+` for added, red with `−` for deleted, orange with `•` for
+changed, and blue with `→` for moved. The symbol is hidden from assistive technology and a visually
+hidden label says the state, so the mark is not colour alone.
 
 **Three views and a way through the changes.** A bar prepended to `{{pages}}` holds three buttons —
-changes, the new version, the earlier version — and previous/next buttons with a count, `3 / 17`.
-The view is not stored: the next person to open the file starts on the changes. The changes are, in
-reading order, the marked blocks, the added pages, and the pages whose change no block carries — a
-front-matter title, or a move with no block changed — each of the last two counted once at its note,
-and the navigation reaches each without an ID on deleted content. The earlier-version view is the
-new document with additions hidden, not a rebuild of the earlier one: its page order, numbers, and
-table of contents are the new version's, an added page shows only its note, and the documentation
-says so.
+side by side, the new version, the earlier version — and previous/next buttons with a count,
+`3 / 17`. The view is not stored: the next person to open the file starts side by side. The new
+version's view shows the right column alone, its additions marked; the earlier version's view the
+left column alone, its deletions marked, so an added page shows only its note there and a deleted
+page its content. The changes are, in reading order, the marked blocks — in the order the alignment
+puts them, the deletion first where a block is replaced — the added and the deleted pages, and the
+pages whose change no block carries — a front-matter title, or a move with no block changed — each
+of the last three counted once at its note. In a view that hides a column, the changes in that
+column are skipped and the count is of those shown. The navigation opens the page a change is on,
+scrolls it into view in both columns, and reaches each change without an ID on the earlier column.
 
 **What the difference adds reaches every theme and no build without it.** The rules and the script
 come from core, through tokens every template is required to have (`{{style}}`, `{{bodyScripts}}`,
 `{{pages}}`, 23.3), so a custom theme gets them without carrying them. The default theme's `app.js`
 does not change: it is written into every build, so a change to it would change the bytes of builds
 without a difference. What the theme would otherwise have to learn, the difference's own script does
-— it takes the marks the highlight puts inside deleted content back out — and the list of changes
-stays out of search through `hidden`, which the default theme's `app.js` already honours. A custom
-`app.js` is not held to it (23.4: delivery, not application). `siteDataJson` gains the pages' states
-only when there is a difference.
+— it takes the marks the highlight puts inside the earlier column back out — and the list of changes
+and the deleted pages stay out of search through `hidden`, which the default theme's `app.js`
+already honours. A custom `app.js` is not held to it (23.4: delivery, not application).
+`siteDataJson` gains the pages' states only when there is a difference.
 
 **The wording joins the label table (23.4)** and follows `lang` and `html.labels`: `diffChanges`,
 `diffAddedPages`, `diffMovedPages`, `diffChangedPages`, `diffDeletedPages`, `diffUnchangedPages`,
-`diffNoChanges`, `diffPageAdded`, `diffPageMoved`, `diffViewChanges`, `diffViewCurrent`,
-`diffViewEarlier`, `diffPrevious`, `diffNext`, `diffAdded`, `diffDeleted`, `diffChanged`,
-`diffMoved` (the sidebar's mark), `diffTitleChanged` (the note of a page whose title changed), and
-`diffMergedInto` (the note of a page another took over through its aliases). They are a table of
-their own beside `LABEL_KEYS`: `siteDataJson` carries every resolved label, so a key added to the
-main table would change the bytes of every build. They join `siteDataJson` only with a difference;
-`html.labels` accepts them in any configuration, as it accepts every label whatever the
+`diffNoChanges`, `diffPageAdded`, `diffPageDeleted`, `diffPageMoved`, `diffViewSideBySide`,
+`diffViewCurrent`, `diffViewEarlier`, `diffPrevious`, `diffNext`, `diffAdded`, `diffDeleted`,
+`diffChanged`, `diffMoved` (the sidebar's marks), `diffTitleChanged` (the note of a page whose title
+changed), and `diffMergedInto` (a deleted page another took over through its aliases). They are a
+table of their own beside `LABEL_KEYS`: `siteDataJson` carries every resolved label, so a key added
+to the main table would change the bytes of every build. They join `siteDataJson` only with a
+difference; `html.labels` accepts them in any configuration, as it accepts every label whatever the
 configuration uses. Counts and routes are put next to a label by code, since labels hold no
 placeholders.
 
 **The same input gives the same bytes (12.4).** The input includes the earlier version's tree and
 the argument naming it as written — the ref, or the `--diff-from-dir` path — which the list of
 changes shows when the earlier version has no `document.version`. The size report (20.5) gains a
-line, `difference`, for what the difference added, and its lines still add up to the file: an image
-is counted once under `images`, whichever version it came from, and nothing is counted on two lines.
+line, `difference`, for what the difference added — the earlier columns above all, which make a
+build with many changed pages close to twice the size — and its lines still add up to the file: an
+image is counted once under `images`, whichever version it came from, and nothing is counted on two
+lines.
 
-Stage 1 decided the rest this way. The list of changes' page ID is `diff-changes`, with `-x` added
+Stage 1 decided the rest this way. The earlier column is cloned by the rules `markup` writes deleted
+content by (7.3.5) — how an SVG's IDs, a diagram's, links, generated numbers, and files are handled
+is recorded there. The list of changes' page ID is `diff-changes`, with `-x` added
 until no page has it, no element has its article's ID, and no element ID starts with it followed by
-a hyphen, as a page's own IDs do. A deleted page is listed under an `h3` with its title, followed by
-its blocks, each marked deleted; the in-page table of contents of the list reads those headings. A
+a hyphen, as a page's own IDs do. A
 page's note is a `div.monodocs-diff-note` at the top of its article, one paragraph per thing it says,
 and a moved page whose front-matter title also changed says both in one note. The sidebar's symbol is
 a `span.monodocs-diff-mark` with `aria-hidden`, and its label a `span.monodocs-diff-label`, which the
@@ -1560,8 +1551,8 @@ difference itself is (7.3.1). It is `diff/pdf-without-pdf` without `--diff-from`
 the PDF is this HTML printed, as the density is (24.6), so the HTML of `-f both --diff-pdf bars`
 printed from a browser gives the bars too, while on screen it keeps its toggle.
 
-- **`markup`**: the changes view, printed. Added text is underlined and coloured, deleted text
-  struck through and coloured, and a whole added or deleted figure, formula, or diagram is framed
+- **`markup`**: the difference written into one column (below), printed. Added text is underlined
+  and coloured, deleted text struck through and coloured, and a whole added or deleted figure, formula, or diagram is framed
   with `labels.diffAdded` or `labels.diffDeleted` beside it. Underline, strike-through, and the
   frame's style tell additions from deletions in black and white; colour only helps
 - **`bars`**: the new version alone, as the change bars of a printed standard. Deleted content is
@@ -1573,6 +1564,44 @@ printed from a browser gives the bars too, while on screen it keeps its toggle.
   is drawn is decided in stage 2 and measured: the default theme gives code blocks padding,
   quotations and admonitions their own borders, and tables collapsed borders, and each is a case the
   bar has to hold in
+
+**`markup` writes the difference into one column, the new version's tree its frame.** Unchanged and
+added blocks are the new version's elements, untouched apart from their mark. A deleted block is
+cloned from the earlier tree and appears where it stood relative to its unchanged neighbours, inside
+the containers it had: a deleted list item stays in its list at its depth, a deleted row in its
+table, a deleted caption in the table's one `caption`. In an ordered list a deleted item takes no
+number, and every other item shows the number it has in the new version — so deleting step 2 of
+three does not show the new step 2 as `3.`, and deleting a footnote leaves the references and the
+list of footnotes agreeing. Likewise in a table, a deleted row never changes which columns and rows
+a cell of the new version covers: where it falls inside a cell's `rowspan`, the row is placed so
+that the new values stay in their columns — whether by extending the span over it or by placing it
+after the spanned rows was decided in stage 1. The output is valid HTML: re-parsing it gives the
+same tree — nothing is moved by the parser, as an element inside a `tbody` would be — and no element
+sits where its parent's content model forbids it.
+
+Stage 1 wrote this ahead of the PDF, and decided it this way. A deleted row goes after every row a
+cell above it spans, and its own cells span no further than the deleted rows written right after it:
+no span is extended, and no cell of either version covers a row of the other. A deleted item takes
+no number because every item of the new version in its list carries its number as `value`. Each
+container of the earlier tree is paired with the new one that an unchanged block inside it sits in,
+matched from the block outwards; a container with no pair is cloned around the deleted blocks it
+held, with what in it is not a block — a table's `colgroup`, an admonition's title — and a section's
+body that the new version has with nothing unchanged in it is used rather than cloned. Where the new
+version split a container — a list broken by a paragraph — the earlier one is paired with each part,
+and a deleted block goes into the part that holds its nearest unchanged neighbour. A deleted
+caption, figure caption, or summary joins the one its container has, before the new text, its
+`<del>` carrying the block's mark; a deleted header row joins the table's head. A generated number
+in deleted content goes with the separator after it, and with the label before it when that starts
+the element, so `Figure 1. Title` reads `Title`; inside a cross-reference, whose text stays, nothing
+is dropped. The IDs inside a deleted SVG are renamed with `earlier-`, or `earlier-2-` and on, the
+first prefix no ID of the new version starts with. The earlier version's pre-rendered diagrams carry
+a prefix of their own (7.3.2), but Mermaid puts it on only some of a diagram's IDs — a sequence
+diagram's lifelines are `actor0` and on — so every other ID in one, and every reference to it, is
+renamed with the same prefix followed by the diagram's own ID, so two deleted diagrams never share
+one; should an ID of the new version start with the diagrams' prefix, every one of their IDs is
+renamed. A link inside a deleted SVG or diagram is dropped, as any other is, unless it refers to an
+element of the same SVG. A deleted video, audio clip, or player whose file is the earlier version's
+is shown as its path, as an image is.
 
 The screen's bar, the page notes, and the sidebar marks are not printed; an added page's note is.
 The list of changes comes after the cover and the printed table of contents, and is the first entry
