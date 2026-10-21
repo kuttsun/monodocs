@@ -689,9 +689,11 @@ html:
 | `diffPageAdded` | This page was added. | このページは追加されました。 | 追加されたページの旧版の列の注記 |
 | `diffPageDeleted` | This page was deleted. | このページは削除されました。 | 削除されたページの新版の列の注記 |
 | `diffPageMoved` | This page moved. Its earlier route: | このページは移動しました。以前の場所: | 移動したページの先頭の注記。以前の route の前 |
-| `diffViewSideBySide` | Side by side | 左右に並べる | 2 つの版を左右に並べる表示 |
+| `diffViewSideBySide` | Side by side | 左右で比較 | 2 つの版を左右に並べる表示 |
+| `diffViewSideBySideHint` | Show the difference with the two versions side by side | 差分を左右に並べて表示 | その表示のボタンのツールチップ |
 | `diffViewCurrent` | New version | 新しい版 | 新しい版を見せる表示 |
 | `diffViewEarlier` | Earlier version | 以前の版 | 以前の版を見せる表示 |
+| `diffShowMarks` | Show changes | 変更の印 | 片方の版の表示で変更に印を付けるチェック |
 | `diffPrevious` | Previous change | 前の変更 | 前の変更へのボタン |
 | `diffNext` | Next change | 次の変更 | 次の変更へのボタン |
 | `diffAdded` | Added | 追加 | 変更されたページの追加ブロック数と、サイドバーの追加ページの印 |

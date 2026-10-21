@@ -355,7 +355,7 @@ describe("the two versions side by side", () => {
     const { html } = await built({ "docs/a.md": "# A\n" }, { "docs/a.md": "# A\n\nNew.\n" });
     expect(html).toContain('<div class="monodocs-diff-bar" role="toolbar"');
     expect(html).toContain(
-      'data-monodocs-diff-view="both" aria-pressed="true">Side by side</button>',
+      'data-monodocs-diff-view="both" aria-pressed="true" title="Show the difference with the two versions side by side">Side by side</button>',
     );
     expect(html).toContain("data-monodocs-diff-pair");
     expect(html).toMatch(/<script>\(function \(\) \{\n {2}var root = document\.documentElement;/);

@@ -75,13 +75,21 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
               );
             });
         });
-      const before = await offsets();
+      // Lining up runs after the layout settles; under load that takes a while, so wait for it.
+      const lined = async () => {
+        for (let waited = 0; waited < 5000; waited += 100) {
+          const gaps = await offsets();
+          if (gaps.length > 5 && gaps.every((gap) => Math.abs(gap) <= 1)) return gaps;
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        return offsets();
+      };
+      const before = await lined();
       expect(before.length).toBeGreaterThan(5);
       expect(before.every((gap) => Math.abs(gap) <= 1)).toBe(true);
       // Lined up again at another width, which wraps the added paragraph differently.
       await page.setViewport({ width: 1100, height: 900 });
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      expect((await offsets()).every((gap) => Math.abs(gap) <= 1)).toBe(true);
+      expect((await lined()).every((gap) => Math.abs(gap) <= 1)).toBe(true);
       await page.setViewport({ width: 1500, height: 900 });
 
       // Left alone, the page is left alone: nothing is lined up again over and over — the count it
@@ -164,6 +172,31 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
         ),
       }));
       expect(earlier).toEqual({ view: "earlier", count: "– / 6", current: true });
+
+      // That view is the earlier version, plain, until the box marks its changes.
+      const marked = () =>
+        page.evaluate(() => {
+          const block = document.querySelector(
+            "article:not([hidden]) .monodocs-diff-earlier [data-monodocs-diff-block]",
+          )!;
+          const badge = document.querySelector(
+            '[data-monodocs-diff-sidebar="earlier"] .monodocs-diff-mark',
+          )!;
+          return {
+            band: getComputedStyle(block).backgroundColor !== "rgba(0, 0, 0, 0)",
+            badge: getComputedStyle(badge).display !== "none",
+            box:
+              getComputedStyle(document.querySelector(".monodocs-diff-marks")!).display !== "none",
+          };
+        });
+      await page.goto(`${pathToFileURL(out).href}#/a`);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await page.click('[data-monodocs-diff-view="earlier"]');
+      expect(await marked()).toEqual({ band: false, badge: false, box: true });
+      await page.click("[data-monodocs-diff-marks-toggle]");
+      expect(await marked()).toEqual({ band: true, badge: true, box: true });
+      await page.click('[data-monodocs-diff-view="both"]');
+      expect((await marked()).box).toBe(false);
     } finally {
       await browser.close();
     }

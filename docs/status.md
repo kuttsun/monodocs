@@ -672,7 +672,7 @@ Every PDF with a formula changes, but this release skips the beta 0.15.0 and 0.1
 - [ ] Adding a second paragraph to one item of a tight Markdown list changes only that item, and adding or deleting a nested item leaves its parent unmarked
 - [ ] Turning one item of a list into a task, in Markdown and in AsciiDoc, changes that item alone
 - [ ] Splitting an AsciiDoc section with a new subheading, and changing a heading's level, adds or changes that heading alone
-- [ ] In the earlier-version view, an added page shows only its note
+- [ ] In the earlier-version view, an added page shows only its note; each version's own view is plain — no mark, page note, or sidebar badge — until the bar's box marks its changes, and the navigation reaches each change either way
 - [ ] Fixing a figure's caption changes the caption alone, and the figure is not shown twice
 - [ ] Changing `sidebar.titleTransform` or `sidebar.titleFrom` alone produces no change; changing a page's front-matter `title` lists that page
 - [ ] Whitespace between elements is never a block or a change, and the bar's count of changes equals the number of marked blocks, added and deleted pages, and pages changed only in their front-matter title or moved without a block changed, each of which the navigation reaches; in a view that hides a column, the count is of the changes shown

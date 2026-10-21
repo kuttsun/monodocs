@@ -1370,9 +1370,12 @@ route を続けたものにする。`//changes` が取られないのと同じ�
 固定し、サイドバー、本文、目次はその下から始める。バーが切り替え、たどるのは、1 つのページではなく
 文書全体だからである。バーには、3 つのボタン——左右に並べる、旧版、新版を、列の並びと同じ順で——と、
 前後の変更へ移るボタンと、`3 / 17` のような数を置く。表示は保存しない。次に
-ファイルを開いた人は左右に並べた表示から始まる。新版の表示は右の列だけを、追加の印付きで見せる。
-旧版の表示は左の列だけを、削除の印付きで見せる。そのため旧版の表示では、追加されたページは注記だけを、
-削除されたページはその中身を見せる。変更とは、読む順に並べた、印の付いたブロック——高さをそろえた
+ファイルを開いた人は左右に並べた表示から始まる。新版の表示は右の列だけを、
+旧版の表示は左の列だけを見せる。そのため旧版の表示では、追加されたページは注記だけを、削除された
+ページはその中身を見せる。片方の版の表示は、ワープロの「変更履歴なし」と同じく、その版をプレーンに
+見せる。ブロックの印も、ページの上の注記も、サイドバーのバッジも出さない。バーのチェック
+`labels.diffShowMarks` を入れると、その版の変更——旧版では削除、新版では追加——に印を付ける。どちらでも、
+ナビゲーションはそれぞれの変更の場所を示す。チェックは、ファイルを開くたびに外れた状態から始まる。変更とは、読む順に並べた、印の付いたブロック——高さをそろえた
 順で、ブロックが置き換わったところでは削除が先——、追加されたページと削除されたページ、どの
 ブロックにも変更が表れないページ——front matter のタイトルの変更、ブロックの変わらない移動——であり、
 最後の 3 つはその注記のところで 1 つと数える。片方の列を隠す表示では、その列の変更を飛ばし、見せる
@@ -1392,7 +1395,8 @@ route を続けたものにする。`//changes` が取られないのと同じ�
 **文言はラベル表（23.4）に足し**、`lang` と `html.labels` に従わせる。`diffChanges`、
 `diffAddedPages`、`diffMovedPages`、`diffChangedPages`、`diffDeletedPages`、`diffUnchangedPages`、
 `diffNoChanges`、`diffPageAdded`、`diffPageDeleted`、`diffPageMoved`、`diffViewSideBySide`、
-`diffViewCurrent`、`diffViewEarlier`、`diffPrevious`、`diffNext`、`diffAdded`、`diffDeleted`、
+`diffViewSideBySideHint`（そのボタンのツールチップ）、`diffViewCurrent`、`diffViewEarlier`、
+`diffShowMarks`、`diffPrevious`、`diffNext`、`diffAdded`、`diffDeleted`、
 `diffChanged`、`diffMoved`（サイドバーの印）、`diffTitleChanged`（タイトルの変わったページの注記）、
 `diffMergedInto`（別名を通してほかのページに引き継がれた、削除されたページ）である。これらは
 `LABEL_KEYS` とは別の表に置く。`siteDataJson` は解決したラベルをすべて運ぶので、本表にキーを足すと、

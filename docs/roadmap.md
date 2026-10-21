@@ -1498,9 +1498,12 @@ the top of the window, above the sidebar, the content, and the table of contents
 it: what it switches and walks is the whole document, not one page. It holds three buttons — side by
 side, the earlier version, the new version, in the order the columns stand — and previous/next
 buttons with a count, `3 / 17`. The view is not stored: the next person to open the file starts side by side. The new
-version's view shows the right column alone, its additions marked; the earlier version's view the
-left column alone, its deletions marked, so an added page shows only its note there and a deleted
-page its content. The changes are, in reading order, the marked blocks — in the order the alignment
+version's view shows the right column alone, and the earlier version's view the left column alone,
+so an added page shows only its note there and a deleted page its content. A version's own view is
+that version, plain, as a word processor's "no markup" is: no mark on a block, no note above the
+page, no badge in the sidebar. A box in the bar, `labels.diffShowMarks`, marks its changes — the
+deletions in the earlier version, the additions in the new — and the navigation shows where each
+change is either way. The box starts unticked whenever the file is opened. The changes are, in reading order, the marked blocks — in the order the alignment
 puts them, the deletion first where a block is replaced — the added and the deleted pages, and the
 pages whose change no block carries — a front-matter title, or a move with no block changed — each
 of the last three counted once at its note. In a view that hides a column, the changes in that
@@ -1520,7 +1523,8 @@ already honours. A custom `app.js` is not held to it (23.4: delivery, not applic
 **The wording joins the label table (23.4)** and follows `lang` and `html.labels`: `diffChanges`,
 `diffAddedPages`, `diffMovedPages`, `diffChangedPages`, `diffDeletedPages`, `diffUnchangedPages`,
 `diffNoChanges`, `diffPageAdded`, `diffPageDeleted`, `diffPageMoved`, `diffViewSideBySide`,
-`diffViewCurrent`, `diffViewEarlier`, `diffPrevious`, `diffNext`, `diffAdded`, `diffDeleted`,
+`diffViewSideBySideHint` (its button's tooltip), `diffViewCurrent`, `diffViewEarlier`,
+`diffShowMarks`, `diffPrevious`, `diffNext`, `diffAdded`, `diffDeleted`,
 `diffChanged`, `diffMoved` (the sidebar's marks), `diffTitleChanged` (the note of a page whose title
 changed), and `diffMergedInto` (a deleted page another took over through its aliases). They are a
 table of their own beside `LABEL_KEYS`: `siteDataJson` carries every resolved label, so a key added

@@ -105,8 +105,10 @@
 | `html.labels.diffPageDeleted` | `lang` から |
 | `html.labels.diffPageMoved` | `lang` から |
 | `html.labels.diffViewSideBySide` | `lang` から |
+| `html.labels.diffViewSideBySideHint` | `lang` から |
 | `html.labels.diffViewCurrent` | `lang` から |
 | `html.labels.diffViewEarlier` | `lang` から |
+| `html.labels.diffShowMarks` | `lang` から |
 | `html.labels.diffPrevious` | `lang` から |
 | `html.labels.diffNext` | `lang` から |
 | `html.labels.diffAdded` | `lang` から |

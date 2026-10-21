@@ -743,9 +743,11 @@ into it.
 | `diffPageAdded` | This page was added. | このページは追加されました。 | Note in the earlier column of an added page |
 | `diffPageDeleted` | This page was deleted. | このページは削除されました。 | Note in the new column of a deleted page |
 | `diffPageMoved` | This page moved. Its earlier route: | このページは移動しました。以前の場所: | Note at the top of a moved page, before its earlier route |
-| `diffViewSideBySide` | Side by side | 左右に並べる | The view that shows the two versions side by side |
+| `diffViewSideBySide` | Side by side | 左右で比較 | The view that shows the two versions side by side |
+| `diffViewSideBySideHint` | Show the difference with the two versions side by side | 差分を左右に並べて表示 | The tooltip of that view's button |
 | `diffViewCurrent` | New version | 新しい版 | The view that shows the new version |
 | `diffViewEarlier` | Earlier version | 以前の版 | The view that shows the earlier version |
+| `diffShowMarks` | Show changes | 変更の印 | The box that marks the changes in a version's own view |
 | `diffPrevious` | Previous change | 前の変更 | The button to the previous change |
 | `diffNext` | Next change | 次の変更 | The button to the next change |
 | `diffAdded` | Added | 追加 | A changed page's count of added blocks, and the sidebar's mark of an added page |
