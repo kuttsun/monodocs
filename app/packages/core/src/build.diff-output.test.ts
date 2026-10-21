@@ -206,7 +206,7 @@ describe("the list of changes", () => {
     const template = await readFile(join(shipped, "template.html"), "utf8");
     await writeFile(
       join(theme, "template.html"),
-      template.replace("<body", '<div id="diff-changes"></div><div id="earlier-x"></div><body'),
+      template.replace("<body", "<div id=diff-changes></div><div id='earlier-x'></div><body"),
     );
     const config = { "monodocs.config.yml": `html:\n  theme: ${theme}\n` };
     const { html } = await built(
@@ -502,6 +502,12 @@ describe("the size report", () => {
 });
 
 describe("diagrams", () => {
+  it("brings the runtime for an earlier diagram in a table cell", async () => {
+    const cell = "= A\n\n|===\na|\n[source,mermaid]\n----\ngraph TD\n  A-->B\n----\n|===\n";
+    const { html } = await built({ "docs/a.adoc": cell }, { "docs/a.adoc": "= A\n\nText.\n" });
+    expect(html).toMatch(/mermaid[\s\S]*\.run\(/);
+  });
+
   it("brings the runtime for a deleted diagram when the new version has none", async () => {
     const { html } = await built(
       { "docs/a.md": "# A\n\n```mermaid\ngraph TD\n  A-->B\n```\n" },

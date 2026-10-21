@@ -419,7 +419,10 @@ export async function buildSite(
     const theme = await loadTheme(config.theme);
     const ids = [
       ...elementIds(next.values()),
-      ...[...theme.template.matchAll(/\sid\s*=\s*["']([^"']+)["']/g)].map((match) => match[1]!),
+      // Quoted or not, as HTML allows either in a template.
+      ...[...theme.template.matchAll(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g)].map(
+        (match) => match[1] ?? match[2] ?? match[3]!,
+      ),
     ];
     const write = {
       svgIdPrefix: earlierIdPrefix(

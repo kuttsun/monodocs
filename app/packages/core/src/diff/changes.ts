@@ -1,9 +1,9 @@
 import type { Root as HastRoot } from "hast";
 import { toHtml } from "hast-util-to-html";
+import { visit } from "unist-util-visit";
 import type { DiffLabels } from "../labels.js";
 import type { Page, SidebarNode } from "../types.js";
 import { escapeAttr, escapeHtml } from "../util/html.js";
-import { blocksOf } from "./blocks.js";
 import type { PageComparison } from "./compare.js";
 import { earlierColumn, writeColumns, type WriteOptions } from "./write.js";
 
@@ -93,6 +93,19 @@ function inSidebarOrder(pages: readonly Page[], sidebar: readonly SidebarNode[])
   walk(sidebar);
   for (const page of pages) if (!seen.has(page.id)) out.push(page);
   return out;
+}
+
+/**
+ * How many diagrams a column holds, wherever they stand — a table cell's included — so a build
+ * drawing them in the browser brings the runtime.
+ */
+function diagramsIn(tree: HastRoot): number {
+  let count = 0;
+  visit(tree, "element", (node) => {
+    const value = node.properties.className;
+    if (Array.isArray(value) && value.includes("mermaid")) count++;
+  });
+  return count;
 }
 
 function link(page: Page): string {
@@ -211,8 +224,8 @@ export function writeDiffDocument(
       oldTree !== undefined &&
       edits.some((e) => e.op !== "equal")
     ) {
-      earlierDiagrams += edits.filter((e) => e.op !== "insert" && e.old.kind === "diagram").length;
       const earlier = writeColumns(nextTree, oldTree, edits, context.write);
+      earlierDiagrams += diagramsIn(earlier);
       page.new.html = columns(labels, html(earlier), html(nextTree));
     }
   }
@@ -255,8 +268,9 @@ export function writeDiffDocument(
     const tree = old.trees.get(oldPage.id);
     let content = "";
     if (tree !== undefined) {
-      earlierDiagrams += blocksOf(tree, oldPage.id).filter((b) => b.kind === "diagram").length;
-      content = html(earlierColumn(tree, context.write));
+      const column = earlierColumn(tree, context.write);
+      earlierDiagrams += diagramsIn(column);
+      content = html(column);
     }
     const page: Page = {
       id: pageId,
