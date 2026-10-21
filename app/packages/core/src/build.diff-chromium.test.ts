@@ -95,6 +95,16 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
       }));
       expect(bar).toEqual({ top: 0, views: ["both", "earlier", "current"] });
 
+      // A row's ring is drawn inside it, where the table's own scrolling box does not cut it.
+      const offset = await page.evaluate(() => {
+        const row = document.querySelector("article:not([hidden]) tr[data-monodocs-diff-block]")!;
+        row.classList.add("monodocs-diff-change-current");
+        const value = getComputedStyle(row).outlineOffset;
+        row.classList.remove("monodocs-diff-change-current");
+        return value;
+      });
+      expect(offset).toBe("-2px");
+
       // Next reaches every change once, across pages, and comes round.
       const seen: string[] = [];
       for (let i = 0; i < 12; i++) {

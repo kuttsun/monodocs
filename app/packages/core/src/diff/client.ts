@@ -143,8 +143,11 @@ del[data-monodocs-diff] {
   outline: 2px solid var(--color-accent, Highlight);
   outline-offset: 3px;
   border-radius: 4px;
-  scroll-margin-top: 6rem;
+  scroll-margin-top: calc(var(--monodocs-diff-bar-height) + 3rem);
 }
+/* A table scrolls sideways in its own box, which would cut a ring drawn outside a row: a row's is
+   drawn inside it. */
+tr.monodocs-diff-change-current { outline-offset: -2px; border-radius: 0; }
 
 /* The sidebar: a badge for each state, its name told to assistive technology alone. */
 .monodocs-diff-label {
