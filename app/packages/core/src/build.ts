@@ -517,7 +517,13 @@ export async function buildSite(
     ...renderInput,
     ...(diffDocument === undefined
       ? {}
-      : { diff: { states: diffDocument.states, labels: diffDocument.labels } }),
+      : {
+          diff: {
+            states: diffDocument.states,
+            labels: diffDocument.labels,
+            sidebars: diffDocument.sidebars,
+          },
+        }),
   });
 
   const outputs = resolveOutputs(config, cwd);

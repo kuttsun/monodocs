@@ -36,6 +36,11 @@ export type DiffDocument = {
   pages: Page[];
   /** The new version's sidebar with the list of changes first and the deleted pages in place. */
   sidebar: SidebarNode[];
+  /**
+   * The sidebar of each version's own view: the new version's, and the earlier version's in its
+   * order and titles, each page linking to the page that shows it. Both start with the list.
+   */
+  sidebars: { current: SidebarNode[]; earlier: SidebarNode[] };
   /** Each page that changed, by page ID. */
   states: Map<string, PageState>;
   /** The labels the difference uses, resolved. */
@@ -271,6 +276,7 @@ export function writeDiffDocument(
   const sidebar = copySidebar(next.sidebar);
   const earlierOrder = inSidebarOrder(old.pages, old.sidebar);
   const deletedPages: { entry: PageComparison & { state: "deleted" }; page: Page }[] = [];
+  const deletedByOld = new Map<string, Page>();
   // The page each new page's deleted followers were last placed after, so they keep their order.
   const lastAfter = new Map<string, string>();
   let first = 0;
@@ -305,6 +311,7 @@ export function writeDiffDocument(
     };
     states.set(pageId, "deleted");
     deletedPages.push({ entry, page });
+    deletedByOld.set(oldPage.id, page);
     let anchor: Page | undefined;
     for (let i = index - 1; i >= 0 && anchor === undefined; i--) {
       const kept = matchedOld.get(earlierOrder[i]!.id);
@@ -415,9 +422,29 @@ export function writeDiffDocument(
     links: [],
     assets: [],
   };
+  const listEntry: SidebarNode = { type: "page", title, route: CHANGES_ROUTE, pageId: id };
+  // The earlier sidebar, its pages linking to what shows them now; numbers are the new version's
+  // alone (19.1).
+  const earlierSidebar = (nodes: readonly SidebarNode[]): SidebarNode[] =>
+    nodes.flatMap((node): SidebarNode[] => {
+      if (node.type === "dir") {
+        const children = earlierSidebar(node.children);
+        return children.length === 0
+          ? []
+          : [{ type: "dir", title: node.title, path: node.path, children }];
+      }
+      const target = matchedOld.get(node.pageId) ?? deletedByOld.get(node.pageId);
+      return target === undefined
+        ? []
+        : [{ type: "page", title: node.title, route: target.route, pageId: target.id }];
+    });
   return {
     pages: [changes, ...pages],
-    sidebar: [{ type: "page", title, route: CHANGES_ROUTE, pageId: id }, ...sidebar],
+    sidebar: [listEntry, ...sidebar],
+    sidebars: {
+      current: [listEntry, ...copySidebar(next.sidebar)],
+      earlier: [listEntry, ...earlierSidebar(old.sidebar)],
+    },
     states,
     labels,
     changesPageId: id,

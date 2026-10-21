@@ -1485,9 +1485,19 @@ in its colour with a symbol: green with `+` for added, red with `−` for delete
 changed, and blue with `→` for moved. The symbol is hidden from assistive technology and a visually
 hidden label says the state, so the mark is not colour alone.
 
-**Three views and a way through the changes.** A bar prepended to `{{pages}}` holds three buttons —
-side by side, the earlier version, the new version, in the order the columns stand — and previous/next buttons with a count,
-`3 / 17`. The view is not stored: the next person to open the file starts side by side. The new
+**The sidebar follows the view.** Side by side, it is the difference's: the new version's sidebar
+with the deleted pages where they stood. In the new version's view it is the new version's sidebar,
+without the deleted pages; in the earlier version's view, the earlier version's, in its order and
+with its titles, without the added pages, each page the new version still has linking to its page,
+and a deleted one to its own. Each marks the changed pages it lists, as above. The earlier sidebar
+has no section numbers, as the earlier column has none (19.1). All three are written into the
+sidebar, and the view shows one.
+
+**Three views and a way through the changes.** A bar written before `{{pages}}` stands fixed across
+the top of the window, above the sidebar, the content, and the table of contents, which start below
+it: what it switches and walks is the whole document, not one page. It holds three buttons — side by
+side, the earlier version, the new version, in the order the columns stand — and previous/next
+buttons with a count, `3 / 17`. The view is not stored: the next person to open the file starts side by side. The new
 version's view shows the right column alone, its additions marked; the earlier version's view the
 left column alone, its deletions marked, so an added page shows only its note there and a deleted
 page its content. The changes are, in reading order, the marked blocks — in the order the alignment

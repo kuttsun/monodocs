@@ -85,11 +85,12 @@ function article(html: string, route: string): string {
 }
 
 /** The sidebar entries, as their text, in order. */
+/** The entries of the difference's own sidebar, the one side by side shows. */
 function sidebarEntries(html: string): string[] {
-  const nav = html.slice(
-    html.indexOf('<nav id="sidebar-nav"'),
-    html.indexOf("</nav>", html.indexOf('<nav id="sidebar-nav"')),
+  const start = html.indexOf(
+    '<div class="monodocs-diff-sidebar" data-monodocs-diff-sidebar="both"',
   );
+  const nav = html.slice(start, html.indexOf('<div class="monodocs-diff-sidebar"', start + 1));
   return [...nav.matchAll(/<a href="[^"]*" data-route="([^"]*)">([\s\S]*?)<\/a>/g)].map(
     (m) => `${m[1]} ${m[2]!.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|")}`,
   );
@@ -276,6 +277,44 @@ describe("the two versions side by side", () => {
     expect(all.filter((id, i) => all.indexOf(id) !== i)).toEqual([]);
   });
 
+  it("writes a sidebar for each view, the earlier one in that version's order and titles", async () => {
+    const { html } = await built(
+      {
+        "docs/a.md": "# A\n",
+        "docs/b.md": "# B\n",
+        "docs/old.md": "---\ntitle: Old\n---\n\nText.\n",
+      },
+      {
+        "docs/a.md": "# A\n",
+        "docs/c.md": "# C\n",
+        "docs/new.md": "---\ntitle: New\naliases: [/old]\n---\n\nText.\n",
+      },
+    );
+    const sidebar = (view: string) => {
+      const start = html.indexOf(
+        `<div class="monodocs-diff-sidebar" data-monodocs-diff-sidebar="${view}"`,
+      );
+      const end = html.indexOf('<div class="monodocs-diff-sidebar"', start + 1);
+      const part = html.slice(start, end === -1 ? html.indexOf("</nav>", start) : end);
+      return [...part.matchAll(/data-route="([^"]*)">([^<]*)/g)].map((m) => `${m[1]} ${m[2]}`);
+    };
+    expect(sidebar("both")).toEqual([
+      "//changes Changes v1",
+      "/a A",
+      "//deleted/b B",
+      "/c C",
+      "/new New",
+    ]);
+    expect(sidebar("current")).toEqual(["//changes Changes v1", "/a A", "/c C", "/new New"]);
+    // The earlier version's: its titles, its order, the deleted page's own, a moved page's new route.
+    expect(sidebar("earlier")).toEqual([
+      "//changes Changes v1",
+      "/a A",
+      "//deleted/b B",
+      "/new Old",
+    ]);
+  });
+
   it("makes a deleted page a page of its own where it stood in the earlier sidebar", async () => {
     const { html } = await built(
       { "docs/a.md": "# A\n", "docs/b.md": "# B\n\nText.\n", "docs/c.md": "# C\n" },
@@ -393,8 +432,13 @@ describe("pages and the sidebar carry their state", () => {
     await write(now, files);
     await buildSite({ outputFile: out() });
     const plain = await readFile(out(), "utf8");
+    // In the body: the sidebar shows them too, once a view.
     const numbers = (html: string) =>
-      [...html.matchAll(/<span class="section-number"[^>]*>([^<]*)<\/span> ([^<]*)/g)]
+      [
+        ...html
+          .slice(html.indexOf('<main id="content"'))
+          .matchAll(/<span class="section-number"[^>]*>([^<]*)<\/span> ([^<]*)/g),
+      ]
         .map((m) => `${m[1]} ${m[2]}`)
         .filter((line) => !line.endsWith(" "));
     const { html } = await built(

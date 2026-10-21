@@ -77,7 +77,12 @@ export type RenderHtmlInput = {
    * A difference from an earlier version (roadmap 7.3.4): each changed page's state, and the labels
    * it uses. Absent, nothing the difference adds is written, and the output is what it was.
    */
-  diff?: { states: ReadonlyMap<string, PageState>; labels: DiffLabels };
+  diff?: {
+    states: ReadonlyMap<string, PageState>;
+    labels: DiffLabels;
+    /** Each version's own sidebar, shown in its view; `sidebar` is the difference's. */
+    sidebars?: { current: SidebarNode[]; earlier: SidebarNode[] };
+  };
 };
 
 /** The sidebar's symbol for each state; hidden from assistive technology, which reads the label. */
@@ -471,7 +476,24 @@ export async function renderSingleHtmlParts(
   const documentMeta = documentFooterLine(input.documentMetadata ?? {}, labels);
 
   const diff = input.diff;
-  const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth, 1, diff);
+  const sidebarFor = (nodes: SidebarNode[]) =>
+    renderSidebar(nodes, input.sidebarCollapseDepth, 1, diff);
+  // With a difference, a sidebar for each view, the one shown chosen by the view (7.3.4).
+  const sidebarHtml =
+    diff?.sidebars === undefined
+      ? sidebarFor(input.sidebar)
+      : (
+          [
+            ["both", input.sidebar],
+            ["earlier", diff.sidebars.earlier],
+            ["current", diff.sidebars.current],
+          ] as const
+        )
+          .map(
+            ([view, nodes]) =>
+              `<div class="monodocs-diff-sidebar" data-monodocs-diff-sidebar="${view}">${sidebarFor([...nodes])}</div>`,
+          )
+          .join("");
   const pagesHtml =
     (diff === undefined ? "" : diffBar(diff.labels)) +
     input.pages.map((page, index) => renderArticle(page, index, diff?.states)).join("\n");

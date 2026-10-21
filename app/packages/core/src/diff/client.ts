@@ -182,23 +182,43 @@ del[data-monodocs-diff] {
   text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 60%, transparent);
 }
 
-/* The bar and the column headings stay in view while the page scrolls. The default theme's
-   content clips what overflows sideways with overflow-x: hidden, which would make it the box they
-   stick to; clip cuts the same overflow without that. */
-#content:has(> .monodocs-diff-bar) { overflow-x: clip; }
+/* The bar stands fixed across the top of the window, and the page — the sidebar, the content, the
+   table of contents — starts below it: what it switches and walks is the whole document. The column
+   headings stick right under it. The default theme's content clips what overflows sideways with
+   overflow-x: hidden, which would make it the box they stick to; clip cuts the same overflow
+   without that. */
+:root { --monodocs-diff-bar-height: 3.25rem; }
+body:has(.monodocs-diff-bar) { padding-top: var(--monodocs-diff-bar-height); }
+body:has(.monodocs-diff-bar) #app { min-height: calc(100vh - var(--monodocs-diff-bar-height)); }
+body:has(.monodocs-diff-bar) #sidebar,
+body:has(.monodocs-diff-bar) #toc {
+  top: var(--monodocs-diff-bar-height);
+  height: calc(100vh - var(--monodocs-diff-bar-height));
+}
+body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-height) + 0.6rem); }
+#content:has(.monodocs-diff-bar) { overflow-x: clip; }
+
+/* The sidebar of the view shown: the difference's side by side, each version's in its own view. */
+.monodocs-diff-sidebar { display: none; }
+:root:not([data-monodocs-diff-view]) [data-monodocs-diff-sidebar="both"],
+:root[data-monodocs-diff-view="both"] [data-monodocs-diff-sidebar="both"],
+:root[data-monodocs-diff-view="current"] [data-monodocs-diff-sidebar="current"],
+:root[data-monodocs-diff-view="earlier"] [data-monodocs-diff-sidebar="earlier"] { display: block; }
 
 /* The bar: the views as one segmented control, the way through the changes beside it. */
 .monodocs-diff-bar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 5;
+  left: 0;
+  right: 0;
+  z-index: 60;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1rem;
   align-items: center;
   justify-content: space-between;
-  margin: -1rem 0 1.5rem;
-  padding: 0.6rem 0;
+  margin: 0;
+  padding: 0.55rem 1.25rem;
   background: var(--monodocs-diff-paper);
   border-bottom: 1px solid var(--monodocs-diff-line);
 }
@@ -430,6 +450,14 @@ export const DIFF_SCRIPT = `(function () {
     });
   }
 
+  // The sidebar shown keeps the page on display open in it, as the theme does for its own.
+  function reveal() {
+    var link = document.querySelector('[data-monodocs-diff-sidebar="' + view + '"] a.active');
+    for (var node = link && link.parentElement; node; node = node.parentElement) {
+      if (node.classList && node.classList.contains("sidebar-dir")) node.classList.remove("collapsed");
+    }
+  }
+
   function setView(name) {
     view = name;
     root.setAttribute("data-monodocs-diff-view", name);
@@ -441,6 +469,7 @@ export const DIFF_SCRIPT = `(function () {
     var old = document.querySelector(".monodocs-diff-change-current");
     if (old) old.classList.remove("monodocs-diff-change-current");
     position = { article: null, index: -1 };
+    reveal();
     align();
     count();
   }
@@ -477,6 +506,7 @@ export const DIFF_SCRIPT = `(function () {
     });
     window.addEventListener("hashchange", function () {
       if (position.article && position.article.hidden) position = { article: null, index: -1 };
+      setTimeout(reveal, 0);
       later();
     });
     window.addEventListener("resize", later);
