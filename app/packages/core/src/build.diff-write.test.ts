@@ -67,10 +67,11 @@ async function difference(
       onWritten: (written) => (pages = written),
       ...(options.prerender === true ? { mermaidPrerenderer: fakePrerenderer() } : {}),
     },
-  ).catch((error: { code?: string }) => {
-    if (error.code !== "diff/unsupported") throw error;
-  });
-  return new Map(pages.map((page) => [page.route, page.html]));
+  );
+  // The list of changes comes first; it is tested on its own.
+  return new Map(
+    pages.filter((page) => page.route !== "//changes").map((page) => [page.route, page.html]),
+  );
 }
 
 /** One page's HTML, both versions of it written as `earlier` and `current`. */
@@ -418,7 +419,7 @@ describe("deleted content has no address", () => {
       `${EARLIER_MERMAID_ID_PREFIX}1-arrow`,
     ]);
     expect(html).toMatch(
-      /<figure class="mermaid"[^>]*data-monodocs-diff-block="del"><del data-monodocs-diff=""><svg id="mermaid-earlier-0">/,
+      /<del data-monodocs-diff=""><figure class="mermaid"[^>]*data-monodocs-diff-block="del"><svg id="mermaid-earlier-0">/,
     );
   });
 

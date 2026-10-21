@@ -180,7 +180,10 @@ function structure(blocks: readonly Block[], parents: Parents): Set<Node> {
  */
 function markBlock(node: Element, mark: Mark, nested: ReadonlySet<Node>): Element {
   node.properties[DIFF_BLOCK] = mark;
-  if (WRAP_WHOLE.has(node.tagName)) return wrapper(mark, [node]);
+  // A diagram is wrapped whole too: in the browser, Mermaid reads its source from its markup.
+  if (WRAP_WHOLE.has(node.tagName) || classes(node).includes("mermaid")) {
+    return wrapper(mark, [node]);
+  }
   if (node.tagName === "tr") {
     for (const cell of elements(node)) {
       if (cell.children.some(significant)) cell.children = [wrapper(mark, cell.children)];
@@ -374,14 +377,15 @@ export type WriteOptions = {
 /**
  * Write a page's difference into the new version's tree: `edits` are its blocks aligned, the new
  * ones in `next` and the earlier ones in `old`. For a deleted page, `next` is an empty root and
- * every edit a deletion.
+ * every edit a deletion. Returns how many deleted diagrams it wrote, which a build drawing diagrams
+ * in the browser needs the runtime for.
  */
 export function writeDifference(
   next: HastRoot,
   old: HastRoot,
   edits: readonly BlockEdit[],
   options: WriteOptions,
-): void {
+): number {
   const newParents = new Parents(next);
   const oldParents = new Parents(old);
   const newStructure = structure(
@@ -564,6 +568,7 @@ export function writeDifference(
   for (const row of rows) clampSpans(row, newParents);
   for (const list of lists) numberItems(list);
   for (const node of fromEarlier) assertNoEarlierId(node, options);
+  return edits.filter((edit) => edit.op === "delete" && edit.old.kind === "diagram").length;
 }
 
 /**
@@ -656,15 +661,11 @@ function assertNoEarlierId(node: Element, options: WriteOptions): void {
   }
 }
 
-/**
- * The prefix a deleted SVG's IDs are renamed with: `earlier-`, or `earlier-2-` and on, the first
- * no ID of the new version starts with — its pages', its elements', and its diagrams' — so the same
- * input gives the same prefix.
- */
-export function earlierIdPrefix(trees: Iterable<HastRoot>, pageIds: Iterable<string>): string {
-  const ids: string[] = [...pageIds].map((id) => `page-${id}`);
+/** Every ID in the trees: their elements', and their pre-rendered diagrams'. */
+export function elementIds(trees: Iterable<HastRoot>): string[] {
+  const ids: string[] = [];
   const walk = (node: Parent) => {
-    for (const child of node.children) {
+    for (const child of kids(node)) {
       if (child.type === "element") {
         if (typeof child.properties.id === "string") ids.push(child.properties.id);
         walk(child);
@@ -675,28 +676,41 @@ export function earlierIdPrefix(trees: Iterable<HastRoot>, pageIds: Iterable<str
     }
   };
   for (const tree of trees) walk(tree);
+  return ids;
+}
+
+/**
+ * The prefix a deleted SVG's IDs are renamed with: `earlier-`, or `earlier-2-` and on, the first
+ * no ID of the new version starts with — its pages' articles' and its elements' — so the same
+ * input gives the same prefix.
+ */
+export function earlierIdPrefix(ids: readonly string[], pageIds: Iterable<string>): string {
+  const all = [...[...pageIds].map((id) => `page-${id}`), ...ids];
   for (let n = 1; ; n++) {
     const prefix = n === 1 ? "earlier-" : `earlier-${n}-`;
-    if (!ids.some((id) => id.startsWith(prefix))) return prefix;
+    if (!all.some((id) => id.startsWith(prefix))) return prefix;
   }
 }
 
 /**
  * Write the difference into every page in both versions that changed, and serialise it again into
  * the page's HTML. The page's headings, text, and anchors are the new version's, untouched (7.3.4).
+ * Returns how many deleted diagrams were written.
  */
 export function writeChangedPages(
   pages: readonly PageComparison[],
   trees: { next: ReadonlyMap<string, HastRoot>; old: ReadonlyMap<string, HastRoot> },
   options: WriteOptions,
-): void {
+): number {
+  let diagrams = 0;
   for (const page of pages) {
     if (page.state !== "matched" || page.edits === undefined) continue;
     if (!page.edits.some((edit) => edit.op !== "equal")) continue;
     const next = trees.next.get(page.new.id);
     const old = trees.old.get(page.old.id);
     if (next === undefined || old === undefined) continue;
-    writeDifference(next, old, page.edits, options);
+    diagrams += writeDifference(next, old, page.edits, options);
     page.new.html = toHtml(next, { allowDangerousHtml: true });
   }
+  return diagrams;
 }

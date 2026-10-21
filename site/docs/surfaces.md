@@ -94,6 +94,26 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `html.labels.version` | from `lang` |
 | `html.labels.cover` | from `lang` |
 | `html.labels.contents` | from `lang` |
+| `html.labels.diffChanges` | from `lang` |
+| `html.labels.diffAddedPages` | from `lang` |
+| `html.labels.diffMovedPages` | from `lang` |
+| `html.labels.diffChangedPages` | from `lang` |
+| `html.labels.diffDeletedPages` | from `lang` |
+| `html.labels.diffUnchangedPages` | from `lang` |
+| `html.labels.diffNoChanges` | from `lang` |
+| `html.labels.diffPageAdded` | from `lang` |
+| `html.labels.diffPageMoved` | from `lang` |
+| `html.labels.diffViewChanges` | from `lang` |
+| `html.labels.diffViewCurrent` | from `lang` |
+| `html.labels.diffViewEarlier` | from `lang` |
+| `html.labels.diffPrevious` | from `lang` |
+| `html.labels.diffNext` | from `lang` |
+| `html.labels.diffAdded` | from `lang` |
+| `html.labels.diffDeleted` | from `lang` |
+| `html.labels.diffChanged` | from `lang` |
+| `html.labels.diffMoved` | from `lang` |
+| `html.labels.diffTitleChanged` | from `lang` |
+| `html.labels.diffMergedInto` | from `lang` |
 | `pdf.pageSize` | `A4` |
 | `pdf.margin.top` | `20mm` |
 | `pdf.margin.right` | `15mm` |

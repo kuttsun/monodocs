@@ -725,6 +725,34 @@ key set:
 | `cover`              | Cover                        | 表紙                       | The cover's page label, shown in the PDF viewer's page number box |
 | `contents`           | Contents                     | 目次                       | The heading of the printed table of contents ([`pdf.toc`](#pdf-toc)) |
 
+A build with a difference from an earlier version (`--diff-from`, `--diff-from-dir`) uses these
+keys too. They are accepted in any configuration, and reach <span v-pre>`{{siteDataJson}}`</span> only in a
+build with a difference, so setting them changes nothing else. A count or a route is put next to a
+label, never into it.
+
+| Key                  | `en`                         | `ja`                       | Where it appears |
+| -------------------- | ---------------------------- | -------------------------- | ---------------- |
+| `diffChanges` | Changes | 変更点 | Title of the list of changes, followed by the two versions |
+| `diffAddedPages` | Added pages | 追加されたページ | Section of the list of changes |
+| `diffMovedPages` | Moved pages | 移動したページ | Section of the list of changes |
+| `diffChangedPages` | Changed pages | 変更されたページ | Section of the list of changes |
+| `diffDeletedPages` | Deleted pages | 削除されたページ | Section of the list of changes |
+| `diffUnchangedPages` | Unchanged pages: | 変更のないページ: | Before the number of unchanged pages |
+| `diffNoChanges` | No changes. | 変更はありません。 | The list of changes when nothing changed |
+| `diffPageAdded` | This page was added. | このページは追加されました。 | Note at the top of an added page |
+| `diffPageMoved` | This page moved. Its earlier route: | このページは移動しました。以前の場所: | Note at the top of a moved page, before its earlier route |
+| `diffViewChanges` | Changes | 変更点 | The view that shows the changes |
+| `diffViewCurrent` | New version | 新しい版 | The view that shows the new version |
+| `diffViewEarlier` | Earlier version | 以前の版 | The view that shows the earlier version |
+| `diffPrevious` | Previous change | 前の変更 | The button to the previous change |
+| `diffNext` | Next change | 次の変更 | The button to the next change |
+| `diffAdded` | Added | 追加 | A changed page's count of added blocks, and the sidebar's mark of an added page |
+| `diffDeleted` | Deleted | 削除 | A changed page's count of deleted blocks |
+| `diffChanged` | Changed | 変更 | The sidebar's mark of a changed page |
+| `diffMoved` | Moved | 移動 | The sidebar's mark of a moved page |
+| `diffTitleChanged` | The title changed. Its earlier title: | タイトルが変わりました。以前のタイトル: | Note of a page whose front-matter title changed, before the earlier title |
+| `diffMergedInto` | Merged into | 統合先: | A deleted page whose route another page took through its aliases |
+
 How a custom theme gets the labels:
 
 - **Every theme** gets the resolved labels as data in <span v-pre>`{{siteDataJson}}`</span>. This is the only

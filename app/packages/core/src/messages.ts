@@ -134,9 +134,6 @@ const EN = {
   "diff.unsupportedCommand":
     "{command} does not compare against an earlier version; build does, with --diff-from or " +
     "--diff-from-dir.",
-  "diff.notWritten":
-    "The earlier version ({label}) was found, but this monodocs does not write the difference into " +
-    "the HTML yet, so nothing was output.",
   "diff.gitUnavailable":
     "git is not found on PATH, and --diff-from {ref} needs it to read the earlier version. Install " +
     "git, or pass a copy of that version with --diff-from-dir.",
@@ -390,6 +387,7 @@ index are all inside it — so it can be handed to someone as it is.
   "cli.size.images": "    images     {size}  ({files} file(s), largest: {largest} {largestSize})",
   "cli.size.mermaid": "    mermaid    {size}  (inline runtime)",
   "cli.size.pageData": "    page data  {size}  (siteDataJson: text, headings, search)",
+  "cli.size.difference": "    difference {size}  (list of changes, deleted content, marks)",
   "cli.size.document": "    document   {size}",
   "cli.rebuilt": "✓ Rebuilt {pages} page(s)",
   "cli.watching": "Watching for changes… (Ctrl+C to stop)",
@@ -516,9 +514,6 @@ const JA: Record<MessageKey, string> = {
   "diff.unsupportedCommand":
     "{command} は以前の版と比較しません。比較するのは build で、--diff-from か --diff-from-dir を" +
     "指定します。",
-  "diff.notWritten":
-    "以前の版（{label}）は見つかりましたが、この monodocs はまだ差分を HTML に書き込めません。" +
-    "何も出力していません。",
   "diff.gitUnavailable":
     "PATH に git が見つかりません。--diff-from {ref} は以前の版を読むのに git を使います。git を" +
     "入れるか、その版の写しを --diff-from-dir で渡してください。",
@@ -752,6 +747,7 @@ monodocs build
   "cli.size.images": "    画像          {size}（{files} ファイル、最大: {largest} {largestSize}）",
   "cli.size.mermaid": "    Mermaid       {size}（inline ランタイム）",
   "cli.size.pageData": "    ページデータ  {size}（siteDataJson: 本文テキスト・見出し・検索）",
+  "cli.size.difference": "    差分          {size}（変更点の一覧・削除された内容・印）",
   "cli.size.document": "    文書本体      {size}",
   "cli.rebuilt": "✓ {pages} ページを再生成しました",
   "cli.watching": "変更を監視しています… (Ctrl+C で停止)",

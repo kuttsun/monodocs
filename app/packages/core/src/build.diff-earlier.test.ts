@@ -12,8 +12,7 @@ import { isLfsPointer } from "./diff/lfsPointer";
 /**
  * Building the earlier version (roadmap 7.3.2): with its own configuration for what the document
  * contains and the new one for how it looks, removed keys read as their replacements, and its hard
- * errors shown in the earlier version. Nothing compares the two yet, so a build that gets through
- * both stops at `diff/unsupported` with `diff.notWritten`.
+ * errors shown in the earlier version.
  */
 let base: string;
 let now: string;
@@ -47,12 +46,10 @@ async function failure(): Promise<{ code?: string; message: string }> {
   throw new Error("the build did not stop");
 }
 
-/** The build got through both versions and stopped where nothing writes the difference yet. */
+/** The build got through both versions and wrote the difference. */
 async function expectBothBuilt(): Promise<void> {
-  const error = await failure();
-  expect(error.code).toBe("diff/unsupported");
-  expect(error.message).toContain("v1.2");
-  expect(error.message).toContain("does not write the difference");
+  const out = join(base, "out.html");
+  await expect(buildSite({ outputFile: out, diff })).resolves.toMatchObject({ outputs: [out] });
 }
 
 describe("the configuration the earlier version is built with", () => {
@@ -237,7 +234,7 @@ describe("an LFS pointer the earlier build reads", () => {
   });
 });
 
-/** Each version's pages, from a build with a difference that stops where nothing writes it. */
+/** Each version's pages, from a build with a difference. */
 async function prepared(): Promise<Record<"new" | "earlier", PreparedSite>> {
   const sites: Partial<Record<"new" | "earlier", PreparedSite>> = {};
   await expect(
@@ -245,7 +242,7 @@ async function prepared(): Promise<Record<"new" | "earlier", PreparedSite>> {
       { outputFile: join(base, "out.html"), diff },
       { onPrepared: (version, site) => (sites[version] = site) },
     ),
-  ).rejects.toMatchObject({ code: "diff/unsupported" });
+  ).resolves.toBeDefined();
   return sites as Record<"new" | "earlier", PreparedSite>;
 }
 
@@ -305,7 +302,7 @@ describe("where and when the earlier version was built", () => {
           { outputFile: join(base, "out.html"), diff: { dir, label: "v1.2" } },
           { onPrepared: (version, site) => (sites[version] = site) },
         ),
-      ).rejects.toMatchObject({ code: "diff/unsupported" });
+      ).resolves.toBeDefined();
       texts.push(textOf(sites.earlier!, "guide.adoc"));
     }
     expect(texts[0]).toBe(texts[1]);
@@ -357,7 +354,7 @@ describe("round 2: what the earlier build reads and writes of itself", () => {
         { outputFile: join(base, "out.html"), diff: { dir: "../R&D", label: "v1.2" } },
         { onPrepared: (version, site) => (sites[version] = site) },
       ),
-    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    ).resolves.toBeDefined();
     const page = sites.earlier!.pages.find((p) => p.relativePath === "guide.adoc")!;
     const slashed = (path: string) => path.replace(/\\/g, "/");
     for (const text of [page.html, page.text, page.title]) {
@@ -403,7 +400,7 @@ describe("round 2: what the earlier build reads and writes of itself", () => {
           onPrepared: (version, site) => (sites[version] = site),
         },
       ),
-    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    ).resolves.toBeDefined();
     for (const version of ["new", "earlier"] as const) {
       expect(textOf(sites[version]!, "time.adoc"), version).toContain("2001 2001");
     }
@@ -434,7 +431,7 @@ describe("round 2: what the earlier build reads and writes of itself", () => {
           onPrepared: (version, site) => (sites[version] = site),
         },
       ),
-    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    ).resolves.toBeDefined();
     expect(calls).toHaveLength(1);
     expect(sites.earlier!.pages[0]!.html).toContain("<svg");
   });
@@ -469,7 +466,7 @@ describe("round 3: where highlighting would cut the location", () => {
           { outputFile: join(base, "out.html"), diff: { dir, label: "v1.2" } },
           { onPrepared: (version, site) => (sites[version] = site) },
         ),
-      ).rejects.toMatchObject({ code: "diff/unsupported" });
+      ).resolves.toBeDefined();
       const html = sites.earlier!.pages.find((p) => p.relativePath === "code.adoc")!.html;
       // Highlighted: the location went in before the tokens were cut.
       expect(html).toContain("<span");
@@ -502,7 +499,7 @@ describe("round 4", () => {
         { outputFile: join(base, "out.html"), diff },
         { onPrepared: (version, site) => (sites[version] = site) },
       ),
-    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    ).resolves.toBeDefined();
     const page = sites.earlier!.pages.find((p) => p.relativePath === "guide.adoc")!;
     const slashed = (path: string) => path.replace(/\\/g, "/");
     expect(slashed(page.text)).toContain(`Here: ${slashed(join(odd, "docs"))}`);
@@ -540,7 +537,7 @@ describe("cross-review round 1", () => {
         { outputFile: join(base, "out.html"), diff: { dir: "..", label: "v1.2" } },
         { onPrepared: (version, site) => (sites[version] = site) },
       ),
-    ).rejects.toMatchObject({ code: "diff/unsupported" });
+    ).resolves.toBeDefined();
     const page = sites.earlier!.pages.find((p) => p.relativePath === "guide.adoc")!;
     const slashed = (path: string) => path.replace(/\\/g, "/");
     expect(slashed(page.text)).toContain(`Here: ${slashed(join(inner, "docs"))}\n`.trimEnd());

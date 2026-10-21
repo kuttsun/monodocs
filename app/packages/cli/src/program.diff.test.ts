@@ -76,10 +76,9 @@ describe("--diff-from and --diff-from-dir", () => {
       const temporaries = () =>
         readdirSync(temp).filter((name) => name.startsWith("monodocs-diff-"));
       const before = temporaries();
-      // The build gets as far as resolving the earlier version, and stops there (7.3).
       const errors = await run("build", "--diff-from", "HEAD", "-o", join(base, "out.html"));
-      expect(errors.join("\n")).toContain("HEAD");
-      expect(process.exitCode).toBe(1);
+      expect(errors).toEqual([]);
+      expect(process.exitCode).toBeUndefined();
       expect(temporaries().filter((name) => !before.includes(name))).toEqual([]);
     } finally {
       vi.unstubAllEnvs();
@@ -119,9 +118,7 @@ describe("--diff-from and --diff-from-dir", () => {
       vi.spyOn(process, "cwd").mockReturnValue(base);
       const out = join(base, "out.html");
       // A pointer the build never reads, and one outside the root, are left as they are.
-      expect((await run("build", "docs", "--diff-from", "unread", "-o", out)).join("\n")).toContain(
-        "does not write the difference",
-      );
+      expect(await run("build", "docs", "--diff-from", "unread", "-o", out)).toEqual([]);
       vi.restoreAllMocks();
       vi.spyOn(process, "cwd").mockReturnValue(base);
       const errors = await run("build", "docs", "--diff-from", "HEAD", "-o", out);

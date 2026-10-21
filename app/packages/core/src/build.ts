@@ -27,14 +27,15 @@ import {
   sharedClockAttributes,
 } from "./diff/earlierLocation.js";
 import { refuseLfsPointer } from "./diff/lfsPointer.js";
-import { earlierIdPrefix, writeChangedPages } from "./diff/write.js";
+import { earlierIdPrefix, elementIds, writeChangedPages } from "./diff/write.js";
+import { writeDiffDocument, type DiffDocument } from "./diff/changes.js";
 import {
   documentAuthor,
   documentCoverParts,
   documentKeywords,
   documentSubject,
 } from "./documentMeta.js";
-import { resolveLabels } from "./labels.js";
+import { resolveDiffLabels, resolveLabels } from "./labels.js";
 import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { createMarkdownRenderer } from "./sources/markdown/renderer.js";
 import { createAsciidocRenderer, withoutAsciidoctorLog } from "./sources/asciidoc/renderer.js";
@@ -306,10 +307,13 @@ export async function buildSite(
   // The earlier version (7.3), built with its own configuration for what the document contains
   // and with the new one for how it looks (7.3.2).
   let earlierConfig: ResolvedConfig | undefined;
+  // What names the earlier version in the list of changes, when it says (7.3.4).
+  let earlierVersion: string | undefined;
   if (options.diff !== undefined) {
     assertDiffSupported(config, options.diff);
     const loaded = await loadEarlierConfig(options, cwd, options.diff);
     earlierConfig = withClock(earlierBuildConfig(loadedConfig, loaded));
+    earlierVersion = loaded.documentMetadata.version;
   }
 
   // PDF は配布時に読者のファイルシステム上の相対画像を参照できないため、PDF を出力する場合は
@@ -389,50 +393,70 @@ export async function buildSite(
   } finally {
     if (ownPrerenderer) await prerenderer?.close();
   }
-  if (options.diff !== undefined) {
+  // The difference, written into the new version's pages (7.3.4).
+  let diffDocument: DiffDocument | undefined;
+  // The document as it would be without the difference, which the size report measures against.
+  let withoutDiff: { pages: Page[]; sidebar: SidebarNode[] } | undefined;
+  let earlierImages: PreparedSite["embeddedImages"] = [];
+  let deletedDiagrams = 0;
+  if (options.diff !== undefined && earlierSite !== undefined) {
     internals.onPrepared?.("new", prepared);
-    if (earlierSite !== undefined) {
-      const next = prepared.trees ?? new Map<string, HastRoot>();
-      const old = earlierSite.trees ?? new Map<string, HastRoot>();
-      const comparison = compareVersions(
-        { pages: prepared.pages, trees: next },
-        { pages: earlierSite.pages, trees: old },
-      );
-      internals.onCompared?.(comparison);
-      writeChangedPages(
-        comparison,
-        { next, old },
-        {
-          svgIdPrefix: earlierIdPrefix(
-            next.values(),
-            prepared.pages.map((page) => page.id),
-          ),
-          earlierDiagramPrefix: EARLIER_MERMAID_ID_PREFIX,
-        },
-      );
-      internals.onWritten?.(prepared.pages);
-    }
-    // Both versions are built (7.3.2), but nothing compares and writes them yet, and a difference
-    // asked for and not output would be accepted and ignored (7.3).
-    throw new MonodocsError(
-      "diff/unsupported",
-      t("diff.notWritten", { label: earlierLabel(options.diff) }),
+    const next = prepared.trees ?? new Map<string, HastRoot>();
+    const old = earlierSite.trees ?? new Map<string, HastRoot>();
+    const comparison = compareVersions(
+      { pages: prepared.pages, trees: next },
+      { pages: earlierSite.pages, trees: old },
     );
+    internals.onCompared?.(comparison);
+    withoutDiff = { pages: prepared.pages.map((page) => ({ ...page })), sidebar: prepared.sidebar };
+    const ids = elementIds(next.values());
+    const write = {
+      svgIdPrefix: earlierIdPrefix(
+        ids,
+        prepared.pages.map((page) => page.id),
+      ),
+      earlierDiagramPrefix: EARLIER_MERMAID_ID_PREFIX,
+    };
+    deletedDiagrams = writeChangedPages(comparison, { next, old }, write);
+    diffDocument = writeDiffDocument(
+      comparison,
+      { pages: prepared.pages, sidebar: prepared.sidebar },
+      { pages: earlierSite.pages, sidebar: earlierSite.sidebar, trees: old },
+      {
+        labels: resolveDiffLabels(config.lang, config.labelOverrides),
+        // The earlier version is named by its own `document.version`, else by the argument that
+        // named it, as written.
+        names: {
+          from: earlierVersion ?? earlierLabel(options.diff),
+          to: config.documentMetadata.version,
+        },
+        write,
+        elementIds: ids,
+      },
+    );
+    deletedDiagrams += diffDocument.deletedDiagrams;
+    earlierImages = earlierSite.embeddedImages;
+    internals.onWritten?.(diffDocument.pages);
   }
-  const { pages, sidebar, warnings, hasMermaid } = prepared;
+  const { warnings, hasMermaid } = prepared;
+  const pages = diffDocument?.pages ?? prepared.pages;
+  const sidebar = diffDocument?.sidebar ?? prepared.sidebar;
   if (forceEmbed || forceLargeEmbed) {
     warnings.unshift(warn("image/embedded-for-pdf", t("build.pdfImagesEmbedded")));
   }
 
   // pre-render は静的 SVG なのでランタイム JS を注入しない（client mode のときだけ注入）。
-  const clientMermaid = hasMermaid && config.mermaidEnabled && config.mermaidMode === "client";
+  // A deleted diagram is drawn in the browser too, when the new version has none or has Mermaid
+  // off (7.3.2).
+  const ownMermaid = hasMermaid && config.mermaidEnabled && config.mermaidMode === "client";
+  const clientMermaid = ownMermaid || (deletedDiagrams > 0 && config.mermaidMode === "client");
   const bodyScripts = clientMermaid ? await mermaidRuntimeScript(config.mermaidRuntime) : "";
 
   // ラベルの解決はここで 1 度だけ行う。同梱の表が無いタグの警告も、ビルド 1 回につき 1 度になる。
   const resolvedLabels = resolveLabels(config.lang, config.labelOverrides);
   if (resolvedLabels.warning !== undefined) warnings.push(resolvedLabels.warning);
 
-  const { html, siteDataJson } = await renderSingleHtmlParts({
+  const renderInput = {
     title: config.title,
     documentMetadata: config.documentMetadata,
     pages,
@@ -455,6 +479,12 @@ export async function buildSite(
     sidebarCollapseDepth: config.sidebarCollapseDepth,
     tocMaxLevel: config.tocMaxLevel,
     bodyScripts,
+  };
+  const { html, siteDataJson } = await renderSingleHtmlParts({
+    ...renderInput,
+    ...(diffDocument === undefined
+      ? {}
+      : { diff: { states: diffDocument.states, labels: diffDocument.labels } }),
   });
 
   const outputs = resolveOutputs(config, cwd);
@@ -466,12 +496,39 @@ export async function buildSite(
     await mkdir(dirname(outputs.html), { recursive: true });
     await writeFile(outputs.html, html, "utf8");
     written.push(outputs.html);
-    const size = await measureHtml(outputs.html, html, {
-      images: prepared.embeddedImages,
-      // Only the inline runtime is the runtime; a CDN reference is a few bytes of document.
-      mermaidRuntime: clientMermaid && config.mermaidRuntime === "inline" ? bodyScripts : "",
-      siteDataJson,
-    });
+    const runtime = (on: boolean) => (on && config.mermaidRuntime === "inline" ? bodyScripts : "");
+    const images = [...prepared.embeddedImages, ...earlierImages];
+    // With a difference, the same document without it, rendered for the size report alone: what
+    // the file holds beyond it is the difference's line (20.5, 7.3.4).
+    const without =
+      withoutDiff === undefined
+        ? undefined
+        : await renderSingleHtmlParts({
+            ...renderInput,
+            pages: withoutDiff.pages,
+            sidebar: withoutDiff.sidebar,
+            bodyScripts: ownMermaid ? bodyScripts : "",
+          });
+    const size = await measureHtml(
+      outputs.html,
+      html,
+      {
+        images,
+        // Only the inline runtime is the runtime; a CDN reference is a few bytes of document.
+        mermaidRuntime: runtime(clientMermaid),
+        siteDataJson,
+      },
+      without === undefined
+        ? undefined
+        : {
+            html: without.html,
+            parts: {
+              images,
+              mermaidRuntime: runtime(ownMermaid),
+              siteDataJson: without.siteDataJson,
+            },
+          },
+    );
     sizes.push(size);
     checkBudget(size, sizes, config.budget, onBudget, warnings);
   }
@@ -523,7 +580,8 @@ export async function buildSite(
     }
   }
 
-  return { outputs: written, pages: pages.length, warnings, sizes };
+  // The document's own pages: the list of changes is generated, not one of them.
+  return { outputs: written, pages: prepared.pages.length, warnings, sizes };
 }
 
 /**

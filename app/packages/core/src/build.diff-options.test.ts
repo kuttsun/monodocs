@@ -11,8 +11,8 @@ import { watchSite } from "./watch";
 /**
  * Naming the earlier version (roadmap 7.3.1): `diff.dir` stands for the current directory, every
  * path the command line names is mapped through it, and every path the earlier version resolves
- * stays inside `diff.tree`. Nothing writes the difference yet, so a build that gets that far is
- * `diff/unsupported` rather than a build that accepted `diff` and ignored it (7.3).
+ * stays inside `diff.tree`. What no stage outputs yet — a PDF — is `diff/unsupported` rather than
+ * accepted and ignored (7.3).
  */
 let base: string;
 /** The current version, and the current directory of every build here. */
@@ -53,13 +53,13 @@ const diff = (extra: Partial<NonNullable<BuildOptions["diff"]>> = {}) => ({
 });
 
 describe("naming the earlier version", () => {
-  it("resolves the earlier version and stops at diff/unsupported, writing nothing", async () => {
+  it("resolves the earlier version and writes the difference", async () => {
     const out = join(base, "out.html");
-    await expect(buildSite({ outputFile: out, diff: diff() })).rejects.toMatchObject({
-      code: "diff/unsupported",
-      message: expect.stringContaining("v1.2"),
+    await expect(buildSite({ outputFile: out, diff: diff() })).resolves.toMatchObject({
+      outputs: [out],
     });
-    await expect(import("node:fs").then((fs) => fs.existsSync(out))).resolves.toBe(false);
+    const html = await import("node:fs/promises").then((fs) => fs.readFile(out, "utf8"));
+    expect(html).toContain('data-route="//changes"');
   });
 
   it("is diff/dir-not-found for a directory that does not exist or is a file", async () => {

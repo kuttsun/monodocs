@@ -1529,6 +1529,17 @@ changes shows when the earlier version has no `document.version`. The size repor
 line, `difference`, for what the difference added, and its lines still add up to the file: an image
 is counted once under `images`, whichever version it came from, and nothing is counted on two lines.
 
+Stage 1 decided the rest this way. The list of changes' page ID is `diff-changes`, with `-x` added
+until no page has it, no element has its article's ID, and no element ID starts with it followed by
+a hyphen, as a page's own IDs do. A deleted page is listed under an `h3` with its title, followed by
+its blocks, each marked deleted; the in-page table of contents of the list reads those headings. A
+page's note is a `div.monodocs-diff-note` at the top of its article, one paragraph per thing it says,
+and a moved page whose front-matter title also changed says both in one note. The sidebar's symbol is
+a `span.monodocs-diff-mark` with `aria-hidden`, and its label a `span.monodocs-diff-label`, which the
+difference's own rules hide visually. The `difference` line is measured against the same document
+rendered once more without the difference: what the file holds beyond it, outside the images, the
+Mermaid runtime, and `siteDataJson`, which keep their own lines.
+
 ### 7.3.5 The Difference on Paper (stage 2)
 
 **The presentation is chosen at build time,** because paper has no toggle:

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { blocksOf, sameBlock } from "./blocks";
 import type { BlockEdit } from "./compare";
 import { diffSequences } from "./myers";
-import { earlierIdPrefix, writeDifference } from "./write";
+import { earlierIdPrefix, elementIds, writeDifference } from "./write";
 
 const parser = unified().use(rehypeParse, { fragment: true });
 
@@ -75,12 +75,15 @@ describe("the check that no earlier ID survives", () => {
 
 describe("the prefix of a deleted SVG's IDs", () => {
   it("is the first no ID of the new version starts with", () => {
-    const tree = (html: string) => parser.parse(html);
-    expect(earlierIdPrefix([tree('<p id="a-x"></p>')], ["a"])).toBe("earlier-");
-    expect(earlierIdPrefix([tree('<p id="earlier-x"></p>')], ["earlier"])).toBe("earlier-2-");
+    const tree = (html: string) => elementIds([parser.parse(html)]);
+    expect(earlierIdPrefix(tree('<p id="a-x"></p>'), ["a"])).toBe("earlier-");
+    expect(earlierIdPrefix(tree('<p id="earlier-x"></p>'), ["earlier"])).toBe("earlier-2-");
     expect(
-      earlierIdPrefix([tree('<p id="earlier-x"></p><p id="earlier-2-y"></p>')], ["earlier"]),
+      earlierIdPrefix(tree('<p id="earlier-x"></p><p id="earlier-2-y"></p>'), ["earlier"]),
     ).toBe("earlier-3-");
+    expect(earlierIdPrefix(tree('<div class="mermaid"><svg id="earlier-1"></svg></div>'), [])).toBe(
+      "earlier-2-",
+    );
     // A page called `earlier` has the article ID `page-earlier`, which does not take the prefix.
     expect(earlierIdPrefix([], ["earlier"])).toBe("earlier-");
   });

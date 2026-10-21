@@ -33,7 +33,7 @@ afterEach(async () => {
 const diff = { dir: "../then", label: "v1.2" };
 const POINTER = `version https://git-lfs.github.com/spec/v1\noid sha256:${"a".repeat(64)}\nsize 2048\n`;
 
-/** Each version's prepared site from a build with a difference, which stops before writing. */
+/** Each version's prepared site from a build with a difference. */
 async function prepared(
   internals: Parameters<typeof buildSite>[1] = {},
 ): Promise<Record<"new" | "earlier", PreparedSite>> {
@@ -43,7 +43,7 @@ async function prepared(
       { outputFile: join(base, "out.html"), diff },
       { ...internals, onPrepared: (version, site) => (sites[version] = site) },
     ),
-  ).rejects.toMatchObject({ code: "diff/unsupported" });
+  ).resolves.toBeDefined();
   return sites as Record<"new" | "earlier", PreparedSite>;
 }
 

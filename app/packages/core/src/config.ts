@@ -7,10 +7,12 @@ import type { DocumentMetadata } from "./documentMeta.js";
 import { z } from "zod";
 import {
   DEFAULT_LANG,
+  DIFF_LABEL_KEYS,
   isValidLanguageTag,
   LABEL_KEYS,
+  type DiffLabelKey,
   type LabelKey,
-  type Labels,
+  type LabelOverrides,
 } from "./labels.js";
 import { t } from "./messages.js";
 import { FONT_CHECK_MODES, type FontCheckMode } from "./pipeline/fontCheck.js";
@@ -262,10 +264,9 @@ export function buildConfigFileSchema() {
    */
   const labelsSchema = z
     .object(
-      Object.fromEntries(LABEL_KEYS.map((key) => [key, z.string().min(1).optional()])) as Record<
-        LabelKey,
-        z.ZodOptional<z.ZodString>
-      >,
+      Object.fromEntries(
+        [...LABEL_KEYS, ...DIFF_LABEL_KEYS].map((key) => [key, z.string().min(1).optional()]),
+      ) as Record<LabelKey | DiffLabelKey, z.ZodOptional<z.ZodString>>,
     )
     .strict();
 
@@ -666,7 +667,7 @@ export type ResolvedConfig = {
   /** 生成した文書の言語（BCP 47）。`<html lang>` を埋め、UI ラベルの表を選ぶ。 */
   lang: string;
   /** `lang` が選んだ表の上に重ねる UI ラベルの差し替え。 */
-  labelOverrides: Partial<Labels>;
+  labelOverrides: LabelOverrides;
   /** 必要なフォントがビルド環境に無いときの挙動（既定 warn）。 */
   fontCheck: FontCheckMode;
   inputDir: string;

@@ -94,6 +94,26 @@
 | `html.labels.version` | `lang` から |
 | `html.labels.cover` | `lang` から |
 | `html.labels.contents` | `lang` から |
+| `html.labels.diffChanges` | `lang` から |
+| `html.labels.diffAddedPages` | `lang` から |
+| `html.labels.diffMovedPages` | `lang` から |
+| `html.labels.diffChangedPages` | `lang` から |
+| `html.labels.diffDeletedPages` | `lang` から |
+| `html.labels.diffUnchangedPages` | `lang` から |
+| `html.labels.diffNoChanges` | `lang` から |
+| `html.labels.diffPageAdded` | `lang` から |
+| `html.labels.diffPageMoved` | `lang` から |
+| `html.labels.diffViewChanges` | `lang` から |
+| `html.labels.diffViewCurrent` | `lang` から |
+| `html.labels.diffViewEarlier` | `lang` から |
+| `html.labels.diffPrevious` | `lang` から |
+| `html.labels.diffNext` | `lang` から |
+| `html.labels.diffAdded` | `lang` から |
+| `html.labels.diffDeleted` | `lang` から |
+| `html.labels.diffChanged` | `lang` から |
+| `html.labels.diffMoved` | `lang` から |
+| `html.labels.diffTitleChanged` | `lang` から |
+| `html.labels.diffMergedInto` | `lang` から |
 | `pdf.pageSize` | `A4` |
 | `pdf.margin.top` | `20mm` |
 | `pdf.margin.right` | `15mm` |

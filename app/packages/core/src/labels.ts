@@ -47,6 +47,42 @@ export const LABEL_KEYS = [
 export type LabelKey = (typeof LABEL_KEYS)[number];
 export type Labels = Record<LabelKey, string>;
 
+/**
+ * The wording of a difference from an earlier version (roadmap 7.3.4): a table of its own beside
+ * {@link LABEL_KEYS}. `siteDataJson` carries every resolved label, so a key added to the main table
+ * would change the bytes of every build; these join it only in a build with a difference.
+ * `html.labels` accepts them in any configuration, as it accepts every label. Labels hold no
+ * placeholders: a count or a route is put next to one by code.
+ */
+export const DIFF_LABEL_KEYS = [
+  "diffChanges",
+  "diffAddedPages",
+  "diffMovedPages",
+  "diffChangedPages",
+  "diffDeletedPages",
+  "diffUnchangedPages",
+  "diffNoChanges",
+  "diffPageAdded",
+  "diffPageMoved",
+  "diffViewChanges",
+  "diffViewCurrent",
+  "diffViewEarlier",
+  "diffPrevious",
+  "diffNext",
+  "diffAdded",
+  "diffDeleted",
+  "diffChanged",
+  "diffMoved",
+  "diffTitleChanged",
+  "diffMergedInto",
+] as const;
+
+export type DiffLabelKey = (typeof DIFF_LABEL_KEYS)[number];
+export type DiffLabels = Record<DiffLabelKey, string>;
+
+/** Every label `html.labels` accepts. */
+export type LabelOverrides = Partial<Labels & DiffLabels>;
+
 const EN: Labels = {
   openSidebar: "Open sidebar",
   closeSidebar: "Close sidebar",
@@ -109,12 +145,59 @@ const JA: Labels = {
   contents: "目次",
 };
 
+const DIFF_EN: DiffLabels = {
+  diffChanges: "Changes",
+  diffAddedPages: "Added pages",
+  diffMovedPages: "Moved pages",
+  diffChangedPages: "Changed pages",
+  diffDeletedPages: "Deleted pages",
+  diffUnchangedPages: "Unchanged pages:",
+  diffNoChanges: "No changes.",
+  diffPageAdded: "This page was added.",
+  diffPageMoved: "This page moved. Its earlier route:",
+  diffViewChanges: "Changes",
+  diffViewCurrent: "New version",
+  diffViewEarlier: "Earlier version",
+  diffPrevious: "Previous change",
+  diffNext: "Next change",
+  diffAdded: "Added",
+  diffDeleted: "Deleted",
+  diffChanged: "Changed",
+  diffMoved: "Moved",
+  diffTitleChanged: "The title changed. Its earlier title:",
+  diffMergedInto: "Merged into",
+};
+
+const DIFF_JA: DiffLabels = {
+  diffChanges: "変更点",
+  diffAddedPages: "追加されたページ",
+  diffMovedPages: "移動したページ",
+  diffChangedPages: "変更されたページ",
+  diffDeletedPages: "削除されたページ",
+  diffUnchangedPages: "変更のないページ:",
+  diffNoChanges: "変更はありません。",
+  diffPageAdded: "このページは追加されました。",
+  diffPageMoved: "このページは移動しました。以前の場所:",
+  diffViewChanges: "変更点",
+  diffViewCurrent: "新しい版",
+  diffViewEarlier: "以前の版",
+  diffPrevious: "前の変更",
+  diffNext: "次の変更",
+  diffAdded: "追加",
+  diffDeleted: "削除",
+  diffChanged: "変更",
+  diffMoved: "移動",
+  diffTitleChanged: "タイトルが変わりました。以前のタイトル:",
+  diffMergedInto: "統合先:",
+};
+
 /**
  * 同梱する表。**en と ja だけ**にとどめる。中途半端に訳した言語を core に同梱するのは、
  * その言語の読者にとって何も無いより悪く、しかも保守するのは話者ではなく維持者になる。
  * 他の言語は `html.labels` で入れられる。
  */
 const TABLES: Record<string, Labels> = { en: EN, ja: JA };
+const DIFF_TABLES: Record<string, DiffLabels> = { en: DIFF_EN, ja: DIFF_JA };
 
 export const DEFAULT_LANG = "en";
 
@@ -205,10 +288,14 @@ export type ResolvedLabels = {
  * ビルドを通すためだけに自分を英語だと偽ることになり、上書きできる英語ラベルより読者にとって
  * 悪い。警告はビルド 1 回につき 1 度、タグ名を挙げて出す（呼び出し側が 1 回だけ呼ぶ）。
  */
-export function resolveLabels(lang: string, overrides: Partial<Labels> = {}): ResolvedLabels {
+export function resolveLabels(lang: string, overrides: LabelOverrides = {}): ResolvedLabels {
   const key = primarySubtag(lang);
   const table = key === undefined ? undefined : TABLES[key];
-  const labels = { ...(table ?? EN), ...overrides };
+  // Only the main table's keys: a difference's labels never reach a build without one.
+  const own = Object.fromEntries(
+    Object.entries(overrides).filter(([name]) => (LABEL_KEYS as readonly string[]).includes(name)),
+  ) as Partial<Labels>;
+  const labels = { ...(table ?? EN), ...own };
   if (table !== undefined) return { labels };
   return {
     labels,
@@ -221,4 +308,19 @@ export function resolveLabels(lang: string, overrides: Partial<Labels> = {}): Re
       }),
     ),
   };
+}
+
+/**
+ * A difference's labels for `lang`, with `overrides` laid over them. A tag with no shipped table
+ * falls back to English, as {@link resolveLabels} does and reports once for the build.
+ */
+export function resolveDiffLabels(lang: string, overrides: LabelOverrides = {}): DiffLabels {
+  const key = primarySubtag(lang);
+  const table = (key === undefined ? undefined : DIFF_TABLES[key]) ?? DIFF_EN;
+  const own = Object.fromEntries(
+    Object.entries(overrides).filter(([name]) =>
+      (DIFF_LABEL_KEYS as readonly string[]).includes(name),
+    ),
+  ) as Partial<DiffLabels>;
+  return { ...table, ...own };
 }

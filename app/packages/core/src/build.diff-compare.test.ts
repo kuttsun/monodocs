@@ -45,7 +45,7 @@ async function compare(earlier: Files, current: Files): Promise<PageComparison[]
       { outputFile: join(base, "out.html"), diff: { dir: "../then", label: "v1" } },
       { onCompared: (pages) => (result = pages) },
     ),
-  ).rejects.toMatchObject({ code: "diff/unsupported" });
+  ).resolves.toBeDefined();
   return result!;
 }
 
