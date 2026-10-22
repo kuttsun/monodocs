@@ -44,9 +44,6 @@ const URL_REFERENCE = /url\(\s*(['"]?)#([^'")\s]+)\1\s*\)/gi;
 /** One character of a CSS identifier as written: a name character, a non-ASCII one, or an escape. */
 const IDENT_CHAR = /(?:[\w-]|[^\x00-\x7f]|\\[0-9a-fA-F]{1,6}[ \t\n\r\f]?|\\[^\n\r\f0-9a-fA-F])/y;
 
-/** A character an identifier may start with. */
-const IDENT_START = /[\w\-\\]|[^\x00-\x7f]/;
-
 /**
  * An attribute selector on `id` whose value, where it is an ID, follows the renaming: an exact
  * match, a word in the list, or the start of the value (`[id=`, `[id~=`, `[id|=`, `[id^=`). A value
@@ -133,7 +130,7 @@ function renameInStylesheet(
   };
   while (i < css.length) {
     const c = css[i]!;
-    if (inSelector() && ID_ATTRIBUTE_SELECTOR.test(prelude) && IDENT_START.test(c)) {
+    if (inSelector() && ID_ATTRIBUTE_SELECTOR.test(prelude) && identEnd(css, i) > i) {
       // An unquoted value: `[id=r]`, `[id=\\31 0]`.
       const j = identEnd(css, i);
       const renamed = rename(unescapeIdent(css.slice(i, j)));

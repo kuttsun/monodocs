@@ -196,4 +196,18 @@ describe("renameSvgReferences", () => {
     });
     expect(out).toContain("#\\ffffff {fill:red} #\\d800 {} #p-r {}");
   });
+
+  // Every branch of the scan must move it forward, whatever is cut off where: a stylesheet that
+  // ends mid-escape (`[id=\`) once looped forever, and a build with it never finished.
+  it("finishes on every truncation of a stylesheet, without throwing", () => {
+    const css =
+      "/* c */ @media print { #r, [id=r], [id=\\31 0], [href='#r'] { fill: url( \"#r\" ); " +
+      'content: "#r\\""; stroke: #fff } } @scope (#r) { .a\\#r {} } #\\ffffff {}';
+    for (let end = 0; end <= css.length; end++) {
+      const piece = css.slice(0, end).replace(/</g, "");
+      expect(() =>
+        renamed(`<svg><style>${piece}</style></svg>`, { r: "p-r", "10": "p-10" }),
+      ).not.toThrow();
+    }
+  });
 });
