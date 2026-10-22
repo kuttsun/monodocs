@@ -18,7 +18,7 @@
   var STORAGE_THEME = "monodocs:theme";
   var STORAGE_CONTENT_WIDTH = "monodocs:content-width";
 
-  // クライアントが動的に書く UI（chrome）の文言。表の選択（lang）と html.labels の適用は
+  // クライアントが動的に書く UI（chrome）の文言。英語の表への html.labels の適用は
   // core が行い、解決済みのものだけがここへ届く。自前の文字列をひとつも持たないのが要点で、
   // 両方が持つと、表と上書きが 2 箇所で食い違い、片方だけ差し替わった文書ができる。
   // テーマ契約上 {{siteDataJson}} はどのテンプレートにも必ずあるので、これは常に届く。

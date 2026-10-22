@@ -4288,7 +4288,7 @@ designed small and one that was reduced.
 **Why the object form has `base`.** Someone who wants "compact, but 12px" should not have to copy
 the other three values; a copy is what gets left behind when a preset is later retuned. `base` names
 the table to start from and the object replaces only what it names, which is the resolution order
-`html.labels` already uses over the table `lang` chose (23.4).
+`html.labels` already uses over the English label table (23.4).
 
 **What is deliberately not here.** There is no measure — no maximum width for the text column. The
 column is what `pdf.margin` decides, and a second cap would fight it: a reader who narrowed the
@@ -4458,7 +4458,7 @@ machinery already there. The body, rendered alone, already numbers from 1 and co
 The cover is inserted before the outline is added; inserting pages leaves the body's page objects,
 and so the named destinations the outline and internal links resolve, where they were. PDF page
 labels (the numbering a reader sees in a viewer's page box) are set on the same pass: the cover
-carries the `cover` UI label, which follows `lang` and `html.labels` (23.4), and the body is numbered
+carries the `cover` UI label, which `html.labels` can replace (23.4), and the body is numbered
 from 1, so the viewer agrees with the paper. A title long enough to push the cover onto a second
 sheet is not clipped; both sheets carry the cover label.
 

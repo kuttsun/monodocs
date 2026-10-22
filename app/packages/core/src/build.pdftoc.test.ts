@@ -257,7 +257,6 @@ describe("what the build hands the PDF generator", () => {
     expect(await tocOption("")).toBeUndefined();
   });
 
-  // Checked here rather than on the sheet, where the real-Chromium tests read the table.
   it("titles the table from the document's labels", async () => {
     expect((await tocOption("pdf:\n  toc:\n    enabled: true\n"))?.title).toBe("Contents");
     // lang selects no labels (23.4).

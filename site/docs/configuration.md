@@ -148,7 +148,7 @@ html:
   contentWidthDefault: standard # standard | wide (used until the reader chooses)
   imageLightbox: true # click unlinked, non-decorative content images and Mermaid diagrams to enlarge them
   # labels: # replace individual UI labels, which are English otherwise
-  #   tocTitle: On this page
+  #   tocTitle: In this article
 
 pdf:
   pageSize: A4

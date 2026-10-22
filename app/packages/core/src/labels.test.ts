@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import { isValidLanguageTag, LABEL_KEYS, resolveLabels } from "./labels";
 
 describe("isValidLanguageTag", () => {
   it("accepts tags a document may legitimately declare", () => {
-    // 同梱の表があるかとは無関係。`<html lang>` は文書の言語を表明できなければならない。
+    // `<html lang>` は文書の言語を表明できなければならない。
     for (const tag of ["en", "ja", "en-GB", "ja-JP", "fr", "zh-Hant-TW", "de-CH-1901", "x-pig"]) {
       expect(isValidLanguageTag(tag), tag).toBe(true);
     }
@@ -40,5 +42,33 @@ describe("resolveLabels", () => {
     expect(labels.copy).toBe("複製");
     // 差し替えたのは 2 つだけ。残りは英語の表のまま。
     expect(labels.noResults).toBe("No results");
+  });
+});
+
+// 設定リファレンスは、0.17.1 までの日本語の表を「全部書いた」ブロックとして載せている。
+// キーが増えたり名前が変わったりしたときに、黙って一部だけの写しにならないようにする。
+describe("the former Japanese table in the configuration reference", () => {
+  const FILES = ["site/docs/configuration.md", "site/ja/docs/configuration.md"];
+  const formerTable = (file: string): Record<string, string> => {
+    const text = readFileSync(new URL(`../../../../${file}`, import.meta.url), "utf8");
+    const blocks = [...text.matchAll(/\n```yaml\n(html:\n {2}labels:\n[\s\S]*?)\n```\n/g)]
+      .map((m) => parseYaml(m[1] ?? "") as { html: { labels: Record<string, string> } })
+      .filter((doc) => Object.keys(doc.html.labels).length > 2);
+    expect(blocks, file).toHaveLength(1);
+    return blocks[0]?.html.labels ?? {};
+  };
+
+  it("names every label key, and no other, in both languages", () => {
+    for (const file of FILES) {
+      const labels = formerTable(file);
+      expect(Object.keys(labels), file).toEqual([...LABEL_KEYS]);
+      expect(labels.tocTitle, file).toBe("このページの内容");
+    }
+  });
+
+  it("is the same block in both languages", () => {
+    // 片方だけ書き損じると、どちらの読者が写すかで出力が変わる。
+    const [en, ja] = FILES.map(formerTable);
+    expect(ja).toEqual(en);
   });
 });
