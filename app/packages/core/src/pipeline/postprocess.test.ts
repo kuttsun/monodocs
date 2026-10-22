@@ -897,12 +897,17 @@ describe("postprocessPages - admonitions", () => {
     expect(content).toMatch(body);
   });
 
-  it("still drops the paragraph the marker and its break leave empty", async () => {
+  it.each([
+    // The break goes with the marker (stripLeadingBreak) before the paragraph is looked at.
+    ["the marker and its break leave", "<p>[!NOTE]<br>\n</p>"],
+    // After a newline the break is the body's, and is all the paragraph holds.
+    ["a break alone leaves", "<p>[!NOTE]\n<br></p>"],
+  ])("still drops the paragraph %s empty", async (_, first) => {
     const pages: Page[] = [
       page({
         relativePath: "a.md",
         route: "/a",
-        html: "<blockquote>\n<p>[!NOTE]<br>\n</p>\n<p>Body.</p>\n</blockquote>",
+        html: `<blockquote>\n${first}\n<p>Body.</p>\n</blockquote>`,
       }),
     ];
     await postprocessPages(pages, baseOptions);

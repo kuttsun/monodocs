@@ -370,7 +370,7 @@ function carryId(from: Element, to: Element): void {
   if (id != null && id !== "") to.properties.id = id;
 }
 
-/** Whether a paragraph holds nothing but whitespace and line breaks. */
+/** Whether a paragraph holds nothing but whitespace, comments, and line breaks. */
 function isEmptyParagraph(p: Element): boolean {
   return p.children.every(
     (c) =>
@@ -435,7 +435,7 @@ function processAdmonitions(tree: HastRoot): void {
       if (!marker[0].endsWith("\n")) stripLeadingBreak(firstEl);
       // マーカーだけの段落（`> [!NOTE]\n>\n> 本文` 形式）は空になるので除去する。
       // 文字が無いだけでは空と言えない。画像だけの本文（`> [!NOTE]\n> ![x](i.png)`）は
-      // 文字を持たないので、要素が残っていないことも見る（#221）。
+      // 文字を持たないので、改行以外の要素が残っていないことも見る（#221）。
       if (isEmptyParagraph(firstEl)) {
         node.children = node.children.filter((c) => c !== firstEl);
       }
