@@ -2,6 +2,7 @@ import { toText } from "hast-util-to-text";
 import { SKIP, visit } from "unist-util-visit";
 import type { Element, ElementContent, Root as HastRoot, RootContent } from "hast";
 import { isMath } from "./mathRender.js";
+import { renameSvgReferences } from "./svgIds.js";
 import type { Heading, PageFormula } from "../types.js";
 
 const HEADING_TAGS = new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
@@ -64,9 +65,16 @@ export function prefixIdsAndCollect(tree: HastRoot, prefix: string): PrefixResul
   });
 
   // 2) 同一文書内アンカー（href="#id"）を prefix 後の ID に書き換える。
+  // インライン SVG（AsciiDoc の `opts=inline`）は中の参照（`url(#…)`、`<use href>`、
+  // `<style>` の `#id`、`aria-labelledby` など）も同じ対応で書き換える（#223）。
+  // 中の `<a>` もそこで扱うので、SVG の中へは降りない（2 度書き換えないため）。
   visit(tree, (node) => {
     if (node.type !== "element") return;
     const element = node as Element;
+    if (element.tagName === "svg") {
+      renameSvgReferences(element, (id) => idMap.get(id));
+      return SKIP;
+    }
     if (element.tagName !== "a") return;
     const href = element.properties.href;
     if (typeof href === "string" && href.startsWith("#")) {

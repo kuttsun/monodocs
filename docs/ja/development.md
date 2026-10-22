@@ -247,7 +247,7 @@ Markdown / AsciiDoc files
 - `core/src/serve.ts` … ローカル HTTP 配信 + 監視 + SSE ライブリロード
 
 単一 HTML 内での見出し ID 衝突を避けるため、各見出し / 要素 ID は
-`{page-id}-{元のID}` に prefix する（AsciiDoc の同一文書内 xref も追従して書き換える）。
+`{page-id}-{元のID}` に prefix する（AsciiDoc の同一文書内 xref と、インライン SVG の中の参照も追従して書き換える）。
 
 対応記法や単一ファイル制約を変更するときは [syntax.md](syntax.md) を、ロードマップのバージョン完了時は [status.md](status.md) と [testing.md](testing.md) を更新します。
 

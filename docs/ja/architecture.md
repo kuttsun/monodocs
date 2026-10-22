@@ -44,7 +44,7 @@ loadConfig (config.ts)
 複数ソースが一つの HTML を共有するため、すべての要素 ID はグローバルに一意でなければなりません。
 
 - ソース由来 ID には、脚注など自動生成された ID も含めて `{page-id}-` を付けます。
-- 両レンダラーは [`sources/prefixIds.ts`](../../app/packages/core/src/sources/prefixIds.ts) の `prefixIdsAndCollect` を使い、ID の接頭辞付与、同一ページアンカーの書き換え、見出しと検索テキストの収集を行います。
+- 両レンダラーは [`sources/prefixIds.ts`](../../app/packages/core/src/sources/prefixIds.ts) の `prefixIdsAndCollect` を使い、ID の接頭辞付与、同一ページアンカーとインライン SVG の中の参照（[`sources/svgIds.ts`](../../app/packages/core/src/sources/svgIds.ts)）の書き換え、見出しと検索テキストの収集を行います。
 - `buildPages` はルート衝突とページ ID 衝突を拒否します（たとえば `a-b.md` と `a/b.md` は同じページ ID になります）。
 - 見出し番号（`numbering.sections`）はラベルであり、アドレスではありません。
   - 番号は読者が見るサイドバーから、どちらかのレンダラーではなく共有の `Page` モデルの上で決め、後処理で `.section-number` 要素として見出しへ書き込みます。サイドバー（要るのはタイトルとパスだけ）を後処理より前に組み立てるのはこのためです。

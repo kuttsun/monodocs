@@ -92,6 +92,9 @@ Asciidoctor.js の標準変換に委ねるため、AsciiDoc の大半の記法�
 
 - **要素 ID の prefix**: すべての要素 ID を `{page-id}-{元のID}` に書き換える。見出しに限らず脚注など
   自動生成 ID も対象とし、ページ間の ID 衝突を防ぐ（[sources/prefixIds.ts](../../app/packages/core/src/sources/prefixIds.ts)）。
+  AsciiDoc のページがインラインで書く SVG（`opts=inline`）の中では、参照も ID に追従する。属性と `<style>` の中の
+  `url(#…)`、`#` で始まる `href` と `xlink:href`、`<style>` の `#id` セレクタ、`aria-labelledby` など ID を名指す
+  属性である。ページに無い ID への参照は書いたまま残す。
 - **ルーティング**: 相対パスから拡張子を除いた route を生成し（`index` → `/`）、単一 HTML 内は
   hash route（`#/setup/install`）で疑似ページ切り替えする。
 - **ファイル間リンク変換**: Markdown の `.md` / `.adoc` リンク、AsciiDoc の `xref:`、変換後 `.html` 相当の

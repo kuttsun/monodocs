@@ -65,7 +65,8 @@ All sources share one HTML document, so every element ID must be globally unique
 - Prefix source-generated IDs, including generated ones such as footnotes, with `{page-id}-`.
 - Both renderers use `prefixIdsAndCollect` from
   [`sources/prefixIds.ts`](../app/packages/core/src/sources/prefixIds.ts) to prefix IDs, rewrite same-page
-  anchors, and collect headings and searchable text.
+  anchors and the references inside an inline SVG ([`sources/svgIds.ts`](../app/packages/core/src/sources/svgIds.ts)),
+  and collect headings and searchable text.
 - `buildPages` must reject route collisions and page-ID collisions (for example, `a-b.md` and `a/b.md` produce
   the same page ID).
 - Section numbers (`numbering.sections`) are labels, never addresses:

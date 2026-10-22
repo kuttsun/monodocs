@@ -282,7 +282,8 @@ Markdown / AsciiDoc files
 - `core/src/serve.ts` … Local HTTP serving + watching + SSE live reload
 
 To avoid heading ID collisions within a single HTML, each heading / element ID is prefixed to
-`{page-id}-{original ID}` (AsciiDoc's intra-document xrefs are rewritten to match).
+`{page-id}-{original ID}` (AsciiDoc's intra-document xrefs, and the references inside an inline SVG, are rewritten
+to match).
 
 When changing supported syntax or a single-file constraint, update [syntax.md](syntax.md). When completing a
 roadmap version, update [status.md](status.md) and [testing.md](testing.md).
