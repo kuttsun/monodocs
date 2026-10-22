@@ -111,12 +111,10 @@ describe("buildSite (custom theme)", () => {
     await writeFile(configFile, 'html:\n  theme: "./theme-a"\n');
 
     let resolveNext: (() => void) | null = null;
-    let rejectNext: ((error: Error) => void) | null = null;
     let onErrorOnce: ((error: Error) => void) | null = null;
     function nextRebuild(): Promise<void> {
-      return new Promise<void>((res, rej) => {
+      return new Promise<void>((res) => {
         resolveNext = res;
-        rejectNext = rej;
       });
     }
     const handle = await watchSite(
@@ -130,13 +128,7 @@ describe("buildSite (custom theme)", () => {
         onError: (error) => {
           const r = onErrorOnce;
           onErrorOnce = null;
-          if (r) return r(error);
-          // An error nobody waits for — a theme watch that could not be set up (#215) — fails the
-          // step waiting for a rebuild now, with its cause, instead of after the test's timeout.
-          const reject = rejectNext;
-          resolveNext = null;
-          rejectNext = null;
-          reject?.(error);
+          r?.(error);
         },
       },
     );

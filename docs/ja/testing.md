@@ -13,7 +13,7 @@
     ページ切り替え（encode/decode 整合）を検証する
 - 検証はすべて Docker / devcontainer 内で実行し、ホスト環境を汚さない。
 - テストごとの制限時間は vitest 既定の 5 秒ではなく 20 秒（`app/vitest.config.ts`）。並列実行の負荷（Chromium の起動、文法の読み込み）の下で、単独なら 1 秒のテストが 5 秒を超えることを実測した。
-- watch のテストは inotify のインスタンスを使う。コンテナは、ホストの利用者の上限（`fs.inotify.max_user_instances`、多くは 128）を、ホストのエディタ・ブラウザ・すべての端末と分け合う。この件が見つかったデスクトップでは、コンテナに残っていたのは 6 個で、watch のテストと Chromium が並行して走る全体の実行では、watch のテストの一部が `EMFILE: too many open files, watch` で失敗した（#215）。コマンドリファレンスのとおりホスト側で上限を引き上げる（`sudo sysctl fs.inotify.max_user_instances=1024`）。CI のランナーは未使用の状態で始まる。
+- watch のテストは inotify のインスタンスを使う。ホストの利用者の UID で動くコンテナは、その利用者の上限（`fs.inotify.max_user_instances`、多くは 128）を、ホストのエディタ・ブラウザ・すべての端末と分け合う。この件が見つかったデスクトップでは、コンテナに残っていたのは 6 個で、watch のテストと Chromium が並行して走る全体の実行では、watch のテストの一部が `EMFILE: too many open files, watch` で失敗した（#215）。コマンドリファレンスのとおりホスト側で上限を引き上げる（`sudo sysctl fs.inotify.max_user_instances=1024`）。CI のランナーは未使用の状態で始まる。
 
 ## 実行方法
 

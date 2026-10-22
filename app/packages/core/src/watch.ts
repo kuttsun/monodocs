@@ -131,6 +131,9 @@ export async function watchSite(
         throw error;
       }
       if (probe) watcher.once("close", () => probe.close());
+      // A watch that fails later (a directory added once `fs.inotify.max_user_watches` is used up)
+      // reports through `error`; with no listener that would end the process.
+      watcher.on("error", (error) => callbacks.onError?.(error));
       watchers.add(watcher);
       return watcher;
     } catch (error) {

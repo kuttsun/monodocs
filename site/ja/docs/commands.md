@@ -113,7 +113,7 @@ monodocs watch [input] [options]
 出力ファイルへの書き込みイベントは無視するため、再ビルドが自分自身を再トリガすることはありません。`Ctrl+C` で停止します。
 
 > [!NOTE]
-> Linux では、監視に inotify のインスタンスを 1 つ使います。利用者 1 人が持てる数（`fs.inotify.max_user_instances`、多くは 128）は、エディタやブラウザを含め、その人が動かすすべてのプログラムで分け合います。残りが無いと、`watch` と `serve` は `EMFILE: too many open files, watch` で止まります。上限は `cat /proc/sys/fs/inotify/max_user_instances` で確かめ、`sudo sysctl fs.inotify.max_user_instances=1024` で引き上げます。再起動後も保つには、`/etc/sysctl.d/` の下のファイルに `fs.inotify.max_user_instances = 1024` と書きます。Docker のコンテナは、ホストの利用者と上限を分け合います。
+> Linux では、監視に inotify のインスタンスを 1 つ使います。利用者 1 人が持てる数（`fs.inotify.max_user_instances`、多くは 128）は、エディタやブラウザを含め、その人が動かすすべてのプログラムで分け合います。残りが無いと、`watch` と `serve` は `EMFILE: too many open files, watch` で止まります。上限は `cat /proc/sys/fs/inotify/max_user_instances` で確かめ、`sudo sysctl fs.inotify.max_user_instances=1024` で引き上げます。再起動後も保つには、`/etc/sysctl.d/` の下のファイルに `fs.inotify.max_user_instances = 1024` と書きます。ホストの利用者と同じ UID で動かす Docker のコンテナ（このリポジトリの開発用スクリプトはそうしています）は、その利用者と上限を分け合います。監視はさらに、入力の下のディレクトリとファイルごとに inotify の watch を 1 つずつ、別の上限 `fs.inotify.max_user_watches` から使います。それが残っていないと木の一部が監視されず、エラーはビルドが動き出してから報告されます。
 
 ## `serve`
 

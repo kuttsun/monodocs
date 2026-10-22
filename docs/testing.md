@@ -14,10 +14,11 @@
 - All verification runs inside Docker / devcontainer and does not pollute the host environment.
 - The per-test timeout is 20 s (`app/vitest.config.ts`), not vitest's 5 s: under parallel load
   (Chromium, grammar loading) a test that takes 1 s alone was measured past 5 s.
-- The watch tests need inotify instances, and the container shares the host user's limit
-  (`fs.inotify.max_user_instances`, often 128) with the editor, the browser, and every terminal on the host.
-  On the desktop this was found on, 6 were left for the container, and a full run, with its watch tests and
-  Chromium running in parallel, failed some watch tests with `EMFILE: too many open files, watch` (#215). Raise the limit on the host as the command reference describes
+- The watch tests need inotify instances, and the container, which runs as the host user's UID, shares that
+  user's limit (`fs.inotify.max_user_instances`, often 128) with the editor, the browser, and every terminal on
+  the host. On the desktop this was found on, 6 were left for the container, and a full run, with its watch
+  tests and Chromium running in parallel, failed some watch tests with `EMFILE: too many open files, watch`
+  (#215). Raise the limit on the host as the command reference describes
   (`sudo sysctl fs.inotify.max_user_instances=1024`); CI runners start with it unused.
 
 ## How to Run

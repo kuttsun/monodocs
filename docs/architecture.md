@@ -302,7 +302,10 @@ theme is guaranteed.
 watches source and configuration inputs, ignores output-file writes to prevent rebuild loops, and rejects a
 missing input path. A single-file input is watched through its directory, filtered to that name, because
 `fs.watch` follows the inode and would go silent after an editor saves by renaming a temporary file over the
-original.
+original. On Linux a plain watch on the same target is opened before each recursive one and kept with it: with
+no inotify instance left, Node 22 returns a recursive watch that reports nothing and no error, and only the
+plain one throws (EMFILE, #215). It is not redundant, and removing it brings back a watch that silently does
+nothing.
 
 [`serve.ts`](../app/packages/core/src/serve.ts) provides HTTP serving, `watchSite`, and SSE live reload using
 Node.js APIs. Keep it dependency-free unless a clear portability requirement justifies a new watching
