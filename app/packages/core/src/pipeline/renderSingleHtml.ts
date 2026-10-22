@@ -418,7 +418,7 @@ export async function renderSingleHtmlParts(
   const colorScheme: ColorScheme = input.colorScheme ?? "light";
   const contentWidthDefault: ContentWidthDefault = input.contentWidthDefault ?? "standard";
   const lang = input.lang ?? DEFAULT_LANG;
-  const labels = input.labels ?? resolveLabels(lang).labels;
+  const labels = input.labels ?? resolveLabels();
   const contentWidthState = contentWidthToggleState(contentWidthDefault, labels);
   const generatorVersion = input.generatorVersion?.trim();
   // The document's own line, composed here so that the HTML footer and the PDF's Subject agree.

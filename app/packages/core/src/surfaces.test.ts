@@ -136,7 +136,7 @@ function expectedDefaults(
       .filter((k) => k.startsWith("html.labels."))
       .map((k) => [
         k,
-        r.labelOverrides && Object.keys(r.labelOverrides).length === 0 ? "from `lang`" : "?",
+        r.labelOverrides && Object.keys(r.labelOverrides).length === 0 ? "English" : "?",
       ]),
   );
   return {
@@ -261,7 +261,7 @@ const JA_WORDS: Record<string, string> = {
   "value of `input` (for a single file, its directory)":
     "`input` の値（単一ファイルならそのディレクトリ）",
   "unset (deprecated; removed in 1.0)": "未設定（非推奨。1.0 で削除）",
-  "from `lang`": "`lang` から",
+  English: "英語",
   "page number / total pages": "ページ番号 / 総ページ数",
   "unset (required when the object is written)": "未設定（オブジェクトを書くときは必須）",
   "from `base`": "`base` から",

@@ -282,9 +282,7 @@ export async function buildSite(
   const clientMermaid = hasMermaid && config.mermaidEnabled && config.mermaidMode === "client";
   const bodyScripts = clientMermaid ? await mermaidRuntimeScript(config.mermaidRuntime) : "";
 
-  // ラベルの解決はここで 1 度だけ行う。同梱の表が無いタグの警告も、ビルド 1 回につき 1 度になる。
-  const resolvedLabels = resolveLabels(config.lang, config.labelOverrides);
-  if (resolvedLabels.warning !== undefined) warnings.push(resolvedLabels.warning);
+  const labels = resolveLabels(config.labelOverrides);
 
   const { html, siteDataJson } = await renderSingleHtmlParts({
     title: config.title,
@@ -292,7 +290,7 @@ export async function buildSite(
     pages,
     sidebar,
     lang: config.lang,
-    labels: resolvedLabels.labels,
+    labels,
     theme: config.theme,
     colorScheme: config.colorScheme,
     contentWidth: config.contentWidth,
@@ -345,19 +343,19 @@ export async function buildSite(
         generator: options.generatorVersion ? `monodocs v${options.generatorVersion}` : "monodocs",
         // 13.5: 書き手が書いた値がビューアの文書情報へ届く。
         author: documentAuthor(config.documentMetadata),
-        subject: documentSubject(config.documentMetadata, resolvedLabels.labels),
+        subject: documentSubject(config.documentMetadata, labels),
         keywords: documentKeywords(config.documentMetadata),
         cover: config.pdfCover
           ? buildPdfCover({
               title: config.title,
-              parts: documentCoverParts(config.documentMetadata, resolvedLabels.labels),
+              parts: documentCoverParts(config.documentMetadata, labels),
               lang: config.lang,
-              pageLabel: resolvedLabels.labels.cover,
+              pageLabel: labels.cover,
               watermark: config.pdfWatermark,
             })
           : undefined,
         toc: config.pdfToc.enabled
-          ? buildPdfToc(sidebar, pages, config.pdfToc.depth, resolvedLabels.labels.contents)
+          ? buildPdfToc(sidebar, pages, config.pdfToc.depth, labels.contents)
           : undefined,
         header: config.pdfHeader,
         footer: config.pdfFooter,

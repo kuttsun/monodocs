@@ -48,9 +48,9 @@ Every key is optional. This example lists them all with their default values:
 # Document title shown in the output HTML
 title: Documentation
 
-# Language of the generated document. Fills <html lang> and selects the UI label table.
-# Any BCP 47 tag; label tables ship for en and ja, and anything else falls back to the en
-# labels with a warning. This is not the language of the CLI's own messages.
+# Language of the generated document's pages. Fills <html lang>; the UI labels stay English
+# whatever it says (html.labels replaces them). Any BCP 47 tag. This is not the language of
+# the CLI's own messages.
 lang: en
 
 # What to do when the machine running the build lacks a font the document needs.
@@ -147,7 +147,7 @@ html:
   contentWidthToggle: true # show the standard/wide toggle
   contentWidthDefault: standard # standard | wide (used until the reader chooses)
   imageLightbox: true # click unlinked, non-decorative content images and Mermaid diagrams to enlarge them
-  # labels: # replace individual UI labels on top of the table lang chose
+  # labels: # replace individual UI labels, which are English otherwise
   #   tocTitle: On this page
 
 pdf:
@@ -174,7 +174,7 @@ pdf:
 | Key      | Type   | Default           | Description                                                                                    |
 | -------- | ------ | ----------------- | ---------------------------------------------------------------------------------------------- |
 | `title`  | string | `Documentation`   | Title shown in the output HTML (`<title>` and header).                                          |
-| `lang`   | string | `en`              | Language of the generated document. Fills `<html lang>` and selects the UI label table. See below. |
+| `lang`   | string | `en`              | Language of the generated document's pages. Fills `<html lang>`. See below. |
 | `fontCheck` | `warn` `error` `off` | `warn` | What to do when the build machine lacks a font the document needs. See below. |
 | `input`  | string | `./docs`          | Input path to scan: a directory, or a single source file. The CLI input argument overrides this. Relative to the config file. |
 | `root`   | string | value of `input`  | The directory every relative path resolves against: routes, images, `include::`, and the config file. See below. |
@@ -236,8 +236,8 @@ Every field is optional and is a string monodocs does not interpret. It only tri
 space, so a whitespace-only value counts as unset. The values appear in exactly three places:
 
 - The **footer** at the end of the HTML and the PDF, as one line: `Version 1.2 · 2026-08-22 ·
-  Documentation Team`. The word `Version` comes from the label table `lang` selects, and can be
-  replaced through [`html.labels`](#html-labels)
+  Documentation Team`. The word `Version` is a UI label, and can be replaced through
+  [`html.labels`](#html-labels)
 - The **PDF's document properties**: the authors become `Author`, the version and date become
   `Subject`, and both values as you wrote them become `Keywords`
 - The **PDF cover**, under the `title`, when [`pdf.cover`](#pdf-cover) is enabled
@@ -248,11 +248,10 @@ space, so a whitespace-only value counts as unset. The values appear in exactly 
 > The build stamps no date of its own: a date in the output is a date you wrote. To show the build
 > date, set `document.date` from your workflow.
 
-#### `lang` (document language and UI labels) {#lang}
+#### `lang` (document language) {#lang}
 
-`lang` sets the document's language: it fills `<html lang>` and selects the label table for the UI
-monodocs wraps around the pages (the search box, `On this page`, `No results`, `Copy`, the lightbox
-controls, prev/next).
+`lang` sets the language of the document's pages: it fills `<html lang>`, which browsers, screen
+readers, and Chromium's font selection for the PDF read.
 
 ```yaml
 lang: ja
@@ -260,10 +259,15 @@ lang: ja
 
 - Any syntactically valid BCP 47 tag is accepted. A string that is not one is rejected rather than
   written into the attribute.
-- Label tables ship for `en` (the default) and `ja` only, matched case-insensitively on the primary
-  language subtag, so `en-GB`, `ja-JP`, and `JA` all find one. Any other tag still reaches
-  `<html lang>`, falls back to the English labels, and warns once naming the tag. Use
-  [`html.labels`](#html-labels) to supply the wording.
+- `lang` does not change the UI monodocs wraps around the pages (the search box, `On this page`,
+  `No results`, `Copy`, the lightbox controls, prev/next, the footer, and the PDF's cover and
+  contents). Those labels are English for every tag; use [`html.labels`](#html-labels) to show them
+  in another language.
+
+> [!IMPORTANT]
+> Until 0.17.1, `lang: ja` also switched the UI labels to Japanese. Since 0.17.2 they are English
+> unless `html.labels` replaces them; [`html.labels`](#html-labels) shows the block that restores the
+> previous Japanese wording.
 
 > [!NOTE]
 > `lang` is not the language of the CLI's own messages. The build log does not change language with
@@ -676,12 +680,12 @@ A formula is rendered by KaTeX to MathML only: no script or stylesheet is added 
 | `html.contentWidthToggle` | boolean | `true` | Show the reader-facing standard/wide content toggle. When `false`, stored reader choices and `html.contentWidthDefault` are ignored. |
 | `html.contentWidthDefault` | `standard` `wide` | `standard` | Initial content-width state. A reader's saved choice takes precedence. |
 | `html.imageLightbox` | boolean | `true` | Open unlinked, non-decorative content images in a viewport-sized dialog when clicked or activated from the keyboard. Linked images retain their original link behavior, and images with an explicit empty `alt` remain decorative. An SVG image is scaled up to fill the dialog, keeping its proportions; a raster image is only shrunk to fit. When that differs from the image's actual size (one image pixel per CSS pixel for a raster image; for a local SVG image, the size its own `width` and `height`, or its `viewBox`, give it; an SVG the build cannot read or size, such as a remote one, a data URI, one outside the input, or one sized in `em`, gets no button), a button switches between the two, and the dialog scrolls at actual size; a raster image is never enlarged. An image is shown on a white panel, in dark mode too, so a transparent one stays readable. Mermaid diagrams open when clicked, or from a button that appears on keyboard focus, scaled to fill the dialog; a diagram with an `accTitle` uses it as the caption. The dialog is omitted from print and PDF output. |
-| `html.labels`        | map     | (from `lang`) | Replace individual UI labels on top of the table [`lang`](#lang) chose. An unknown key is rejected. See below. |
+| `html.labels`        | map     | (English) | Replace individual UI labels. An unknown key is rejected. See below. |
 
 #### `html.labels` (UI labels) {#html-labels}
 
-Each entry replaces one label from the table `lang` selected; everything you leave out keeps the
-table's wording. This is also how you supply a language monodocs ships no table for.
+The UI labels are English. Each entry replaces one of them; everything you leave out keeps the English
+wording. This is how a document shows its UI in another language.
 
 ```yaml
 lang: fr
@@ -691,41 +695,78 @@ html:
     noResults: Aucun résultat
 ```
 
-An unknown key is rejected rather than ignored, so a typo cannot silently keep the default. The full
-key set:
+An unknown key is rejected rather than ignored, so a typo cannot silently keep the default. The
+Japanese labels `lang: ja` selected until 0.17.1 are, written out in full:
 
-| Key                  | `en`                         | `ja`                       | Where it appears |
-| -------------------- | ---------------------------- | -------------------------- | ---------------- |
-| `openSidebar`        | Open sidebar                 | サイドバーを開く           | The ☰ button shown when the sidebar is closed |
-| `closeSidebar`       | Close sidebar                | サイドバーを閉じる         | The « button in the sidebar header |
-| `searchPlaceholder`  | Search…                      | 検索…                      | Placeholder in the search box |
-| `searchLabel`        | Search documents             | ドキュメントを検索         | Accessible name of the search box |
-| `clearSearch`        | Clear search                 | 検索語を消去               | The × that clears the search box |
-| `searchResults`      | Search results               | 検索結果                   | Accessible name of the result list |
-| `noResults`          | No results                   | 該当なし                   | Shown when a query matches nothing |
-| `contentWidthToggle` | Toggle content width         | 本文幅を切り替え           | Accessible name of the width button |
-| `useWideContent`     | Use wide content             | 本文を広く表示             | Width button tooltip while standard |
-| `useStandardContent` | Use standard content width   | 本文を標準の幅で表示       | Width button tooltip while wide |
-| `darkModeToggle`     | Toggle dark mode             | ダークモードを切り替え     | The dark mode button |
-| `tocLabel`           | Table of contents            | 目次                       | Accessible name of the in-page table of contents |
-| `tocTitle`           | On this page                 | このページの内容           | Heading above the in-page table of contents |
-| `pageNavLabel`       | Page navigation              | ページ移動                 | Accessible name of the prev/next navigation |
-| `prev`               | ← Prev                       | ← 前へ                     | Previous-page link |
-| `next`               | Next →                       | 次へ →                     | Next-page link |
-| `wrapToggle`         | Toggle word wrap             | 折り返しを切り替え         | Word-wrap button on a code block |
-| `copyCode`           | Copy code                    | コードをコピー             | Accessible name of the copy button |
-| `copy`               | Copy                         | コピー                     | Copy button tooltip |
-| `copied`             | Copied!                      | コピーしました             | Shown after a successful copy |
-| `copyFailed`         | Copy failed                  | コピーできませんでした     | Shown when a copy fails |
-| `openImagePreview`   | Open image preview           | 画像を拡大表示             | Accessible name of an enlargeable image, and of the button that enlarges a Mermaid diagram |
-| `imagePreview`       | Image preview                | 画像プレビュー             | Accessible name of the lightbox dialog |
-| `closeImagePreview`  | Close image preview          | 画像プレビューを閉じる     | Close button in the lightbox |
-| `actualSize`         | Actual size                  | 実寸で表示                 | Lightbox button that shows an image at its actual size |
-| `fitToScreen`        | Fit to screen                | 画面に合わせる             | Lightbox button that fits the image to the screen again |
-| `generatedBy`        | Generated by                 | 生成:                      | Prefix of the branding footer |
-| `version`            | Version                      | バージョン                 | Before `document.version` in the footer |
-| `cover`              | Cover                        | 表紙                       | The cover's page label, shown in the PDF viewer's page number box |
-| `contents`           | Contents                     | 目次                       | The heading of the printed table of contents ([`pdf.toc`](#pdf-toc)) |
+```yaml
+html:
+  labels:
+    openSidebar: "サイドバーを開く"
+    closeSidebar: "サイドバーを閉じる"
+    searchPlaceholder: "検索…"
+    searchLabel: "ドキュメントを検索"
+    clearSearch: "検索語を消去"
+    searchResults: "検索結果"
+    noResults: "該当なし"
+    contentWidthToggle: "本文幅を切り替え"
+    useWideContent: "本文を広く表示"
+    useStandardContent: "本文を標準の幅で表示"
+    darkModeToggle: "ダークモードを切り替え"
+    tocLabel: "目次"
+    tocTitle: "このページの内容"
+    pageNavLabel: "ページ移動"
+    prev: "← 前へ"
+    next: "次へ →"
+    wrapToggle: "折り返しを切り替え"
+    copyCode: "コードをコピー"
+    copy: "コピー"
+    copied: "コピーしました"
+    copyFailed: "コピーできませんでした"
+    openImagePreview: "画像を拡大表示"
+    imagePreview: "画像プレビュー"
+    closeImagePreview: "画像プレビューを閉じる"
+    actualSize: "実寸で表示"
+    fitToScreen: "画面に合わせる"
+    generatedBy: "生成:"
+    version: "バージョン"
+    cover: "表紙"
+    contents: "目次"
+```
+
+The full key set:
+
+| Key | Default | Where it appears |
+| --- | --- | --- |
+| `openSidebar` | Open sidebar | The ☰ button shown when the sidebar is closed |
+| `closeSidebar` | Close sidebar | The « button in the sidebar header |
+| `searchPlaceholder` | Search… | Placeholder in the search box |
+| `searchLabel` | Search documents | Accessible name of the search box |
+| `clearSearch` | Clear search | The × that clears the search box |
+| `searchResults` | Search results | Accessible name of the result list |
+| `noResults` | No results | Shown when a query matches nothing |
+| `contentWidthToggle` | Toggle content width | Accessible name of the width button |
+| `useWideContent` | Use wide content | Width button tooltip while standard |
+| `useStandardContent` | Use standard content width | Width button tooltip while wide |
+| `darkModeToggle` | Toggle dark mode | The dark mode button |
+| `tocLabel` | Table of contents | Accessible name of the in-page table of contents |
+| `tocTitle` | On this page | Heading above the in-page table of contents |
+| `pageNavLabel` | Page navigation | Accessible name of the prev/next navigation |
+| `prev` | ← Prev | Previous-page link |
+| `next` | Next → | Next-page link |
+| `wrapToggle` | Toggle word wrap | Word-wrap button on a code block |
+| `copyCode` | Copy code | Accessible name of the copy button |
+| `copy` | Copy | Copy button tooltip |
+| `copied` | Copied! | Shown after a successful copy |
+| `copyFailed` | Copy failed | Shown when a copy fails |
+| `openImagePreview` | Open image preview | Accessible name of an enlargeable image, and of the button that enlarges a Mermaid diagram |
+| `imagePreview` | Image preview | Accessible name of the lightbox dialog |
+| `closeImagePreview` | Close image preview | Close button in the lightbox |
+| `actualSize` | Actual size | Lightbox button that shows an image at its actual size |
+| `fitToScreen` | Fit to screen | Lightbox button that fits the image to the screen again |
+| `generatedBy` | Generated by | Prefix of the branding footer |
+| `version` | Version | Before `document.version` in the footer |
+| `cover` | Cover | The cover's page label, shown in the PDF viewer's page number box |
+| `contents` | Contents | The heading of the printed table of contents ([`pdf.toc`](#pdf-toc)) |
 
 How a custom theme gets the labels:
 
@@ -960,7 +1001,7 @@ pdf:
   body's.
 - **The cover is unnumbered, and the body starts at 1.** Neither the default footer nor a
   replacement fragment is drawn on it, and the total page count leaves it out. The PDF viewer's page
-  number box agrees with the print: the cover shows the [`cover`](#html-labels) label (`Cover` / `表紙`),
+  number box agrees with the print: the cover shows the [`cover`](#html-labels) label (`Cover` by default),
   the body 1, 2, 3, and so on.
 - **The bookmarks still point into the body.** The cover is not added to them.
 - **HTML gets no cover.** On screen, the same information is in the footer at the end, which
@@ -984,7 +1025,7 @@ pdf:
   `[%collapsible]` example), which is not on the paper. Each line is a link to its section.
 - **Where it goes.** On sheets of its own, in front of the body and after the [cover](#pdf-cover).
   Its sheets are part of the body, so they are numbered in the footer and the first page starts on the
-  sheet after them. The heading is the [`contents`](#html-labels) label (`Contents` / `目次`).
+  sheet after them. The heading is the [`contents`](#html-labels) label (`Contents` by default).
 - **The numbers are read from the PDF, and checked.** monodocs prints the document once with the
   number column empty, reads which sheet each section landed on, prints it again with the numbers
   in, then reads that final PDF once more and compares. The column has a fixed width in tabular

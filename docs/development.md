@@ -289,18 +289,18 @@ roadmap version, update [status.md](status.md) and [testing.md](testing.md).
 
 ### Language of the UI (chrome)
 
-The theme's UI text (copy/wrap, prev/next navigation, search, table of contents, etc.) **follows the document's
-`lang`**, default `en` (v0.10). The language is chosen at build time; there is no runtime i18n following the
-reader, since a single file has one audience at a time.
+The theme's UI text (copy/wrap, prev/next navigation, search, table of contents, etc.) is **English, whatever
+the document's `lang`**, and `html.labels` replaces individual entries (0.17.2). The text is fixed at build
+time; there is no runtime i18n following the reader, since a single file has one audience at a time.
 
-Core resolves the table for `lang`, applies `html.labels` over it, and publishes the result in `siteDataJson`;
+Core applies `html.labels` over the English table and publishes the result in `siteDataJson`;
 `themes/default/app.js` consumes that instead of holding its own copy, and static text comes from tokens in
-`template.html`. Tables ship for `en` and `ja`. When adding a label, add it to both tables and to the enumerated
-key set: a key missing from one table fails the build rather than silently falling back.
+`template.html`. When adding a label, add it to the table and to the enumerated key set: a key missing from
+the table fails the typecheck rather than reaching a reader empty.
 
 > [!NOTE]
-> Until v0.10 the labels were always English, so a `lang="ja"` document displayed `On this page`, and no
-> configuration could fix it. See [roadmap.md](roadmap.md) 23.4.
+> From v0.10 to 0.17.1, `lang` also selected a label table, and `ja` shipped one. See
+> [roadmap.md](roadmap.md) 23.4 for why 0.17.2 dropped it.
 
 ### PDF Fonts
 

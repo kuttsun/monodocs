@@ -66,36 +66,36 @@
 | `html.imageLightbox` | `true` |
 | `html.branding` | `true` |
 | `html.colorScheme` | `light` |
-| `html.labels.openSidebar` | `lang` から |
-| `html.labels.closeSidebar` | `lang` から |
-| `html.labels.searchPlaceholder` | `lang` から |
-| `html.labels.searchLabel` | `lang` から |
-| `html.labels.clearSearch` | `lang` から |
-| `html.labels.searchResults` | `lang` から |
-| `html.labels.noResults` | `lang` から |
-| `html.labels.contentWidthToggle` | `lang` から |
-| `html.labels.useWideContent` | `lang` から |
-| `html.labels.useStandardContent` | `lang` から |
-| `html.labels.darkModeToggle` | `lang` から |
-| `html.labels.tocLabel` | `lang` から |
-| `html.labels.tocTitle` | `lang` から |
-| `html.labels.pageNavLabel` | `lang` から |
-| `html.labels.prev` | `lang` から |
-| `html.labels.next` | `lang` から |
-| `html.labels.wrapToggle` | `lang` から |
-| `html.labels.copyCode` | `lang` から |
-| `html.labels.copy` | `lang` から |
-| `html.labels.copied` | `lang` から |
-| `html.labels.copyFailed` | `lang` から |
-| `html.labels.openImagePreview` | `lang` から |
-| `html.labels.imagePreview` | `lang` から |
-| `html.labels.closeImagePreview` | `lang` から |
-| `html.labels.actualSize` | `lang` から |
-| `html.labels.fitToScreen` | `lang` から |
-| `html.labels.generatedBy` | `lang` から |
-| `html.labels.version` | `lang` から |
-| `html.labels.cover` | `lang` から |
-| `html.labels.contents` | `lang` から |
+| `html.labels.openSidebar` | 英語 |
+| `html.labels.closeSidebar` | 英語 |
+| `html.labels.searchPlaceholder` | 英語 |
+| `html.labels.searchLabel` | 英語 |
+| `html.labels.clearSearch` | 英語 |
+| `html.labels.searchResults` | 英語 |
+| `html.labels.noResults` | 英語 |
+| `html.labels.contentWidthToggle` | 英語 |
+| `html.labels.useWideContent` | 英語 |
+| `html.labels.useStandardContent` | 英語 |
+| `html.labels.darkModeToggle` | 英語 |
+| `html.labels.tocLabel` | 英語 |
+| `html.labels.tocTitle` | 英語 |
+| `html.labels.pageNavLabel` | 英語 |
+| `html.labels.prev` | 英語 |
+| `html.labels.next` | 英語 |
+| `html.labels.wrapToggle` | 英語 |
+| `html.labels.copyCode` | 英語 |
+| `html.labels.copy` | 英語 |
+| `html.labels.copied` | 英語 |
+| `html.labels.copyFailed` | 英語 |
+| `html.labels.openImagePreview` | 英語 |
+| `html.labels.imagePreview` | 英語 |
+| `html.labels.closeImagePreview` | 英語 |
+| `html.labels.actualSize` | 英語 |
+| `html.labels.fitToScreen` | 英語 |
+| `html.labels.generatedBy` | 英語 |
+| `html.labels.version` | 英語 |
+| `html.labels.cover` | 英語 |
+| `html.labels.contents` | 英語 |
 | `pdf.pageSize` | `A4` |
 | `pdf.margin.top` | `20mm` |
 | `pdf.margin.right` | `15mm` |
@@ -173,7 +173,6 @@
 - `input/not-found`
 - `input/unsupported-file`
 - `internal/unexpected`
-- `lang/no-label-table`
 - `lang/unsupported`
 - `link/unresolved`
 - `link/unresolved-anchor`

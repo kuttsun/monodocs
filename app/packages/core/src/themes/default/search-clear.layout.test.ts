@@ -133,10 +133,10 @@ async function nativeCancelDrawn(page: Page, control: boolean): Promise<boolean>
 }
 
 describe("the clear button's name", () => {
-  it("comes from the label table, and html.labels replaces it", async () => {
+  it("comes from the labels, English under lang: ja, and html.labels replaces it", async () => {
     expect(html).toMatch(/id="search-clear"[^>]*aria-label="Clear search"/);
     const ja = await build("ja", "lang: ja\n");
-    expect(ja).toMatch(/id="search-clear"[^>]*aria-label="検索語を消去"/);
+    expect(ja).toMatch(/id="search-clear"[^>]*aria-label="Clear search"/);
     const own = await build("own", 'html:\n  labels:\n    clearSearch: "Reset"\n');
     expect(own).toMatch(/id="search-clear"[^>]*aria-label="Reset"[^>]*title="Reset"/);
   }, 60_000);

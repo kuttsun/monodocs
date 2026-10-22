@@ -1,12 +1,11 @@
-import { type Diagnostic, warn } from "./diagnostics.js";
-import { t } from "./messages.js";
 /**
  * 生成した文書の UI ラベル（chrome）。
  *
  * 文書には一致する理由のない 2 つの言語がある。ページ本文の言語と、monodocs がその周りに
- * 被せる UI の言語である。`lang` が後者の表を選び、`html.labels` がその上に個別のエントリを
- * 差し替える。解決は core だけで行い、結果を `siteDataJson` に載せる。テーマ側（app.js）が
- * 自前の文字列を持つと、表と上書きが 2 箇所で食い違うため。
+ * 被せる UI の言語である。`lang` は前者だけを表し、UI のラベルは常に英語の表から始まる
+ * （0.17.2 で言語ごとの表をやめた。roadmap 23.4）。`html.labels` がその上に個別のエントリを
+ * 差し替え、英語以外の UI はここで入れる。解決は core だけで行い、結果を `siteDataJson` に
+ * 載せる。テーマ側（app.js）が自前の文字列を持つと、表と上書きが 2 箇所で食い違うため。
  */
 
 /**
@@ -49,7 +48,7 @@ export const LABEL_KEYS = [
 export type LabelKey = (typeof LABEL_KEYS)[number];
 export type Labels = Record<LabelKey, string>;
 
-const EN: Labels = {
+const DEFAULT_LABELS: Labels = {
   openSidebar: "Open sidebar",
   closeSidebar: "Close sidebar",
   searchPlaceholder: "Search…",
@@ -81,46 +80,6 @@ const EN: Labels = {
   cover: "Cover",
   contents: "Contents",
 };
-
-const JA: Labels = {
-  openSidebar: "サイドバーを開く",
-  closeSidebar: "サイドバーを閉じる",
-  searchPlaceholder: "検索…",
-  searchLabel: "ドキュメントを検索",
-  clearSearch: "検索語を消去",
-  searchResults: "検索結果",
-  noResults: "該当なし",
-  contentWidthToggle: "本文幅を切り替え",
-  useWideContent: "本文を広く表示",
-  useStandardContent: "本文を標準の幅で表示",
-  darkModeToggle: "ダークモードを切り替え",
-  tocLabel: "目次",
-  tocTitle: "このページの内容",
-  pageNavLabel: "ページ移動",
-  prev: "← 前へ",
-  next: "次へ →",
-  wrapToggle: "折り返しを切り替え",
-  copyCode: "コードをコピー",
-  copy: "コピー",
-  copied: "コピーしました",
-  copyFailed: "コピーできませんでした",
-  openImagePreview: "画像を拡大表示",
-  imagePreview: "画像プレビュー",
-  closeImagePreview: "画像プレビューを閉じる",
-  actualSize: "実寸で表示",
-  fitToScreen: "画面に合わせる",
-  generatedBy: "生成:",
-  version: "バージョン",
-  cover: "表紙",
-  contents: "目次",
-};
-
-/**
- * 同梱する表。**en と ja だけ**にとどめる。中途半端に訳した言語を core に同梱するのは、
- * その言語の読者にとって何も無いより悪く、しかも保守するのは話者ではなく維持者になる。
- * 他の言語は `html.labels` で入れられる。
- */
-const TABLES: Record<string, Labels> = { en: EN, ja: JA };
 
 export const DEFAULT_LANG = "en";
 
@@ -164,13 +123,12 @@ const GRANDFATHERED = new Set(
 /**
  * 構文的に妥当な BCP 47 言語タグか。
  *
- * 文書の言語であり `<html lang>` はそれを表明できなければならないので、同梱の表があるかとは
- * 無関係に「タグとして妥当か」だけを見る。妥当でない文字列は属性に書かず拒否する。
+ * 文書の言語であり `<html lang>` はそれを表明できなければならないので、「タグとして妥当か」
+ * だけを見る。妥当でない文字列は属性に書かず拒否する。
  *
  * 判定の主体は `Intl.getCanonicalLocales`（well-formed でなければ RangeError を投げる）だが、
  * これは Unicode の locale identifier 文法なので BCP 47 と完全には一致しない。妥当なのに
- * 弾かれる 2 種類 — 私用のみのタグと grandfathered タグ — を先に受ける。どちらも同梱の表は
- * 無いのでラベルは英語へ落ちるが、それは属性に書けないこととは別の話である。
+ * 弾かれる 2 種類 — 私用のみのタグと grandfathered タグ — を先に受ける。
  */
 export function isValidLanguageTag(tag: string): boolean {
   if (tag.length === 0 || tag.length > 100) return false;
@@ -186,45 +144,8 @@ export function isValidLanguageTag(tag: string): boolean {
 }
 
 /**
- * タグから同梱の表を探すためのキー（主言語サブタグを小文字化したもの）。
- * `en-GB` / `ja-JP` / `JA` はいずれも表に行き着く。照合先の無いタグ
- * （私用のみのタグ、grandfathered タグ）は undefined を返す。
+ * 英語の表に `overrides` を重ねる。`lang` は見ない。表を選ばないので、どのタグでも警告は出ない。
  */
-function primarySubtag(tag: string): string | undefined {
-  const first = tag.split("-")[0]?.toLowerCase();
-  if (first === undefined || first === "" || first === "x") return undefined;
-  // 主言語サブタグは 2〜3 文字（または 4〜8 文字の登録済み言語）。数字を含むものは
-  // 主言語サブタグではない。
-  return /^[a-z]{2,8}$/.test(first) ? first : undefined;
-}
-
-export type ResolvedLabels = {
-  labels: Labels;
-  /** The finding reported when no shipped table matched and English was used instead. */
-  warning?: Diagnostic;
-};
-
-/**
- * `lang` に対する表を選び、`overrides` をその上に重ねる。
- *
- * 同梱の表が無いタグは拒否せず en の表へ落として警告する。拒否すると、フランス語の文書が
- * ビルドを通すためだけに自分を英語だと偽ることになり、上書きできる英語ラベルより読者にとって
- * 悪い。警告はビルド 1 回につき 1 度、タグ名を挙げて出す（呼び出し側が 1 回だけ呼ぶ）。
- */
-export function resolveLabels(lang: string, overrides: Partial<Labels> = {}): ResolvedLabels {
-  const key = primarySubtag(lang);
-  const table = key === undefined ? undefined : TABLES[key];
-  const labels = { ...(table ?? EN), ...overrides };
-  if (table !== undefined) return { labels };
-  return {
-    labels,
-    warning: warn(
-      "lang/no-label-table",
-      t("labels.noTable", {
-        lang,
-        fallback: DEFAULT_LANG,
-        shipped: Object.keys(TABLES).join(", "),
-      }),
-    ),
-  };
+export function resolveLabels(overrides: Partial<Labels> = {}): Labels {
+  return { ...DEFAULT_LABELS, ...overrides };
 }

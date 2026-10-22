@@ -215,7 +215,7 @@ v0.18〜v0.20 も 1.0 の前に置く。Git を見ない読み手のために、
 
 **文書の言語と UI ラベル**（[roadmap.md](roadmap.md) 23.4）
 
-- [x] トップレベルの `lang` キーが `<html lang>` と UI ラベルの両方を決め、既定は `en`。文書がある言語を宣言しながら別の言語を表示することが無くなる。これは [architecture.md](architecture.md) と [development.md](development.md) に記録されている「ラベルは英語に統一」の決定を覆すものであり、ロードマップと矛盾したまま残さず両方とも更新する。直書きされていた `<html lang="ja">` に依存していた利用者にはその属性が変わる破壊的変更であり、1.0 より前に行う
+- [x] トップレベルの `lang` キーが `<html lang>` と UI ラベルの両方を決め、既定は `en`。文書がある言語を宣言しながら別の言語を表示することが無くなる。これは [architecture.md](architecture.md) と [development.md](development.md) に記録されている「ラベルは英語に統一」の決定を覆すものであり、ロードマップと矛盾したまま残さず両方とも更新する。直書きされていた `<html lang="ja">` に依存していた利用者にはその属性が変わる破壊的変更であり、1.0 より前に行う。ラベルの側は 0.17.2 で覆した（v0.17 の 0.17.2）
 - [x] `lang` は構文的に妥当な BCP 47 タグを受理し、そうでない文字列は属性に書かず拒否する。照合は主要言語サブタグに対して大文字小文字を無視する（`en-GB` / `JA` → `en` / `ja`）。表を持たないタグ——照合すべきサブタグを持たない、タグ全体が私用の `x-…` や grandfathered tag を含む——は英語のラベルへフォールバックし、タグを名指ししてビルドごとに一度警告する
 - [x] 表の解決と `html.labels` の適用は core が行い、結果を `{{siteDataJson}}` に公開する。`app.js` は自前の写しを持たずそれを消費するので、表と上書きがずれることがない
 - [x] `en` / `ja` の表が、列挙されたキー集合を完全に覆う。どちらかに欠けたキーは黙ってフォールバックせずビルドを失敗させる。1.0 が凍結するのでキー集合は設定リファレンスに列挙する。未知の `html.labels` キーは無視されずに拒否される
@@ -665,6 +665,10 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [x] ダークモードでは、Mermaid のライトテーマで描かれた図（クライアントのランタイムが描いたもの、明るいページ向けに pre-render したもの）に、図の画像と同じ白い下地を敷き、lightbox でも白いパネルに載せる。ほぼ黒の辺が `#0d1117` の上で見えなくなっていたためである。`html.colorScheme: dark` で（`redux-dark-color` で）pre-render した図にはビルド時に印を付け、どちらでもページの背景のままにする——`lightbox.layout.test.ts` がそれぞれを Chromium で開き、本文での下地とパネルの色を確かめる。変更前は、ライトテーマの図をダークモードで開く 2 件が失敗した。印は `postprocess.test.ts` と `build.mermaid-prerender.test.ts` が確かめる。[syntax.md](syntax.md) が説明する
 - [x] lightbox で、画像を「画面に合わせる」と「実寸」で切り替えられるようにする。実寸は、ラスター画像では画像の 1 ピクセルを CSS の 1 ピクセルとする大きさ、ローカルの SVG 画像では SVG が自分に与える大きさで、ビルドが `<img>` に記録する（`data-monodocs-svg-size`）。ブラウザは `viewBox` だけの SVG に丸めた既定の大きさを返し、`<img>` の `width` は作者が書いたものかもしれないためである。ビルドが読めない・大きさを決められない SVG（リモート、data URI、入力の外、`em` での寸法）にはボタンを出さない。実寸ではダイアログをスクロールさせ、絵の中央から見せる。ボタンは 2 つの大きさが違うときだけ出し、ラスター画像はどちらでも拡大しない。Mermaid 図には付けない。ボタンの文言は `html.labels` の新しいキー `actualSize` と `fitToScreen` で、issue はマイナーリリースを提案していたが、判断してこのパッチに入れた——`lightbox.layout.test.ts` が、小さいラスター画像（ボタンなし）、横長と縦長の大きいラスター画像をキーボードで実寸にする場合（ピクセルどおり、スクロールし、絵の始まりに届き、中央から始まる）、ボタンを 2 回押す場合（画面に合わせ直す）、開き直す場合（画面に合わせる）、draw.io の形の SVG、`viewBox` だけの SVG、作者が幅を狭めた SVG を、それぞれが自分に与える大きさで開く場合、大きさが記録されていない SVG にボタンを出さないこと、押してもボタンがフォーカスを保つことを確かめる。`svgOwnSize` と記録は `postprocess.test.ts` が確かめる。キーは `surfaces.md` に載せた
 - [x] `0.17.1` を `latest` タグで公開し、CI ガイドをバージョン変更の中で固定する。`dist_tag: 0.17.1` で走らせた `verify-published.yml` と、リリースバイナリの `verify-release-binaries.yml` で検証し、`next` をそこへ移す——2026-10-20 に #217 から公開した。CI ガイドは各言語で 4 箇所を `monodocs@0.17.1` に固定し、そのままデプロイされた。`dist_tag: 0.17.1` の `verify-published.yml` は Linux と Windows で通った。1 回目は、レジストリがその版を返す前に走らせたので `ETARGET` で失敗した。`verify-release-binaries.yml` は、初めは両方のプラットフォームで失敗した。[#208](https://github.com/kuttsun/monodocs/pull/208) が `examples/en` に設定ファイルを足したので、既定の出力は文書どおりその横に書かれるのに、スクリプトは作業ディレクトリを見ていたためである。[#218](https://github.com/kuttsun/monodocs/pull/218) でスクリプトを直したあとは、どちらのプラットフォームでも 16 件中 16 件が通り、Linux のスクリプトは Node.js の無い `debian:stable-slim` のコンテナでも同じく通った。`next` と `latest` はどちらも `0.17.1` を指す
+
+**0.17.2**（[#224](https://github.com/kuttsun/monodocs/issues/224)）
+
+- [x] UI ラベルは文書の `lang` によらず英語になり、`lang` は `<html lang>` を埋めるだけになる。`ja` の表と `lang/no-label-table` はなくなり、UI を別の言語で表示する手段は `html.labels` になる。`html.labels` を設定していない `lang: ja` のビルドはすべて出力が変わる。それを承知でこのパッチに入れることにし、[roadmap.md](roadmap.md) 23.4 に記録した。設定リファレンスには、以前の `ja` の表を写せる形で載せる — `build.lang.test.ts` が `lang: ja` と `lang: fr` をビルドし、テンプレートと `siteDataJson` に英語のラベルがあり警告が出ないことを確かめる。`labels.test.ts`、`build.documentmeta.test.ts`、`build.pdfbands.test.ts`、`build.pdftoc.test.ts`、`init.test.ts` は、`lang: ja` でフッターの語、表紙のラベル、目次の見出しが英語になり、`html.labels` がそれぞれを差し替えられることを確かめる
 
 ### v0.18: 旧版との差分を HTML に出す
 
