@@ -189,4 +189,11 @@ describe("renameSvgReferences", () => {
     );
     expect(out).toContain("@scope (#p-r) { g {} } @supports selector(#p-r) { #p-r {} }");
   });
+
+  it("reads an escape past the last code point as CSS does, rather than throwing", () => {
+    const out = renamed("<svg><style>#\\ffffff {fill:red} #\\d800 {} #r {}</style></svg>", {
+      r: "p-r",
+    });
+    expect(out).toContain("#\\ffffff {fill:red} #\\d800 {} #p-r {}");
+  });
 });

@@ -254,8 +254,14 @@ function identEnd(css: string, from: number): number {
 function unescapeIdent(written: string): string {
   return written.replace(
     /\\(?:([0-9a-fA-F]{1,6})[ \t\n\r\f]?|(.))/g,
-    (_, hex?: string, ch?: string) =>
-      hex === undefined ? ch! : String.fromCodePoint(Number.parseInt(hex, 16)),
+    (_, hex?: string, ch?: string) => {
+      if (hex === undefined) return ch!;
+      // As CSS reads it: zero, a surrogate, or past the last code point is U+FFFD, not an error.
+      const code = Number.parseInt(hex, 16);
+      return code === 0 || (code >= 0xd800 && code <= 0xdfff) || code > 0x10ffff
+        ? "\uFFFD"
+        : String.fromCodePoint(code);
+    },
   );
 }
 
