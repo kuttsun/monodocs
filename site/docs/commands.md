@@ -119,6 +119,9 @@ monodocs watch [input] [options]
 
 Writes to the output file are ignored, so a rebuild never re-triggers itself. Press `Ctrl+C` to stop.
 
+> [!NOTE]
+> On Linux, watching takes an inotify instance, and the number a user may hold (`fs.inotify.max_user_instances`, often 128) is shared with every program they run, editors and browsers included. With none left, `watch` and `serve` stop with `EMFILE: too many open files, watch`. Check the limit with `cat /proc/sys/fs/inotify/max_user_instances` and raise it with `sudo sysctl fs.inotify.max_user_instances=1024`; to keep it across reboots, put `fs.inotify.max_user_instances = 1024` in a file under `/etc/sysctl.d/`. A Docker container shares the limit with its host user.
+
 ## `serve`
 
 Serves the output over HTTP, watches for changes, and live-reloads the browser (via server-sent events).
