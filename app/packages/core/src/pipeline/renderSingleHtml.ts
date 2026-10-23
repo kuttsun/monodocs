@@ -23,8 +23,8 @@ export type RenderHtmlInput = {
   /** 文書の言語（BCP 47）。`{{lang}}` を持つテンプレートの `<html lang>` に入る。未指定は "en"。 */
   lang?: string;
   /**
-   * 解決済みの UI ラベル。解決（表の選択と `html.labels` の適用）は呼び出し側で 1 度だけ
-   * 行い、ここへは結果を渡す。未指定のときは `lang` から解決する（この境界を直接呼ぶ
+   * 解決済みの UI ラベル。解決（英語の表への `html.labels` の適用）は呼び出し側で 1 度だけ
+   * 行い、ここへは結果を渡す。未指定のときは英語の表を使う（この境界を直接呼ぶ
    * 利用者が、ラベルを組み立てずに済むようにするため）。
    */
   labels?: Labels;
@@ -418,7 +418,7 @@ export async function renderSingleHtmlParts(
   const colorScheme: ColorScheme = input.colorScheme ?? "light";
   const contentWidthDefault: ContentWidthDefault = input.contentWidthDefault ?? "standard";
   const lang = input.lang ?? DEFAULT_LANG;
-  const labels = input.labels ?? resolveLabels(lang).labels;
+  const labels = input.labels ?? resolveLabels();
   const contentWidthState = contentWidthToggleState(contentWidthDefault, labels);
   const generatorVersion = input.generatorVersion?.trim();
   // The document's own line, composed here so that the HTML footer and the PDF's Subject agree.

@@ -44,7 +44,7 @@ loadConfig (config.ts)
 複数ソースが一つの HTML を共有するため、すべての要素 ID はグローバルに一意でなければなりません。
 
 - ソース由来 ID には、脚注など自動生成された ID も含めて `{page-id}-` を付けます。
-- 両レンダラーは [`sources/prefixIds.ts`](../../app/packages/core/src/sources/prefixIds.ts) の `prefixIdsAndCollect` を使い、ID の接頭辞付与、同一ページアンカーの書き換え、見出しと検索テキストの収集を行います。
+- 両レンダラーは [`sources/prefixIds.ts`](../../app/packages/core/src/sources/prefixIds.ts) の `prefixIdsAndCollect` を使い、ID の接頭辞付与、同一ページアンカーとインライン SVG の中の参照（[`sources/svgIds.ts`](../../app/packages/core/src/sources/svgIds.ts)）の書き換え、見出しと検索テキストの収集を行います。
 - `buildPages` はルート衝突とページ ID 衝突を拒否します（たとえば `a-b.md` と `a/b.md` は同じページ ID になります）。
 - 見出し番号（`numbering.sections`）はラベルであり、アドレスではありません。
   - 番号は読者が見るサイドバーから、どちらかのレンダラーではなく共有の `Page` モデルの上で決め、後処理で `.section-number` 要素として見出しへ書き込みます。サイドバー（要るのはタイトルとパスだけ）を後処理より前に組み立てるのはこのためです。
@@ -153,14 +153,14 @@ pre-render の次の不変条件を守ってください。
 
 既定テーマは意図的に中立で、[`site/`](../../site/) のドキュメントサイトのデザインには揃えません。サイトは monodocs を売り込むものですが、出力は文書を書いた人を表すものだからです。中立であることは、このディレクトリを差し替える `html.theme` の出発点としても適切です。同じ理由に加え、単一ファイルは外部を参照できない（webfont は全成果物へインライン埋め込みするしかない）ため、テーマは webfont を埋め込まず、システムフォントスタックを使います。サイトとの違いは、直すべき不整合ではなく決定として扱ってください。
 
-テーマ UI ラベルは文書の `lang` に従います（v0.10）。正本は core です。core が `lang` に対応する表を解決し、`html.labels` を上から適用し、結果を `siteDataJson` に公開します。`app.js` は文字列の写しを持たずそれを消費するので、表と上書きがずれません。静的ラベルは `template.html` のトークンから取ります。同梱する表は `en` と `ja` で、表を持たない `lang` は英語のラベルへフォールバックして警告します。v0.10 まではラベルが常に英語で、`lang="ja"` の文書が `On this page` を表示していました。覆した理由とカスタムテーマに対する保証の範囲は [roadmap.md](roadmap.md) 23.4 を参照してください。
+テーマ UI ラベルは、文書の `lang` によらず英語です。`lang` はページの言語だけを表します（0.17.2）。正本は core です。core が英語の表の上に `html.labels` を適用し、結果を `siteDataJson` に公開します。`app.js` は文字列の写しを持たずそれを消費するので、表と上書きがずれません。静的ラベルは `template.html` のトークンから取ります。v0.10 から 0.17.1 までは `lang` がラベルの表も選び、`ja` の表を同梱していました。2 度の方針転換の理由とカスタムテーマに対する保証の範囲は [roadmap.md](roadmap.md) 23.4 を参照してください。
 
 > [!WARNING]
 > TypeScript コンパイルは `.html`、`.css`、`.js` のテーマ資産をコピーしません。コンパイル後に `dist/themes` を使えるよう、core build で `packages/core/scripts/copy-theme.mjs` を実行してください。テーマ資産を変えたら再ビルドが必要です。
 
 ## Watch と Serve
 
-[`watch.ts`](../../app/packages/core/src/watch.ts) は `fs.watch`（対応環境では recursive mode）と debounce を使います。ソースと設定の入力を監視し、出力ファイルの書き込みを無視して再ビルドループを避け、入力パスがなければ拒否します。単一ファイルの入力は、それを含むディレクトリをその名前だけに絞って監視します。`fs.watch` は inode を追うため、ファイル自身を監視すると、エディタが一時ファイルを元の名前へ rename して保存した後は何も届かなくなるからです。
+[`watch.ts`](../../app/packages/core/src/watch.ts) は `fs.watch`（対応環境では recursive mode）と debounce を使います。ソースと設定の入力を監視し、出力ファイルの書き込みを無視して再ビルドループを避け、入力パスがなければ拒否します。単一ファイルの入力は、それを含むディレクトリをその名前だけに絞って監視します。`fs.watch` は inode を追うため、ファイル自身を監視すると、エディタが一時ファイルを元の名前へ rename して保存した後は何も届かなくなるからです。Linux では、再帰する監視のそれぞれの前に、同じ対象を再帰せずに監視するものを開いて一緒に保ちます。inotify のインスタンスが残っていないとき、Node 22 は何も知らせずエラーも出さない再帰の監視を返し、例外（EMFILE）を投げるのは再帰しないほうだけだからです（#215）。冗長ではなく、取り除くと、黙って何もしない監視に戻ります。
 
 [`serve.ts`](../../app/packages/core/src/serve.ts) は Node.js API で HTTP 配信、`watchSite`、SSE live reload を提供します。明確な移植性要件がない限り、監視用の依存を増やしません。
 

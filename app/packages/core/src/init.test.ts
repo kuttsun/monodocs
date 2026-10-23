@@ -68,8 +68,8 @@ describe("monodocs init", () => {
 
     const config = await readFile(configPath(), "utf8");
     expect(config).toContain("# monodocs の設定ファイル。");
-    // The page text is Japanese, so `lang` has to say so: a document declaring one language and
-    // displaying another is the mismatch v0.10 exists to end (23.4).
+    // The page text is Japanese, so `lang` has to say so; it describes the pages and leaves the
+    // UI labels English (23.4).
     expect(config).toContain('lang: "ja"');
     expect(await readFile(pagePath(), "utf8")).toContain("# ドキュメント");
 
@@ -77,7 +77,7 @@ describe("monodocs init", () => {
     expect(result.pages).toBe(1);
     const html = await readFile(join(dir, "dist", "docs.html"), "utf8");
     expect(html).toContain('<html lang="ja"');
-    expect(html).toContain("このページの内容");
+    expect(html).toContain("On this page");
   });
 
   // Over the shipped languages rather than over the two spelled out above: a scaffold is a

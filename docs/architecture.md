@@ -65,7 +65,8 @@ All sources share one HTML document, so every element ID must be globally unique
 - Prefix source-generated IDs, including generated ones such as footnotes, with `{page-id}-`.
 - Both renderers use `prefixIdsAndCollect` from
   [`sources/prefixIds.ts`](../app/packages/core/src/sources/prefixIds.ts) to prefix IDs, rewrite same-page
-  anchors, and collect headings and searchable text.
+  anchors and the references inside an inline SVG ([`sources/svgIds.ts`](../app/packages/core/src/sources/svgIds.ts)),
+  and collect headings and searchable text.
 - `buildPages` must reject route collisions and page-ID collisions (for example, `a-b.md` and `a/b.md` produce
   the same page ID).
 - Section numbers (`numbering.sections`) are labels, never addresses:
@@ -284,12 +285,12 @@ file may not reference anything external (a webfont would have to be inlined int
 embeds no webfont and uses system font stacks.
 Treat the difference from the site as a decision, not as an inconsistency to be fixed.
 
-Theme UI labels follow the document's `lang` (v0.10). Core is the source of truth: it resolves the table for
-`lang`, applies `html.labels` over it, and publishes the result in `siteDataJson`. `app.js` consumes that rather
-than holding its own copy, so a table and an override cannot drift apart; static labels come from tokens in
-`template.html`. Tables ship for `en` and `ja`; a `lang` with no shipped table falls back to English labels
-with a warning. Until v0.10 labels were always English, which left a `lang="ja"` document displaying
-`On this page`; see [roadmap.md](roadmap.md) 23.4 for the reversal and what a custom theme is guaranteed.
+Theme UI labels are English whatever the document's `lang`, which describes the pages only (0.17.2). Core is
+the source of truth: it applies `html.labels` over the English table and publishes the result in
+`siteDataJson`. `app.js` consumes that rather than holding its own copy, so the table and an override cannot
+drift apart; static labels come from tokens in `template.html`. From v0.10 to 0.17.1 `lang` also selected a
+label table, with one shipped for `ja`; see [roadmap.md](roadmap.md) 23.4 for both reversals and what a custom
+theme is guaranteed.
 
 > [!WARNING]
 > TypeScript compilation does not copy `.html`, `.css`, or `.js` theme assets. The core build must run
@@ -301,7 +302,10 @@ with a warning. Until v0.10 labels were always English, which left a `lang="ja"`
 watches source and configuration inputs, ignores output-file writes to prevent rebuild loops, and rejects a
 missing input path. A single-file input is watched through its directory, filtered to that name, because
 `fs.watch` follows the inode and would go silent after an editor saves by renaming a temporary file over the
-original.
+original. On Linux a plain watch on the same target is opened before each recursive one and kept with it: with
+no inotify instance left, Node 22 returns a recursive watch that reports nothing and no error, and only the
+plain one throws (EMFILE, #215). It is not redundant, and removing it brings back a watch that silently does
+nothing.
 
 [`serve.ts`](../app/packages/core/src/serve.ts) provides HTTP serving, `watchSite`, and SSE live reload using
 Node.js APIs. Keep it dependency-free unless a clear portability requirement justifies a new watching

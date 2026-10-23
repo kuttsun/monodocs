@@ -872,6 +872,48 @@ describe("postprocessPages - admonitions", () => {
     expect(pages[0]!.html).toContain("<p>Body.</p>");
   });
 
+  // #221: a paragraph holding only an image has no text, so testing it for text alone dropped the
+  // image with the marker.
+  it.each([
+    ["an image alone", "> [!NOTE]\n> ![x](i.png)\n", /<p[^>]*><img src="i.png" alt="x"><\/p>/],
+    [
+      "an image followed by text on the next line",
+      "> [!NOTE]\n> ![x](i.png)\n> after\n",
+      /<p[^>]*><img src="i.png" alt="x">\nafter<\/p>/,
+    ],
+    [
+      "text before the image",
+      "> [!NOTE]\n> Text ![y](i.png)\n",
+      /<p>Text <img src="i.png" alt="y"><\/p>/,
+    ],
+  ])("keeps a body that is %s", async (_, raw, body) => {
+    const rendered = await markdownRenderer.render(
+      { absolutePath: "/docs/a.md", relativePath: "a.md", raw, format: "markdown" },
+      { page: { id: "a", route: "/a", relativePath: "a.md", format: "markdown" } },
+    );
+    const pages: Page[] = [page({ relativePath: "a.md", route: "/a", html: rendered.html })];
+    await postprocessPages(pages, baseOptions);
+    const content = pages[0]!.html.split('<div class="admonition-content">')[1] ?? "";
+    expect(content).toMatch(body);
+  });
+
+  it.each([
+    // The break goes with the marker (stripLeadingBreak) before the paragraph is looked at.
+    ["the marker and its break leave", "<p>[!NOTE]<br>\n</p>"],
+    // After a newline the break is the body's, and is all the paragraph holds.
+    ["a break alone leaves", "<p>[!NOTE]\n<br></p>"],
+  ])("still drops the paragraph %s empty", async (_, first) => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html: `<blockquote>\n${first}\n<p>Body.</p>\n</blockquote>`,
+      }),
+    ];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toMatch(/<div class="admonition-content">\s*<p>Body\.<\/p>/);
+  });
+
   it("leaves ordinary blockquotes untouched", async () => {
     const pages: Page[] = [
       page({

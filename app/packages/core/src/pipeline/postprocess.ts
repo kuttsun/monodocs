@@ -370,6 +370,16 @@ function carryId(from: Element, to: Element): void {
   if (id != null && id !== "") to.properties.id = id;
 }
 
+/** Whether a paragraph holds nothing but whitespace, comments, and line breaks. */
+function isEmptyParagraph(p: Element): boolean {
+  return p.children.every(
+    (c) =>
+      c.type === "comment" ||
+      (c.type === "text" && c.value.trim() === "") ||
+      (c.type === "element" && c.tagName === "br"),
+  );
+}
+
 /** node 配下から最初の `td.content`（AsciiDoc admonition の本文セル）の子を返す。 */
 function findAdmonitionContent(node: Element): ElementContent[] | null {
   let content: ElementContent[] | null = null;
@@ -424,7 +434,9 @@ function processAdmonitions(tree: HastRoot): void {
       // after it is the body's first line, written on purpose, and stays.
       if (!marker[0].endsWith("\n")) stripLeadingBreak(firstEl);
       // マーカーだけの段落（`> [!NOTE]\n>\n> 本文` 形式）は空になるので除去する。
-      if (toText(firstEl).trim() === "") {
+      // 文字が無いだけでは空と言えない。画像だけの本文（`> [!NOTE]\n> ![x](i.png)`）は
+      // 文字を持たないので、改行以外の要素が残っていないことも見る（#221）。
+      if (isEmptyParagraph(firstEl)) {
         node.children = node.children.filter((c) => c !== firstEl);
       }
 

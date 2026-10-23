@@ -66,36 +66,36 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `html.imageLightbox` | `true` |
 | `html.branding` | `true` |
 | `html.colorScheme` | `light` |
-| `html.labels.openSidebar` | from `lang` |
-| `html.labels.closeSidebar` | from `lang` |
-| `html.labels.searchPlaceholder` | from `lang` |
-| `html.labels.searchLabel` | from `lang` |
-| `html.labels.clearSearch` | from `lang` |
-| `html.labels.searchResults` | from `lang` |
-| `html.labels.noResults` | from `lang` |
-| `html.labels.contentWidthToggle` | from `lang` |
-| `html.labels.useWideContent` | from `lang` |
-| `html.labels.useStandardContent` | from `lang` |
-| `html.labels.darkModeToggle` | from `lang` |
-| `html.labels.tocLabel` | from `lang` |
-| `html.labels.tocTitle` | from `lang` |
-| `html.labels.pageNavLabel` | from `lang` |
-| `html.labels.prev` | from `lang` |
-| `html.labels.next` | from `lang` |
-| `html.labels.wrapToggle` | from `lang` |
-| `html.labels.copyCode` | from `lang` |
-| `html.labels.copy` | from `lang` |
-| `html.labels.copied` | from `lang` |
-| `html.labels.copyFailed` | from `lang` |
-| `html.labels.openImagePreview` | from `lang` |
-| `html.labels.imagePreview` | from `lang` |
-| `html.labels.closeImagePreview` | from `lang` |
-| `html.labels.actualSize` | from `lang` |
-| `html.labels.fitToScreen` | from `lang` |
-| `html.labels.generatedBy` | from `lang` |
-| `html.labels.version` | from `lang` |
-| `html.labels.cover` | from `lang` |
-| `html.labels.contents` | from `lang` |
+| `html.labels.openSidebar` | English |
+| `html.labels.closeSidebar` | English |
+| `html.labels.searchPlaceholder` | English |
+| `html.labels.searchLabel` | English |
+| `html.labels.clearSearch` | English |
+| `html.labels.searchResults` | English |
+| `html.labels.noResults` | English |
+| `html.labels.contentWidthToggle` | English |
+| `html.labels.useWideContent` | English |
+| `html.labels.useStandardContent` | English |
+| `html.labels.darkModeToggle` | English |
+| `html.labels.tocLabel` | English |
+| `html.labels.tocTitle` | English |
+| `html.labels.pageNavLabel` | English |
+| `html.labels.prev` | English |
+| `html.labels.next` | English |
+| `html.labels.wrapToggle` | English |
+| `html.labels.copyCode` | English |
+| `html.labels.copy` | English |
+| `html.labels.copied` | English |
+| `html.labels.copyFailed` | English |
+| `html.labels.openImagePreview` | English |
+| `html.labels.imagePreview` | English |
+| `html.labels.closeImagePreview` | English |
+| `html.labels.actualSize` | English |
+| `html.labels.fitToScreen` | English |
+| `html.labels.generatedBy` | English |
+| `html.labels.version` | English |
+| `html.labels.cover` | English |
+| `html.labels.contents` | English |
 | `pdf.pageSize` | `A4` |
 | `pdf.margin.top` | `20mm` |
 | `pdf.margin.right` | `15mm` |
@@ -173,7 +173,6 @@ A diagnostic's `code` is what a job filters on, and is not renamed. The codes:
 - `input/not-found`
 - `input/unsupported-file`
 - `internal/unexpected`
-- `lang/no-label-table`
 - `lang/unsupported`
 - `link/unresolved`
 - `link/unresolved-anchor`
