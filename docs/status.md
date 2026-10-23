@@ -84,6 +84,9 @@ patch, but it adds two `html.labels` keys for the lightbox's size button (#211),
 `latest` moved, the published package and the release binaries were verified, once the binary
 checks looked for the sample's output beside its new configuration file, and `next` moved onto
 0.17.1.
+0.17.2 goes out under `latest`, with the CI guide pinned to it in the version change. It is a
+patch, but it turns the UI labels of every `lang: ja` build that does not set `html.labels` English
+(#224), by decision. The published package and the release binaries are verified after `latest` moves.
 
 v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an earlier version written
 into them, for readers who do not look at Git, in three releases. 12.4 would allow them in 1.x; they
