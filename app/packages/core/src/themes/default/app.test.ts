@@ -19,7 +19,7 @@ async function mountClient(routes: string[]): Promise<void> {
   document.body.innerHTML = `<nav id="sidebar-nav">${links}</nav><main id="content">${articles}</main>`;
 
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
-    labels: resolveLabels("en").labels,
+    labels: resolveLabels(),
     initialRoute: routes[0],
   };
 

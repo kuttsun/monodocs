@@ -36,8 +36,8 @@ function authorList(metadata: DocumentMetadata): string[] {
 /**
  * The version with the word in front of it — "Version 1.2".
  *
- * The word comes from the document's label table, so it follows `lang` and can be replaced through
- * `html.labels` like every other piece of chrome (23.4). A bare "1.2" in a footer says nothing.
+ * The word is the `version` label, English unless `html.labels` replaces it, like every other piece
+ * of chrome (23.4). A bare "1.2" in a footer says nothing.
  */
 function versionPhrase(version: string, labels: Labels): string {
   return `${labels.version} ${version}`;

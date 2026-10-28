@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, realpath, stat } from "node:fs/promises";
+import { open, readFile, realpath, stat } from "node:fs/promises";
 import { dirname, posix, relative, resolve, sep } from "node:path";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
@@ -392,6 +392,16 @@ function carryId(from: Element, to: Element): void {
   if (id != null && id !== "") to.properties.id = id;
 }
 
+/** Whether a paragraph holds nothing but whitespace, comments, and line breaks. */
+function isEmptyParagraph(p: Element): boolean {
+  return p.children.every(
+    (c) =>
+      c.type === "comment" ||
+      (c.type === "text" && c.value.trim() === "") ||
+      (c.type === "element" && c.tagName === "br"),
+  );
+}
+
 /** node 配下から最初の `td.content`（AsciiDoc admonition の本文セル）の子を返す。 */
 function findAdmonitionContent(node: Element): ElementContent[] | null {
   let content: ElementContent[] | null = null;
@@ -446,7 +456,9 @@ function processAdmonitions(tree: HastRoot): void {
       // after it is the body's first line, written on purpose, and stays.
       if (!marker[0].endsWith("\n")) stripLeadingBreak(firstEl);
       // マーカーだけの段落（`> [!NOTE]\n>\n> 本文` 形式）は空になるので除去する。
-      if (toText(firstEl).trim() === "") {
+      // 文字が無いだけでは空と言えない。画像だけの本文（`> [!NOTE]\n> ![x](i.png)`）は
+      // 文字を持たないので、改行以外の要素が残っていないことも見る（#221）。
+      if (isEmptyParagraph(firstEl)) {
         node.children = node.children.filter((c) => c !== firstEl);
       }
 
@@ -526,7 +538,11 @@ async function processMermaidPrerender(
       block.parent.children[block.index] = {
         type: "element",
         tagName: "figure",
-        properties: { className: ["mermaid"] },
+        properties: {
+          className: ["mermaid"],
+          // A diagram drawn in a dark theme needs no light backing on a dark page (style.css).
+          ...(renderer.scheme === "dark" ? { dataMonodocsScheme: "dark" } : {}),
+        },
         children: [raw],
         ...carriedData(block.parent.children[block.index]),
       };
@@ -1138,6 +1154,168 @@ function checkEmbeddedImages(
   });
 }
 
+/** How much of an SVG is read to find its root element's attributes. */
+const SVG_HEAD_BYTES = 64 * 1024;
+
+/** Whether an SVG length attribute gives the image a size of its own: present and not a percentage. */
+function isOwnSvgLength(value: string | undefined): boolean {
+  if (value === undefined) return false;
+  const v = value.trim();
+  return v !== "" && v !== "auto" && !v.endsWith("%");
+}
+
+/** The attributes of an SVG's root element, or `undefined` when there is none. */
+function svgRootAttributes(source: string): Map<string, string> | undefined {
+  // A quoted value can hold a ">", which does not end the tag.
+  const root = /<svg\b((?:[^>"']|"[^"]*"|'[^']*')*)>/i.exec(source);
+  if (!root) return undefined;
+  const attributes = new Map<string, string>();
+  for (const m of (root[1] ?? "").matchAll(/([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    attributes.set(m[1]!, m[2] ?? m[3] ?? "");
+  }
+  return attributes;
+}
+
+/** The width and height of a usable `viewBox`, or `undefined`. */
+function svgViewBoxSize(attributes: Map<string, string>): [number, number] | undefined {
+  const box = (attributes.get("viewBox") ?? "")
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  if (box.length !== 4 || box.some((n) => !Number.isFinite(n))) return undefined;
+  const [, , width, height] = box as [number, number, number, number];
+  return width > 0 && height > 0 ? [width, height] : undefined;
+}
+
+/** CSS pixels per unit of an absolute SVG length. */
+const SVG_UNIT_PX: Record<string, number> = {
+  "": 1,
+  px: 1,
+  in: 96,
+  cm: 96 / 2.54,
+  mm: 96 / 25.4,
+  q: 96 / 101.6,
+  pt: 96 / 72,
+  pc: 16,
+};
+
+/** An SVG length in CSS pixels, or `undefined` when it is relative (`%`, `em`) or not a length. */
+function svgLengthPx(value: string | undefined): number | undefined {
+  const m = /^\s*([+]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*([a-z]*)\s*$/i.exec(value ?? "");
+  const unit = SVG_UNIT_PX[(m?.[2] ?? "").toLowerCase()];
+  if (!m || unit === undefined) return undefined;
+  const px = Number(m[1]) * unit;
+  return px > 0 ? px : undefined;
+}
+
+/**
+ * The width to give an SVG whose root element has a `viewBox` but neither a `width` nor a
+ * `height` of its own (a percentage counts as none). A browser stretches such an image across
+ * the page, however small its drawing; given its `viewBox` width in pixels, as a drawing tool
+ * exporting at 100% would write it, it shows at that size instead, and its height follows from
+ * the `viewBox`'s proportions. `undefined` when the SVG has a size, or no usable `viewBox`.
+ */
+export function unsizedSvgWidth(source: string): number | undefined {
+  const attributes = svgRootAttributes(source);
+  if (!attributes) return undefined;
+  if (isOwnSvgLength(attributes.get("width")) || isOwnSvgLength(attributes.get("height"))) {
+    return undefined;
+  }
+  const box = svgViewBoxSize(attributes);
+  return box ? Math.max(1, Math.round(box[0])) : undefined;
+}
+
+/**
+ * The size, in CSS pixels, an SVG gives itself at 100%: its own `width` and `height`; one of them
+ * and the `viewBox`'s proportions; or, with neither, the size {@link unsizedSvgWidth} gives it.
+ * This is the image's actual size in the lightbox (#211), which the browser cannot tell: it
+ * reports a rounded default for an SVG with only a `viewBox`. `undefined` when a length is
+ * relative (`em`) or there is nothing to take the size from.
+ */
+export function svgOwnSize(source: string): [number, number] | undefined {
+  const attributes = svgRootAttributes(source);
+  if (!attributes) return undefined;
+  const box = svgViewBoxSize(attributes);
+  const ownWidth = isOwnSvgLength(attributes.get("width"));
+  const ownHeight = isOwnSvgLength(attributes.get("height"));
+  let width = ownWidth ? svgLengthPx(attributes.get("width")) : undefined;
+  let height = ownHeight ? svgLengthPx(attributes.get("height")) : undefined;
+  if ((ownWidth && width === undefined) || (ownHeight && height === undefined)) return undefined;
+  if (width === undefined && height === undefined) {
+    if (!box) return undefined;
+    width = Math.max(1, Math.round(box[0]));
+  }
+  if (height === undefined) height = box ? (width! * box[1]) / box[0] : undefined;
+  if (width === undefined) width = box ? (height! * box[0]) / box[1] : undefined;
+  if (width === undefined || height === undefined) return undefined;
+  const round = (n: number) => Math.round(n * 100) / 100;
+  return [round(width), round(height)];
+}
+
+/**
+ * Resolves a local image's path to the file it names. The Markdown renderer percent-encodes
+ * `src` (`図.png` becomes `%E5%9B%B3.png`) and Asciidoctor does not, so the decoded path is tried
+ * first, as link rewriting does, and the path as written second, for a file whose name really
+ * contains `%20`. Rejects when neither exists.
+ */
+async function realpathOfImage(baseDir: string, pathPart: string): Promise<string> {
+  const decoded = decodePathPart(pathPart);
+  if (decoded !== pathPart) {
+    try {
+      return await realpath(resolve(baseDir, decoded));
+    } catch {
+      // Fall through to the name as written.
+    }
+  }
+  return realpath(resolve(baseDir, pathPart));
+}
+
+/**
+ * For each local SVG image, records the size the SVG gives itself ({@link svgOwnSize}) in
+ * `data-monodocs-svg-size`, for the lightbox's actual size; and gives one that has no size of its
+ * own, and no `width` or `height` on its `<img>`, the width {@link unsizedSvgWidth} finds. Runs
+ * whether or not images are embedded, before they are, while `src` is still the path. An image
+ * that cannot be read is left alone: embedding, if on, reports it.
+ */
+async function sizeSvgImages(tree: HastRoot, page: Page, realRoot: string): Promise<void> {
+  const images: Element[] = [];
+  visit(tree, "element", (node) => {
+    if (node.tagName === "img") images.push(node);
+  });
+
+  const baseDir = dirname(page.sourcePath);
+  for (const img of images) {
+    const src = img.properties.src;
+    if (typeof src !== "string" || !src || isExternalSrc(src)) continue;
+    const pathPart = src.split("#")[0]?.split("?")[0] ?? src;
+    if (posix.extname(pathPart).toLowerCase() !== ".svg") continue;
+
+    let head: string;
+    try {
+      const real = await realpathOfImage(baseDir, pathPart);
+      if (!isInside(realRoot, real)) continue;
+      const file = await open(real, "r");
+      try {
+        const buffer = Buffer.alloc(SVG_HEAD_BYTES);
+        const { bytesRead } = await file.read(buffer, 0, SVG_HEAD_BYTES, 0);
+        head = buffer.subarray(0, bytesRead).toString("utf8");
+      } finally {
+        await file.close();
+      }
+    } catch {
+      continue;
+    }
+    const own = svgOwnSize(head);
+    if (own) img.properties.dataMonodocsSvgSize = own.join(" ");
+
+    if (img.properties.width !== undefined || img.properties.height !== undefined) continue;
+    const style = img.properties.style;
+    if (typeof style === "string" && /(?:^|[;\s])(?:width|height)\s*:/i.test(style)) continue;
+    const width = unsizedSvgWidth(head);
+    if (width !== undefined) img.properties.width = width;
+  }
+}
+
 async function embedImages(
   tree: HastRoot,
   page: Page,
@@ -1171,7 +1349,7 @@ async function embedImages(
     // symlink を解決した実体パスで存在確認し、入力ルート外への参照を拒否する。
     let real: string;
     try {
-      real = await realpath(resolve(baseDir, pathPart));
+      real = await realpathOfImage(baseDir, pathPart);
     } catch {
       warnings.push(
         warn("image/not-found", t("post.imageNotFound", { src, path: page.relativePath }), {
@@ -1291,6 +1469,7 @@ export async function postprocessPages(
     if (options.checkEmbedded !== undefined) checkEmbeddedImages(tree, page, options.checkEmbedded);
     if (trees !== undefined) await recordImages(tree, page, realRoot, options.checkRead);
     if (trees !== undefined) markGeneratedNumbers(tree, page);
+    await sizeSvgImages(tree, page, realRoot);
     if (options.embedImages) {
       await embedImages(tree, page, options, realRoot, warnings, embeddedImages);
     }

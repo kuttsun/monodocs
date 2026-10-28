@@ -225,11 +225,6 @@ const EN = {
   "check.imageNoAlt":
     'Image has no alt attribute: "{src}" in "{path}". Write alt="" if it is decorative.',
 
-  // ---- labels (23.4) ----
-  "labels.noTable":
-    'No UI label table ships for lang "{lang}"; using the {fallback} labels. Tables ship for ' +
-    "{shipped}; html.labels can replace individual entries.",
-
   // ---- headless browser ----
   "browser.chromiumMissing":
     "A headless browser needs Chromium or Google Chrome (Microsoft Edge also works on Windows). " +
@@ -322,9 +317,9 @@ const EN = {
 # Used as the document title, in <title>, and in the PDF metadata.
 title: "Documentation"
 
-# Language of the generated document. It fills <html lang> and selects the UI labels
-# (the search box, "On this page", prev/next). This is not the language of monodocs'
-# own messages, which is --lang / MONODOCS_LANG.
+# Language of the generated document's pages. It fills <html lang>; the UI labels (the
+# search box, "On this page", prev/next) stay English, and html.labels replaces them. This
+# is not the language of monodocs' own messages, which is --lang / MONODOCS_LANG.
 lang: "en"
 
 # What to bundle: a directory to scan, or a single source file.
@@ -600,10 +595,6 @@ const JA: Record<MessageKey, string> = {
   "check.imageNoAlt":
     'alt 属性の無い画像です: "{src}"（"{path}"）。装飾目的なら alt="" と書いてください。',
 
-  "labels.noTable":
-    '言語 "{lang}" 向けの UI ラベル表は同梱していません。{fallback} のラベルを使います。' +
-    "同梱しているのは {shipped} です。html.labels で個別に差し替えられます。",
-
   "browser.chromiumMissing":
     "ヘッドレスブラウザには Chromium / Google Chrome（Windows では Microsoft Edge も可）が必要です。" +
     "PUPPETEER_EXECUTABLE_PATH を設定するか、Google Chrome もしくは Chromium をインストールしてください" +
@@ -687,9 +678,9 @@ const JA: Record<MessageKey, string> = {
 # 文書のタイトル。<title> と PDF のメタデータにも使われます。
 title: "ドキュメント"
 
-# 生成される文書の言語。<html lang> に入り、UI ラベル（検索ボックス、「このページの内容」、
-# 前後ナビ）の表を選びます。monodocs 自身のメッセージの言語（--lang / MONODOCS_LANG）とは
-# 別の設定です。
+# 生成される文書のページの言語。<html lang> に入ります。UI ラベル（検索ボックス、
+# 「On this page」、前後ナビ）は英語のままで、html.labels で差し替えます。monodocs 自身の
+# メッセージの言語（--lang / MONODOCS_LANG）とは別の設定です。
 lang: "ja"
 
 # 束ねる対象。走査するディレクトリ、または単一のソースファイル。

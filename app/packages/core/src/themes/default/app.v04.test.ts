@@ -75,7 +75,7 @@ async function mountClient(
     imageLightbox;
 
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
-    labels: resolveLabels("en").labels,
+    labels: resolveLabels(),
     initialRoute: pages[0]?.route,
     colorScheme: options.colorScheme,
     contentWidthDefault: options.contentWidthDefault,
@@ -188,9 +188,64 @@ describe("v0.4 client features (app.js)", () => {
     expect(document.getElementById("image-lightbox")!.hasAttribute("open")).toBe(true);
   });
 
+  it.each([
+    ["an .svg path", "figures/diagram.svg", true],
+    ["an .svg path with a query and fragment", "diagram.SVG?v=2#top", true],
+    ["an embedded SVG", "data:image/svg+xml;base64,PHN2Zy8+", true],
+    ["a URL-encoded embedded SVG", "data:image/svg+xml,%3Csvg%2F%3E", true],
+    ["a PNG", "diagram.png", false],
+    ["a PNG whose query names an SVG", "render.png?from=diagram.svg", false],
+    ["an embedded PNG", "data:image/png;base64,iVBORw0KGgo=", false],
+  ])("scales %s up to the dialog only when it is a vector image", async (_name, src, vector) => {
+    await mountClient(SAMPLE, {
+      articleHtml: `<img id="previewable" src="${src}" alt="Diagram" />`,
+    });
+
+    const dialog = document.getElementById("image-lightbox")!;
+    document.getElementById("previewable")!.click();
+    expect(dialog.classList.contains("image-lightbox-vector")).toBe(vector);
+
+    document.getElementById("image-lightbox-close")!.click();
+    expect(dialog.classList.contains("image-lightbox-vector")).toBe(false);
+  });
+
+  it("drops the vector sizing when a raster image opens without the dialog closing", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml:
+        '<img id="vector" src="diagram.svg" alt="Diagram" />' +
+        '<img id="raster" src="photo.png" alt="Photo" />',
+    });
+
+    const dialog = document.getElementById("image-lightbox")!;
+    document.getElementById("vector")!.click();
+    expect(dialog.classList.contains("image-lightbox-vector")).toBe(true);
+    // Without showModal the page behind stays clickable, so the next image opens over this one.
+    document.getElementById("raster")!.click();
+    expect(dialog.hasAttribute("open")).toBe(true);
+    expect(dialog.classList.contains("image-lightbox-vector")).toBe(false);
+  });
+
   const DIAGRAM_SVG =
     '<svg id="mermaid-0" viewBox="0 0 400 100" style="max-width: 400px;">' +
     '<title id="chart-title-mermaid-0">Login flow</title><g id="mermaid-0-node"></g></svg>';
+
+  it("drops the image's sizing when a diagram opens without the dialog closing", async () => {
+    await mountClient(SAMPLE, {
+      articleHtml:
+        '<img id="vector" src="diagram.svg" alt="Diagram" />' +
+        `<figure id="diagram" class="mermaid">${DIAGRAM_SVG}</figure>`,
+    });
+
+    const dialog = document.getElementById("image-lightbox")!;
+    const preview = document.getElementById("image-lightbox-image") as HTMLImageElement;
+    document.getElementById("vector")!.click();
+    expect(dialog.classList.contains("image-lightbox-picture")).toBe(true);
+    preview.style.width = "100px";
+    document.querySelector<HTMLButtonElement>(".diagram-lightbox-open")!.click();
+    expect(dialog.classList.contains("image-lightbox-picture")).toBe(false);
+    expect(dialog.classList.contains("image-lightbox-vector")).toBe(false);
+    expect(preview.getAttribute("style")).toBeNull();
+  });
 
   it("opens a pre-rendered Mermaid diagram by moving its SVG into the lightbox", async () => {
     await mountClient(SAMPLE, {
@@ -626,7 +681,7 @@ describe("v0.4 client features (app.js)", () => {
       `<main id="content"><article class="page" data-route="/">${codeHtml}` +
       `<nav id="page-nav"></nav></article></main>`;
     (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
-      labels: resolveLabels("en").labels,
+      labels: resolveLabels(),
       initialRoute: "/",
       pages: [page("/", "Home")],
     };

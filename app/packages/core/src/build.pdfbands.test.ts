@@ -102,7 +102,7 @@ describe("PDF cover options", () => {
     expect(options.cover).toBeUndefined();
   });
 
-  it("builds the cover from title and document, with the cover label for the language", async () => {
+  it("builds the cover from title and document, with the English cover label under lang: ja", async () => {
     const options = await buildWith(
       "cover-on",
       'title: "仕様書"\nlang: ja\ndocument:\n  version: "1.2"\n  date: "2026-08-22"\n' +
@@ -110,9 +110,9 @@ describe("PDF cover options", () => {
     );
     expect(options.cover?.fragment).toContain(">仕様書</h1>");
     // The same words the PDF's Subject uses, so the cover cannot disagree with the properties.
-    expect(options.cover?.fragment).toContain("<p>バージョン 1.2</p><p>2026-08-22</p>");
+    expect(options.cover?.fragment).toContain("<p>Version 1.2</p><p>2026-08-22</p>");
     expect(options.cover?.fragment).toContain("<p>開発チーム</p>");
-    expect(options.cover?.pageLabel).toBe("表紙");
+    expect(options.cover?.pageLabel).toBe("Cover");
   });
 
   it("takes the page label from html.labels", async () => {

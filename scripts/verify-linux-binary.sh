@@ -333,16 +333,19 @@ section "Build output"
 
 default_build_dir="$work_dir/build-default"
 mkdir -p "$default_build_dir"
-default_output="$default_build_dir/dist/docs.html"
+# examples/en carries a monodocs.config.yml, and the default output.path is relative to the config
+# file, so the build run from another directory writes beside the staged example, not here.
+default_output="$docs_en/dist/docs.html"
 
 check_default_output() {
   invoke_bin "$default_build_dir" build "$docs_en"
   [ "$bin_status" -eq 0 ] || { echo "Exit code $bin_status: $bin_err" >&2; return 1; }
-  [ -f "$default_output" ] || { echo "dist/docs.html was not created" >&2; return 1; }
+  [ -f "$default_output" ] || { echo "dist/docs.html was not created beside the config" >&2; return 1; }
+  [ ! -e "$default_build_dir/dist" ] || { echo "dist/ was created in the working directory" >&2; return 1; }
   # 0.9.0 renamed the default output; make sure the old name is really gone.
-  [ ! -f "$default_build_dir/dist/manual.html" ] || { echo "dist/manual.html was created" >&2; return 1; }
+  [ ! -f "$docs_en/dist/manual.html" ] || { echo "dist/manual.html was created" >&2; return 1; }
 }
-run_check "build without -o writes dist/docs.html" check_default_output
+run_check "build without -o writes dist/docs.html beside the config" check_default_output
 
 check_self_contained() {
   file_contains "$default_output" "__MONODOCS_DATA__" || { echo "Embedded document payload not found" >&2; return 1; }

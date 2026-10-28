@@ -7,8 +7,7 @@ import {
 } from "./documentMeta";
 import { resolveLabels } from "./labels";
 
-const EN = resolveLabels("en").labels;
-const JA = resolveLabels("ja").labels;
+const EN = resolveLabels();
 
 const FULL = { version: "1.2", date: "2026-08-22", authors: ["Docs Team", "QA"] };
 
@@ -17,10 +16,12 @@ describe("the line a document says about itself", () => {
     expect(documentFooterLine(FULL, EN)).toBe("Version 1.2 · 2026-08-22 · Docs Team · QA");
   });
 
-  it("takes the word for the version from the document's label table", () => {
-    // The footer is chrome, so it follows `lang` (23.4) — and `html.labels` can replace it, which
-    // is what makes a language monodocs does not ship possible.
-    expect(documentFooterLine(FULL, JA)).toBe("バージョン 1.2 · 2026-08-22 · Docs Team · QA");
+  it("takes the word for the version from the labels", () => {
+    // The footer is chrome, so `html.labels` can replace it, which is how a document puts it in
+    // another language (23.4).
+    expect(documentFooterLine(FULL, { ...EN, version: "バージョン" })).toBe(
+      "バージョン 1.2 · 2026-08-22 · Docs Team · QA",
+    );
     expect(documentFooterLine(FULL, { ...EN, version: "Rev." })).toContain("Rev. 1.2");
   });
 

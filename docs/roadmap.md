@@ -1551,7 +1551,7 @@ theme's `app.js` already honours. A custom `app.js` is not held to it (23.4: del
 application); without the hook, its search stays the new version's in every view.
 `siteDataJson` gains the pages' states only when there is a difference.
 
-**The wording joins the label table (23.4)** and follows `lang` and `html.labels`: `diffChanges`,
+**The wording joins the label table (23.4)**, English, and `html.labels` replaces it: `diffChanges`,
 `diffAddedPages`, `diffMovedPages`, `diffChangedPages`, `diffDeletedPages`, `diffUnchangedPages`,
 `diffNoChanges`, `diffPageAdded`, `diffPageDeleted`, `diffPageMoved`, `diffViewSideBySide`,
 `diffViewSideBySideHint` (its button's tooltip), `diffViewCurrent`, `diffViewEarlier`,
@@ -2191,9 +2191,9 @@ that specifies it, marked with the version that introduces it.
 ```yaml
 title: "Internal Documentation"
 
-# Language of the generated document: fills <html lang> and selects the UI label table (v0.10).
-# Any BCP 47 tag; label tables ship for "en" (default) and "ja", and anything else falls back to the
-# "en" labels with a warning. This is not the language of the CLI's own messages (25.6).
+# Language of the generated document's pages: fills <html lang> (v0.10). Any BCP 47 tag. The UI
+# labels are English whatever it says, and html.labels replaces them (0.17.2). This is not the
+# language of the CLI's own messages (25.6).
 lang: "en"
 
 # What to do when the machine running the build lacks a font the document needs (v0.10):
@@ -2324,7 +2324,7 @@ html:
   imageLightbox: true
   # Show the generator name and version at the end of HTML and PDF output
   branding: true
-  # Replaces individual UI labels on top of the table chosen by lang (v0.10).
+  # Replaces individual UI labels on top of the English table (v0.10).
   # An unknown key is rejected; the key set is part of the frozen configuration surface.
   labels:
     tocTitle: "On this page"
@@ -2647,8 +2647,8 @@ does.
 
 **The default does not follow `lang`.** A document that declares Japanese is not a document whose
 Markdown means something different; the same file would then produce different structure depending on
-a display setting, and one document can hold both languages at once. `lang` selects labels and
-`<html lang>` (23.4), not a parser.
+a display setting, and one document can hold both languages at once. `lang` fills
+`<html lang>` (23.4), and selects no parser.
 
 **This does not gate 1.0.** It is an optional key whose default changes nothing, which 12.4 allows a
 minor release to add. It is scheduled after v0.12 because `break`'s AsciiDoc half is the attribute
@@ -2751,8 +2751,8 @@ and in every example, and moving it would buy consistency at the price of the on
 promises not to do.
 
 **Where each field lands.** The footer carries one line — `Version 1.2 · 2026-08-22 · Documentation
-Team` — and the word in front of the version comes from the label table `lang` selects, so it follows
-the document's language and `html.labels` can replace it. The PDF's properties take the authors as
+Team` — and the word in front of the version is the `version` label, which `html.labels` can replace
+(until 0.17.1 it also followed `lang`, 23.4). The PDF's properties take the authors as
 `Author`, the version and the date as `Subject`, and both values as the author wrote them as
 `Keywords`: a search over a folder of PDFs matches `1.2`, not `Version 1.2`. The footer element
 survives `html.branding: false`, which removes monodocs' line and not the author's — the two are
@@ -4112,6 +4112,21 @@ rather than once at the source.
 own messages: a document is often written in one language by someone working in a terminal that
 reports another, and a build log should not change language because the document did.
 
+**0.17.2 drops the label tables.** `lang` now describes the pages only, and the UI labels are English
+for every tag unless `html.labels` replaces them; the `ja` table and `lang/no-label-table` are gone.
+Choosing the Japanese wording for `generatedBy` (#224) showed what the shipped table costs: a label
+holds no placeholders, so every entry is a fixed phrase that has to read well in front of whatever
+follows it, and keeping that right for a second language is the maintainer's work rather than its
+speakers'. One table means one wording to keep right. `html.labels` already covers every language,
+Japanese included, and the configuration reference writes out the former `ja` table as a block to
+copy. It changes the output of every `lang: ja` build that does not set `html.labels`, and goes into a
+patch release knowingly, recorded as such in its release notes.
+
+The cost is the half of the v0.10 problem this section began with: a `lang="ja"` document again shows
+English labels, and a screen reader voices them as Japanese until `html.labels` replaces them.
+`lang/no-label-table` is dropped rather than kept, as `math/asciimath-not-rendered` was (v0.16): its
+condition can no longer occur.
+
 ---
 
 ## 24. PDF Output
@@ -4423,7 +4438,7 @@ designed small and one that was reduced.
 **Why the object form has `base`.** Someone who wants "compact, but 12px" should not have to copy
 the other three values; a copy is what gets left behind when a preset is later retuned. `base` names
 the table to start from and the object replaces only what it names, which is the resolution order
-`html.labels` already uses over the table `lang` chose (23.4).
+`html.labels` already uses over the English label table (23.4).
 
 **What is deliberately not here.** There is no measure — no maximum width for the text column. The
 column is what `pdf.margin` decides, and a second cap would fight it: a reader who narrowed the
@@ -4593,7 +4608,7 @@ machinery already there. The body, rendered alone, already numbers from 1 and co
 The cover is inserted before the outline is added; inserting pages leaves the body's page objects,
 and so the named destinations the outline and internal links resolve, where they were. PDF page
 labels (the numbering a reader sees in a viewer's page box) are set on the same pass: the cover
-carries the `cover` UI label, which follows `lang` and `html.labels` (23.4), and the body is numbered
+carries the `cover` UI label, which `html.labels` can replace (23.4), and the body is numbered
 from 1, so the viewer agrees with the paper. A title long enough to push the cover onto a second
 sheet is not clipped; both sheets carry the cover label.
 

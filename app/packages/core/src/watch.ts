@@ -119,7 +119,23 @@ export async function watchSite(
     only?: string,
   ): FSWatcher {
     try {
-      const watcher = fsWatch(target, { recursive }, makeListener(baseDir, only));
+      // On Linux a recursive watch that cannot get an inotify instance (the per-user limit,
+      // `fs.inotify.max_user_instances`, is shared with every other program the user runs) returns
+      // a watcher that never reports anything, with no error (Node 22, #215). A plain watch on the
+      // same target throws EMFILE instead, so one is opened first and kept, and the failure is
+      // reported rather than left as a watch that silently does nothing. It closes with the watch.
+      const probe = recursive && process.platform === "linux" ? fsWatch(target, () => {}) : null;
+      let watcher: FSWatcher;
+      try {
+        watcher = fsWatch(target, { recursive }, makeListener(baseDir, only));
+      } catch (error) {
+        probe?.close();
+        throw error;
+      }
+      if (probe) watcher.once("close", () => probe.close());
+      // A watch that fails later (a directory added once `fs.inotify.max_user_watches` is used up)
+      // reports through `error`; with no listener that would end the process.
+      watcher.on("error", (error) => callbacks.onError?.(error));
       watchers.add(watcher);
       return watcher;
     } catch (error) {

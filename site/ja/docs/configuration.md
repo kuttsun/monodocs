@@ -47,9 +47,9 @@ error: 設定ファイル ./monodocs.config.yml の内容が不正です: pdf: U
 # 出力 HTML に表示されるドキュメントタイトル
 title: Documentation
 
-# 生成する文書の言語。<html lang> を埋め、UI ラベルの表を選ぶ。
-# BCP 47 タグならなんでも指定でき、同梱の表は en と ja のみ。それ以外は警告のうえ
-# en のラベルに落ちる。CLI 自身のメッセージの言語とは別物。
+# 生成する文書のページの言語。<html lang> を埋める。UI ラベルはこの値によらず英語
+# （html.labels で差し替える）。BCP 47 タグならなんでも指定できる。CLI 自身のメッセージの
+# 言語とは別物。
 lang: en
 
 # 文書が必要とするフォントがビルド環境に無いときの挙動。
@@ -146,7 +146,7 @@ html:
   contentWidthToggle: true # 標準幅／ワイド幅切替ボタンを表示
   contentWidthDefault: standard # standard | wide（読者が選択するまでの初期状態）
   imageLightbox: true # リンクのない装飾目的以外の本文画像と Mermaid 図をクリックして拡大表示
-  # labels: # lang が選んだ表の上に個別の UI ラベルを差し替える
+  # labels: # 個別の UI ラベルを差し替える（書かなければ英語）
   #   tocTitle: このページの内容
 
 pdf:
@@ -173,7 +173,7 @@ pdf:
 | キー     | 型     | 既定値          | 説明                                                                       |
 | -------- | ------ | --------------- | -------------------------------------------------------------------------- |
 | `title`  | string | `Documentation` | 出力 HTML に表示されるタイトル（`<title>`・ヘッダ）。                       |
-| `lang`   | string | `en`            | 生成する文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ。下記参照。   |
+| `lang`   | string | `en`            | 生成する文書のページの言語。`<html lang>` を埋める。下記参照。   |
 | `fontCheck` | `warn` `error` `off` | `warn` | 文書が必要とするフォントがビルド環境に無いときの挙動。下記参照。 |
 | `input`  | string | `./docs`        | 走査する入力パス。ディレクトリ、または単一のソースファイル。CLI の入力引数で上書き。設定ファイル基準の相対パス。 |
 | `root`   | string | `input` の値    | 相対的なものすべての基準になるディレクトリ。route・画像・`include::`・設定ファイル。下記参照。 |
@@ -233,8 +233,8 @@ document:
 すべて任意で、いずれも monodocs が解釈しない文字列です。前後の空白だけは除去し、空白だけの値は
 未設定として扱います。値が出るのは次の 3 か所だけです。
 
-- HTML と PDF の末尾の **フッター**。1 行にまとめて出ます: `バージョン 1.2 · 2026-08-22 ·
-  ドキュメントチーム`。`バージョン` という語は `lang` が選ぶラベル表から取り、
+- HTML と PDF の末尾の **フッター**。1 行にまとめて出ます: `Version 1.2 · 2026-08-22 ·
+  ドキュメントチーム`。`Version` という語は UI ラベルで、
   [`html.labels`](#html-labels) で差し替えられます
 - **PDF の文書情報**。著者は `Author`、バージョンと日付は `Subject`、書いたままの両方の値は
   `Keywords` に入ります
@@ -246,16 +246,19 @@ document:
 > ビルドは自前の日付を埋め込みません。出力に載る日付は、あなたが書いた日付です。
 > ビルド日を載せたい場合は、`document.date` をワークフローから設定してください。
 
-#### `lang`（文書の言語と UI ラベル） {#lang}
+#### `lang`（文書の言語） {#lang}
 
-`lang` は文書の言語を決めます。`<html lang>` を埋め、monodocs がページの周りに被せる UI（検索欄、`On this page`、`No results`、`Copy`、画像プレビューの操作、前後ナビ）のラベル表を選びます。
+`lang` は文書のページの言語を決めます。`<html lang>` を埋め、ブラウザ、スクリーンリーダー、PDF を組むときの Chromium のフォント選択がこれを読みます。
 
 ```yaml
 lang: ja
 ```
 
 - 構文的に妥当な BCP 47 タグはすべて受け付けます。妥当でない文字列は属性に書かず拒否します。
-- 同梱のラベル表は `en`（既定）と `ja` だけです。照合は主言語サブタグで大文字小文字を無視するので、`en-GB` / `ja-JP` / `JA` はいずれも表に行き着きます。それ以外のタグも `<html lang>` には書かれ、ラベルだけ英語に落ちて、タグ名を挙げて 1 度警告します。文言は [`html.labels`](#html-labels) で与えてください。
+- `lang` は、monodocs がページの周りに被せる UI（検索欄、`On this page`、`No results`、`Copy`、画像プレビューの操作、前後ナビ、フッター、PDF の表紙と目次）を変えません。これらのラベルはどのタグでも英語です。別の言語で表示するには [`html.labels`](#html-labels) を使ってください。
+
+> [!IMPORTANT]
+> 0.17.1 までは、`lang: ja` で UI ラベルも日本語になっていました。0.17.2 からは、`html.labels` で差し替えない限り英語です。以前の日本語の文言に戻す設定は [`html.labels`](#html-labels) に載せています。
 
 > [!NOTE]
 > `lang` は CLI 自身のメッセージの言語ではありません。ビルドログの言語は文書の言語に連動しません。
@@ -591,7 +594,7 @@ figures:
 | 自己完結                | cdn = 要ネット / inline = 自己完結       | 自己完結（SVG を埋め込み）                      |
 | JavaScript              | 必要                                     | 不要                                           |
 | 追加サイズ              | cdn ≈ 0 / inline ≈ 1.6MB(gzip) 固定      | 図の数に比例（1 図あたり数 KB）                |
-| ダーク配色              | 追従しない（mermaid 既定テーマで固定）   | `html.colorScheme` で固定（`dark`→`redux-dark-color` / 他→mermaid の既定） |
+| ダーク配色              | 追従しない（mermaid 既定テーマで固定。ダークモードでは白い下地に載せる） | `html.colorScheme` で固定（`dark`→`redux-dark-color` / 他→mermaid の既定） |
 | フォント                | 読者のブラウザ・フォントで描画           | **ビルド環境のフォントで計測・焼き込み**       |
 | 対話機能（`click` 等）  | 有効                                     | 無効（静的 SVG）                               |
 | 印刷・未訪問ページの図  | 崩れる場合がある                         | 常に表示される                                 |
@@ -630,12 +633,12 @@ figures:
 | `html.contentWidth` | string / number | `860px`   | 本文領域の最大幅。CSS 長さ（`px`・`rem`・`em`・`ch`・`vw`・`%`）または数値（px）。`full`（または `none`）で残り幅いっぱいに広げる。 |
 | `html.contentWidthToggle` | boolean | `true` | 読者向けの標準幅／ワイド幅切替ボタンを表示する。`false` の場合は保存済みの読者設定と `html.contentWidthDefault` を無視する。 |
 | `html.contentWidthDefault` | `standard` `wide` | `standard` | 本文幅の初期状態。読者の選択が保存されている場合はそちらを優先する。 |
-| `html.imageLightbox` | boolean | `true` | リンクのない装飾目的以外の本文画像をクリックまたはキーボード操作すると、画面内に収まる大きさのダイアログで表示する。リンク付き画像は元のリンク動作を維持し、`alt` が明示的に空の画像は装飾画像のままにする。Mermaid 図はクリックするか、キーボードでフォーカスしたときに現れるボタンで開き、ダイアログいっぱいまで拡大する。`accTitle` を持つ図はそれをキャプションにする。印刷および PDF 出力にはダイアログを含めない。 |
-| `html.labels`        | map     | （`lang` 由来） | [`lang`](#lang) が選んだ表の上に、個別の UI ラベルを差し替える。未知のキーは拒否する。下記参照。 |
+| `html.imageLightbox` | boolean | `true` | リンクのない装飾目的以外の本文画像をクリックまたはキーボード操作すると、画面内に収まる大きさのダイアログで表示する。リンク付き画像は元のリンク動作を維持し、`alt` が明示的に空の画像は装飾画像のままにする。SVG 画像は縦横比を保ってダイアログいっぱいまで拡大し、ラスター画像は収まるように縮めるだけにする。それが画像の実寸（ラスター画像は画像の 1 ピクセルを CSS の 1 ピクセルとする大きさ、ローカルの SVG 画像は SVG 自身の `width` と `height`、または `viewBox` による大きさ。リモートのもの、data URI、入力の外のもの、`em` で寸法を書いたものなど、ビルドが読めない・大きさを決められない SVG にはボタンを出さない）と違うときは、両者を切り替えるボタンを出し、実寸ではダイアログをスクロールさせる。ラスター画像はどちらでも拡大しない。画像はダークモードでも白いパネルに載せるので、背景が透明な画像も読める。Mermaid 図はクリックするか、キーボードでフォーカスしたときに現れるボタンで開き、ダイアログいっぱいまで拡大する。`accTitle` を持つ図はそれをキャプションにする。印刷および PDF 出力にはダイアログを含めない。 |
+| `html.labels`        | map     | （英語） | 個別の UI ラベルを差し替える。未知のキーは拒否する。下記参照。 |
 
 #### `html.labels`（UI ラベル） {#html-labels}
 
-各エントリは、`lang` が選んだ表のラベルを 1 つ差し替えます。書かなかったものは表の文言のままです。monodocs が表を同梱していない言語を与える手段でもあります。
+UI ラベルは英語です。各エントリはそのうち 1 つを差し替え、書かなかったものは英語の文言のままです。UI を別の言語で表示する手段はこれです。
 
 ```yaml
 lang: fr
@@ -645,66 +648,105 @@ html:
     noResults: Aucun résultat
 ```
 
-未知のキーは無視せず拒否するので、タイプミスが黙って既定のまま残ることはありません。キーの全一覧は次のとおりです。
+未知のキーは無視せず拒否するので、タイプミスが黙って既定のまま残ることはありません。0.17.1 まで `lang: ja` が選んでいた日本語のラベルを全部書くと、次のようになります。
 
-| キー                 | `en`                         | `ja`                       | 現れる場所 |
-| -------------------- | ---------------------------- | -------------------------- | ---------- |
-| `openSidebar`        | Open sidebar                 | サイドバーを開く           | サイドバーを閉じているときの ☰ ボタン |
-| `closeSidebar`       | Close sidebar                | サイドバーを閉じる         | サイドバーヘッダの « ボタン |
-| `searchPlaceholder`  | Search…                      | 検索…                      | 検索欄のプレースホルダ |
-| `searchLabel`        | Search documents             | ドキュメントを検索         | 検索欄のアクセシブル名 |
-| `clearSearch`        | Clear search                 | 検索語を消去               | 検索欄を消す × ボタン |
-| `searchResults`      | Search results               | 検索結果                   | 結果一覧のアクセシブル名 |
-| `noResults`          | No results                   | 該当なし                   | 一致が無いときの表示 |
-| `contentWidthToggle` | Toggle content width         | 本文幅を切り替え           | 本文幅ボタンのアクセシブル名 |
-| `useWideContent`     | Use wide content             | 本文を広く表示             | 標準幅のときの本文幅ボタンの説明 |
-| `useStandardContent` | Use standard content width   | 本文を標準の幅で表示       | 広い幅のときの本文幅ボタンの説明 |
-| `darkModeToggle`     | Toggle dark mode             | ダークモードを切り替え     | ダークモードボタン |
-| `tocLabel`           | Table of contents            | 目次                       | ページ内目次のアクセシブル名 |
-| `tocTitle`           | On this page                 | このページの内容           | ページ内目次の見出し |
-| `pageNavLabel`       | Page navigation              | ページ移動                 | 前後ナビのアクセシブル名 |
-| `prev`               | ← Prev                       | ← 前へ                     | 前のページへのリンク |
-| `next`               | Next →                       | 次へ →                     | 次のページへのリンク |
-| `wrapToggle`         | Toggle word wrap             | 折り返しを切り替え         | コードブロックの折り返しボタン |
-| `copyCode`           | Copy code                    | コードをコピー             | コピーボタンのアクセシブル名 |
-| `copy`               | Copy                         | コピー                     | コピーボタンの説明 |
-| `copied`             | Copied!                      | コピーしました             | コピー成功時の表示 |
-| `copyFailed`         | Copy failed                  | コピーできませんでした     | コピー失敗時の表示 |
-| `openImagePreview`   | Open image preview           | 画像を拡大表示             | 拡大できる画像と、Mermaid 図を拡大するボタンのアクセシブル名 |
-| `imagePreview`       | Image preview                | 画像プレビュー             | 画像プレビューのアクセシブル名 |
-| `closeImagePreview`  | Close image preview          | 画像プレビューを閉じる     | 画像プレビューの閉じるボタン |
-| `generatedBy`        | Generated by                 | 生成:                      | ブランディングフッターの接頭辞 |
-| `version`            | Version                      | バージョン                 | フッターの `document.version` の前 |
-| `cover`              | Cover                        | 表紙                       | PDF ビューアのページ番号欄に出る、表紙のページラベル |
-| `contents`           | Contents                     | 目次                       | 印刷する目次（[`pdf.toc`](#pdf-toc)）の見出し |
+```yaml
+html:
+  labels:
+    openSidebar: "サイドバーを開く"
+    closeSidebar: "サイドバーを閉じる"
+    searchPlaceholder: "検索…"
+    searchLabel: "ドキュメントを検索"
+    clearSearch: "検索語を消去"
+    searchResults: "検索結果"
+    noResults: "該当なし"
+    contentWidthToggle: "本文幅を切り替え"
+    useWideContent: "本文を広く表示"
+    useStandardContent: "本文を標準の幅で表示"
+    darkModeToggle: "ダークモードを切り替え"
+    tocLabel: "目次"
+    tocTitle: "このページの内容"
+    pageNavLabel: "ページ移動"
+    prev: "← 前へ"
+    next: "次へ →"
+    wrapToggle: "折り返しを切り替え"
+    copyCode: "コードをコピー"
+    copy: "コピー"
+    copied: "コピーしました"
+    copyFailed: "コピーできませんでした"
+    openImagePreview: "画像を拡大表示"
+    imagePreview: "画像プレビュー"
+    closeImagePreview: "画像プレビューを閉じる"
+    actualSize: "実寸で表示"
+    fitToScreen: "画面に合わせる"
+    generatedBy: "生成:"
+    version: "バージョン"
+    cover: "表紙"
+    contents: "目次"
+```
+
+キーの全一覧は次のとおりです。
+
+| キー | 既定 | 現れる場所 |
+| --- | --- | --- |
+| `openSidebar` | Open sidebar | サイドバーを閉じているときの ☰ ボタン |
+| `closeSidebar` | Close sidebar | サイドバーヘッダの « ボタン |
+| `searchPlaceholder` | Search… | 検索欄のプレースホルダ |
+| `searchLabel` | Search documents | 検索欄のアクセシブル名 |
+| `clearSearch` | Clear search | 検索欄を消す × ボタン |
+| `searchResults` | Search results | 結果一覧のアクセシブル名 |
+| `noResults` | No results | 一致が無いときの表示 |
+| `contentWidthToggle` | Toggle content width | 本文幅ボタンのアクセシブル名 |
+| `useWideContent` | Use wide content | 標準幅のときの本文幅ボタンの説明 |
+| `useStandardContent` | Use standard content width | 広い幅のときの本文幅ボタンの説明 |
+| `darkModeToggle` | Toggle dark mode | ダークモードボタン |
+| `tocLabel` | Table of contents | ページ内目次のアクセシブル名 |
+| `tocTitle` | On this page | ページ内目次の見出し |
+| `pageNavLabel` | Page navigation | 前後ナビのアクセシブル名 |
+| `prev` | ← Prev | 前のページへのリンク |
+| `next` | Next → | 次のページへのリンク |
+| `wrapToggle` | Toggle word wrap | コードブロックの折り返しボタン |
+| `copyCode` | Copy code | コピーボタンのアクセシブル名 |
+| `copy` | Copy | コピーボタンの説明 |
+| `copied` | Copied! | コピー成功時の表示 |
+| `copyFailed` | Copy failed | コピー失敗時の表示 |
+| `openImagePreview` | Open image preview | 拡大できる画像と、Mermaid 図を拡大するボタンのアクセシブル名 |
+| `imagePreview` | Image preview | 画像プレビューのアクセシブル名 |
+| `closeImagePreview` | Close image preview | 画像プレビューの閉じるボタン |
+| `actualSize` | Actual size | lightbox で画像を実寸で表示するボタン |
+| `fitToScreen` | Fit to screen | lightbox で画像を画面に合わせ直すボタン |
+| `generatedBy` | Generated by | ブランディングフッターの接頭辞 |
+| `version` | Version | フッターの `document.version` の前 |
+| `cover` | Cover | PDF ビューアのページ番号欄に出る、表紙のページラベル |
+| `contents` | Contents | 印刷する目次（[`pdf.toc`](#pdf-toc)）の見出し |
 
 以前の版との差分（`--diff-from`、`--diff-from-dir`）を出すビルドは、次のキーも使います。どの設定でも受け付けますが、<span v-pre>`{{siteDataJson}}`</span> に入るのは差分を出すビルドだけなので、書いてもほかには何も変わりません。<span v-pre>`{{label…}}`</span> のテンプレートトークンは無く、テーマはそのデータから読みます。数や route はラベルの横に置き、ラベルの中には入れません。
 
-| キー                 | `en`                         | `ja`                       | 現れる場所 |
-| -------------------- | ---------------------------- | -------------------------- | ---------- |
-| `diffChanges` | Changes | 変更点 | 変更点の一覧の題。後ろに 2 つの版が続く |
-| `diffAddedPages` | Added pages | 追加されたページ | 変更点の一覧の節 |
-| `diffMovedPages` | Moved pages | 移動したページ | 変更点の一覧の節 |
-| `diffChangedPages` | Changed pages | 変更されたページ | 変更点の一覧の節 |
-| `diffDeletedPages` | Deleted pages | 削除されたページ | 変更点の一覧の節 |
-| `diffUnchangedPages` | Unchanged pages: | 変更のないページ: | 変更のないページの数の前 |
-| `diffNoChanges` | No changes. | 変更はありません。 | 何も変わっていないときの変更点の一覧 |
-| `diffPageAdded` | This page was added. | このページは追加されました。 | 追加されたページの旧版の列の注記 |
-| `diffPageDeleted` | This page was deleted. | このページは削除されました。 | 削除されたページの新版の列の注記 |
-| `diffPageMoved` | This page moved. Its earlier route: | このページは移動しました。以前の場所: | 移動したページの先頭の注記。以前の route の前 |
-| `diffViewSideBySide` | Side by side | 左右で比較 | 2 つの版を左右に並べる表示 |
-| `diffViewSideBySideHint` | Show the difference with the two versions side by side | 差分を左右に並べて表示 | その表示のボタンのツールチップ |
-| `diffViewCurrent` | New version | 新しい版 | 新しい版を見せる表示 |
-| `diffViewEarlier` | Earlier version | 以前の版 | 以前の版を見せる表示 |
-| `diffShowMarks` | Show changes | 変更を表示 | 片方の版の表示で変更に印を付けるチェック |
-| `diffPrevious` | Previous change | 前の変更 | 前の変更へのボタン |
-| `diffNext` | Next change | 次の変更 | 次の変更へのボタン |
-| `diffAdded` | Added | 追加 | 変更されたページの追加ブロック数と、サイドバーの追加ページの印 |
-| `diffDeleted` | Deleted | 削除 | 変更されたページの削除ブロック数と、サイドバーの削除ページの印 |
-| `diffChanged` | Changed | 変更 | サイドバーの変更ページの印 |
-| `diffMoved` | Moved | 移動 | サイドバーの移動ページの印 |
-| `diffTitleChanged` | The title changed. Its earlier title: | タイトルが変わりました。以前のタイトル: | front matter のタイトルが変わったページの注記。以前のタイトルの前 |
-| `diffMergedInto` | Merged into: | 統合先: | 別のページが aliases で route を引き継いだ、削除されたページ |
+| キー | 既定 | 現れる場所 |
+| --- | --- | --- |
+| `diffChanges` | Changes | 変更点の一覧の題。後ろに 2 つの版が続く |
+| `diffAddedPages` | Added pages | 変更点の一覧の節 |
+| `diffMovedPages` | Moved pages | 変更点の一覧の節 |
+| `diffChangedPages` | Changed pages | 変更点の一覧の節 |
+| `diffDeletedPages` | Deleted pages | 変更点の一覧の節 |
+| `diffUnchangedPages` | Unchanged pages: | 変更のないページの数の前 |
+| `diffNoChanges` | No changes. | 何も変わっていないときの変更点の一覧 |
+| `diffPageAdded` | This page was added. | 追加されたページの旧版の列の注記 |
+| `diffPageDeleted` | This page was deleted. | 削除されたページの新版の列の注記 |
+| `diffPageMoved` | This page moved. Its earlier route: | 移動したページの先頭の注記。以前の route の前 |
+| `diffViewSideBySide` | Side by side | 2 つの版を左右に並べる表示 |
+| `diffViewSideBySideHint` | Show the difference with the two versions side by side | その表示のボタンのツールチップ |
+| `diffViewCurrent` | New version | 新しい版を見せる表示 |
+| `diffViewEarlier` | Earlier version | 以前の版を見せる表示 |
+| `diffShowMarks` | Show changes | 片方の版の表示で変更に印を付けるチェック |
+| `diffPrevious` | Previous change | 前の変更へのボタン |
+| `diffNext` | Next change | 次の変更へのボタン |
+| `diffAdded` | Added | 変更されたページの追加ブロック数と、サイドバーの追加ページの印 |
+| `diffDeleted` | Deleted | 変更されたページの削除ブロック数と、サイドバーの削除ページの印 |
+| `diffChanged` | Changed | サイドバーの変更ページの印 |
+| `diffMoved` | Moved | サイドバーの移動ページの印 |
+| `diffTitleChanged` | The title changed. Its earlier title: | front matter のタイトルが変わったページの注記。以前のタイトルの前 |
+| `diffMergedInto` | Merged into: | 別のページが aliases で route を引き継いだ、削除されたページ |
 
 カスタムテーマがラベルを受け取る方法は次のとおりです。
 
@@ -923,7 +965,7 @@ pdf:
   日付はその下、作成者は紙の下端に並びます。用紙サイズと余白は本文と同じです。
 - **表紙には番号が付かず、本文が 1 から始まります。** 既定のフッタも置き換えたフラグメントも
   表紙には描かれず、総ページ数にも表紙は含まれません。PDF ビューアのページ番号欄も印字と一致し、
-  表紙には [`cover`](#html-labels) ラベル（`表紙` / `Cover`）が、本文には 1, 2, 3… が出ます。
+  表紙には [`cover`](#html-labels) ラベル（既定は `Cover`）が、本文には 1, 2, 3… が出ます。
 - **しおりは本文を指したままです。** 表紙はしおりに加わりません。
 - **HTML には表紙を付けません。** 画面では、同じ情報が `document` が埋める末尾のフッターに出ます。
 
@@ -945,7 +987,7 @@ pdf:
   出ないので載せません。各行はその節へのリンクです。
 - **置き場所。** 本文の前、[表紙](#pdf-cover)の後に、専用の紙で入ります。目次の紙は本文の一部なので
   フッタの番号が付き、最初のページはその次の紙から始まります。見出しは [`contents`](#html-labels)
-  ラベル（`Contents` / `目次`）です。
+  ラベル（既定は `Contents`）です。
 - **番号は PDF から読み、確かめます。** monodocs はまず番号の欄を空にして文書を印刷し、各節が
   どの紙に載ったかを読み取り、番号を入れてもう一度印刷します。そのうえで、書き出すその PDF をもう
   一度読んで比べます。番号の欄は等幅数字の固定幅なので、番号を入れても行は折り返し直さず、2 回目の

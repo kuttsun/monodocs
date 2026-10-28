@@ -486,7 +486,7 @@ describe("pages and the sidebar carry their state", () => {
 });
 
 describe("labels", () => {
-  it("follow lang and html.labels, and join siteDataJson only with a difference", async () => {
+  it("are English under lang: ja, follow html.labels, and join siteDataJson only with a difference", async () => {
     const config = {
       "monodocs.config.yml": "lang: ja\nhtml:\n  labels:\n    diffChanges: 改訂の一覧\n",
     };
@@ -495,10 +495,11 @@ describe("labels", () => {
       { ...config, "docs/a.md": "# A\n\nNew.\n" },
     );
     expect(article(html, "//changes")).toContain(">改訂の一覧 v1</h1>");
-    expect(html).toContain("変更されたページ");
+    // lang selects no labels (0.17.2, roadmap 23.4): what html.labels leaves is English.
+    expect(html).toContain("Changed pages");
     expect(siteData(html).labels).toMatchObject({
       diffChanges: "改訂の一覧",
-      diffNext: "次の変更",
+      diffNext: "Next change",
     });
 
     // Without a difference, the same configuration writes what a build without the label writes.

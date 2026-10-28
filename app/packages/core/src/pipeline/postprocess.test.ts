@@ -5,7 +5,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unified } from "unified";
 import rehypeStringify from "rehype-stringify";
 import type { Root as HastRoot } from "hast";
-import { postprocessPages, SHIKI_INJECTORS, shikiLanguageClosure } from "./postprocess";
+import {
+  postprocessPages,
+  SHIKI_INJECTORS,
+  shikiLanguageClosure,
+  svgOwnSize,
+  unsizedSvgWidth,
+} from "./postprocess";
 import { createMarkdownRenderer, markdownRenderer } from "../sources/markdown/renderer";
 import { MermaidPrerenderSetupError } from "./mermaidPrerender";
 import type { Page } from "../types";
@@ -414,6 +420,32 @@ describe("postprocessPages - mermaid pre-render", () => {
     expect(pages[0]!.html).not.toContain("<pre");
     expect(pages[0]!.html).not.toContain("language-mermaid");
   });
+
+  it.each([
+    ["dark", ' data-monodocs-scheme="dark"'],
+    ["light", ""],
+    [undefined, ""],
+  ] as const)(
+    "marks a diagram only when it is drawn for a dark page (scheme: %s)",
+    async (scheme, mark) => {
+      const pages: Page[] = [
+        page({
+          relativePath: "a.md",
+          route: "/a",
+          html: '<pre><code class="language-mermaid">graph TD; A-->B</code></pre>',
+        }),
+      ];
+      const { renderer } = fakeRenderer((id) => `<svg id="${id}"></svg>`);
+      await postprocessPages(pages, {
+        ...baseOptions,
+        mermaidMode: "pre-render",
+        mermaidPrerenderer: { ...renderer, scheme },
+      });
+      expect(pages[0]!.html).toContain(
+        `<figure class="mermaid"${mark} data-monodocs-figure="center"><svg`,
+      );
+    },
+  );
 
   it("assigns sequential ids across pages and multiple diagrams", async () => {
     const pages: Page[] = [
@@ -840,6 +872,48 @@ describe("postprocessPages - admonitions", () => {
     expect(pages[0]!.html).toContain("<p>Body.</p>");
   });
 
+  // #221: a paragraph holding only an image has no text, so testing it for text alone dropped the
+  // image with the marker.
+  it.each([
+    ["an image alone", "> [!NOTE]\n> ![x](i.png)\n", /<p[^>]*><img src="i.png" alt="x"><\/p>/],
+    [
+      "an image followed by text on the next line",
+      "> [!NOTE]\n> ![x](i.png)\n> after\n",
+      /<p[^>]*><img src="i.png" alt="x">\nafter<\/p>/,
+    ],
+    [
+      "text before the image",
+      "> [!NOTE]\n> Text ![y](i.png)\n",
+      /<p>Text <img src="i.png" alt="y"><\/p>/,
+    ],
+  ])("keeps a body that is %s", async (_, raw, body) => {
+    const rendered = await markdownRenderer.render(
+      { absolutePath: "/docs/a.md", relativePath: "a.md", raw, format: "markdown" },
+      { page: { id: "a", route: "/a", relativePath: "a.md", format: "markdown" } },
+    );
+    const pages: Page[] = [page({ relativePath: "a.md", route: "/a", html: rendered.html })];
+    await postprocessPages(pages, baseOptions);
+    const content = pages[0]!.html.split('<div class="admonition-content">')[1] ?? "";
+    expect(content).toMatch(body);
+  });
+
+  it.each([
+    // The break goes with the marker (stripLeadingBreak) before the paragraph is looked at.
+    ["the marker and its break leave", "<p>[!NOTE]<br>\n</p>"],
+    // After a newline the break is the body's, and is all the paragraph holds.
+    ["a break alone leaves", "<p>[!NOTE]\n<br></p>"],
+  ])("still drops the paragraph %s empty", async (_, first) => {
+    const pages: Page[] = [
+      page({
+        relativePath: "a.md",
+        route: "/a",
+        html: `<blockquote>\n${first}\n<p>Body.</p>\n</blockquote>`,
+      }),
+    ];
+    await postprocessPages(pages, baseOptions);
+    expect(pages[0]!.html).toMatch(/<div class="admonition-content">\s*<p>Body\.<\/p>/);
+  });
+
   it("leaves ordinary blockquotes untouched", async () => {
     const pages: Page[] = [
       page({
@@ -939,6 +1013,32 @@ describe("postprocessPages - image embedding", () => {
     expect(pages[0]!.html).not.toContain("data:image");
   });
 
+  it("decodes a percent-encoded src, and falls back to the name as written", async () => {
+    await writeFile(join(docs, "図.svg"), "<svg xmlns='http://www.w3.org/2000/svg'></svg>");
+    await writeFile(join(docs, "a b.svg"), "<svg xmlns='http://www.w3.org/2000/svg'></svg>");
+    await writeFile(join(docs, "c%20d.svg"), "<svg xmlns='http://www.w3.org/2000/svg'></svg>");
+    const pages: Page[] = [
+      page({
+        relativePath: "index.md",
+        route: "/",
+        sourcePath: join(docs, "index.md"),
+        html: ["%E5%9B%B3.svg", "a%20b.svg", "c%20d.svg", "%E0%A4%A.svg"]
+          .map((src) => `<img src="${src}" alt="x">`)
+          .join(""),
+      }),
+    ];
+    const result = await postprocessPages(pages, {
+      ...baseOptions,
+      inputDir: docs,
+      embedImages: true,
+    });
+    expect(pages[0]!.html.match(/data:image\/svg\+xml;base64,/g)).toHaveLength(3);
+    // A src that does not decode is looked up as written, and reported when that is not found.
+    const imageWarnings = result.warnings.filter((w) => w.code.startsWith("image/"));
+    expect(imageWarnings.map((w) => w.code)).toEqual(["image/not-found"]);
+    expect(imageWarnings[0]!.message).toContain("%E0%A4%A.svg");
+  });
+
   it("warns on missing images and leaves external untouched", async () => {
     const pages: Page[] = [
       page({
@@ -955,5 +1055,137 @@ describe("postprocessPages - image embedding", () => {
     });
     expect(result.warnings.some((w) => w.message.includes("nope.png"))).toBe(true);
     expect(pages[0]!.html).toContain('src="https://x/y.png"');
+  });
+});
+
+describe("unsizedSvgWidth", () => {
+  it.each([
+    ["only a viewBox", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 400">', 100],
+    ["a percentage width", '<svg width="100%" viewBox="0 0 640.4 480">', 640],
+    ["percentages both ways", "<svg width='100%' height='100%' viewBox='0,0,24,24'>", 24],
+    [
+      "an XML declaration and a comment first",
+      '<?xml version="1.0"?>\n<!-- x -->\n<svg viewBox="0 0 50 20">',
+      50,
+    ],
+  ])("gives the viewBox width to an SVG with %s", (_name, source, width) => {
+    expect(unsizedSvgWidth(source)).toBe(width);
+  });
+
+  it.each([
+    ["a width and a height", '<svg width="444px" height="392px" viewBox="0 0 444 392">'],
+    [
+      "a width and a height after a quoted >",
+      `<svg viewBox="0 0 100 400" aria-label="A > B" data-x='1>0' width="400" height="1600">`,
+    ],
+    ["a width only", '<svg width="200" viewBox="0 0 100 400">'],
+    ["a height only, in another unit", '<svg height="3cm" viewBox="0 0 100 400">'],
+    ["no viewBox", "<svg>"],
+    ["an empty viewBox", '<svg viewBox="0 0 0 10">'],
+    ["a malformed viewBox", '<svg viewBox="0 0 wide 10">'],
+    ["no svg root", "<html></html>"],
+  ])("leaves an SVG with %s alone", (_name, source) => {
+    expect(unsizedSvgWidth(source)).toBeUndefined();
+  });
+});
+
+describe("svgOwnSize", () => {
+  it.each([
+    [
+      "its own width and height",
+      '<svg width="444px" height="392px" viewBox="0 0 444 392">',
+      [444, 392],
+    ],
+    ["unitless lengths and no viewBox", '<svg width="200" height="100">', [200, 100]],
+    ["absolute units", '<svg width="1in" height="72pt">', [96, 96]],
+    [
+      "a width and the viewBox's proportions",
+      '<svg width="200" viewBox="0 0 100 400">',
+      [200, 800],
+    ],
+    [
+      "a height and the viewBox's proportions",
+      '<svg height="50" viewBox="0 0 100 400">',
+      [12.5, 50],
+    ],
+    ["only a viewBox, as the build sizes it", '<svg viewBox="0 0 100.4 400">', [100, 398.41]],
+    ["percentages and a viewBox", '<svg width="100%" height="100%" viewBox="0 0 24 24">', [24, 24]],
+  ])("takes the size from %s", (_name, source, size) => {
+    expect(svgOwnSize(source)).toEqual(size);
+  });
+
+  it.each([
+    ["no viewBox and no size", "<svg>"],
+    ["a relative length", '<svg width="10em" height="5em" viewBox="0 0 2 1">'],
+    ["a width alone, with no viewBox", '<svg width="200">'],
+    ["no svg root", "<html></html>"],
+  ])("finds no size in an SVG with %s", (_name, source) => {
+    expect(svgOwnSize(source)).toBeUndefined();
+  });
+});
+
+describe("postprocessPages - sizing SVG images that have no size", () => {
+  let root: string;
+  let docs: string;
+  beforeAll(async () => {
+    root = await mkdtemp(join(tmpdir(), "monodocs-svg-size-"));
+    docs = join(root, "docs");
+    await mkdir(docs, { recursive: true });
+    const svg = (attributes: string) =>
+      `<svg xmlns="http://www.w3.org/2000/svg" ${attributes}><rect width="10" height="10"/></svg>`;
+    await writeFile(join(docs, "tall.svg"), svg('viewBox="0 0 100 400"'));
+    await writeFile(join(docs, "sized.svg"), svg('width="444" height="392" viewBox="0 0 444 392"'));
+    await writeFile(join(root, "outside.svg"), svg('viewBox="0 0 100 400"'));
+  });
+  afterAll(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  async function run(html: string, embedImages: boolean) {
+    const pages: Page[] = [
+      page({ relativePath: "index.md", route: "/", sourcePath: join(docs, "index.md"), html }),
+    ];
+    await postprocessPages(pages, { ...baseOptions, inputDir: docs, embedImages });
+    return pages[0]!.html;
+  }
+
+  it.each([true, false])(
+    "gives a viewBox-only SVG its viewBox width (embedImages: %s)",
+    async (embedImages) => {
+      const html = await run('<img src="tall.svg?v=1#x" alt="Flow">', embedImages);
+      expect(html).toMatch(/<img [^>]*width="100"/);
+      expect(html).not.toMatch(/<img [^>]*height=/);
+      expect(html.includes("data:image/svg+xml")).toBe(embedImages);
+    },
+  );
+
+  it.each([
+    ["an SVG with its own size", '<img src="sized.svg" alt="x">'],
+    ["an <img> with a width", '<img src="tall.svg" width="50" alt="x">'],
+    ["an <img> with a height", '<img src="tall.svg" height="50" alt="x">'],
+    ["an <img> with a width in its style", '<img src="tall.svg" style="width: 50%" alt="x">'],
+    ["an SVG outside the input", '<img src="../outside.svg" alt="x">'],
+    ["a missing SVG", '<img src="nope.svg" alt="x">'],
+    ["a remote SVG", '<img src="https://example.com/a.svg" alt="x">'],
+    ["a raster image", '<img src="tall.png" alt="x">'],
+  ])("leaves %s as it is", async (_name, html) => {
+    const out = await run(html, false);
+    // Whatever width it would be given, none is added; one the <img> sets itself stays.
+    expect(out.match(/width="/g)?.length ?? 0).toBe(html.match(/width="/g)?.length ?? 0);
+  });
+
+  // The lightbox's actual size (#211) is the size the SVG gives itself, whatever the <img> says.
+  it.each([
+    ["a viewBox-only SVG", '<img src="tall.svg" alt="x">', "100 400"],
+    ["an SVG with its own size", '<img src="sized.svg" alt="x">', "444 392"],
+    ["an SVG an author narrows", '<img src="sized.svg" width="200" alt="x">', "444 392"],
+    ["an SVG outside the input", '<img src="../outside.svg" alt="x">', undefined],
+    ["a remote SVG", '<img src="https://example.com/a.svg" alt="x">', undefined],
+  ])("records the size %s gives itself", async (_name, html, size) => {
+    for (const embedImages of [true, false]) {
+      const out = await run(html, embedImages);
+      const recorded = /data-monodocs-svg-size="([^"]*)"/.exec(out)?.[1];
+      expect(recorded).toBe(size);
+    }
   });
 });

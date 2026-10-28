@@ -66,57 +66,59 @@
 | `html.imageLightbox` | `true` |
 | `html.branding` | `true` |
 | `html.colorScheme` | `light` |
-| `html.labels.openSidebar` | `lang` から |
-| `html.labels.closeSidebar` | `lang` から |
-| `html.labels.searchPlaceholder` | `lang` から |
-| `html.labels.searchLabel` | `lang` から |
-| `html.labels.clearSearch` | `lang` から |
-| `html.labels.searchResults` | `lang` から |
-| `html.labels.noResults` | `lang` から |
-| `html.labels.contentWidthToggle` | `lang` から |
-| `html.labels.useWideContent` | `lang` から |
-| `html.labels.useStandardContent` | `lang` から |
-| `html.labels.darkModeToggle` | `lang` から |
-| `html.labels.tocLabel` | `lang` から |
-| `html.labels.tocTitle` | `lang` から |
-| `html.labels.pageNavLabel` | `lang` から |
-| `html.labels.prev` | `lang` から |
-| `html.labels.next` | `lang` から |
-| `html.labels.wrapToggle` | `lang` から |
-| `html.labels.copyCode` | `lang` から |
-| `html.labels.copy` | `lang` から |
-| `html.labels.copied` | `lang` から |
-| `html.labels.copyFailed` | `lang` から |
-| `html.labels.openImagePreview` | `lang` から |
-| `html.labels.imagePreview` | `lang` から |
-| `html.labels.closeImagePreview` | `lang` から |
-| `html.labels.generatedBy` | `lang` から |
-| `html.labels.version` | `lang` から |
-| `html.labels.cover` | `lang` から |
-| `html.labels.contents` | `lang` から |
-| `html.labels.diffChanges` | `lang` から |
-| `html.labels.diffAddedPages` | `lang` から |
-| `html.labels.diffMovedPages` | `lang` から |
-| `html.labels.diffChangedPages` | `lang` から |
-| `html.labels.diffDeletedPages` | `lang` から |
-| `html.labels.diffUnchangedPages` | `lang` から |
-| `html.labels.diffNoChanges` | `lang` から |
-| `html.labels.diffPageAdded` | `lang` から |
-| `html.labels.diffPageDeleted` | `lang` から |
-| `html.labels.diffPageMoved` | `lang` から |
-| `html.labels.diffViewSideBySide` | `lang` から |
-| `html.labels.diffViewSideBySideHint` | `lang` から |
-| `html.labels.diffViewCurrent` | `lang` から |
-| `html.labels.diffViewEarlier` | `lang` から |
-| `html.labels.diffShowMarks` | `lang` から |
-| `html.labels.diffPrevious` | `lang` から |
-| `html.labels.diffNext` | `lang` から |
-| `html.labels.diffAdded` | `lang` から |
-| `html.labels.diffDeleted` | `lang` から |
-| `html.labels.diffChanged` | `lang` から |
-| `html.labels.diffMoved` | `lang` から |
-| `html.labels.diffTitleChanged` | `lang` から |
-| `html.labels.diffMergedInto` | `lang` から |
+| `html.labels.openSidebar` | 英語 |
+| `html.labels.closeSidebar` | 英語 |
+| `html.labels.searchPlaceholder` | 英語 |
+| `html.labels.searchLabel` | 英語 |
+| `html.labels.clearSearch` | 英語 |
+| `html.labels.searchResults` | 英語 |
+| `html.labels.noResults` | 英語 |
+| `html.labels.contentWidthToggle` | 英語 |
+| `html.labels.useWideContent` | 英語 |
+| `html.labels.useStandardContent` | 英語 |
+| `html.labels.darkModeToggle` | 英語 |
+| `html.labels.tocLabel` | 英語 |
+| `html.labels.tocTitle` | 英語 |
+| `html.labels.pageNavLabel` | 英語 |
+| `html.labels.prev` | 英語 |
+| `html.labels.next` | 英語 |
+| `html.labels.wrapToggle` | 英語 |
+| `html.labels.copyCode` | 英語 |
+| `html.labels.copy` | 英語 |
+| `html.labels.copied` | 英語 |
+| `html.labels.copyFailed` | 英語 |
+| `html.labels.openImagePreview` | 英語 |
+| `html.labels.imagePreview` | 英語 |
+| `html.labels.closeImagePreview` | 英語 |
+| `html.labels.actualSize` | 英語 |
+| `html.labels.fitToScreen` | 英語 |
+| `html.labels.generatedBy` | 英語 |
+| `html.labels.version` | 英語 |
+| `html.labels.cover` | 英語 |
+| `html.labels.contents` | 英語 |
+| `html.labels.diffChanges` | 英語 |
+| `html.labels.diffAddedPages` | 英語 |
+| `html.labels.diffMovedPages` | 英語 |
+| `html.labels.diffChangedPages` | 英語 |
+| `html.labels.diffDeletedPages` | 英語 |
+| `html.labels.diffUnchangedPages` | 英語 |
+| `html.labels.diffNoChanges` | 英語 |
+| `html.labels.diffPageAdded` | 英語 |
+| `html.labels.diffPageDeleted` | 英語 |
+| `html.labels.diffPageMoved` | 英語 |
+| `html.labels.diffViewSideBySide` | 英語 |
+| `html.labels.diffViewSideBySideHint` | 英語 |
+| `html.labels.diffViewCurrent` | 英語 |
+| `html.labels.diffViewEarlier` | 英語 |
+| `html.labels.diffShowMarks` | 英語 |
+| `html.labels.diffPrevious` | 英語 |
+| `html.labels.diffNext` | 英語 |
+| `html.labels.diffAdded` | 英語 |
+| `html.labels.diffDeleted` | 英語 |
+| `html.labels.diffChanged` | 英語 |
+| `html.labels.diffMoved` | 英語 |
+| `html.labels.diffTitleChanged` | 英語 |
+| `html.labels.diffMergedInto` | 英語 |
 | `pdf.pageSize` | `A4` |
 | `pdf.margin.top` | `20mm` |
 | `pdf.margin.right` | `15mm` |
@@ -203,7 +205,6 @@
 - `input/not-found`
 - `input/unsupported-file`
 - `internal/unexpected`
-- `lang/no-label-table`
 - `lang/unsupported`
 - `link/unresolved`
 - `link/unresolved-anchor`

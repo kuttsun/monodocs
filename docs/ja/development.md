@@ -60,7 +60,7 @@ pnpm 11 は、公開から `minimumReleaseAge` 分（既定 1440 分＝24 時間
 
 ### サイト依存関係のセキュリティ override
 
-`site/` の standalone package は Vite を一時的に `~6.4.3` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は、Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を通し続けてください。安全な Vite を含む範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。2026-10-01 時点の再点検では、安定版は依然として VitePress 1.6.4（`vite ^5.4.14`）、VitePress 2 は alpha（`next` タグの `2.0.0-alpha.20`）のみ、Vite 6.4 系の最新 patch も `6.4.3` のままなので、override を維持します。
+`site/` の standalone package は Vite を一時的に `~6.4.4` へ固定しています。VitePress 1.6.4 が宣言する Vite `^5.4.14` は、Dependabot が検出する Vite / esbuild の advisory 対象版へ解決されるためです。override は Vite 6.4 の patch release に限定し、`npm ci`、`npm audit`、VitePress production build を通し続けてください。安全な Vite を含む範囲を宣言する安定版 VitePress へ更新するときに削除を再検討します。2026-10-21 時点の再点検では、安定版は依然として VitePress 1.6.4（`vite ^5.4.14`）、VitePress 2 は alpha（`next` タグの `2.0.0-alpha.20`）のみなので、override を維持します。2026-10-20 に公開された launch-editor の advisory（GHSA-587h-7wmj-h5pm、GHSA-698v-4r3x-3vcv、GHSA-r825-w8mm-5pxw）が Vite 6.4.3 までを対象とするため、`~6.4.3` から `~6.4.4` に上げました。
 
 ### サイトのテーマ
 
@@ -247,22 +247,23 @@ Markdown / AsciiDoc files
 - `core/src/serve.ts` … ローカル HTTP 配信 + 監視 + SSE ライブリロード
 
 単一 HTML 内での見出し ID 衝突を避けるため、各見出し / 要素 ID は
-`{page-id}-{元のID}` に prefix する（AsciiDoc の同一文書内 xref も追従して書き換える）。
+`{page-id}-{元のID}` に prefix する（AsciiDoc の同一文書内 xref と、インライン SVG の中の参照も追従して書き換える）。
 
 対応記法や単一ファイル制約を変更するときは [syntax.md](syntax.md) を、ロードマップのバージョン完了時は [status.md](status.md) と [testing.md](testing.md) を更新します。
 
 ### UI（chrome）の言語
 
-テーマの UI 文言（コピー/折り返し、前後ナビ、検索、目次など）は**文書の `lang` に従う**。既定は `en`（v0.10）。
-言語はビルド時に決まり、読者に追従するランタイム i18n は行わない（単一ファイルの読者は一度に一種類である）。
+テーマの UI 文言（コピー/折り返し、前後ナビ、検索、目次など）は**文書の `lang` によらず英語**で、
+`html.labels` が個別の項目を差し替える（0.17.2）。文言はビルド時に決まり、読者に追従するランタイム i18n は
+行わない（単一ファイルの読者は一度に一種類である）。
 
-core が `lang` に対応する表を解決し、`html.labels` を上から適用し、結果を `siteDataJson` に公開する。
+core が英語の表の上に `html.labels` を適用し、結果を `siteDataJson` に公開する。
 `themes/default/app.js` は自前の写しを持たずそれを消費し、静的文言は `template.html` のトークンから
-取る。同梱する表は `en` と `ja`。ラベルを追加するときは両方の表と、列挙されたキー集合の両方に足す。
-片方の表に無いキーは黙ってフォールバックせずビルドを失敗させる。
+取る。ラベルを追加するときは、表と列挙されたキー集合の両方に足す。表に無いキーは、読者に空のまま
+届く前に型検査で失敗する。
 
 > [!NOTE]
-> v0.10 までは UI 文言が常に英語で、`lang="ja"` の文書が `On this page` を表示し、設定でも直せなかった。
+> v0.10 から 0.17.1 までは、`lang` がラベルの表も選び、`ja` の表を同梱していた。0.17.2 でやめた理由は
 > [roadmap.md](roadmap.md) 23.4 を参照。
 
 ### PDF のフォント

@@ -65,7 +65,8 @@ All sources share one HTML document, so every element ID must be globally unique
 - Prefix source-generated IDs, including generated ones such as footnotes, with `{page-id}-`.
 - Both renderers use `prefixIdsAndCollect` from
   [`sources/prefixIds.ts`](../app/packages/core/src/sources/prefixIds.ts) to prefix IDs, rewrite same-page
-  anchors, and collect headings and searchable text.
+  anchors and the references inside an inline SVG ([`sources/svgIds.ts`](../app/packages/core/src/sources/svgIds.ts)),
+  and collect headings and searchable text.
 - `buildPages` must reject route collisions and page-ID collisions (for example, `a-b.md` and `a/b.md` produce
   the same page ID).
 - Section numbers (`numbering.sections`) are labels, never addresses:
@@ -148,6 +149,11 @@ Preserve these pre-render invariants:
 - Create the browser lazily and close it in `finally`. Do not start Chromium when there are no diagrams.
 - Keep `validateSite` browserless by overriding Mermaid processing to client mode.
 - The pre-rendered SVG theme is fixed at build time and does not follow the reader's theme toggle.
+- A diagram drawn in Mermaid's light theme, by the client runtime or pre-rendered for a light page, gets the
+  white backing a figure's image does in dark mode, and the white panel in the lightbox. A diagram pre-rendered in
+  a dark theme (`MermaidPrerenderer.scheme`) is marked `data-monodocs-scheme="dark"` on its `<figure>`, and keeps
+  the page background in both: the lightbox script copies the mark onto the panel, since the SVG is moved out of
+  the marked block. The mark goes on the `<figure>`, not into the SVG, which `pdfVariants` keys by its string.
 - The HTML's SVG is laid out with the build machine's fonts. When a PDF is built too, a diagram with a formula in
   a label is laid out a second time, in the carried math font, and swapped in, as a string, for its HTML copy in
   the page the PDF is printed from (`pdfVariants`); the HTML written keeps its own.
@@ -226,6 +232,22 @@ Preserve these display and reachability invariants:
   keyboard-accessible dialog.
   - Images inside links or buttons keep the parent interaction; images with an explicit empty `alt` stay
     decorative. The dialog must not appear in print or PDF output.
+  - A raster image is only shrunk to fit, since enlarging it blurs it. An SVG image (an `.svg` path or a
+    `data:image/svg+xml` URI) is scaled up to fill the dialog, keeping its proportions, as a diagram is,
+    instead of stopping at the size its `width` and `height` give it.
+  - When that fitted size differs from the image's actual size, a button switches between the two, and the
+    dialog scrolls at actual size. A raster image's actual size is its pixels, one per CSS pixel. An SVG
+    image's is the size the SVG gives itself, which the build reads from each local SVG and records in
+    `data-monodocs-svg-size` (`svgOwnSize`): the browser reports a rounded default for an SVG with only a
+    `viewBox`, and a `width` on the `<img>` is how it shows in the page, not its own size. An SVG the build
+    cannot read or size, remote, a data URI, outside the input, or sized in `em`, gets no button. Every size is measured before the image is
+    resized, since laying the dialog out at another size in between scrolls it back to the start, and the
+    button is hidden only after, since hiding it while the dialog is laid out drops a keyboard user's focus.
+    A diagram gets no button: it has no size beyond the page's.
+  - An image sits on a white panel fitted to the picture, so a transparent image is not drawn over the
+    dark backdrop and the page showing through it. The panel stays white in dark mode, as does the
+    backing a figure's image gets in the page there, because most images, a draw.io export or a
+    transparent PNG, are drawn for a light background. An icon in a sentence gets no backing.
   - Mermaid diagrams open in the same dialog once their SVG exists (at load for `pre-render`, after rendering
     for `client`). The SVG is moved into the dialog and back on close, not copied, because a copy would
     duplicate the IDs its styles and `url(#…)` references depend on.
@@ -294,12 +316,12 @@ file may not reference anything external (a webfont would have to be inlined int
 embeds no webfont and uses system font stacks.
 Treat the difference from the site as a decision, not as an inconsistency to be fixed.
 
-Theme UI labels follow the document's `lang` (v0.10). Core is the source of truth: it resolves the table for
-`lang`, applies `html.labels` over it, and publishes the result in `siteDataJson`. `app.js` consumes that rather
-than holding its own copy, so a table and an override cannot drift apart; static labels come from tokens in
-`template.html`. Tables ship for `en` and `ja`; a `lang` with no shipped table falls back to English labels
-with a warning. Until v0.10 labels were always English, which left a `lang="ja"` document displaying
-`On this page`; see [roadmap.md](roadmap.md) 23.4 for the reversal and what a custom theme is guaranteed.
+Theme UI labels are English whatever the document's `lang`, which describes the pages only (0.17.2). Core is
+the source of truth: it applies `html.labels` over the English table and publishes the result in
+`siteDataJson`. `app.js` consumes that rather than holding its own copy, so the table and an override cannot
+drift apart; static labels come from tokens in `template.html`. From v0.10 to 0.17.1 `lang` also selected a
+label table, with one shipped for `ja`; see [roadmap.md](roadmap.md) 23.4 for both reversals and what a custom
+theme is guaranteed.
 
 > [!WARNING]
 > TypeScript compilation does not copy `.html`, `.css`, or `.js` theme assets. The core build must run
@@ -311,7 +333,10 @@ with a warning. Until v0.10 labels were always English, which left a `lang="ja"`
 watches source and configuration inputs, ignores output-file writes to prevent rebuild loops, and rejects a
 missing input path. A single-file input is watched through its directory, filtered to that name, because
 `fs.watch` follows the inode and would go silent after an editor saves by renaming a temporary file over the
-original.
+original. On Linux a plain watch on the same target is opened before each recursive one and kept with it: with
+no inotify instance left, Node 22 returns a recursive watch that reports nothing and no error, and only the
+plain one throws (EMFILE, #215). It is not redundant, and removing it brings back a watch that silently does
+nothing.
 
 [`serve.ts`](../app/packages/core/src/serve.ts) provides HTTP serving, `watchSite`, and SSE live reload using
 Node.js APIs. Keep it dependency-free unless a clear portability requirement justifies a new watching

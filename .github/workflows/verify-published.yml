@@ -64,7 +64,8 @@ jobs:
       # size report and `assets.budget`, and `pdf.watermark` in 0.13, `numbering.sections` and
       # `pdf.toc` in 0.14, the inline Mermaid runtime's notices and math in 0.15, checklists,
       # asciimath rendered, search folding, figure alignment, and the search clear button in 0.16,
-      # and, in 0.17, the math font a PDF's formulas are set in.
+      # and, in 0.17, the math font a PDF's formulas are set in. 0.17.2 keeps the UI labels English
+      # under `lang: ja`, the one gate on a patch release.
       # Verifying an older release must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
@@ -76,9 +77,9 @@ jobs:
             const raw = process.argv[1].trim().replace(/^v/, '');
             const m = /^(\d+)\.(\d+)\.(\d+)/.exec(raw);
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
-            const major = Number(m[1]), minor = Number(m[2]);
-            const atLeast = (n) => major > 0 || minor >= n;
-            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16), atLeast(17)].map(String).join(' '));
+            const major = Number(m[1]), minor = Number(m[2]), patch = Number(m[3]);
+            const atLeast = (n, p = 0) => major > 0 || minor > n || (minor === n && patch >= p);
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16), atLeast(17), atLeast(17, 2)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
@@ -89,6 +90,7 @@ jobs:
           echo "SUPPORTS_V015=$(echo "$gate" | cut -d' ' -f6)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V016=$(echo "$gate" | cut -d' ' -f7)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V017=$(echo "$gate" | cut -d' ' -f8)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V0172=$(echo "$gate" | cut -d' ' -f9)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -886,7 +888,9 @@ jobs:
             if (/<p data-monodocs-figure[^>]*>Inline/.test(h)) fail('an inline image was taken for a figure');
             if (!h.includes('[data-monodocs-figure=\"right\"]:not(.mermaid)')) fail('the placement rules are not in the stylesheet');
             if (!/id=\"search-clear\"[^>]*aria-label=\"Reset\"/.test(h)) fail('the clear button is missing or html.labels did not name it');
-            if (!/id=\"search-clear\"[^>]*aria-label=\"\u691C\u7D22\u8A9E\u3092\u6D88\u53BB\"/.test(ja)) fail('the clear button has no Japanese name');
+            // lang: ja named it in Japanese until 0.17.1; from 0.17.2 the labels stay English.
+            const jaName = process.env.SUPPORTS_V0172 === 'true' ? 'Clear search' : '\u691C\u7D22\u8A9E\u3092\u6D88\u53BB';
+            if (!new RegExp('id=\"search-clear\"[^>]*aria-label=\"' + jaName + '\"').test(ja)) fail('the clear button under lang: ja is not named ' + JSON.stringify(jaName));
           "
 
       # v0.16. Search folds half-width katakana and matches okurigana variants and English inflections

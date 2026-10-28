@@ -66,57 +66,59 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `html.imageLightbox` | `true` |
 | `html.branding` | `true` |
 | `html.colorScheme` | `light` |
-| `html.labels.openSidebar` | from `lang` |
-| `html.labels.closeSidebar` | from `lang` |
-| `html.labels.searchPlaceholder` | from `lang` |
-| `html.labels.searchLabel` | from `lang` |
-| `html.labels.clearSearch` | from `lang` |
-| `html.labels.searchResults` | from `lang` |
-| `html.labels.noResults` | from `lang` |
-| `html.labels.contentWidthToggle` | from `lang` |
-| `html.labels.useWideContent` | from `lang` |
-| `html.labels.useStandardContent` | from `lang` |
-| `html.labels.darkModeToggle` | from `lang` |
-| `html.labels.tocLabel` | from `lang` |
-| `html.labels.tocTitle` | from `lang` |
-| `html.labels.pageNavLabel` | from `lang` |
-| `html.labels.prev` | from `lang` |
-| `html.labels.next` | from `lang` |
-| `html.labels.wrapToggle` | from `lang` |
-| `html.labels.copyCode` | from `lang` |
-| `html.labels.copy` | from `lang` |
-| `html.labels.copied` | from `lang` |
-| `html.labels.copyFailed` | from `lang` |
-| `html.labels.openImagePreview` | from `lang` |
-| `html.labels.imagePreview` | from `lang` |
-| `html.labels.closeImagePreview` | from `lang` |
-| `html.labels.generatedBy` | from `lang` |
-| `html.labels.version` | from `lang` |
-| `html.labels.cover` | from `lang` |
-| `html.labels.contents` | from `lang` |
-| `html.labels.diffChanges` | from `lang` |
-| `html.labels.diffAddedPages` | from `lang` |
-| `html.labels.diffMovedPages` | from `lang` |
-| `html.labels.diffChangedPages` | from `lang` |
-| `html.labels.diffDeletedPages` | from `lang` |
-| `html.labels.diffUnchangedPages` | from `lang` |
-| `html.labels.diffNoChanges` | from `lang` |
-| `html.labels.diffPageAdded` | from `lang` |
-| `html.labels.diffPageDeleted` | from `lang` |
-| `html.labels.diffPageMoved` | from `lang` |
-| `html.labels.diffViewSideBySide` | from `lang` |
-| `html.labels.diffViewSideBySideHint` | from `lang` |
-| `html.labels.diffViewCurrent` | from `lang` |
-| `html.labels.diffViewEarlier` | from `lang` |
-| `html.labels.diffShowMarks` | from `lang` |
-| `html.labels.diffPrevious` | from `lang` |
-| `html.labels.diffNext` | from `lang` |
-| `html.labels.diffAdded` | from `lang` |
-| `html.labels.diffDeleted` | from `lang` |
-| `html.labels.diffChanged` | from `lang` |
-| `html.labels.diffMoved` | from `lang` |
-| `html.labels.diffTitleChanged` | from `lang` |
-| `html.labels.diffMergedInto` | from `lang` |
+| `html.labels.openSidebar` | English |
+| `html.labels.closeSidebar` | English |
+| `html.labels.searchPlaceholder` | English |
+| `html.labels.searchLabel` | English |
+| `html.labels.clearSearch` | English |
+| `html.labels.searchResults` | English |
+| `html.labels.noResults` | English |
+| `html.labels.contentWidthToggle` | English |
+| `html.labels.useWideContent` | English |
+| `html.labels.useStandardContent` | English |
+| `html.labels.darkModeToggle` | English |
+| `html.labels.tocLabel` | English |
+| `html.labels.tocTitle` | English |
+| `html.labels.pageNavLabel` | English |
+| `html.labels.prev` | English |
+| `html.labels.next` | English |
+| `html.labels.wrapToggle` | English |
+| `html.labels.copyCode` | English |
+| `html.labels.copy` | English |
+| `html.labels.copied` | English |
+| `html.labels.copyFailed` | English |
+| `html.labels.openImagePreview` | English |
+| `html.labels.imagePreview` | English |
+| `html.labels.closeImagePreview` | English |
+| `html.labels.actualSize` | English |
+| `html.labels.fitToScreen` | English |
+| `html.labels.generatedBy` | English |
+| `html.labels.version` | English |
+| `html.labels.cover` | English |
+| `html.labels.contents` | English |
+| `html.labels.diffChanges` | English |
+| `html.labels.diffAddedPages` | English |
+| `html.labels.diffMovedPages` | English |
+| `html.labels.diffChangedPages` | English |
+| `html.labels.diffDeletedPages` | English |
+| `html.labels.diffUnchangedPages` | English |
+| `html.labels.diffNoChanges` | English |
+| `html.labels.diffPageAdded` | English |
+| `html.labels.diffPageDeleted` | English |
+| `html.labels.diffPageMoved` | English |
+| `html.labels.diffViewSideBySide` | English |
+| `html.labels.diffViewSideBySideHint` | English |
+| `html.labels.diffViewCurrent` | English |
+| `html.labels.diffViewEarlier` | English |
+| `html.labels.diffShowMarks` | English |
+| `html.labels.diffPrevious` | English |
+| `html.labels.diffNext` | English |
+| `html.labels.diffAdded` | English |
+| `html.labels.diffDeleted` | English |
+| `html.labels.diffChanged` | English |
+| `html.labels.diffMoved` | English |
+| `html.labels.diffTitleChanged` | English |
+| `html.labels.diffMergedInto` | English |
 | `pdf.pageSize` | `A4` |
 | `pdf.margin.top` | `20mm` |
 | `pdf.margin.right` | `15mm` |
@@ -203,7 +205,6 @@ A diagnostic's `code` is what a job filters on, and is not renamed. The codes:
 - `input/not-found`
 - `input/unsupported-file`
 - `internal/unexpected`
-- `lang/no-label-table`
 - `lang/unsupported`
 - `link/unresolved`
 - `link/unresolved-anchor`

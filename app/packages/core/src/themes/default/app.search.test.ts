@@ -69,7 +69,7 @@ async function mountClient(
     `</div>`;
 
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
-    labels: resolveLabels("en").labels,
+    labels: resolveLabels(),
     initialRoute: pages[0]?.route,
     tocMaxLevel: options.tocMaxLevel,
     // html is a DOM-side concern, so it stays out of the client data, as in a generated document.

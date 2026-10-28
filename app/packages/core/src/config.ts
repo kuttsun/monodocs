@@ -280,9 +280,9 @@ export function buildConfigFileSchema() {
     .object({
       title: z.string().optional(),
       /**
-       * 生成した文書の言語。`<html lang>` を埋め、UI ラベルの表を選ぶ（既定 "en"）。
-       * 同梱の表が無いタグも属性には書き、ラベルだけ en へ落とす。CLI 自身のメッセージの
-       * 言語とは別物（文書はある言語で書かれ、書いている人の端末は別の言語を返しうる）。
+       * 生成した文書のページの言語。`<html lang>` を埋める（既定 "en"）。UI ラベルは選ばず、
+       * 常に英語（0.17.2、roadmap 23.4）。CLI 自身のメッセージの言語とは別物（文書はある言語で
+       * 書かれ、書いている人の端末は別の言語を返しうる）。
        */
       lang: z
         .string()
@@ -494,7 +494,7 @@ export function buildConfigFileSchema() {
           // ドキュメントを開いたときの初期配色。"light"（既定）/ "dark" / "auto"（OS 追従）。
           // 読者がトグルで切り替えると localStorage の選択が優先される。
           colorScheme: z.enum(["light", "dark", "auto"]).optional(),
-          // lang が選んだ表の上に、個別の UI ラベルを差し替える。テーマの chrome に作用する
+          // 英語の表の上に、個別の UI ラベルを差し替える。テーマの chrome に作用する
           // 層なので html の下（lang は文書自身の記述なのでトップレベル）。
           labels: labelsSchema.optional(),
         })
@@ -588,7 +588,7 @@ export function buildConfigFileSchema() {
           /**
            * 版面の密度。プリセット名か、プリセットを土台に一部だけ差し替えるオブジェクト。
            * 値を 4 つ書き写させないために `base` を持たせている（写しは、後でプリセット側を
-           * 調整したときに取り残される）。`html.labels` が lang の表に重なるのと同じ解決順。
+           * 調整したときに取り残される）。`html.labels` が英語の表に重なるのと同じ解決順。
            */
           density: z
             .union([
@@ -664,9 +664,9 @@ export type ResolvedConfig = {
   title: string;
   /** What the document says about itself: version, date, authors (13.5). */
   documentMetadata: DocumentMetadata;
-  /** 生成した文書の言語（BCP 47）。`<html lang>` を埋め、UI ラベルの表を選ぶ。 */
+  /** 生成した文書のページの言語（BCP 47）。`<html lang>` を埋める。UI ラベルは選ばない。 */
   lang: string;
-  /** `lang` が選んだ表の上に重ねる UI ラベルの差し替え。 */
+  /** 英語の表の上に重ねる UI ラベルの差し替え。 */
   labelOverrides: LabelOverrides;
   /** 必要なフォントがビルド環境に無いときの挙動（既定 warn）。 */
   fontCheck: FontCheckMode;

@@ -11,7 +11,7 @@ import { loadTheme } from "../index";
  * まったく検証しないテストになる。
  */
 const MARKED = Object.fromEntries(
-  Object.keys(resolveLabels("en").labels).map((key) => [key, `«${key}»`]),
+  Object.keys(resolveLabels()).map((key) => [key, `«${key}»`]),
 ) as Record<string, string>;
 
 async function mountClient(labels: Record<string, string>): Promise<void> {
