@@ -1058,7 +1058,8 @@ jobs:
               if (!h.includes('class=\"monodocs-diff-bar\"')) fail(file + ': no bar');
               if (!h.includes('<del data-monodocs-diff=\"\">Gone.</del>')) fail(file + ': the deleted paragraph is not marked');
               if (!h.includes('<ins data-monodocs-diff=\"\">Added.</ins>')) fail(file + ': the added paragraph is not marked');
-              if (!h.includes('href=\"#/new\"')) fail(file + ': the added page is not listed');
+              // The list of changes links a page without the sidebar's data-route.
+              if (!h.includes('<a href=\"#/new\">New</a>')) fail(file + ': the added page is not in the list of changes');
             }
             // Nothing changes for a build without one.
             if (fs.readFileSync('diff-none.html', 'utf8').includes('monodocs-diff')) fail('a build without a difference carries one');
