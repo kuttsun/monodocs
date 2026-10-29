@@ -679,6 +679,10 @@ describe.skipIf(!chromium)("search in each view", () => {
       expect(await settled([])).toEqual([]);
       await page.click('[data-monodocs-diff-view="earlier"]');
       expect(await settled(["/a"])).toEqual(["/a"]);
+      // The view changed and the query stayed: the search ran again on what the box holds.
+      const query = () =>
+        page.evaluate(() => (document.querySelector("#search-input") as HTMLInputElement).value);
+      expect(await query()).toBe("two");
       // A result opens the page, and the highlight stays in the column of the version searched.
       await page.click('#search-results a[data-route="/a"]');
       await new Promise((resolve) => setTimeout(resolve, 400));
@@ -703,6 +707,7 @@ describe.skipIf(!chromium)("search in each view", () => {
       await page.focus("#search-input");
       await page.click('[data-monodocs-diff-view="current"]');
       expect(await settled([])).toEqual([]);
+      expect(await query()).toBe("two");
       const left = await page.evaluate(() => ({
         own: document.getElementById("own-mark") !== null,
         highlights: document.querySelectorAll(

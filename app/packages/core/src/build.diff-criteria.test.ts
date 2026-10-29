@@ -247,6 +247,22 @@ describe("where and when the earlier version was built (item 26)", () => {
     expect(states(await compared())).toEqual(["/guide same"]);
   });
 
+  it("reads an SVG written inline with {docdir} from the earlier version", async () => {
+    // As under `:data-uri:`, Asciidoctor reads the file itself, so each version writes its own.
+    const svg = (fill: string) =>
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4" fill="${fill}"/></svg>`;
+    const inline = (fill: string): Files => ({
+      "docs/guide.adoc": "= Guide\n\nimage::{docdir}/s.svg[S,opts=inline]\n\nLast line.\n",
+      "docs/s.svg": svg(fill),
+    });
+    await write(now, inline("red"));
+    await write(then, inline("blue"));
+    const page = (await compared()).find((p) => p.state === "matched")!;
+    expect(changes(page).length).toBeGreaterThan(0);
+    await write(then, inline("red"));
+    expect(states(await compared())).toEqual(["/guide same"]);
+  });
+
   it("gives the same bytes for two builds of the same version at two places", async () => {
     // Two extractions of one ref land in two temporary directories; a real `--diff-from` twice is
     // in program.diff.test.ts.
@@ -436,7 +452,8 @@ describe("a build without a difference (item 30)", () => {
    * every other byte to compare, siteDataJson with its labels among them. A change made on purpose
    * to what a build writes changes these measures too: build the fixtures through `buildSite` at the
    * commit before that change and at the change, check that the change is the only difference, and
-   * take the new measures.
+   * take the new measures. They are then no longer 0.17.2's: say which release they are in this
+   * comment and in the test's title, and in docs/status.md's v0.18 item that names 0.17.2.
    */
   const fixtures = [
     {
