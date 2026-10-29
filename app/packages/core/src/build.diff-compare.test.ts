@@ -281,7 +281,7 @@ describe("generated numbers are not differences", () => {
       // Only what was inserted: every number that moved on is left out.
       const found = changes(await onePage("docs/a.adoc", earlier, current, config));
       expect(found.map((c) => (c.startsWith("+image") ? "+image" : c))).toEqual([
-        "+h2 . Zero",
+        "+h2 Zero",
         "+p New.",
         "+image",
         "+title Figure . New fig",

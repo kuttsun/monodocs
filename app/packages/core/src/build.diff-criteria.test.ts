@@ -314,6 +314,21 @@ describe("an earlier :sectnums: against numbering.sections (item 27)", () => {
     expect(inlineDeleted).toContain("-h2 One");
     for (const mark of inlineDeleted) expect(mark.replace(/^\S+ /, ""), mark).not.toMatch(/\d/);
   });
+
+  it("pairs the headings that stayed, although the scheme numbering them changed", async () => {
+    // Asciidoctor writes `1. Two` and `1.1. Two sub`, numbering.sections an element of its own. The
+    // separators are generated as the numbers are, so neither is read as part of the heading.
+    await write(then, {
+      "docs/g.adoc": "= G\n:sectnums:\n\n== One\n\nA.\n\n== Two\n\nB.\n\n=== Two sub\n\nC.\n",
+    });
+    await write(now, {
+      "monodocs.config.yml": "numbering:\n  sections: 3\n",
+      "docs/g.adoc": "= G\n\n== One\n\nA.\n\n== Two\n\nB.\n\n=== Two sub\n\nC.\n",
+    });
+    const page = (await compared()).find((p) => p.state === "matched" && p.new.route === "/g");
+    expect(page).toBeDefined();
+    expect(changes(page)).toEqual([]);
+  });
 });
 
 describe("a build without a difference (item 30)", () => {

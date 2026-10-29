@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Element, ElementContent, Root as HastRoot } from "hast";
 import { toHtml } from "hast-util-to-html";
-import { isGenerated } from "../pipeline/generatedNumbers.js";
+import { isGenerated, isGeneratedSeparator } from "../pipeline/generatedNumbers.js";
 import { recordedData } from "../pipeline/postprocess.js";
 
 /**
@@ -229,7 +229,7 @@ function collapse(text: string): string {
 }
 
 /**
- * What text reads as: generated numbers left out, an inline formula as its TeX, an inline image as
+ * What text reads as: generated numbers, and the separators around a section's, left out, an inline formula as its TeX, an inline image as
  * its hash and `alt`, a checkbox as its state. Links, emphasis, and classes are not read: a link
  * re-pointed with the same text is not a change to what the document says.
  */
@@ -238,7 +238,7 @@ function textOf(nodes: readonly ElementContent[]): string {
   const walk = (list: readonly ElementContent[]) => {
     for (const child of list) {
       if (child.type === "text") {
-        if (!isGenerated(child)) out += child.value;
+        if (!isGenerated(child) && !isGeneratedSeparator(child)) out += child.value;
         continue;
       }
       if (child.type !== "element") continue;
