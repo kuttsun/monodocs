@@ -468,8 +468,38 @@ export const DIFF_SCRIPT = `(function () {
 
   // Line up each unchanged pair: the higher of the two gets space above it.
   function unpad() {
-    padded.forEach(function (entry) { entry.node.style.marginTop = entry.margin; });
+    padded.forEach(function (entry) { entry.node.style[entry.prop] = entry.value; });
     padded = [];
+  }
+  // Space added to one property of one element, remembered so that unpad can take it back.
+  function pad(node, prop, by) {
+    var known = padded.filter(function (entry) {
+      return entry.node === node && entry.prop === prop;
+    })[0];
+    if (!known) {
+      known = { node: node, prop: prop, value: node.style[prop] };
+      padded.push(known);
+    }
+    var now = parseFloat(getComputedStyle(node)[prop]) || 0;
+    node.style[prop] = now + by + "px";
+  }
+  // Move a block down by the given pixels. A table row takes no margin: the space goes under the row
+  // before it, into each of its cells so the row grows by that much, or above its table when it is
+  // the table's first row.
+  function lower(node, by) {
+    if (node.tagName !== "TR") return pad(node, "marginTop", by);
+    var before = node.previousElementSibling;
+    var section = node.parentElement;
+    while (!before && section && section.previousElementSibling) {
+      section = section.previousElementSibling;
+      before = section.rows && section.rows.length ? section.rows[section.rows.length - 1] : null;
+    }
+    if (before && before.tagName === "TR") {
+      [].forEach.call(before.cells, function (cell) { pad(cell, "paddingBottom", by); });
+      return;
+    }
+    var table = node.closest("table");
+    if (table) pad(table, "marginTop", by);
   }
   function sideBySide(columns) {
     var earlier = columns.children[0];
@@ -495,18 +525,12 @@ export const DIFF_SCRIPT = `(function () {
       });
       own(columns.children[0], "[data-monodocs-diff-pair]").forEach(function (left) {
         var other = right[left.getAttribute("data-monodocs-diff-pair")];
-        if (!other || /^(TR|TD|TH)$/.test(left.tagName)) return;
+        // A cell is level once its row is.
+        if (!other || /^(TD|TH)$/.test(left.tagName)) return;
         for (var tries = 0; tries < 3; tries++) {
           var gap = left.getBoundingClientRect().top - other.getBoundingClientRect().top;
           if (Math.abs(gap) < 1) break;
-          var node = gap > 0 ? other : left;
-          var known = padded.filter(function (entry) { return entry.node === node; })[0];
-          if (!known) {
-            known = { node: node, margin: node.style.marginTop };
-            padded.push(known);
-          }
-          var now = parseFloat(getComputedStyle(node).marginTop) || 0;
-          node.style.marginTop = now + Math.abs(gap) + "px";
+          lower(gap > 0 ? other : left, Math.abs(gap));
         }
       });
     });

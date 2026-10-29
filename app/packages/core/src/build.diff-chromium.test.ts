@@ -84,7 +84,7 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
           const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
           const [left, right] = [...article.querySelectorAll(".monodocs-diff-columns > div")];
           return [...left!.querySelectorAll("[data-monodocs-diff-pair]")]
-            .filter((node) => !/^(TR|TD|TH)$/.test(node.tagName))
+            .filter((node) => !/^(TD|TH)$/.test(node.tagName))
             .map((node) => {
               const pair = node.getAttribute("data-monodocs-diff-pair");
               const other = right!.querySelector(`[data-monodocs-diff-pair="${pair}"]`)!;
@@ -1257,7 +1257,7 @@ function pairGaps(page: import("puppeteer-core").Page) {
     const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
     const [left, right] = [...article.querySelectorAll(".monodocs-diff-columns > div")];
     return [...left!.querySelectorAll("[data-monodocs-diff-pair]")]
-      .filter((node) => !/^(TR|TD|TH)$/.test(node.tagName))
+      .filter((node) => !/^(TD|TH)$/.test(node.tagName))
       .map((node) => {
         const pair = node.getAttribute("data-monodocs-diff-pair");
         const other = right!.querySelector(`[data-monodocs-diff-pair="${pair}"]`)!;
@@ -1269,6 +1269,62 @@ function pairGaps(page: import("puppeteer-core").Page) {
       });
   });
 }
+
+/** The gap between each pair of table rows side by side, by the first cell's text. */
+function rowGaps(page: import("puppeteer-core").Page) {
+  return page.evaluate(() => {
+    const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+    const [left, right] = [...article.querySelectorAll(".monodocs-diff-columns > div")];
+    return [...left!.querySelectorAll("tr[data-monodocs-diff-pair]")].map((row) => {
+      const pair = row.getAttribute("data-monodocs-diff-pair");
+      const other = right!.querySelector(`[data-monodocs-diff-pair="${pair}"]`)!;
+      return {
+        row: row.querySelector("td, th")!.textContent!.trim(),
+        gap: Math.round(row.getBoundingClientRect().top - other.getBoundingClientRect().top),
+      };
+    });
+  });
+}
+
+describe.skipIf(!chromium)("a table with rows of different heights either side", () => {
+  it("lines up its unchanged rows, and what follows it", async () => {
+    const long =
+      "a cell long enough to wrap onto several lines of its own in a column half the width of " +
+      "the page, so that its row stands taller than any other";
+    const { dir, html } = await builtDiff(
+      "rows",
+      {
+        "docs/a.md":
+          "# A\n\n| Key | Value |\n|---|---|\n| first | one |\n" +
+          `| gone | ${long} |\n| second | two |\n| third | short |\n| fourth | four |\n\nAfter.\n`,
+      },
+      {
+        "docs/a.md":
+          "# A\n\n| Key | Value |\n|---|---|\n| first | one |\n| second | two |\n" +
+          `| third | ${long} |\n| fourth | four |\n\nAfter.\n`,
+      },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      await page.goto(`${pathToFileURL(html).href}#/a`);
+      const level = (gaps: { gap: number }[]) => gaps.every((pair) => Math.abs(pair.gap) <= 1);
+      // The deleted row on the left and the taller changed row on the right both push what follows.
+      const rows = await until(() => rowGaps(page), level);
+      expect(rows.map((pair) => pair.row)).toEqual(["Key", "first", "second", "fourth"]);
+      expect(level(rows)).toBe(true);
+      expect(level(await pairGaps(page))).toBe(true);
+      // Again once the layout changes.
+      await page.setViewport({ width: 1100, height: 900 });
+      expect(level(await until(() => rowGaps(page), level))).toBe(true);
+      expect(level(await until(() => pairGaps(page), level))).toBe(true);
+      await page.close();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
+});
 
 describe.skipIf(!chromium)("a diagram with changes around it", () => {
   it("lines up the blocks either side in both columns, at any width, and stacks them when narrow", async () => {

@@ -345,6 +345,28 @@ describe("an earlier :sectnums: against numbering.sections (item 27)", () => {
     for (const mark of inlineDeleted) expect(mark.replace(/^\S+ /, ""), mark).not.toMatch(/\d/);
   });
 
+  it.each([
+    ["sectlinks", ":sectlinks:\n"],
+    ["a table of contents", ":toc:\n"],
+  ])("shows no number in the earlier column with %s", async (_, attribute) => {
+    // A heading's own link, and a table of contents' entry, are the section's title, not a
+    // cross-reference whose text keeps its numbers.
+    await write(then, {
+      "docs/g.adoc": `= G\n:sectnums:\n${attribute}\n== One\n\nA.\n\n=== One sub\n\nX.\n\n== Two\n\nB.\n`,
+    });
+    await write(now, {
+      "monodocs.config.yml": "numbering:\n  sections: 3\n",
+      "docs/g.adoc": `= G\n${attribute}\n== Two\n\nB.\n`,
+    });
+    await buildSite({ outputFile: out(), diff: { dir: "../then", label: "v1" } });
+    const html = await readFile(out(), "utf8");
+    const start = html.indexOf('<article class="page" data-route="/g"');
+    const page = html.slice(start, html.indexOf("</article>", start));
+    const earlier = page.slice(0, page.indexOf('<div class="monodocs-diff-current">'));
+    expect(earlier).toContain("One sub");
+    expect(earlier).not.toMatch(/\d+(?:\.\d+)*\. (?:One|Two)/);
+  });
+
   it("pairs the headings that stayed, although the scheme numbering them changed", async () => {
     // Asciidoctor writes `1. Two` and `1.1. Two sub`, numbering.sections an element of its own. The
     // separators are generated as the numbers are, so neither is read as part of the heading.

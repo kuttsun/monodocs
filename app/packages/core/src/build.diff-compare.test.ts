@@ -400,6 +400,13 @@ describe("what each block is compared by", () => {
   it("never makes whitespace between AsciiDoc elements a block", async () => {
     const page = await onePage("docs/a.adoc", "= A\n\nOne.\n\n\n\nTwo.\n", "= A\n\nOne.\n\nTwo.\n");
     expect(changes(page)).toEqual([]);
+    // Nor a block on both sides, which an unchanged pair would hide.
+    expect(page.edits!.every((edit) => edit.op !== "equal" || edit.new.key !== "")).toBe(true);
+    expect(page.edits!.map((edit) => edit.op === "equal" && edit.new.key)).toEqual([
+      "A",
+      "One.",
+      "Two.",
+    ]);
   });
 
   it("reads a front-matter title written with {docdir} as the same title", async () => {

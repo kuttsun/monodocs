@@ -309,6 +309,16 @@ function renameSvgIds(svg: Element, prefix: string): void {
   walk(svg);
 }
 
+/**
+ * Whether a link is a section's own: Asciidoctor's `:sectlinks:` heading link (`a.link`), or an
+ * entry of its table of contents (`ul.sectlevelN > li > a`). Both point into the page.
+ */
+function isSectionLink(link: Element, inToc: boolean): boolean {
+  const href = link.properties.href;
+  if (typeof href !== "string" || !href.startsWith("#")) return false;
+  return inToc || classes(link).includes("link");
+}
+
 /** The writer for one version's clones, with the prefix its SVG IDs are renamed with. */
 class Cloner {
   constructor(
@@ -321,7 +331,7 @@ class Cloner {
    * image the earlier version kept as a file shown as its `alt` and path. Several nodes, or none,
    * may stand for one: a link is replaced by its content.
    */
-  clean(node: Node, inLink = false): ElementContent[] {
+  clean(node: Node, inLink = false, inToc = false): ElementContent[] {
     if (node.type === "text") {
       return isGenerated(node) && !inLink ? [] : [{ type: "text", value: node.value }];
     }
@@ -338,8 +348,13 @@ class Cloner {
       return [svg];
     }
     if (isGeneratedElement(node)) return [];
-    // A cross-reference's text stays as the earlier version wrote it, its numbers with it.
-    if (node.tagName === "a") return node.children.flatMap((child) => this.clean(child, true));
+    if (node.tagName === "a") {
+      // A section's own link — its heading's under `:sectlinks:`, or its entry in Asciidoctor's
+      // table of contents — is the section's title, and its numbers go as a heading's do.
+      if (!inLink && isSectionLink(node, inToc)) return this.cleanChildren(node.children, false);
+      // A cross-reference's text stays as the earlier version wrote it, its numbers with it.
+      return node.children.flatMap((child) => this.clean(child, true));
+    }
     // A video, an audio clip, or a player the earlier version kept as a file is shown as its path,
     // as an image is: the file is in the earlier version.
     if (MEDIA_FILES.has(node.tagName)) {
@@ -357,7 +372,9 @@ class Cloner {
         return [textSpan(alt === "" ? src : `${alt} (${src})`, node)];
       }
     }
-    const shell = this.shell(node, this.cleanChildren(node.children, inLink));
+    const toc =
+      inToc || (node.tagName === "ul" && classes(node).some((name) => /^sectlevel\d+$/.test(name)));
+    const shell = this.shell(node, this.cleanChildren(node.children, inLink, toc));
     // Other sources of the image, and a video's poster, would be read from the new version too.
     delete shell.properties.srcSet;
     if (typeof shell.properties.poster === "string" && isLocal(shell.properties.poster)) {
@@ -371,7 +388,11 @@ class Cloner {
    * (`1. Title`, `Appendix A: Title`), and the label before it when that starts the element
    * (`Figure 1. Title`), so the earlier title reads as its words alone.
    */
-  private cleanChildren(children: readonly ElementContent[], inLink: boolean): ElementContent[] {
+  private cleanChildren(
+    children: readonly ElementContent[],
+    inLink: boolean,
+    inToc = false,
+  ): ElementContent[] {
     const out: ElementContent[] = [];
     let after = false;
     for (const child of children) {
@@ -387,7 +408,7 @@ class Cloner {
         after = true;
         continue;
       }
-      const cleaned = this.clean(child, inLink);
+      const cleaned = this.clean(child, inLink, inToc);
       const first = cleaned[0];
       if (after && first?.type === "text") first.value = first.value.replace(/^[.:]\s*/, "");
       if (cleaned.length > 0) after = false;
