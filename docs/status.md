@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-10-14
+Last updated: 2026-10-29
 
 ## Support Status
 
@@ -27,7 +27,7 @@ Last updated: 2026-10-14
 | Mermaid runtime notices, Mermaid 12, math         | ✅ Done   | v0.15          |
 | Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | ✅ Done   | v0.16 |
 | One math font for the PDF, KaTeX 0.18, Mermaid 12.2 | ✅ Done   | v0.17 |
-| Difference from an earlier version in HTML        | 🚧 Planned| v0.18          |
+| Difference from an earlier version in HTML        | ✅ Done   | v0.18          |
 | Difference from an earlier version in PDF         | 🚧 Planned| v0.19          |
 | Word and character differences inside a block     | 🚧 Planned| v0.20          |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
@@ -93,6 +93,11 @@ v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an ear
 into them, for readers who do not look at Git, in three releases. 12.4 would allow them in 1.x; they
 come first because what they add is a surface 1.0 freezes, cheap to change before the number and
 expensive after it ([roadmap.md](roadmap.md) 7.3, 12.4).
+0.18.0, the first of them, goes out under `latest` without a beta, with the CI guide pinned to it:
+nothing changes for a build without `--diff-from` or `--diff-from-dir`. It also carries the zod
+update for #232, which 0.17.2's package and binaries lack. The published package and the release
+binaries are verified, and a difference the released Linux binary builds driven in a browser, after
+`latest` moves.
 
 ## Completion Criteria Status
 
@@ -735,7 +740,7 @@ Every PDF with a formula changes, but this release skips the beta 0.15.0 and 0.1
 
 Nothing changes for an existing document, so this release goes to `latest` without a beta, as 0.13.0 and 0.14.0 did.
 
-- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.18.0` in the version change itself, before the `v0.18.0` tag is created
+- [x] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.18.0` in the version change itself, before the `v0.18.0` tag is created — `site/docs/ci.md` and `site/ja/docs/ci.md`, four pins each, in the change that bumps the CLI to 0.18.0
 - [x] `verify-published.yml` gains a 0.18 gate and steps that build a difference from a tag of a fixture repository and from a directory, merged before anything below runs — the gate reads `SUPPORTS_V018` from the published version, and the step commits a fixture in a repository it makes, tags it, changes a paragraph and adds a page in a second commit, so that `v1` is not `HEAD`, and builds the difference with `--diff-from v1` and with `--diff-from-dir` against a copy, asserting the list of changes under each version's name, the bar, the deleted and added paragraphs marked, the unchanged paragraph paired in both columns and marked in neither, and the added page under the list's added pages, by the link the list writes rather than the sidebar's; a build without a difference carries none, and a PDF with `--diff-from` stops saying why and writes no file. Run locally against this tree's CLI in the development image, the step passed and the gate read `true` for 0.18.0; it first runs on a runner with 0.18.0's verification
 - [ ] Publish `0.18.0` under the `latest` tag, with release notes introducing `--diff-from` and `--diff-from-dir` and stating that nothing changes for a build without them, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.18.0` — not the default `next`, which still points at 0.17.2 and would skip every 0.18 step while passing — confirming that the 0.18 steps ran rather than being skipped
 - [ ] Verify the `v0.18.0` release binaries through `verify-release-binaries.yml` on both platforms
