@@ -201,7 +201,7 @@ describe("where and when the earlier version was built (item 26)", () => {
     "docs/j.png": "PNG",
   });
 
-  it("is no difference for an unchanged page using {docdir}, its includes and images read from the earlier version", async () => {
+  it("is no difference for an unchanged page using {docdir} in its text, includes, and images", async () => {
     await write(now, located(""));
     await write(then, located(""));
     expect(states(await compared())).toEqual(["/guide same"]);
@@ -217,6 +217,34 @@ describe("where and when the earlier version was built (item 26)", () => {
       "-p Included through docdir then.",
       "+p Included through docdir.",
     ]);
+  });
+
+  it("reads a relative image from the earlier version", async () => {
+    // Only the earlier version's file differs: the image is a change, so its own file was read.
+    await write(now, located(""));
+    await write(then, { ...located(""), "docs/i.png": "PNG then" });
+    const page = (await compared()).find((p) => p.state === "matched")!;
+    expect(changes(page).map((c) => c.replace(/ .*/, ""))).toEqual(["-image", "+image"]);
+  });
+
+  it("reads an image written with {docdir} from the earlier version where Asciidoctor reads it", async () => {
+    // A `{docdir}` target is absolute, which monodocs reads in neither version: it is compared by
+    // its `src`, the new location in both (roadmap 7.3.2). Under `:data-uri:` Asciidoctor reads the
+    // file itself, and each version embeds its own.
+    const dataUri = (files: Files): Files => ({
+      ...files,
+      "docs/guide.adoc": files["docs/guide.adoc"]!.toString().replace(
+        "= Guide\n",
+        "= Guide\n:data-uri:\n",
+      ),
+    });
+    await write(now, dataUri(located("")));
+    await write(then, dataUri({ ...located(""), "docs/j.png": "PNG then" }));
+    const page = (await compared()).find((p) => p.state === "matched")!;
+    expect(changes(page).map((c) => c.replace(/ .*/, ""))).toEqual(["-image", "+image"]);
+    // And with the file unchanged, the page is unchanged.
+    await write(then, dataUri(located("")));
+    expect(states(await compared())).toEqual(["/guide same"]);
   });
 
   it("gives the same bytes for two builds of the same version at two places", async () => {
@@ -308,6 +336,8 @@ describe("an earlier :sectnums: against numbering.sections (item 27)", () => {
     expect(deleted).toContain("-h3 One sub");
     for (const mark of deleted) expect(mark.replace(/^\S+ /, ""), mark).not.toMatch(/\d/);
     expect(earlier).not.toContain("section-number");
+    // Nor the numbers Asciidoctor writes itself, on the headings that stayed as on those deleted.
+    expect(earlier).not.toMatch(/<h[2-6][^>]*>\s*(?:<a[^>]*><\/a>)?\d+(?:\.\d+)*\. /);
     // In one column, as the markup PDF will.
     const inline = (await writtenInline()).get("/g")!;
     const inlineDeleted = marks(inline).filter((mark) => /^-h[2-6] /.test(mark));
@@ -324,6 +354,33 @@ describe("an earlier :sectnums: against numbering.sections (item 27)", () => {
     await write(now, {
       "monodocs.config.yml": "numbering:\n  sections: 3\n",
       "docs/g.adoc": "= G\n\n== One\n\nA.\n\n== Two\n\nB.\n\n=== Two sub\n\nC.\n",
+    });
+    const page = (await compared()).find((p) => p.state === "matched" && p.new.route === "/g");
+    expect(page).toBeDefined();
+    expect(changes(page)).toEqual([]);
+  });
+
+  // The run of numbers ends at Asciidoctor's `. `: a title of its own that starts with a dot keeps
+  // it, so changing it is a change.
+  it("reads a title's own leading dot as the title's", async () => {
+    const page = await onePage(
+      "docs/n.adoc",
+      "= N\n:sectnums:\n\n== .NET overview\n\nA.\n",
+      "= N\n:sectnums:\n\n== NET overview\n\nA.\n",
+    );
+    expect(changes(page)).toEqual(["-h2 .NET overview", "+h2 NET overview"]);
+  });
+
+  it.each([
+    ["sectanchors", ":sectanchors:\n"],
+    ["sectlinks", ":sectlinks:\n"],
+    ["a table of contents", ":toc:\n"],
+  ])("pairs the headings that stayed with %s too", async (_, attribute) => {
+    const body = "\n== One\n\nA.\n\n== Two\n\nB.\n\n=== Two sub\n\nC.\n";
+    await write(then, { "docs/g.adoc": `= G\n:sectnums:\n${attribute}${body}` });
+    await write(now, {
+      "monodocs.config.yml": "numbering:\n  sections: 3\n",
+      "docs/g.adoc": `= G\n${attribute}${body}`,
     });
     const page = (await compared()).find((p) => p.state === "matched" && p.new.route === "/g");
     expect(page).toBeDefined();
@@ -350,11 +407,14 @@ describe("a build without a difference (item 30)", () => {
   /**
    * Two documents, one with numbering.sections and one with :sectnums:, lang: ja, and a label of
    * the author's, built by monodocs 0.17.2 (the release before this feature) with that theme: each
-   * output's size and SHA-256. 0.17.2 and this build differ only in the default theme's `app.js`
+   * output's size and SHA-256. They are core's `buildSite` without `generatorVersion`, as this test
+   * builds: the CLI passes its version, and the footer then reads `monodocs v0.17.2`, which changes
+   * both. 0.17.2 and this build differ only in the default theme's `app.js`
    * (measured on `examples/en`, `ja`, and `math`: the search hook alone), so replacing it leaves
    * every other byte to compare, siteDataJson with its labels among them. A change made on purpose
-   * to what a build writes changes these measures too: build the fixtures with the commit before
-   * that change, check that the change is the only difference, and take the new measures.
+   * to what a build writes changes these measures too: build the fixtures through `buildSite` at the
+   * commit before that change and at the change, check that the change is the only difference, and
+   * take the new measures.
    */
   const fixtures = [
     {

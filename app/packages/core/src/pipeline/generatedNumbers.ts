@@ -49,39 +49,70 @@ const HEADING = /^h[1-6]$/;
  * Asciidoctor writes a numbered section's heading as `1.2. Title`, and only the numbers are marked:
  * the dots and the space around them are its own too, and read as part of the heading they would
  * make a heading numbered by `:sectnums:` differ from the same heading numbered by
- * `numbering.sections`, which writes its number as an element (19.1). Every separator in the run of
- * numbers that opens the heading is marked, up to the title's first character, which is split off.
- * The mark is a separator's, not a number's: what reads the numbers alone sees what it saw before.
+ * `numbering.sections`, which writes its number as an element (19.1). The separators in the run of
+ * numbers that opens the heading — a `.` between two numbers, and the `. ` after the last — are
+ * marked; a title's own leading dot (`.NET`) is the title's. The heading's text may sit behind an
+ * empty anchor (`:sectanchors:`) or inside a link (`:sectlinks:`), and the same run opens each entry
+ * of Asciidoctor's table of contents. The mark is a separator's, not a number's: what reads the
+ * numbers alone sees what it saw before.
  */
-function markSectionSeparators(heading: Element): void {
-  const children = heading.children;
-  const isMarked = (child: ElementContent | undefined): child is Text =>
-    child?.type === "text" && isGenerated(child);
-  // Before the spans are turned into text: a numeral is still `span[data-monodocs-generated]`.
+function markSectionSeparators(container: Element): void {
   const isNumeral = (child: ElementContent | undefined) =>
-    isMarked(child) ||
+    (child?.type === "text" && isGenerated(child)) ||
     (child?.type === "element" &&
       child.tagName === "span" &&
       child.properties.dataMonodocsGenerated !== undefined);
-  if (!isNumeral(children[0])) return;
-  for (let i = 1; i < children.length; i++) {
+  const hasText = (node: ElementContent): boolean =>
+    node.type === "text"
+      ? node.value.trim() !== ""
+      : node.type === "element" && node.children.some(hasText);
+  // Whitespace, and the empty anchor `:sectanchors:` writes before the title.
+  const before = (node: ElementContent) =>
+    !hasText(node) && (node.type === "text" || (node.type === "element" && node.tagName === "a"));
+  const children = container.children;
+  let first = 0;
+  while (first < children.length && before(children[first]!)) first++;
+  const lead = children[first];
+  if (lead?.type === "element" && lead.tagName === "a" && !isNumeral(lead)) {
+    markSectionSeparators(lead);
+    return;
+  }
+  if (!isNumeral(lead)) return;
+  // A separator keeps whatever else its text node carried.
+  const separator = (from: Text, value: string): Text => ({
+    ...from,
+    value,
+    data: { ...from.data, monodocsGeneratedSeparator: true } as Text["data"],
+  });
+  for (let i = first + 1; i < children.length; i++) {
     const child = children[i]!;
     if (isNumeral(child)) continue;
     if (child.type !== "text") return;
-    const separator = /^[.\s]*/.exec(child.value)![0];
-    if (separator === "") return;
-    const marked = {
-      type: "text",
-      value: separator,
-      data: { ...child.data, monodocsGeneratedSeparator: true },
-    } as Text;
-    if (separator === child.value) {
-      children[i] = marked;
+    // Between two numbers: `.` alone.
+    if (child.value === "." && isNumeral(children[i + 1])) {
+      children[i] = separator(child, ".");
       continue;
     }
-    // The title starts here: only what comes before it is generated.
-    children.splice(i, 1, marked, { ...child, value: child.value.slice(separator.length) });
+    // After the last: `. `, then the title.
+    const end = /^\.\s/.exec(child.value)?.[0];
+    if (end === undefined) return;
+    const rest = child.value.slice(end.length);
+    children.splice(
+      i,
+      1,
+      separator(child, end),
+      ...(rest === "" ? [] : [{ ...child, value: rest }]),
+    );
     return;
+  }
+}
+
+/** Asciidoctor's table of contents: each `ul.sectlevelN > li > a` opens with the section's numbers. */
+function markTocSeparators(list: Element): void {
+  for (const item of list.children) {
+    if (item.type !== "element" || item.tagName !== "li") continue;
+    const link = item.children.find((c): c is Element => c.type === "element");
+    if (link?.tagName === "a") markSectionSeparators(link);
   }
 }
 
@@ -112,8 +143,12 @@ function markGfm(tree: HastRoot): void {
  */
 function markAsciidoc(tree: HastRoot): void {
   visit(tree, "element", (node, index, parent) => {
-    // A section's heading: the separators around the numbers are generated with them.
+    // A section's heading, and its entry in the table of contents: the separators around the
+    // numbers are generated with them.
     if (HEADING.test(node.tagName)) markSectionSeparators(node);
+    if (node.tagName === "ul" && classes(node).some((name) => /^sectlevel\d+$/.test(name))) {
+      markTocSeparators(node);
+    }
     if (node.tagName === "span" && node.properties.dataMonodocsGenerated !== undefined) {
       if (parent === undefined || typeof index !== "number") return;
       const marked: ElementContent[] = node.children.map((child) =>

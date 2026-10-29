@@ -126,7 +126,7 @@ monodocs build ./docs -o ./dist/docs.html --diff-from-dir ../project-1.2
 - 以前の版は、文書が何を含むか——`input`、`root`、`sources.*`、`sidebar.mode`、`sidebar.items`、`sidebar.titleFrom`、`sidebar.titleTransform`、`sidebar.flattenSingleChild`、`math.enabled`、`mermaid.enabled`——を自分の設定から取り、出力の見た目は新しい版の設定に従います。以前の版に無いパスや、以前の版の外に出るパスは `diff/outside-version` になります。文書のディレクトリをあとで改名した版は、新しい版と同じ配置にした写しを `--diff-from-dir` で渡してください。
 - 以前の版のビルドが出す警告は報告しません。リリースした版は直せないからです。以前の版のビルドのエラーはビルドを止めます。
 
-2 つのオプションは同時に使えず（`diff/conflicting-options`）、`build` にだけあり、設定ファイルのキーはありません。差分は今のところ HTML だけです。`-f pdf`、`-f both`、`output.format` のどれで PDF を出力しても、ビルドは `diff/unsupported` で止まります。バー、一覧、注記の文言は `lang` に従い、[`html.labels`](/ja/docs/configuration#html-labels) で変えられます。[サイズの報告](/ja/docs/configuration#assets)には `差分` の行が加わります。
+2 つのオプションは同時に使えず（`diff/conflicting-options`）、`build` にだけあり、設定ファイルのキーはありません。差分は今のところ HTML だけです。`-f pdf`、`-f both`、`output.format` のどれで PDF を出力しても、ビルドは `diff/unsupported` で止まります。バー、一覧、注記の文言は、ほかの UI ラベルと同じく `lang` によらず英語で、[`html.labels`](/ja/docs/configuration#html-labels) で変えられます。[サイズの報告](/ja/docs/configuration#assets)には `差分` の行が加わります。
 
 ## `watch`
 

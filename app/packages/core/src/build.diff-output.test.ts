@@ -311,6 +311,29 @@ describe("the two versions side by side", () => {
     expect(sidebar("earlier")).toEqual(["/a A", "//deleted/b B", "/new Old"]);
   });
 
+  it("orders the earlier version's sidebar as that version did, not as the new one does", async () => {
+    // The earlier version lists b before a; the new one, in folder order, a before b.
+    const { html } = await built(
+      {
+        "monodocs.config.yml":
+          'sidebar:\n  mode: custom\n  items:\n    - path: "b.md"\n    - path: "a.md"\n',
+        "docs/a.md": "# A\n\nOld.\n",
+        "docs/b.md": "# B\n",
+      },
+      { "docs/a.md": "# A\n\nNew.\n", "docs/b.md": "# B\n" },
+    );
+    const routes = (view: string) => {
+      const start = html.indexOf(
+        `<div class="monodocs-diff-sidebar" data-monodocs-diff-sidebar="${view}"`,
+      );
+      const end = html.indexOf('<div class="monodocs-diff-sidebar"', start + 1);
+      const part = html.slice(start, end === -1 ? html.indexOf("</nav>", start) : end);
+      return [...part.matchAll(/data-route="([^"]*)"/g)].map((m) => m[1]);
+    };
+    expect(routes("earlier")).toEqual(["/b", "/a"]);
+    expect(routes("current")).toEqual(["/a", "/b"]);
+  });
+
   it("keeps the mark of a deleted image the earlier column shows as its path", async () => {
     const png = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",

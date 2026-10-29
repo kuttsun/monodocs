@@ -133,7 +133,7 @@ A block is compared by what it reads as: a link's target, emphasis, a table's fr
 - The earlier version uses its own configuration for what the document contains — `input`, `root`, `sources.*`, `sidebar.mode`, `sidebar.items`, `sidebar.titleFrom`, `sidebar.titleTransform`, `sidebar.flattenSingleChild`, `math.enabled`, `mermaid.enabled` — and the new one for how the output looks. A path the earlier version does not have, or one that leaves it, is `diff/outside-version`: a version whose document directory was later renamed is passed as a copy laid out as the new one, with `--diff-from-dir`.
 - Warnings from the earlier build are not reported, since a released version cannot be fixed; an error in it stops the build.
 
-The two options cannot be used together (`diff/conflicting-options`), exist on `build` only, and have no key in the configuration file. The difference is HTML only for now: with a PDF output, from `-f pdf`, `-f both`, or `output.format`, the build stops with `diff/unsupported`. The wording of the bar, the list, and the notes follows `lang` and can be changed with [`html.labels`](/docs/configuration#html-labels); the [size report](/docs/configuration#assets) gains a `difference` line.
+The two options cannot be used together (`diff/conflicting-options`), exist on `build` only, and have no key in the configuration file. The difference is HTML only for now: with a PDF output, from `-f pdf`, `-f both`, or `output.format`, the build stops with `diff/unsupported`. The wording of the bar, the list, and the notes is English, as every UI label is whatever `lang` says, and can be changed with [`html.labels`](/docs/configuration#html-labels); the [size report](/docs/configuration#assets) gains a `difference` line.
 
 ## `watch`
 
