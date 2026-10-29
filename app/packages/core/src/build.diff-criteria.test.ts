@@ -398,6 +398,23 @@ describe("an earlier :sectnums: against numbering.sections (item 27)", () => {
     expect(changes(page)).toEqual([]);
   });
 
+  it("pairs a book's chapters written with a signifier before the number", async () => {
+    // `Chapter 1. One`: the earlier column shows `One`, the word and the number gone, and the
+    // comparison reads it the same way.
+    const head = "= B\n:doctype: book\n";
+    const body = "\n== One\n\nA.\n\n== Two\n\nB.\n";
+    await write(then, {
+      "docs/b.adoc": `${head}:sectnums:\n:chapter-signifier: Chapter\n${body}`,
+    });
+    await write(now, {
+      "monodocs.config.yml": "numbering:\n  sections: 3\n",
+      "docs/b.adoc": `${head}${body}`,
+    });
+    const page = (await compared()).find((p) => p.state === "matched" && p.new.route === "/b");
+    expect(page).toBeDefined();
+    expect(changes(page)).toEqual([]);
+  });
+
   // The run of numbers ends at Asciidoctor's `. `: a title of its own that starts with a dot keeps
   // it, so changing it is a change.
   it("reads a title's own leading dot as the title's", async () => {

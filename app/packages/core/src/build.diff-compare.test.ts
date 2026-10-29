@@ -285,7 +285,7 @@ describe("generated numbers are not differences", () => {
         "+p New.",
         "+image",
         "+title Figure . New fig",
-        "+h2 Appendix : Inserted",
+        "+h2 Inserted",
         "+text . Zeroth.",
       ]);
     });

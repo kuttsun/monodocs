@@ -50,8 +50,10 @@ const HEADING = /^h[1-6]$/;
  * the dots and the space around them are its own too, and read as part of the heading they would
  * make a heading numbered by `:sectnums:` differ from the same heading numbered by
  * `numbering.sections`, which writes its number as an element (19.1). The separators in the run of
- * numbers that opens the heading — a `.` between two numbers, and the `. ` after the last — are
- * marked; a title's own leading dot (`.NET`) is the title's. The heading's text may sit behind an
+ * numbers that opens the heading — a `.` between two numbers, the `. ` (an appendix's `: `) after
+ * the last, and a signifier word before them (`Chapter 1. Title`, `Appendix A: Title`) — are
+ * marked, as the earlier column leaves them out (diff/write.ts); a title's own leading dot (`.NET`)
+ * is the title's. The heading's text may sit behind an
  * empty anchor (`:sectanchors:`) or inside a link (`:sectlinks:`), and the same run opens each entry
  * of Asciidoctor's table of contents. The mark is a separator's, not a number's: what reads the
  * numbers alone sees what it saw before.
@@ -77,13 +79,20 @@ function markSectionSeparators(container: Element): void {
     markSectionSeparators(lead);
     return;
   }
-  if (!isNumeral(lead)) return;
   // A separator keeps whatever else its text node carried.
   const separator = (from: Text, value: string): Text => ({
     ...from,
     value,
     data: { ...from.data, monodocsGeneratedSeparator: true } as Text["data"],
   });
+  // A signifier before the number, a book's `Chapter 1. Title`: a word alone, as the earlier
+  // column leaves it out (diff/write.ts), so the comparison reads the heading as it shows.
+  if (lead?.type === "text" && /^\S+\s+$/.test(lead.value) && isNumeral(children[first + 1])) {
+    children[first] = separator(lead, lead.value);
+    first++;
+  } else if (!isNumeral(lead)) {
+    return;
+  }
   for (let i = first + 1; i < children.length; i++) {
     const child = children[i]!;
     if (isNumeral(child)) continue;
@@ -93,8 +102,8 @@ function markSectionSeparators(container: Element): void {
       children[i] = separator(child, ".");
       continue;
     }
-    // After the last: `. `, then the title.
-    const end = /^\.\s/.exec(child.value)?.[0];
+    // After the last: `. `, or an appendix's `: `, then the title.
+    const end = /^[.:]\s/.exec(child.value)?.[0];
     if (end === undefined) return;
     const rest = child.value.slice(end.length);
     children.splice(
