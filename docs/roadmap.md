@@ -6337,7 +6337,7 @@ Completion criteria:
   released Linux binary builds — the three views, previous and next, the sidebar marks, the list of
   changes — `verify-windows-binary.ps1` on Windows 11 and the Windows checks a person has to make,
   git on Windows included (paths with spaces and Japanese characters, `core.autocrlf`, LFS), and the
-  CI guide pinned to the release. Without a beta, `next` still points at 0.17.0, so the published
+  CI guide pinned to the release. Without a beta, `next` still points at 0.17.2, so the published
   package is verified with `dist_tag: 0.18.0`, as 0.13.0 was, and `next` is moved onto 0.18.0
   afterwards. The release notes introduce the two options and say that nothing changes for a build
   without them
