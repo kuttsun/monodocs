@@ -1040,6 +1040,9 @@ jobs:
           cp -R docs ../diffearlier/
           printf '# Guide\n\nKept.\n\nAdded.\n' > docs/guide.md
           printf '# New\n\nFresh.\n' > docs/new.md
+          # Committed, so that v1 and HEAD differ: a build reading HEAD instead of the ref shows nothing.
+          git add -A
+          git commit -q -m v2
           monodocs build docs -o ../diff-ref.html --diff-from v1
           monodocs build docs -o ../diff-dir.html --diff-from-dir ../diffearlier
           monodocs build docs -o ../diff-none.html
