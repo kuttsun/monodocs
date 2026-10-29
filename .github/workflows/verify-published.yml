@@ -65,7 +65,8 @@ jobs:
       # `pdf.toc` in 0.14, the inline Mermaid runtime's notices and math in 0.15, checklists,
       # asciimath rendered, search folding, figure alignment, and the search clear button in 0.16,
       # and, in 0.17, the math font a PDF's formulas are set in. 0.17.2 keeps the UI labels English
-      # under `lang: ja`, the one gate on a patch release.
+      # under `lang: ja`, the one gate on a patch release. 0.18 writes the difference from an earlier
+      # version into the HTML.
       # Verifying an older release must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
@@ -79,7 +80,7 @@ jobs:
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
             const major = Number(m[1]), minor = Number(m[2]), patch = Number(m[3]);
             const atLeast = (n, p = 0) => major > 0 || minor > n || (minor === n && patch >= p);
-            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16), atLeast(17), atLeast(17, 2)].map(String).join(' '));
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16), atLeast(17), atLeast(17, 2), atLeast(18)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
@@ -91,6 +92,7 @@ jobs:
           echo "SUPPORTS_V016=$(echo "$gate" | cut -d' ' -f7)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V017=$(echo "$gate" | cut -d' ' -f8)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V0172=$(echo "$gate" | cut -d' ' -f9)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V018=$(echo "$gate" | cut -d' ' -f10)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -1014,3 +1016,58 @@ jobs:
           path: mathfont/math-*.pdf
           if-no-files-found: warn
           retention-days: 14
+
+      # v0.18. The difference from an earlier version, read from a tag of a repository and from a
+      # directory, in HTML (7.3.1-7.3.4). The repository is made here, inside the checkout: git
+      # finds the nearest `.git`, so the checkout's own history is not read.
+      - name: A difference from a tag and from a directory (0.18)
+        if: env.SUPPORTS_V018 == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p diffrepo/docs
+          cd diffrepo
+          git init -q
+          git config user.email "verify@example.invalid"
+          git config user.name "verify"
+          git config core.autocrlf false
+          printf '# Intro\n\nSame.\n' > docs/index.md
+          printf '# Guide\n\nKept.\n\nGone.\n' > docs/guide.md
+          git add -A
+          git commit -q -m v1
+          git tag v1
+          # The earlier version as a directory: the one the current directory stands for.
+          mkdir -p ../diffearlier
+          cp -R docs ../diffearlier/
+          printf '# Guide\n\nKept.\n\nAdded.\n' > docs/guide.md
+          printf '# New\n\nFresh.\n' > docs/new.md
+          # Committed, so that v1 and HEAD differ: a build reading HEAD instead of the ref shows nothing.
+          git add -A
+          git commit -q -m v2
+          monodocs build docs -o ../diff-ref.html --diff-from v1
+          monodocs build docs -o ../diff-dir.html --diff-from-dir ../diffearlier
+          monodocs build docs -o ../diff-none.html
+          # A PDF cannot have one yet: the build stops rather than leaving the difference out.
+          if monodocs build docs -f pdf -o ../diff.pdf --diff-from v1 2> ../diff-pdf.err; then
+            echo "::error::a PDF with --diff-from built"; exit 1
+          fi
+          grep -q "HTML only" ../diff-pdf.err || { cat ../diff-pdf.err; echo "::error::the PDF refusal did not say why"; exit 1; }
+          [ ! -e ../diff.pdf ] || { echo "::error::a PDF was written although the build was refused"; exit 1; }
+          cd ..
+          node -e "
+            const fs = require('node:fs');
+            const fail = (m) => { throw new Error(m); };
+            for (const [file, label] of [['diff-ref.html', 'v1'], ['diff-dir.html', '../diffearlier']]) {
+              const h = fs.readFileSync(file, 'utf8');
+              if (!h.includes('<h1 id=\"diff-changes\">Changes ' + label)) fail(file + ': no list of changes titled with ' + label);
+              if (!h.includes('class=\"monodocs-diff-bar\"')) fail(file + ': no bar');
+              if (!h.includes('<del data-monodocs-diff=\"\">Gone.</del>')) fail(file + ': the deleted paragraph is not marked');
+              if (!h.includes('<ins data-monodocs-diff=\"\">Added.</ins>')) fail(file + ': the added paragraph is not marked');
+              // The list of changes links a page without the sidebar's data-route, under its section.
+              if (!/Added pages<\/h2>\s*<ul>\s*<li><a href=\"#\/new\">New<\/a>/.test(h)) fail(file + ': the added page is not listed as added');
+              // What did not change is a pair in both columns, and marked in neither.
+              if ((h.match(/<p data-monodocs-diff-pair=\"\d+\">Kept\.<\/p>/g) || []).length !== 2) fail(file + ': the unchanged paragraph is not paired');
+              if (/<(?:del|ins) data-monodocs-diff=\"\">Kept\./.test(h)) fail(file + ': the unchanged paragraph is marked');
+            }
+            // Nothing changes for a build without one.
+            if (fs.readFileSync('diff-none.html', 'utf8').includes('monodocs-diff')) fail('a build without a difference carries one');
+          "
