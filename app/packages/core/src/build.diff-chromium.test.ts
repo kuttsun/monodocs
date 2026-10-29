@@ -715,3 +715,768 @@ describe.skipIf(!chromium)("search in each view", () => {
     }
   });
 });
+
+/** Builds a difference from `then` to `now` into a new directory, returning both. */
+async function builtDiff(
+  prefix: string,
+  then: Record<string, string>,
+  now: Record<string, string>,
+): Promise<{ dir: string; html: string }> {
+  const dir = await mkdtemp(join(tmpdir(), `monodocs-diff-${prefix}-`));
+  await write(join(dir, "then"), then);
+  await write(join(dir, "now"), now);
+  const html = join(dir, "out.html");
+  vi.spyOn(process, "cwd").mockReturnValue(join(dir, "now"));
+  try {
+    await buildSite({ outputFile: html, diff: { dir: "../then", label: "v1" } });
+  } finally {
+    vi.restoreAllMocks();
+  }
+  return { dir, html };
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Reads `read` until `ok` holds or five seconds pass, and returns the last reading. */
+async function until<T>(read: () => Promise<T>, ok: (value: T) => boolean): Promise<T> {
+  for (let waited = 0; waited < 5000; waited += 100) {
+    const value = await read();
+    if (ok(value)) return value;
+    await sleep(100);
+  }
+  return read();
+}
+
+/** What Next lands on, `steps` times: the page, and the element ringed. */
+async function walk(page: import("puppeteer-core").Page, steps: number): Promise<string[]> {
+  const seen: string[] = [];
+  for (let i = 0; i < steps; i++) {
+    await page.click('[data-monodocs-diff-go="1"]');
+    await sleep(300);
+    seen.push(
+      await page.evaluate(() => {
+        const ring = document.querySelector(".monodocs-diff-change-current");
+        const what = ring
+          ? ring.classList.contains("monodocs-diff-note")
+            ? "note"
+            : `${ring.tagName}:${ring.textContent!.trim()}`
+          : "none";
+        return `${decodeURI(location.hash)} ${what}`;
+      }),
+    );
+  }
+  return seen;
+}
+
+/**
+ * Opens `route` of `html` in `view`, chosen on the bar as a reader would, in a fresh load: a change
+ * of the hash alone would keep the box as it was left.
+ */
+async function openView(
+  page: import("puppeteer-core").Page,
+  html: string,
+  view: string,
+  route: string,
+): Promise<void> {
+  await page.goto("about:blank");
+  await page.goto(`${pathToFileURL(html).href}#${route}`);
+  await sleep(200);
+  if (view !== "both") await page.click(`[data-monodocs-diff-view="${view}"]`);
+  await sleep(200);
+}
+
+const countOf = (page: import("puppeteer-core").Page) =>
+  page.evaluate(() => document.querySelector(".monodocs-diff-count")!.textContent);
+
+/**
+ * Pages of each kind a difference has: a changed page whose changes lie far down it, past an
+ * unchanged run long enough to scroll, with a heading only the earlier version has; an added, a
+ * deleted, a moved, and a retitled page.
+ */
+const filler = Array.from({ length: 40 }, (_, i) => `Filler ${i + 1}.`).join("\n\n");
+const head = "# A\n\n## Kept head\n\nKept.\n\n";
+const kinds = {
+  then: {
+    "docs/a.md": `${head}${filler}\n\n## Zebra section\n\nStriped.\n\nOld para.\n`,
+    "docs/b.md": "# B\n\nGone.\n",
+    "docs/old.md": "# Moved\n\nText.\n",
+    "docs/t.md": "---\ntitle: Old T\n---\n\nSame.\n",
+  },
+  now: {
+    "docs/a.md": `${head}${filler}\n\nNew para.\n`,
+    "docs/c.md": "# C\n\nNew.\n",
+    "docs/new.md": "---\naliases: [/old]\n---\n\n# Moved\n\nText.\n",
+    "docs/t.md": "---\ntitle: New T\n---\n\nSame.\n",
+  },
+};
+
+describe.skipIf(!chromium)("each kind of page in each view", () => {
+  let dir: string;
+  let html: string;
+  beforeAll(async () => {
+    ({ dir, html } = await builtDiff("kinds", kinds.then, kinds.now));
+  });
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  const open = (page: import("puppeteer-core").Page, view: string, route: string) =>
+    openView(page, html, view, route);
+
+  it("shows an added page in the earlier view as its note alone, and hides a page note while plain", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      const article = () =>
+        page.evaluate(() =>
+          (document.querySelector("article.page:not([hidden])") as HTMLElement).innerText.trim(),
+        );
+      // Plain or marked, the earlier version's view of an added page is the note saying so.
+      await open(page, "earlier", "/c");
+      expect(await article()).toBe("This page was added.");
+      await page.click("[data-monodocs-diff-marks-toggle]");
+      expect(await article()).toBe("This page was added.");
+
+      // A note above a page (a retitled one, a moved one) is hidden in a plain view, in each
+      // version's, and shown once the box marks the changes.
+      const note = () =>
+        page.evaluate(
+          () =>
+            getComputedStyle(
+              document.querySelector("article.page:not([hidden]) > .monodocs-diff-note")!,
+            ).display,
+        );
+      for (const view of ["earlier", "current"]) {
+        for (const route of ["/t", "/new"]) {
+          await open(page, view, route);
+          expect(await note()).toBe("none");
+          await page.click("[data-monodocs-diff-marks-toggle]");
+          expect(await note()).toBe("block");
+        }
+      }
+      // Side by side it is always shown.
+      await open(page, "both", "/t");
+      expect(await note()).toBe("block");
+    } finally {
+      await closePages(browser);
+    }
+  });
+
+  it("shows the new version plain, with no mark, page note, or badge, until the box is ticked", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      const marked = () =>
+        page.evaluate(() => {
+          const block = document.querySelector(
+            "article:not([hidden]) .monodocs-diff-current [data-monodocs-diff-block]",
+          )!;
+          const shown = (selector: string) =>
+            [
+              ...document.querySelectorAll(`[data-monodocs-diff-sidebar="current"] ${selector}`),
+            ].map((node) => getComputedStyle(node).display !== "none");
+          const note = document.querySelector('article[data-route="/t"] > .monodocs-diff-note')!;
+          return {
+            band: getComputedStyle(block).backgroundColor !== "rgba(0, 0, 0, 0)",
+            edge: getComputedStyle(block).boxShadow !== "none",
+            badges: shown(".monodocs-diff-mark"),
+            labels: shown(".monodocs-diff-label"),
+            note: getComputedStyle(note).display !== "none",
+          };
+        });
+      await open(page, "current", "/a");
+      // Four pages in the new version's sidebar, each changed: a badge and a label each.
+      expect(await marked()).toEqual({
+        band: false,
+        edge: false,
+        badges: [false, false, false, false],
+        labels: [false, false, false, false],
+        note: false,
+      });
+      await page.click("[data-monodocs-diff-marks-toggle]");
+      expect(await marked()).toEqual({
+        band: true,
+        edge: true,
+        badges: [true, true, true, true],
+        labels: [true, true, true, true],
+        note: true,
+      });
+    } finally {
+      await closePages(browser);
+    }
+  });
+
+  it("walks each change in a version's own view, its marks off and on", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      // Plain, a page whose change is its hidden note is reached at its first block; marked, at
+      // the note itself. The added page is reached at its first block either way.
+      await open(page, "current", "//changes");
+      expect(await walk(page, 5)).toEqual([
+        "#/a P:New para.",
+        "#/c H1:C",
+        "#/new H1:Moved",
+        "#/t P:Same.",
+        "#/a P:New para.",
+      ]);
+      expect(await countOf(page)).toBe("1 / 4");
+      // Ticking the box starts the way again, from the page shown.
+      await page.click("[data-monodocs-diff-marks-toggle]");
+      expect(await walk(page, 5)).toEqual([
+        "#/a P:New para.",
+        "#/c H1:C",
+        "#/new note",
+        "#/t note",
+        "#/a P:New para.",
+      ]);
+
+      await open(page, "earlier", "//changes");
+      const earlier = [
+        "#/a H2:Zebra section",
+        "#/a P:Striped.",
+        "#/a P:Old para.",
+        "#//deleted/b H1:B",
+      ];
+      expect(await walk(page, 6)).toEqual([...earlier, "#/new H1:Moved", "#/t P:Same."]);
+      // Ticking the box starts the way again, from the page shown.
+      await page.click("[data-monodocs-diff-marks-toggle]");
+      expect(await walk(page, 7)).toEqual(["#/t note", ...earlier, "#/new note", "#/t note"]);
+    } finally {
+      await closePages(browser);
+    }
+  });
+
+  it("counts a retitled page among the changes side by side, and reaches it", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      await open(page, "both", "//changes");
+      const seen = await walk(page, 9);
+      // Four marked blocks on /a, and four pages whose change no block carries: the added, the
+      // deleted, the moved, and the retitled.
+      const blocks = await page.evaluate(
+        () => document.querySelectorAll("article.page [data-monodocs-diff-block]").length,
+      );
+      expect(blocks).toBe(4);
+      // On /a in the order they stand: the added paragraph, nothing being under it to line up,
+      // stands level with the deleted heading's margin, above it.
+      expect(seen).toEqual([
+        "#/a P:New para.",
+        "#/a H2:Zebra section",
+        "#/a P:Striped.",
+        "#/a P:Old para.",
+        "#//deleted/b note",
+        "#/c note",
+        "#/new note",
+        "#/t note",
+        "#/a P:New para.",
+      ]);
+      expect(await countOf(page)).toBe(`1 / ${blocks + 4}`);
+    } finally {
+      await closePages(browser);
+    }
+  });
+
+  it("brings the change the bar goes to on another page into view, and leaves out the list of changes", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      const ring = () =>
+        page.evaluate(() => {
+          const box = document
+            .querySelector(".monodocs-diff-change-current")!
+            .getBoundingClientRect();
+          return {
+            hash: decodeURI(location.hash),
+            scrolled: window.scrollY > 500,
+            inView: box.top >= 0 && box.bottom <= window.innerHeight,
+          };
+        });
+      // From the list of changes to the first change on /a, past forty paragraphs.
+      await open(page, "both", "//changes");
+      await page.click('[data-monodocs-diff-go="1"]');
+      await sleep(400);
+      expect(await ring()).toEqual({ hash: "#/a", scrolled: true, inView: true });
+      // Back from the added page to the last change on /a, in the new version's own view.
+      await open(page, "current", "/c");
+      await page.click('[data-monodocs-diff-go="-1"]');
+      await sleep(400);
+      expect(await ring()).toEqual({ hash: "#/a", scrolled: true, inView: true });
+
+      // In a version's own view, Previous from its first page comes round to its last change, not
+      // to the list of changes, and the page navigation under the first page has no previous page.
+      for (const view of ["earlier", "current"]) {
+        await open(page, view, "/a");
+        expect(
+          await page.evaluate(() => [
+            document.querySelector("#page-nav .page-nav-prev")?.getAttribute("data-route") ??
+              "none",
+            document.querySelector("#page-nav .page-nav-next")!.getAttribute("data-route"),
+          ]),
+        ).toEqual(["none", view === "earlier" ? "//deleted/b" : "/c"]);
+        await page.click('[data-monodocs-diff-go="-1"]');
+        await sleep(400);
+        expect(await page.evaluate(() => decodeURI(location.hash))).toBe("#/t");
+      }
+    } finally {
+      await closePages(browser);
+    }
+  });
+
+  it("shows each state in the sidebar in its colour, and each view's own sidebar", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      await open(page, "both", "//changes");
+      const badges = await page.evaluate(() =>
+        [
+          ...document.querySelectorAll(
+            '[data-monodocs-diff-sidebar="both"] .sidebar-page[data-monodocs-diff-page]',
+          ),
+        ].map((item) => {
+          const mark = item.querySelector(".monodocs-diff-mark")!;
+          const label = getComputedStyle(item.querySelector(".monodocs-diff-label")!);
+          return {
+            state: item.getAttribute("data-monodocs-diff-page"),
+            sign: mark.textContent,
+            colour: getComputedStyle(mark).color,
+            label: [
+              label.display,
+              label.position,
+              label.width,
+              label.height,
+              label.overflow,
+              label.clip,
+            ].join(" "),
+          };
+        }),
+      );
+      // The default theme's light colours: its tip, caution, warning, and note.
+      const hidden = "block absolute 1px 1px hidden rect(0px, 0px, 0px, 0px)";
+      expect(badges).toEqual([
+        { state: "changed", sign: "•", colour: "rgb(154, 103, 0)", label: hidden },
+        { state: "deleted", sign: "−", colour: "rgb(207, 34, 46)", label: hidden },
+        { state: "added", sign: "+", colour: "rgb(26, 127, 55)", label: hidden },
+        { state: "moved", sign: "→", colour: "rgb(9, 105, 218)", label: hidden },
+        { state: "changed", sign: "•", colour: "rgb(154, 103, 0)", label: hidden },
+      ]);
+
+      // The bar stands above the sidebar and the content, not over them, at the top and scrolled.
+      const layout = () =>
+        page.evaluate(() => {
+          const bar = document.querySelector(".monodocs-diff-bar")!.getBoundingClientRect();
+          const sidebar = document.getElementById("sidebar")!.getBoundingClientRect();
+          const first = document.querySelector("article.page:not([hidden]) > *")!;
+          return {
+            barTop: Math.round(bar.top),
+            sidebarBelow: sidebar.top >= bar.bottom - 1,
+            contentBelow: window.scrollY > 0 || first.getBoundingClientRect().top >= bar.bottom - 1,
+          };
+        });
+      expect(await layout()).toEqual({ barTop: 0, sidebarBelow: true, contentBelow: true });
+      await open(page, "both", "/a");
+      await page.evaluate(() => window.scrollTo(0, 800));
+      await sleep(200);
+      expect(await layout()).toEqual({ barTop: 0, sidebarBelow: true, contentBelow: true });
+
+      // Each view shows its own sidebar alone: the earlier version's in its order and titles.
+      const sidebars = () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll("[data-monodocs-diff-sidebar]")]
+            .filter((sidebar) => getComputedStyle(sidebar).display !== "none")
+            .map((sidebar) => ({
+              view: sidebar.getAttribute("data-monodocs-diff-sidebar"),
+              titles: [...sidebar.querySelectorAll("a[data-route]")].map((a) =>
+                a.firstChild!.textContent!.trim(),
+              ),
+            })),
+        );
+      expect(await sidebars()).toEqual([
+        { view: "both", titles: ["Changes v1", "A", "B", "C", "Moved", "New T"] },
+      ]);
+      await page.click('[data-monodocs-diff-view="earlier"]');
+      expect(await sidebars()).toEqual([{ view: "earlier", titles: ["A", "B", "Moved", "Old T"] }]);
+      await page.click('[data-monodocs-diff-view="current"]');
+      expect(await sidebars()).toEqual([{ view: "current", titles: ["A", "C", "Moved", "New T"] }]);
+    } finally {
+      await closePages(browser);
+    }
+  });
+
+  it("lists the earlier headings in the earlier view, and opens a section only the earlier column has", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      const toc = () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll("#toc-nav a[data-monodocs-diff-toc]")].map((a) =>
+            a.textContent!.replace(/\s+/g, " ").trim(),
+          ),
+        );
+      const zebra = async () => {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await sleep(200);
+        await page.evaluate(() =>
+          [...document.querySelectorAll<HTMLElement>("#toc-nav a[data-monodocs-diff-toc]")]
+            .find((a) => a.textContent!.includes("Zebra"))!
+            .click(),
+        );
+        await sleep(300);
+        return page.evaluate(() => {
+          const heading = [...document.querySelectorAll("article:not([hidden]) h2")].find((h) =>
+            h.textContent!.includes("Zebra"),
+          )!;
+          const box = heading.getBoundingClientRect();
+          return {
+            column: heading.closest(".monodocs-diff-earlier") ? "earlier" : "current",
+            id: heading.id,
+            inView: box.top >= 0 && box.bottom <= window.innerHeight,
+          };
+        });
+      };
+      await open(page, "both", "/a");
+      // Side by side, each with its changes: the new column's Kept head runs to the added paragraph.
+      expect(await until(toc, (list) => list.length === 2)).toEqual([
+        "Kept head1",
+        "−Zebra section3",
+      ]);
+      expect(await zebra()).toEqual({ column: "earlier", id: "", inView: true });
+      await open(page, "earlier", "/a");
+      expect(await until(toc, (list) => list.length === 2)).toEqual(["Kept head", "Zebra section"]);
+      expect(await zebra()).toEqual({ column: "earlier", id: "", inView: true });
+      await open(page, "current", "/a");
+      expect(await until(toc, (list) => list.length === 1)).toEqual(["Kept head"]);
+    } finally {
+      await closePages(browser);
+    }
+  });
+
+  it("finds a heading only the earlier version has in its view alone, highlighted in its column", async () => {
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      // The routes found, or the theme's word for none once it has searched.
+      const results = () =>
+        page.evaluate(() =>
+          document.querySelector("#search-results .search-empty")
+            ? ["none"]
+            : [...document.querySelectorAll("#search-results a[data-route]")].map((a) =>
+                a.getAttribute("data-route"),
+              ),
+        );
+      await open(page, "both", "/c");
+      await page.type("#search-input", "Zebra");
+      expect(await until(results, (list) => list.length > 0)).toEqual(["none"]);
+      await page.click('[data-monodocs-diff-view="current"]');
+      await sleep(500);
+      expect(await until(results, (list) => list.length > 0)).toEqual(["none"]);
+      await page.click('[data-monodocs-diff-view="earlier"]');
+      expect(await until(results, (list) => list.length > 0)).toEqual(["/a"]);
+      await page.click('#search-results a[data-route="/a"]');
+      await sleep(400);
+      expect(
+        await page.evaluate(() =>
+          [...document.querySelectorAll("article:not([hidden]) mark.search-hit")].map(
+            (mark) =>
+              `${mark.closest(".monodocs-diff-earlier") ? "earlier" : "current"} ${mark.closest("h2") ? "H2" : "elsewhere"} ${mark.textContent}`,
+          ),
+        ),
+      ).toEqual(["earlier H2 Zebra"]);
+    } finally {
+      await closePages(browser);
+    }
+  });
+});
+
+/**
+ * A document's own struck text, which GFM writes as `<del>`, and a raw `<ins>`, here an AsciiDoc
+ * passthrough (Markdown's raw HTML is not kept), on pages that changed elsewhere.
+ */
+describe.skipIf(!chromium)("a document's own struck and inserted text", () => {
+  it("shows the document's own struck and inserted text in every view, marked or plain", async () => {
+    const { dir, html } = await builtDiff(
+      "own",
+      {
+        "docs/a.md": "# A\n\nSome ~~struck~~ words.\n\nGone.\n",
+        "docs/r.adoc": "= R\n\nKeep +++<ins>raw</ins>+++.\n\nGone.\n",
+      },
+      {
+        "docs/a.md": "# A\n\nSome ~~struck~~ words.\n",
+        "docs/r.adoc": "= R\n\nKeep +++<ins>raw</ins>+++.\n",
+      },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      const own = () =>
+        page.evaluate(() =>
+          [
+            ...document.querySelectorAll(
+              "article:not([hidden]) :is(del, ins):not([data-monodocs-diff])",
+            ),
+          ]
+            .filter((node) => (node as HTMLElement).offsetParent !== null)
+            .map((node) => {
+              const column = node.closest(".monodocs-diff-earlier") ? "earlier" : "current";
+              return `${column} ${node.textContent} ${getComputedStyle(node).textDecorationLine}`;
+            }),
+        );
+      for (const [route, text] of [
+        ["/a", "struck line-through"],
+        ["/r", "raw underline"],
+      ] as const) {
+        await openView(page, html, "both", route);
+        expect(await own()).toEqual([`earlier ${text}`, `current ${text}`]);
+        for (const view of ["earlier", "current"]) {
+          await openView(page, html, view, route);
+          expect(await own()).toEqual([`${view} ${text}`]);
+          await page.click("[data-monodocs-diff-marks-toggle]");
+          expect(await own()).toEqual([`${view} ${text}`]);
+        }
+      }
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/** Each pair's gap, the earlier side's top less the new side's, on the page shown. */
+function pairGaps(page: import("puppeteer-core").Page) {
+  return page.evaluate(() => {
+    const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+    const [left, right] = [...article.querySelectorAll(".monodocs-diff-columns > div")];
+    return [...left!.querySelectorAll("[data-monodocs-diff-pair]")]
+      .filter((node) => !/^(TR|TD|TH)$/.test(node.tagName))
+      .map((node) => {
+        const pair = node.getAttribute("data-monodocs-diff-pair");
+        const other = right!.querySelector(`[data-monodocs-diff-pair="${pair}"]`)!;
+        const diagram = node.querySelector("svg") !== null;
+        const gap = Math.round(
+          node.getBoundingClientRect().top - other.getBoundingClientRect().top,
+        );
+        return { diagram, gap };
+      });
+  });
+}
+
+describe.skipIf(!chromium)("a diagram with changes around it", () => {
+  it("lines up the blocks either side in both columns, at any width, and stacks them when narrow", async () => {
+    const diagram = "```mermaid\ngraph LR\n  Start --> End\n```\n";
+    const { dir, html } = await builtDiff(
+      "around",
+      {
+        "docs/a.md": `# A\n\nBefore.\n\n${diagram}\nAfter.\n\nTail.\n`,
+        "docs/u.md": "# U\n\nSame.\n",
+      },
+      {
+        "docs/a.md":
+          "# A\n\nBefore, now a paragraph long enough to wrap onto lines of its own beside the " +
+          "earlier one, which stays short.\n\nAnd one more added.\n\n" +
+          `${diagram}\nAfter, changed.\n\nTail.\n`,
+        "docs/u.md": "# U\n\nSame.\n",
+      },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      await page.goto(`${pathToFileURL(html).href}#/a`);
+      // Both diagrams drawn, and every pair, the diagram's and the tail's below it, level.
+      const lined = () =>
+        until(
+          () => pairGaps(page),
+          (gaps) =>
+            gaps.filter((pair) => pair.diagram).length === 1 &&
+            gaps.every((pair) => Math.abs(pair.gap) <= 1),
+        );
+      const drawn = () =>
+        page.evaluate(
+          () =>
+            [...document.querySelectorAll("article:not([hidden]) .mermaid svg")].filter(
+              (svg) => svg.getBoundingClientRect().height > 10,
+            ).length,
+        );
+      expect(await until(drawn, (n) => n === 2)).toBe(2);
+      const before = await lined();
+      // The heading, the diagram, and the tail.
+      expect(before).toEqual([
+        { diagram: false, gap: 0 },
+        { diagram: true, gap: 0 },
+        { diagram: false, gap: 0 },
+      ]);
+      await page.setViewport({ width: 1100, height: 900 });
+      expect((await lined()).every((pair) => Math.abs(pair.gap) <= 1)).toBe(true);
+
+      // Too narrow for two columns, the earlier stands above the new, as wide as it.
+      await page.setViewport({ width: 900, height: 900 });
+      await sleep(300);
+      const stacked = await page.evaluate(() => {
+        const earlier = document
+          .querySelector("article:not([hidden]) .monodocs-diff-earlier")!
+          .getBoundingClientRect();
+        const current = document
+          .querySelector("article:not([hidden]) .monodocs-diff-current")!
+          .getBoundingClientRect();
+        return {
+          above: earlier.bottom <= current.top,
+          left: Math.round(earlier.left - current.left),
+          width: Math.round(earlier.width - current.width),
+        };
+      });
+      expect(stacked).toEqual({ above: true, left: 0, width: 0 });
+
+      // A page that did not change is shown once, in no columns.
+      await page.setViewport({ width: 1500, height: 900 });
+      await page.evaluate(() => {
+        location.hash = "#/u";
+      });
+      await sleep(300);
+      expect(
+        await page.evaluate(() => {
+          const article = document.querySelector("article.page:not([hidden])") as HTMLElement;
+          return {
+            route: article.getAttribute("data-route"),
+            columns: article.querySelector(".monodocs-diff-columns") !== null,
+            text: article.innerText.trim(),
+          };
+        }),
+      ).toEqual({ route: "/u", columns: false, text: "U\n\nSame." });
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 30000);
+});
+
+describe.skipIf(!chromium)("versions that start on different pages", () => {
+  it("opens each version's own first page from the list of changes", async () => {
+    // The earlier version starts with a page since deleted; the new one with the page after it.
+    const { dir, html } = await builtDiff(
+      "first",
+      { "docs/a.md": "# A\n\nFirst.\n", "docs/b.md": "# B\n\nOld.\n" },
+      { "docs/b.md": "# B\n\nNew.\n", "docs/c.md": "# C\n\nAdded.\n" },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      const shown = () =>
+        page.evaluate(() => [
+          decodeURI(location.hash),
+          document.querySelector("article.page:not([hidden])")!.getAttribute("data-route"),
+        ]);
+      for (const [view, first] of [
+        ["earlier", "//deleted/a"],
+        ["current", "/b"],
+      ] as const) {
+        await openView(page, html, "both", "//changes");
+        expect(await shown()).toEqual(["#//changes", "//changes"]);
+        // The list of changes is in the side-by-side sidebar alone.
+        expect(
+          await page.evaluate(() =>
+            [
+              ...document.querySelectorAll(
+                '[data-monodocs-diff-sidebar] a[data-route="//changes"]',
+              ),
+            ].map((a) =>
+              a.closest("[data-monodocs-diff-sidebar]")!.getAttribute("data-monodocs-diff-sidebar"),
+            ),
+          ),
+        ).toEqual(["both"]);
+        await page.click(`[data-monodocs-diff-view="${view}"]`);
+        await sleep(300);
+        expect(await shown()).toEqual([`#${first}`, first]);
+      }
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * A theme of its own: a template with only the tokens it must have, a stylesheet of one rule, and a
+ * script that does nothing but show the page the hash names.
+ */
+const customTheme = {
+  "theme/template.html":
+    "<!doctype html>\n<html>\n  <head><style>{{style}}</style></head>\n  <body>\n" +
+    '    <nav id="side">{{sidebar}}</nav>\n    <main id="content">{{pages}}</main>\n' +
+    "    <script>window.__MONODOCS_DATA__ = {{siteDataJson}};</script>\n" +
+    "    <script>{{appJs}}</script>\n{{bodyScripts}}\n  </body>\n</html>\n",
+  "theme/style.css": "body { margin: 0; font-family: serif; }\n",
+  "theme/app.js":
+    "(function () {\n  function show() {\n" +
+    "    var route = decodeURI(location.hash.slice(1)) || window.__MONODOCS_DATA__.initialRoute;\n" +
+    '    document.querySelectorAll("article.page").forEach(function (page) {\n' +
+    '      page.hidden = page.getAttribute("data-route") !== route;\n    });\n  }\n' +
+    '  window.addEventListener("hashchange", show);\n  show();\n})();\n',
+  "monodocs.config.yml": "html:\n  theme: ./theme\n",
+};
+
+describe.skipIf(!chromium)("a custom theme with its own template, style, and script", () => {
+  it("gets the bar, the marks, and the navigation", async () => {
+    const { dir, html } = await builtDiff(
+      "theme",
+      { ...customTheme, "docs/a.md": "# A\n\nOld.\n", "docs/b.md": "# B\n\nKeep.\n" },
+      {
+        ...customTheme,
+        "docs/a.md": "# A\n\nNew.\n",
+        "docs/b.md": "# B\n\nKeep.\n\nAdded.\n",
+      },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      await page.goto(`${pathToFileURL(html).href}#/a`);
+      await sleep(300);
+      const shown = await page.evaluate(() => {
+        const bar = document.querySelector(".monodocs-diff-bar")!;
+        const band = (selector: string) =>
+          getComputedStyle(document.querySelector(`article:not([hidden]) ${selector}`)!)
+            .backgroundColor !== "rgba(0, 0, 0, 0)";
+        return {
+          theme:
+            document.getElementById("side") !== null && getComputedStyle(document.body).fontFamily,
+          bar: `${getComputedStyle(bar).position} ${Math.round(bar.getBoundingClientRect().top)}`,
+          views: [...bar.querySelectorAll("[data-monodocs-diff-view]")].length,
+          del: band('[data-monodocs-diff-block="del"]'),
+          ins: band('[data-monodocs-diff-block="ins"]'),
+        };
+      });
+      expect(shown).toEqual({ theme: "serif", bar: "fixed 0", views: 3, del: true, ins: true });
+      expect(await walk(page, 4)).toEqual([
+        "#/a P:Old.",
+        "#/a P:New.",
+        "#/b P:Added.",
+        "#/a P:Old.",
+      ]);
+      // And the views: the new version's own hides the earlier column, and walks its own changes.
+      await page.click('[data-monodocs-diff-view="current"]');
+      expect(
+        await page.evaluate(
+          () =>
+            getComputedStyle(
+              document.querySelector("article:not([hidden]) .monodocs-diff-earlier")!,
+            ).display,
+        ),
+      ).toBe("none");
+      expect(await walk(page, 3)).toEqual(["#/a P:New.", "#/b P:Added.", "#/a P:New."]);
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
