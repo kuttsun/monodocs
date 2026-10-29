@@ -93,12 +93,13 @@ v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an ear
 into them, for readers who do not look at Git, in three releases. 12.4 would allow them in 1.x; they
 come first because what they add is a surface 1.0 freezes, cheap to change before the number and
 expensive after it ([roadmap.md](roadmap.md) 7.3, 12.4).
-0.18.0, the first of them, goes out under `latest` without a beta, with the CI guide pinned to it:
-nothing changes for a build without `--diff-from` or `--diff-from-dir`. It also carries the zod
-update for #232, which 0.17.2's package and binaries lack. After `latest` moves, the published
-package and the release binaries are verified, a difference the released Linux binary builds is
-driven in a browser, a difference built with `--diff-from` is looked at on Windows, and `next` moves
-onto 0.18.0.
+0.18.0, the first of them, goes out under `latest` with the CI guide pinned to it, and without a
+beta, since nothing changes for a build without `--diff-from` or `--diff-from-dir`. It also carries
+the zod update for #232, which 0.17.2's package and binaries lack. After `latest` moves, the
+published package and the release binaries are verified, a difference the released Linux binary
+builds is driven in a browser, the Windows checks a person makes are made (a difference built with
+`--diff-from`, `serve --open`, and Mark of the Web), `next` moves onto 0.18.0, and the deployed CI
+guide is confirmed pinned to it.
 
 ## Completion Criteria Status
 
