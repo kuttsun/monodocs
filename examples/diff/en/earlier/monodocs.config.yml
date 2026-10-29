@@ -1,0 +1,4 @@
+# Sample of a difference (earlier version); the new version is in ../current.
+title: "Product specification"
+document:
+  version: "1.0"

@@ -121,6 +121,13 @@ jobs:
         run: |
           node dist/monodocs.cjs build ../examples/en -o ../site/public/sample.html
           node dist/monodocs.cjs build ../examples/ja -o ../site/public/ja/sample.html
+          # The difference samples the README links to, built as scripts/site-build.sh builds them:
+          # from the new version's directory, whose counterpart --diff-from-dir names.
+          for lang in en ja; do
+            out=site/public/diff-sample.html
+            [ "$lang" = ja ] && out=site/public/ja/diff-sample.html
+            (cd "../examples/diff/$lang/current" && node ../../../../app/dist/monodocs.cjs build . --diff-from-dir ../earlier -o "../../../../$out")
+          done
 
       # The PDF samples the README links to (with a cover and a printed table of contents). They go
       # through scripts/site-pdf-sample.sh, as the deploy does, so a PR shows they still build.
@@ -146,6 +153,8 @@ jobs:
           path: |
             site/public/sample.html
             site/public/ja/sample.html
+            site/public/diff-sample.html
+            site/public/ja/diff-sample.html
             site/public/sample.pdf
             site/public/ja/sample.pdf
             site/public/density

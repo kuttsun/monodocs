@@ -16,6 +16,8 @@ site/public/sample.html
 site/public/ja/sample.html
 site/public/sample.pdf
 site/public/ja/sample.pdf
+site/public/diff-sample.html
+site/public/ja/diff-sample.html
 # 版面密度の比較サンプル（site-build.sh が site/samples/density/ から生成する PDF と画像）
 site/public/density/
 site/public/ja/density/

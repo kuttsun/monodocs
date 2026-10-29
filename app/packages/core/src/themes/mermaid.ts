@@ -30,11 +30,11 @@ const VISIBLE_MERMAID = "#content article:not([hidden]) .mermaid";
  * earlier, such as the one a late runtime starts itself, skips diagrams already marked, which is why
  * the earlier runs are chained in.
  */
-export function renderHelper(mermaidExpr: string): string {
+export function renderHelper(mermaidExpr: string, selector: string = VISIBLE_MERMAID): string {
   return (
     `window.__sdRenderMermaid=function(){` +
     `var run=Promise.resolve().then(function(){` +
-    `return ${mermaidExpr}.run({querySelector:"${VISIBLE_MERMAID}"});` +
+    `return ${mermaidExpr}.run({querySelector:${JSON.stringify(selector)}});` +
     `}).catch(function(){});` +
     `window.__sdMermaidPending=Promise.all([window.__sdMermaidPending,run]);` +
     `return window.__sdMermaidPending;` +
@@ -79,7 +79,14 @@ export function noticeComment(text: string): string {
   return `/*!\n${safe}\n*/\n`;
 }
 
-export async function mermaidRuntimeScript(runtime: MermaidRuntime): Promise<string> {
+/**
+ * The script that brings Mermaid in and defines the render helper. `selector` picks the diagrams a
+ * render draws; a build with a difference passes one that leaves out a column its view hides (7.3.4).
+ */
+export async function mermaidRuntimeScript(
+  runtime: MermaidRuntime,
+  selector: string = VISIBLE_MERMAID,
+): Promise<string> {
   if (runtime === "inline") {
     const [lib, notices] = await Promise.all([loadMermaidInline(), loadMermaidNotices()]);
     return (
@@ -88,7 +95,7 @@ export async function mermaidRuntimeScript(runtime: MermaidRuntime): Promise<str
       `var ns=window.__esbuild_esm_mermaid_nm;var m=ns&&ns.mermaid;m=m&&(m.default||m);` +
       `if(!m&&window.mermaid)m=window.mermaid;` +
       `if(m&&m.initialize){m.initialize({startOnLoad:false});` +
-      renderHelper("m") +
+      renderHelper("m", selector) +
       `}` +
       `})();</script>`
     );
@@ -96,7 +103,7 @@ export async function mermaidRuntimeScript(runtime: MermaidRuntime): Promise<str
   return (
     `<script type="module">` +
     `import mermaid from "${MERMAID_CDN}";mermaid.initialize({startOnLoad:false});` +
-    renderHelper("mermaid") +
+    renderHelper("mermaid", selector) +
     `</script>`
   );
 }

@@ -8,7 +8,15 @@ import {
   type PdfDensity,
   type PdfPageBreakLevel,
 } from "../config.js";
-import { DEFAULT_LANG, LABEL_KEYS, resolveLabels, type Labels } from "../labels.js";
+import {
+  DEFAULT_LANG,
+  LABEL_KEYS,
+  resolveLabels,
+  type DiffLabels,
+  type Labels,
+} from "../labels.js";
+import type { EarlierSearchPage, PageState } from "../diff/changes.js";
+import { DIFF_SCRIPT, DIFF_STYLE, diffBar } from "../diff/client.js";
 import { loadTheme } from "../themes/index.js";
 import { escapeAttr, escapeHtml, escapeLabel, renderTemplate } from "../util/html.js";
 import { documentFooterLine, type DocumentMetadata } from "../documentMeta.js";
@@ -65,7 +73,38 @@ export type RenderHtmlInput = {
   tocMaxLevel?: number;
   /** </body> 直前に挿入する追加スクリプト（例: Mermaid ランタイム）。 */
   bodyScripts?: string;
+  /**
+   * A difference from an earlier version (roadmap 7.3.4): each changed page's state, and the labels
+   * it uses. Absent, nothing the difference adds is written, and the output is what it was.
+   */
+  diff?: {
+    states: ReadonlyMap<string, PageState>;
+    labels: DiffLabels;
+    /** Each version's own sidebar, shown in its view; `sidebar` is the difference's. */
+    sidebars?: { current: SidebarNode[]; earlier: SidebarNode[] };
+    /** What search covers in the earlier version's view. */
+    earlierSearch?: EarlierSearchPage[];
+  };
 };
+
+/** The sidebar's symbol for each state; hidden from assistive technology, which reads the label. */
+const DIFF_MARKS: Record<PageState, { symbol: string; label: keyof DiffLabels }> = {
+  added: { symbol: "+", label: "diffAdded" },
+  deleted: { symbol: "−", label: "diffDeleted" },
+  moved: { symbol: "→", label: "diffMoved" },
+  changed: { symbol: "•", label: "diffChanged" },
+};
+
+/** A changed page's mark in the sidebar: a symbol and a label only assistive technology reads. */
+function diffMark(pageId: string, diff: RenderHtmlInput["diff"]): string {
+  const state = diff?.states.get(pageId);
+  if (state === undefined) return "";
+  const mark = DIFF_MARKS[state];
+  return (
+    `<span class="monodocs-diff-mark" aria-hidden="true">${mark.symbol}</span>` +
+    `<span class="monodocs-diff-label">${escapeHtml(diff!.labels[mark.label])}</span>`
+  );
+}
 
 /**
  * The section number in front of a sidebar entry (19.1), in the element and with the space the
@@ -94,7 +133,12 @@ function dirLabel(node: Extract<SidebarNode, { type: "dir" }>): string {
  * `collapseDepth` 指定時は、その階層より深いディレクトリに `collapsed` を付けて
  * 既定で畳む（クライアントの開閉トグルでいつでも開ける）。`depth` はトップレベルを 1 とする。
  */
-function renderSidebar(nodes: SidebarNode[], collapseDepth?: number, depth = 1): string {
+function renderSidebar(
+  nodes: SidebarNode[],
+  collapseDepth?: number,
+  depth = 1,
+  diff?: RenderHtmlInput["diff"],
+): string {
   if (nodes.length === 0) return "";
   const items = nodes
     .map((node) => {
@@ -103,16 +147,17 @@ function renderSidebar(nodes: SidebarNode[], collapseDepth?: number, depth = 1):
         return (
           `<li class="sidebar-dir${collapsed}">` +
           `<span class="sidebar-dir-title">${dirLabel(node)}</span>` +
-          renderSidebar(node.children, collapseDepth, depth + 1) +
+          renderSidebar(node.children, collapseDepth, depth + 1, diff) +
           `</li>`
         );
       }
+      const state = diff?.states.get(node.pageId);
       return (
-        `<li class="sidebar-page">` +
+        `<li class="sidebar-page"${state === undefined ? "" : ` data-monodocs-diff-page="${state}"`}>` +
         // href は encodeURI（route の "/" は保持）。data-route はクライアントで
         // decode 後に比較するため生の route を保持する。
         `<a href="#${escapeAttr(encodeURI(node.route))}" data-route="${escapeAttr(node.route)}">` +
-        `${numberLabel(node.number)}${escapeHtml(node.title)}</a></li>`
+        `${numberLabel(node.number)}${escapeHtml(node.title)}${diffMark(node.pageId, diff)}</a></li>`
       );
     })
     .join("");
@@ -120,11 +165,13 @@ function renderSidebar(nodes: SidebarNode[], collapseDepth?: number, depth = 1):
 }
 
 /** 1 ページ分の <article> を生成する。先頭ページのみ表示、他は hidden。 */
-function renderArticle(page: Page, index: number): string {
+function renderArticle(page: Page, index: number, states?: ReadonlyMap<string, PageState>): string {
   const hidden = index === 0 ? "" : " hidden";
+  const state = states?.get(page.id);
+  const diff = state === undefined ? "" : ` data-monodocs-diff-page="${state}"`;
   return (
     `<article class="page" data-route="${escapeAttr(page.route)}"` +
-    ` id="page-${escapeAttr(page.id)}"${hidden}>\n${page.html}\n</article>`
+    ` id="page-${escapeAttr(page.id)}"${hidden}${diff}>\n${page.html}\n</article>`
   );
 }
 
@@ -300,11 +347,15 @@ function printDensityRules(density: PdfDensity | undefined): string {
 }
 
 /** クライアント（目次・検索・前後ナビ）へ渡す 1 ページ分のデータ。 */
-function pageData(page: Page): {
+function pageData(
+  page: Page,
+  states?: ReadonlyMap<string, PageState>,
+): {
   route: string;
   title: string;
   number?: string;
   hidden: boolean;
+  diff?: PageState;
   headings: { id: string; text: string; level: number; number?: string }[];
   text: string;
   formulas?: { tex: string; section?: string }[];
@@ -327,6 +378,8 @@ function pageData(page: Page): {
     // Each formula's TeX and its section, so that a query matching a formula opens that section
     // (roadmap 6.4). Absent on a page without formulas, so the payload is what it was.
     ...(page.formulas && page.formulas.length > 0 ? { formulas: page.formulas } : {}),
+    // What became of the page, in a build with a difference only (7.3.4).
+    ...(states?.has(page.id) === true ? { diff: states.get(page.id) } : {}),
   };
 }
 
@@ -424,8 +477,28 @@ export async function renderSingleHtmlParts(
   // The document's own line, composed here so that the HTML footer and the PDF's Subject agree.
   const documentMeta = documentFooterLine(input.documentMetadata ?? {}, labels);
 
-  const sidebarHtml = renderSidebar(input.sidebar, input.sidebarCollapseDepth);
-  const pagesHtml = input.pages.map(renderArticle).join("\n");
+  const diff = input.diff;
+  const sidebarFor = (nodes: SidebarNode[]) =>
+    renderSidebar(nodes, input.sidebarCollapseDepth, 1, diff);
+  // With a difference, a sidebar for each view, the one shown chosen by the view (7.3.4).
+  const sidebarHtml =
+    diff?.sidebars === undefined
+      ? sidebarFor(input.sidebar)
+      : (
+          [
+            ["both", input.sidebar],
+            ["earlier", diff.sidebars.earlier],
+            ["current", diff.sidebars.current],
+          ] as const
+        )
+          .map(
+            ([view, nodes]) =>
+              `<div class="monodocs-diff-sidebar" data-monodocs-diff-sidebar="${view}">${sidebarFor([...nodes])}</div>`,
+          )
+          .join("");
+  const pagesHtml =
+    (diff === undefined ? "" : diffBar(diff.labels)) +
+    input.pages.map((page, index) => renderArticle(page, index, diff?.states)).join("\n");
   const siteData = safeJson({
     title: input.title,
     initialRoute: input.pages[0]?.route ?? "/",
@@ -437,13 +510,16 @@ export async function renderSingleHtmlParts(
     tocMaxLevel,
     // 解決済みの UI ラベル。app.js が動的に書く文言（検索結果の見出し、コピーの結果、
     // 前後ナビ）はここから読む。テーマがどれであれデータとしては必ず届く。
-    labels,
+    // A difference's labels join them only in a build with one (7.3.4).
+    labels: diff === undefined ? labels : { ...labels, ...diff.labels },
     // 目次・検索・前後ナビ用のページメタ（本文 HTML は含めない）。
-    pages: input.pages.map(pageData),
+    pages: input.pages.map((page) => pageData(page, diff?.states)),
     // 古い route → 現在の route の対応表（15.5）。ページではないので pages には入らず、
     // サイドバー・検索・前後ナビにも現れない。どの route にも当たらなかった hash だけが
     // ここを引く。別名が無ければ空オブジェクトなので、出力はほとんど変わらない。
     aliases: aliasTable(input.pages),
+    // The earlier version's pages as search reads them, in a build with a difference only (7.3.4).
+    ...(diff?.earlierSearch === undefined ? {} : { diffEarlierPages: diff.earlierSearch }),
   });
 
   let html = renderConditionalBlock(
@@ -482,12 +558,13 @@ export async function renderSingleHtmlParts(
     generatorVersion: escapeHtml(generatorVersion ?? ""),
     documentMeta: escapeHtml(documentMeta),
     title: escapeHtml(input.title),
-    style: styleWithOverrides(theme.style, input),
+    style: styleWithOverrides(theme.style, input) + (diff === undefined ? "" : DIFF_STYLE),
     sidebar: sidebarHtml,
     pages: pagesHtml,
     siteDataJson: siteData,
     appJs: theme.appJs,
-    bodyScripts: input.bodyScripts ?? "",
+    bodyScripts:
+      (input.bodyScripts ?? "") + (diff === undefined ? "" : `<script>${DIFF_SCRIPT}</script>`),
   });
   return { html: rendered, siteDataJson: siteData };
 }

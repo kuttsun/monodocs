@@ -7,10 +7,12 @@ import type { DocumentMetadata } from "./documentMeta.js";
 import { z } from "zod";
 import {
   DEFAULT_LANG,
+  DIFF_LABEL_KEYS,
   isValidLanguageTag,
   LABEL_KEYS,
+  type DiffLabelKey,
   type LabelKey,
-  type Labels,
+  type LabelOverrides,
 } from "./labels.js";
 import { t } from "./messages.js";
 import { FONT_CHECK_MODES, type FontCheckMode } from "./pipeline/fontCheck.js";
@@ -262,10 +264,9 @@ export function buildConfigFileSchema() {
    */
   const labelsSchema = z
     .object(
-      Object.fromEntries(LABEL_KEYS.map((key) => [key, z.string().min(1).optional()])) as Record<
-        LabelKey,
-        z.ZodOptional<z.ZodString>
-      >,
+      Object.fromEntries(
+        [...LABEL_KEYS, ...DIFF_LABEL_KEYS].map((key) => [key, z.string().min(1).optional()]),
+      ) as Record<LabelKey | DiffLabelKey, z.ZodOptional<z.ZodString>>,
     )
     .strict();
 
@@ -666,7 +667,7 @@ export type ResolvedConfig = {
   /** 生成した文書のページの言語（BCP 47）。`<html lang>` を埋める。UI ラベルは選ばない。 */
   lang: string;
   /** 英語の表の上に重ねる UI ラベルの差し替え。 */
-  labelOverrides: Partial<Labels>;
+  labelOverrides: LabelOverrides;
   /** 必要なフォントがビルド環境に無いときの挙動（既定 warn）。 */
   fontCheck: FontCheckMode;
   inputDir: string;
@@ -1068,27 +1069,99 @@ function assertNoNegatedGlob(patterns: string[], key: string): void {
   }
 }
 
-function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
-  if (options.inputDir) {
-    const inputConfigPath = join(
-      configBaseFor(resolve(cwd, options.inputDir)),
-      DEFAULT_CONFIG_FILE,
-    );
-    return existsSync(inputConfigPath) ? inputConfigPath : undefined;
-  }
+/**
+ * Where a configuration file is looked for when `-c` is not given: beside the input when one is
+ * named, else in the current directory. Whether it is there is the caller's question — the CLI
+ * asks it of an earlier version's index before that version's files exist (roadmap 7.3.1).
+ */
+export function defaultConfigPath(options: BuildOptions, cwd: string): string {
+  return options.inputDir
+    ? join(configBaseFor(resolve(cwd, options.inputDir)), DEFAULT_CONFIG_FILE)
+    : resolve(cwd, DEFAULT_CONFIG_FILE);
+}
 
-  const cwdConfigPath = resolve(cwd, DEFAULT_CONFIG_FILE);
-  return existsSync(cwdConfigPath) ? cwdConfigPath : undefined;
+function findDefaultConfigPath(options: BuildOptions, cwd: string): string | undefined {
+  const path = defaultConfigPath(options, cwd);
+  return existsSync(path) ? path : undefined;
+}
+
+/**
+ * Keys a major release removes after deprecating them, and what each is read as in an earlier
+ * version's configuration (roadmap 7.3.2). Kept beside the deprecations: a key deprecated for
+ * removal joins this table when it is deprecated, so the release that removes it from the schema
+ * leaves every version that used it still comparable. A key in neither the schema nor this table
+ * is an error, as in any configuration.
+ */
+export const REMOVED_KEY_TRANSLATIONS: readonly { from: string; to: string }[] = [
+  // Deprecated in 0.10 for `sources.exclude`, removed in 1.0 (12.4). Read the same way today.
+  { from: "sidebar.exclude", to: "sources.exclude" },
+];
+
+/**
+ * A parsed configuration with every removed key moved to its replacement. A replacement that is
+ * already written is left alone, beside the old key, so that the two are reported as they would
+ * be in any configuration rather than one silently winning.
+ */
+export function translateKeys(parsed: unknown): {
+  value: unknown;
+  /** The translations applied, so that a problem is reported under the key the author wrote. */
+  moved: { from: string; to: string }[];
+} {
+  const moved: { from: string; to: string }[] = [];
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { value: parsed, moved };
+  }
+  const out = structuredClone(parsed) as Record<string, unknown>;
+  for (const { from, to } of REMOVED_KEY_TRANSLATIONS) {
+    const [fromParent, fromKey] = splitKey(from);
+    const [toParent, toKey] = splitKey(to);
+    const source = objectAt(out, fromParent);
+    if (source === undefined || !(fromKey in source)) continue;
+    const target = objectAt(out, toParent, true);
+    if (target === undefined || toKey in target) continue;
+    target[toKey] = source[fromKey];
+    delete source[fromKey];
+    moved.push({ from, to });
+  }
+  return { value: out, moved };
+}
+
+function splitKey(key: string): [string[], string] {
+  const parts = key.split(".");
+  return [parts.slice(0, -1), parts[parts.length - 1]!];
+}
+
+/** The object at a dotted path, made on the way when `create`; undefined when something else is. */
+function objectAt(
+  root: Record<string, unknown>,
+  path: string[],
+  create = false,
+): Record<string, unknown> | undefined {
+  let at: Record<string, unknown> = root;
+  for (const name of path) {
+    let next = at[name];
+    if (next === undefined && create) next = at[name] = {};
+    if (typeof next !== "object" || next === null || Array.isArray(next)) return undefined;
+    at = next as Record<string, unknown>;
+  }
+  return at;
 }
 
 /**
  * Render a schema failure as `path: message` per problem. Zod's own `error.message` is a JSON dump
  * of the issue array, which buries the one thing the author needs — which key, and what about it.
  */
-function formatConfigIssues(error: z.ZodError): string {
+function formatConfigIssues(
+  error: z.ZodError,
+  moved: readonly { from: string; to: string }[] = [],
+): string {
   return error.issues
     .map((issue) => {
-      const path = issue.path.join(".");
+      let path = issue.path.join(".");
+      // A key read as its replacement is reported under the name the file gives it.
+      for (const { from, to } of moved) {
+        if (path === to || path.startsWith(`${to}.`)) path = from + path.slice(to.length);
+      }
       return path ? `${path}: ${issue.message}` : issue.message;
     })
     .join("; ");
@@ -1101,6 +1174,15 @@ function formatConfigIssues(error: z.ZodError): string {
 export async function loadConfig(
   options: BuildOptions = {},
   cwd: string = process.cwd(),
+  {
+    translateRemovedKeys = false,
+  }: {
+    /**
+     * Read a key a major release removed as its replacement ({@link REMOVED_KEY_TRANSLATIONS}).
+     * Only for an earlier version's configuration, which its author cannot rewrite (roadmap 7.3.2).
+     */
+    translateRemovedKeys?: boolean;
+  } = {},
 ): Promise<ResolvedConfig> {
   const configPath = options.configFile
     ? resolve(cwd, options.configFile)
@@ -1117,11 +1199,15 @@ export async function loadConfig(
         t("config.parseFailed", { path: configPath, detail: (error as Error).message }),
       );
     }
-    const result = buildConfigFileSchema().safeParse(parsed ?? {});
+    const translated = translateRemovedKeys ? translateKeys(parsed) : { value: parsed, moved: [] };
+    const result = buildConfigFileSchema().safeParse(translated.value ?? {});
     if (!result.success) {
       throw new MonodocsError(
         "config/invalid",
-        t("config.invalid", { path: configPath, detail: formatConfigIssues(result.error) }),
+        t("config.invalid", {
+          path: configPath,
+          detail: formatConfigIssues(result.error, translated.moved),
+        }),
       );
     }
     fileConfig = result.data;

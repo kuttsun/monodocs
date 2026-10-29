@@ -96,6 +96,29 @@
 | `html.labels.version` | 英語 |
 | `html.labels.cover` | 英語 |
 | `html.labels.contents` | 英語 |
+| `html.labels.diffChanges` | 英語 |
+| `html.labels.diffAddedPages` | 英語 |
+| `html.labels.diffMovedPages` | 英語 |
+| `html.labels.diffChangedPages` | 英語 |
+| `html.labels.diffDeletedPages` | 英語 |
+| `html.labels.diffUnchangedPages` | 英語 |
+| `html.labels.diffNoChanges` | 英語 |
+| `html.labels.diffPageAdded` | 英語 |
+| `html.labels.diffPageDeleted` | 英語 |
+| `html.labels.diffPageMoved` | 英語 |
+| `html.labels.diffViewSideBySide` | 英語 |
+| `html.labels.diffViewSideBySideHint` | 英語 |
+| `html.labels.diffViewCurrent` | 英語 |
+| `html.labels.diffViewEarlier` | 英語 |
+| `html.labels.diffShowMarks` | 英語 |
+| `html.labels.diffPrevious` | 英語 |
+| `html.labels.diffNext` | 英語 |
+| `html.labels.diffAdded` | 英語 |
+| `html.labels.diffDeleted` | 英語 |
+| `html.labels.diffChanged` | 英語 |
+| `html.labels.diffMoved` | 英語 |
+| `html.labels.diffTitleChanged` | 英語 |
+| `html.labels.diffMergedInto` | 英語 |
 | `pdf.pageSize` | `A4` |
 | `pdf.margin.top` | `20mm` |
 | `pdf.margin.right` | `15mm` |
@@ -137,7 +160,7 @@
 | --- | --- | --- |
 | （共通） | — | `-V, --version`, `--lang <lang>`, `-h, --help` |
 | `init` | — | — |
-| `build` | `[input]` | `-o, --output <path>`, `-c, --config <file>`, `-f, --format <format>` |
+| `build` | `[input]` | `-o, --output <path>`, `-c, --config <file>`, `-f, --format <format>`, `--diff-from <ref>`, `--diff-from-dir <dir>` |
 | `watch` | `[input]` | `-o, --output <file>`, `-c, --config <file>` |
 | `serve` | `[input]` | `-o, --output <file>`, `-c, --config <file>`, `-p, --port <port>`, `-H, --host <host>`, `--open` |
 | `validate` | `[input]` | `-c, --config <file>`, `--format <format>`, `--strict` |
@@ -156,6 +179,15 @@
 - `config/input-outside-root`
 - `config/invalid`
 - `config/not-found`
+- `diff/conflicting-options`
+- `diff/dir-not-found`
+- `diff/git-failed`
+- `diff/git-unavailable`
+- `diff/lfs-pointer`
+- `diff/not-a-repository`
+- `diff/outside-version`
+- `diff/ref-not-found`
+- `diff/unsupported`
 - `font/missing`
 - `font/no-math-table`
 - `font/unchecked`
@@ -222,10 +254,11 @@
 - **設定ファイルを探す場所**：`-c, --config` が名指すファイルで、無ければエラーです。指定が無ければ、入力引数があるときは入力ディレクトリ（単一ファイルならそのディレクトリ）の `monodocs.config.yml` だけを、入力引数が無いときはカレントディレクトリの `monodocs.config.yml` を探します（[設定ファイル](./configuration#設定ファイルの探索場所)）。
 - **オプションの既定値**：`--lang` は `MONODOCS_LANG` に従い、無ければ `en` です。設定の `lang` は文書の言語であり、CLI の言語ではありません。`validate --format` は `human` で、`--strict` が無ければ警告だけでは `validate` は失敗しません。`serve` は `127.0.0.1` のポート `4173` で待ち受け、`--open` が無ければブラウザを開きません。`-o` と `build -f` は `output.path` と `output.format` から、`-c` は上のファイルの探し方から既定値を取ります。
 - **アドレス**：ページのルートは、入力ルートからの相対パスから拡張子を除いたもので、大文字小文字も文字もそのまま保ちます。どの階層でも `index` のページはそのディレクトリを表します（`index.md` は `/`、`guide/index.md` は `/guide`）。文書はそれを `#/route` として開きます。ページの ID はルートから作ります。区切りごとに小文字にし、空白をハイフンにし、文字・数字・ハイフン以外を落とし、続くハイフンを 1 つにし、両端のハイフンと空の区切りを除いて、ハイフンでつなぎます。空になれば `index` です（`/Setup/API_Reference` は `setup-apireference`、`/foo--bar` は `foo-bar`、`/` は `index`）。要素の ID は、ページの ID、ハイフン、ソースが付けた ID を続けたものです。移動したページは、`aliases`（`:sd-aliases:`）で古いルートを保ちます。
+- **以前の版との差分**（`--diff-from`、`--diff-from-dir`。[コマンドオプション](./commands#difference)）：変更の一覧はルート `//changes` にあり、削除されたページは `//deleted` に以前のルートを続けたルートにあります（`/guide/old` は `//deleted/guide/old` で、ページ ID は `deleted-guide-old`）。別名はこれらのルートを取れず、取るソースファイル——それを許すシステムで、パスがバックスラッシュで始まるものだけ——は `page/duplicate-route` になります。変更の一覧のページ ID は `diff-changes`、削除されたページのページ ID は `deleted-` に以前のページ ID を続けたものです。どちらも、そのページ ID を持つページがなくなり、そのページ ID か記事の ID を持つ要素がなくなり、それにハイフンを続けた文字列で始まる要素の ID がなくなるまで、`-x` を足します。差分は次の属性で表し、スタイルシートやスクリプトはこれらで選べます。monodocs が書くすべての `<ins>` と `<del>` に付く `data-monodocs-diff`、追加または削除されたブロックに付く `data-monodocs-diff-block`（`ins`、`del`）、ページの記事とそのサイドバーの項目に付く `data-monodocs-diff-page`（`added`、`deleted`、`moved`、`changed`）、変わっていない組の 2 つのブロックが同じ値で持つ `data-monodocs-diff-pair` です。差分のそのほかのマークアップ、クラス、スクリプトは凍結しません。
 - **カスタムテーマ**は `template.html`、`style.css`、`app.js` を持てます。置かなかったものは既定のテーマのものになります。`template.html` は次のトークンを残す必要があります（[設定ファイル](./configuration#html-theme-カスタムテーマ)）。凍結するのはファイル名とこれらのトークンです。任意のトークン、<span v-pre>`{{siteDataJson}}`</span> が運ぶデータの形、既定のテーマ自身のマークアップとクラスは凍結しないので、`app.js` を差し替えるテーマや既定のマークアップにスタイルを当てるテーマは、マイナーリリースで手直しが要ることがあります。
 
 ```text
 {{style}} {{sidebar}} {{pages}} {{siteDataJson}} {{appJs}} {{bodyScripts}}
 ```
 
-テストは、オプションの既定値、トークン、アドレスの例をコードと照らし合わせます。アドレスの規則、ファイルの探し方、上の記法はレビューで保ちます。
+テストは、オプションの既定値、トークン、差分のものを含むアドレスの例をコードと照らし合わせます。アドレスの規則、ファイルの探し方、上の記法はレビューで保ちます。

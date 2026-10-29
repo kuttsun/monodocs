@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { load, type Document, type Section } from "@asciidoctor/core";
+import { load, LoggerManager, NullLogger, type Document, type Section } from "@asciidoctor/core";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
@@ -21,6 +21,7 @@ import { prefixIdsAndCollect } from "../prefixIds.js";
 import { rehypeRenderMath, type MathProblem } from "../mathRender.js";
 import { createMathConverter, type AsciidocMath } from "./math.js";
 import { markChecklists, normalizeChecklistBoxes } from "./checklist.js";
+import { createNumberMarks } from "./numberMarks.js";
 import {
   createIncludeBoundary,
   rethrowIncludeViolation,
@@ -42,13 +43,13 @@ function buildOptions(
   source: SourceFile,
   attributes: Readonly<Record<string, string>>,
   registry: unknown,
-  math?: AsciidocMath,
+  converter?: object,
 ): Record<string, unknown> {
   return {
     // Asciidoctor's own hook for a converter made beforehand, used here so that the formulas in a
     // section title, which Asciidoctor converts while it loads the document (to make the section's ID),
     // go through the math converter too. Not in Asciidoctor's public API; a test pins it.
-    ...(math === undefined ? {} : { _preCreatedConverter: math.converter }),
+    ...(converter === undefined ? {} : { _preCreatedConverter: converter }),
     safe: "safe",
     standalone: false,
     base_dir: dirname(source.absolutePath),
@@ -80,6 +81,10 @@ export function createAsciidocRenderer(
     refuseSectnums?: boolean;
     /** Render latexmath (`math.enabled`, roadmap 6.4). On unless turned off. */
     math?: boolean;
+    /** Called with every file `include::` reads and its content, before Asciidoctor reads it. */
+    checkInclude?: (path: string, content: Buffer) => void;
+    /** Mark the numbers Asciidoctor generates, for a build with a difference (7.3.2). */
+    markNumbers?: boolean;
   } = {},
 ): SourceRenderer {
   const lineBreak = options.lineBreak ?? "space";
@@ -93,7 +98,9 @@ export function createAsciidocRenderer(
   const mathFor = () =>
     (options.math ?? true) ? createMathConverter({ htmlsyntax }) : Promise.resolve(undefined);
   const boundaryFor = (source: SourceFile) =>
-    rootDir === undefined ? undefined : createIncludeBoundary(rootDir, source.relativePath);
+    rootDir === undefined
+      ? undefined
+      : createIncludeBoundary(rootDir, source.relativePath, options.checkInclude);
 
   return {
     format: "asciidoc",
@@ -103,7 +110,7 @@ export function createAsciidocRenderer(
       const boundary = boundaryFor(source);
       const math = await mathFor();
       const doc = await withBoundary(boundary, source, () =>
-        load(source.raw, buildOptions(source, attributes, boundary?.registry, math)),
+        load(source.raw, buildOptions(source, attributes, boundary?.registry, math?.converter)),
       );
       if (options.refuseSectnums) refuseNumberedSections(doc, source);
       const rawTitle = doc.getDocumentTitle();
@@ -126,10 +133,21 @@ export function createAsciidocRenderer(
     async render(source: SourceFile, context: RenderContext): Promise<RenderedContent> {
       const boundary = boundaryFor(source);
       const math = await mathFor();
+      // In a build with a difference, the numbers Asciidoctor generates are marked as it writes
+      // them (7.3.2), by a converter around the math converter.
+      const numbers =
+        options.markNumbers === true
+          ? await createNumberMarks(math?.converter, { htmlsyntax })
+          : undefined;
       const rawHtml = await withBoundary(boundary, source, async () => {
         const doc = await load(
           source.raw,
-          buildOptions(source, attributes, boundary?.registry, math),
+          buildOptions(
+            source,
+            attributes,
+            boundary?.registry,
+            numbers?.converter ?? math?.converter,
+          ),
         );
         markChecklists(doc);
         return doc.convert();
@@ -147,6 +165,7 @@ export function createAsciidocRenderer(
       // （見出し・xref・脚注などの単一 HTML 内 ID 衝突を回避）。Markdown と共通処理。
       const file = await unified()
         .use(rehypeParse, { fragment: true })
+        .use(numbers ? [() => numbers.markGenerated] : [])
         .use(() => normalizeChecklistBoxes)
         .use(math ? [() => (tree: HastRoot) => math.markFormulas(tree)] : [])
         .use(lineBreak === "join" ? [() => joinSegmentBreaks] : [])
@@ -242,7 +261,8 @@ function numbersSections(doc: Document): boolean {
  * buried in it. The violation is read back from the boundary instead of parsed out of the text.
  */
 async function withBoundary<T>(
-  boundary: { takeViolation(): IncludeViolation | undefined } | undefined,
+  boundary:
+    { takeViolation(): IncludeViolation | undefined; takeRefusal(): Error | undefined } | undefined,
   source: SourceFile,
   run: () => Promise<T>,
 ): Promise<T> {
@@ -250,6 +270,9 @@ async function withBoundary<T>(
     return await run();
   } catch (error) {
     rethrowIncludeViolation(boundary?.takeViolation(), source.relativePath);
+    // A check on an included file throws inside Asciidoctor, which wraps it; the original is kept.
+    const refused = boundary?.takeRefusal();
+    if (refused !== undefined) throw refused;
     throw error;
   }
 }
@@ -262,6 +285,22 @@ function unique(problems: MathProblem[]): MathProblem[] {
     seen.add(key);
     return true;
   });
+}
+
+/**
+ * Run `run` with Asciidoctor's own log silenced, and restore it after. The earlier version's build
+ * (roadmap 7.3.2) reports no warnings, and Asciidoctor writes its own straight to the terminal — a
+ * missing include, a duplicate ID — past the diagnostics monodocs discards. The logger is global,
+ * so this suits only a build that runs alone, as the earlier one does between the new one's steps.
+ */
+export async function withoutAsciidoctorLog<T>(run: () => Promise<T>): Promise<T> {
+  const logger = LoggerManager.getLogger();
+  LoggerManager.setLogger(NullLogger.create());
+  try {
+    return await run();
+  } finally {
+    LoggerManager.setLogger(logger);
+  }
 }
 
 /** 設定を持たない既定の AsciiDoc renderer（core を直接使う呼び出し側向け）。 */

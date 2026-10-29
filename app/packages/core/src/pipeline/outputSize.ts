@@ -13,8 +13,22 @@ export type HtmlBreakdown = {
   mermaid: number;
   /** The `siteDataJson` payload: page text, headings, and search data. */
   pageData: number;
+  /**
+   * What a difference from an earlier version added besides images, the runtime, and page data:
+   * the list of changes, deleted content, marks, notes, and their rules (roadmap 7.3.4). Only in a
+   * build with a difference.
+   */
+  difference?: number;
   /** Everything else: the pages' HTML, the theme, the scripts, the sidebar. */
   document: number;
+};
+
+/** What a single HTML is measured against: its images, its inline runtime, and its page data. */
+export type HtmlParts = {
+  images: EmbeddedImage[];
+  /** The inline runtime, or its pieces where only those are the runtime's (7.3.4). */
+  mermaidRuntime: string | string[];
+  siteDataJson: string;
 };
 
 export type OutputSize = {
@@ -53,10 +67,29 @@ function occurrenceBytes(haystack: string, needle: string): number {
 export async function measureHtml(
   path: string,
   html: string,
-  parts: { images: EmbeddedImage[]; mermaidRuntime: string; siteDataJson: string },
+  parts: HtmlParts,
+  /**
+   * In a build with a difference, the same document without it: what the file holds beyond that,
+   * outside the other parts, is the difference's line, and the document's line is the baseline's.
+   */
+  without?: { html: string; parts: HtmlParts },
 ): Promise<OutputSize> {
   const bytes = (await stat(path)).size;
+  const breakdown = breakdownOf(html, bytes, parts);
+  if (without !== undefined) {
+    const baseline = breakdownOf(
+      without.html,
+      Buffer.byteLength(without.html, "utf8"),
+      without.parts,
+    );
+    breakdown.difference = breakdown.document - baseline.document;
+    breakdown.document = baseline.document;
+  }
+  return { path, bytes, breakdown };
+}
 
+/** Where `bytes` of `html` went, `document` the remainder. */
+function breakdownOf(html: string, bytes: number, parts: HtmlParts): HtmlBreakdown {
   // Keyed by the data URI, so identical files that produced the same URI are not counted twice.
   // A copy is matched as a whole attribute value, quotes included: a URI can be a prefix of
   // another (the same image with one more trailing byte), and a bare substring search would count
@@ -82,17 +115,15 @@ export async function measureHtml(
     if (!largest || copyBytes > largest.bytes) largest = { path: first!, bytes: copyBytes };
   }
 
-  const mermaid = occurrenceBytes(html, parts.mermaidRuntime);
+  const mermaid = (
+    Array.isArray(parts.mermaidRuntime) ? parts.mermaidRuntime : [parts.mermaidRuntime]
+  ).reduce((sum, piece) => sum + occurrenceBytes(html, piece), 0);
   const pageData = occurrenceBytes(html, parts.siteDataJson);
   return {
-    path,
-    bytes,
-    breakdown: {
-      images: { bytes: imageBytes, files: fileCount, largest },
-      mermaid,
-      pageData,
-      document: bytes - imageBytes - mermaid - pageData,
-    },
+    images: { bytes: imageBytes, files: fileCount, largest },
+    mermaid,
+    pageData,
+    document: bytes - imageBytes - mermaid - pageData,
   };
 }
 
@@ -162,6 +193,9 @@ export function sizeReportLines(sizes: OutputSize[]): string[] {
     }
     if (parts.mermaid > 0) lines.push(t("cli.size.mermaid", { size: formatSize(parts.mermaid) }));
     lines.push(t("cli.size.pageData", { size: formatSize(parts.pageData) }));
+    if (parts.difference !== undefined) {
+      lines.push(t("cli.size.difference", { size: formatSize(parts.difference) }));
+    }
     lines.push(t("cli.size.document", { size: formatSize(parts.document) }));
   }
   return lines;

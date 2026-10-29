@@ -9,18 +9,38 @@ import type {
   SourceFile,
   SourceFormat,
 } from "./types.js";
+import type { Root as HastRoot } from "hast";
 import { loadConfig, type MermaidMode, type OnLargeImage, type ResolvedConfig } from "./config.js";
 import { bySeverity, type Diagnostic, MonodocsError, toDiagnostic, warn } from "./diagnostics.js";
+import {
+  assertDiffSupported,
+  assertNoDiff,
+  earlierLabel,
+  inEarlierVersion,
+  loadEarlierConfig,
+} from "./diff/earlier.js";
+import { compareVersions, type PageComparison } from "./diff/compare.js";
+import { earlierBuildConfig } from "./diff/earlierConfig.js";
+import {
+  earlierRelocator,
+  relocateEarlierPages,
+  sharedClockAttributes,
+} from "./diff/earlierLocation.js";
+import { refuseLfsPointer } from "./diff/lfsPointer.js";
+import { earlierIdPrefix, elementIds, writeChangedPages } from "./diff/write.js";
+import { CHANGES_ROUTE, writeDiffDocument, type DiffDocument } from "./diff/changes.js";
+import { DIFF_MERMAID } from "./diff/client.js";
+import { loadTheme } from "./themes/index.js";
 import {
   documentAuthor,
   documentCoverParts,
   documentKeywords,
   documentSubject,
 } from "./documentMeta.js";
-import { resolveLabels } from "./labels.js";
+import { resolveDiffLabels, resolveLabels } from "./labels.js";
 import { readSourceFile, scanSourceFiles } from "./scan.js";
 import { createMarkdownRenderer } from "./sources/markdown/renderer.js";
-import { createAsciidocRenderer } from "./sources/asciidoc/renderer.js";
+import { createAsciidocRenderer, withoutAsciidoctorLog } from "./sources/asciidoc/renderer.js";
 import { buildPages } from "./pipeline/buildPages.js";
 import { buildCustomSidebar, buildSidebar, orderPagesBySidebar } from "./pipeline/buildSidebar.js";
 import { postprocessPages, type PostprocessOptions } from "./pipeline/postprocess.js";
@@ -61,10 +81,30 @@ type PreparePagesOptions = {
    * にする）だと PDF から画像が欠落するため、埋め込み側（`warn`）へ倒す。
    */
   onLargeImage?: OnLargeImage;
+  /**
+   * Called with every file the build reads — a page, an included file, an image — and its content.
+   * The earlier version's build refuses an LFS pointer with it (roadmap 7.3.1).
+   */
+  checkRead?: (path: string, content: Buffer | string) => void;
+  /** Called with every image Asciidoctor read itself and wrote into a page, and those bytes. */
+  checkEmbedded?: (page: Page, content: Buffer) => void;
+  /**
+   * Rewrites the pages as the renderers wrote them, before the sidebar takes their titles and
+   * before post-processing splits their text — highlighting cuts a path into tokens.
+   */
+  relocate?: (pages: Page[]) => Page[];
+  /** Rewrites a page title before `sidebar.titleTransform` changes its characters. */
+  relocateTitle?: (title: string) => string;
+  /** Keep each page's tree with what comparison needs (7.3.2), as {@link PreparedSite.trees}. */
+  record?: boolean;
+  /** What the version's pre-rendered diagram IDs start with. */
+  mermaidIdPrefix?: string;
 };
 
-type PreparedSite = {
+export type PreparedSite = {
   pages: Page[];
+  /** Each page's tree by page ID, with what comparison needs; only when asked to record. */
+  trees?: Map<string, HastRoot>;
   sidebar: SidebarNode[];
   warnings: Diagnostic[];
   hasMermaid: boolean;
@@ -123,7 +163,11 @@ export async function preparePages(
     }
   }
 
-  const { pages, warnings } = await buildPages(
+  if (opts.checkRead !== undefined) {
+    for (const source of sources) opts.checkRead(source.absolutePath, source.raw);
+  }
+
+  const rendered = await buildPages(
     sources,
     [
       createMarkdownRenderer({ lineBreak: config.lineBreak, math: config.mathEnabled }),
@@ -131,14 +175,19 @@ export async function preparePages(
         lineBreak: config.lineBreak,
         refuseSectnums: config.numberingSections !== false,
         math: config.mathEnabled,
+        checkInclude: opts.checkRead,
+        markNumbers: opts.record === true,
       }),
     ],
     {
       titleTransform: config.sidebarTitleTransform.page,
       titleFrom: config.sidebarTitleFrom,
+      ...(opts.relocateTitle === undefined ? {} : { rewriteTitle: opts.relocateTitle }),
       sourceExtensions: [...config.markdownExtensions, ...config.asciidocExtensions],
     },
   );
+  const { warnings } = rendered;
+  const pages = opts.relocate === undefined ? rendered.pages : opts.relocate(rendered.pages);
   // The sidebar comes first: it needs only titles and paths, and with numbering on it decides
   // every page's number, which post-processing writes into the headings (19.1).
   const custom =
@@ -169,6 +218,10 @@ export async function preparePages(
     pdfPageBreakLevel: config.pdfPageBreakLevel,
     figureAlign: config.figuresAlign,
     sectionNumbers,
+    checkRead: opts.checkRead,
+    checkEmbedded: opts.checkEmbedded,
+    ...(opts.record === true ? { record: true } : {}),
+    ...(opts.mermaidIdPrefix === undefined ? {} : { mermaidIdPrefix: opts.mermaidIdPrefix }),
   });
   // custom はサイドバーが閲覧順そのものになるため、ページの並びもそれに合わせる
   // （前後ナビ・PDF のページ順・初期表示ページが一致する）。
@@ -179,6 +232,7 @@ export async function preparePages(
       warnings: [...config.warnings, ...warnings, ...post.warnings, ...custom.warnings],
       hasMermaid: post.hasMermaid,
       embeddedImages: post.embeddedImages,
+      ...(post.trees === undefined ? {} : { trees: post.trees }),
     };
   }
 
@@ -188,6 +242,7 @@ export async function preparePages(
     warnings: [...config.warnings, ...warnings, ...post.warnings],
     hasMermaid: post.hasMermaid,
     embeddedImages: post.embeddedImages,
+    ...(post.trees === undefined ? {} : { trees: post.trees }),
   };
 }
 
@@ -212,9 +267,27 @@ export function resolveOutputs(config: ResolvedConfig, cwd: string): ResolvedOut
  * buildSite 内部でブラウザ依存処理へ差し込む注入口。
  * 通常は使わず、テストで Chromium なしに検証するために偽実装を渡す。
  */
+/** What the earlier version's pre-rendered diagram IDs start with (roadmap 7.3.2). */
+export const EARLIER_MERMAID_ID_PREFIX = "mermaid-earlier-";
+
 export type BuildInternals = {
   mermaidPrerenderer?: MermaidPrerenderer;
   pdfGenerator?: PdfGenerator;
+  /** The clock a build with a difference reads its one instant from (7.3.2). For tests. */
+  now?: () => Date;
+  /** What makes the Mermaid pre-renderer when none is passed. For tests. */
+  createPrerenderer?: typeof createPuppeteerPrerenderer;
+  /** Called with the comparison of the two versions, in a build with a difference. For tests. */
+  onCompared?: (pages: PageComparison[]) => void;
+  /** Called with each version's pages once they are built, in a build with a difference. */
+  onPrepared?: (version: "new" | "earlier", site: PreparedSite) => void;
+  /**
+   * Write the difference into one column, as the markup PDF will (7.3.5), rather than side by side.
+   * For tests, until the PDF uses it.
+   */
+  writeInline?: boolean;
+  /** Called with the new version's pages once the difference is written into them. For tests. */
+  onWritten?: (pages: Page[]) => void;
 };
 
 /**
@@ -229,7 +302,26 @@ export async function buildSite(
   internals: BuildInternals = {},
 ): Promise<BuildResult> {
   const cwd = process.cwd();
-  const config = await loadConfig(options, cwd);
+  // One instant for both builds of a difference, taken before either reads the clock (7.3.2).
+  const startedAt = internals.now?.() ?? new Date();
+  const loadedConfig = await loadConfig(options, cwd);
+  const clock = options.diff === undefined ? {} : sharedClockAttributes(startedAt);
+  const withClock = (c: ResolvedConfig): ResolvedConfig =>
+    Object.keys(clock).length === 0
+      ? c
+      : { ...c, asciidocAttributes: { ...clock, ...c.asciidocAttributes } };
+  const config = withClock(loadedConfig);
+  // The earlier version (7.3), built with its own configuration for what the document contains
+  // and with the new one for how it looks (7.3.2).
+  let earlierConfig: ResolvedConfig | undefined;
+  // What names the earlier version in the list of changes, when it says (7.3.4).
+  let earlierVersion: string | undefined;
+  if (options.diff !== undefined) {
+    assertDiffSupported(config, options.diff);
+    const loaded = await loadEarlierConfig(options, cwd, options.diff);
+    earlierConfig = withClock(earlierBuildConfig(loadedConfig, loaded));
+    earlierVersion = loaded.documentMetadata.version;
+  }
 
   // PDF は配布時に読者のファイルシステム上の相対画像を参照できないため、PDF を出力する場合は
   // 画像を data URI として埋め込む必要がある。embedImages: false や onLargeImage: external
@@ -247,8 +339,11 @@ export async function buildSite(
   const ownPrerenderer = internals.mermaidPrerenderer === undefined;
   const prerenderer =
     internals.mermaidPrerenderer ??
-    (config.mermaidEnabled && config.mermaidMode === "pre-render"
-      ? createPuppeteerPrerenderer({
+    // Decided over both versions, so an earlier diagram is drawn when the new version has none
+    // or has Mermaid off (7.3.2).
+    ((config.mermaidEnabled || earlierConfig?.mermaidEnabled === true) &&
+    config.mermaidMode === "pre-render"
+      ? (internals.createPrerenderer ?? createPuppeteerPrerenderer)({
           colorScheme: config.colorScheme,
           // A PDF's labels are laid out in the font the PDF sets them in; the HTML's are not.
           mathFont: needsPdf
@@ -258,12 +353,44 @@ export async function buildSite(
       : undefined);
 
   let prepared: PreparedSite;
+  let earlierSite: PreparedSite | undefined;
   try {
     prepared = await preparePages(config, cwd, {
       mermaidPrerenderer: prerenderer,
       embedImages: forceEmbed ? true : undefined,
       onLargeImage: forceLargeEmbed ? "warn" : undefined,
+      record: options.diff !== undefined,
     });
+    if (options.diff !== undefined && earlierConfig !== undefined) {
+      const diff = options.diff;
+      const settings = earlierConfig;
+      // Its warnings are not reported: the author cannot fix a released version, and a report
+      // doubled by the past hides what can be fixed now. A hard error stops the build, its paths
+      // shown in the earlier version (7.3.2).
+      const earlier = await inEarlierVersion(diff, cwd, () =>
+        withoutAsciidoctorLog(() =>
+          preparePages(settings, resolve(cwd, diff.dir), {
+            mermaidPrerenderer: prerenderer,
+            embedImages: forceEmbed ? true : undefined,
+            onLargeImage: forceLargeEmbed ? "warn" : undefined,
+            checkRead: refuseLfsPointer,
+            checkEmbedded: (page, content) =>
+              refuseLfsPointer(page.sourcePath, content, "embedded"),
+            relocate: (pages) => relocateEarlierPages(pages, diff, cwd),
+            relocateTitle: earlierRelocator(diff, cwd).text,
+            record: true,
+            // The pre-renderer numbers IDs from a counter that restarts in every call, so the
+            // earlier build's diagrams use a prefix of their own (7.3.2).
+            mermaidIdPrefix: EARLIER_MERMAID_ID_PREFIX,
+          }),
+        ),
+      );
+      internals.onPrepared?.("earlier", earlier);
+      earlierSite = earlier;
+    }
+    // The earlier version's diagrams are checked too: a deleted one is drawn in the output with
+    // this machine's fonts, as the new version's are. What the check finds is the machine's, not
+    // either version's, so it is reported as it is in any build (7.3.2).
     // pre-render は本文と違って、ビルドマシンのフォントを SVG へ焼き込む。図を描いた文脈が
     // まだ開いているこの時点で確かめる（fontCheck: error なら例外が出てビルドは止まる）。
     await prerenderer?.checkFonts?.({
@@ -273,18 +400,101 @@ export async function buildSite(
   } finally {
     if (ownPrerenderer) await prerenderer?.close();
   }
-  const { pages, sidebar, warnings, hasMermaid } = prepared;
+  // The difference, written into the new version's pages (7.3.4).
+  let diffDocument: DiffDocument | undefined;
+  // The document as it would be without the difference, which the size report measures against.
+  let withoutDiff: { pages: Page[]; sidebar: SidebarNode[] } | undefined;
+  let earlierImages: PreparedSite["embeddedImages"] = [];
+  let earlierDiagrams = 0;
+  if (options.diff !== undefined && earlierSite !== undefined) {
+    internals.onPrepared?.("new", prepared);
+    const next = prepared.trees ?? new Map<string, HastRoot>();
+    const old = earlierSite.trees ?? new Map<string, HastRoot>();
+    const comparison = compareVersions(
+      { pages: prepared.pages, trees: next },
+      { pages: earlierSite.pages, trees: old },
+    );
+    internals.onCompared?.(comparison);
+    withoutDiff = { pages: prepared.pages.map((page) => ({ ...page })), sidebar: prepared.sidebar };
+    // The IDs the list of changes and deleted SVGs avoid: the pages' and the theme template's own.
+    const theme = await loadTheme(config.theme);
+    const ids = [
+      ...elementIds(next.values()),
+      // Quoted or not, as HTML allows either in a template.
+      ...[...theme.template.matchAll(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g)].map(
+        (match) => match[1] ?? match[2] ?? match[3]!,
+      ),
+    ];
+    const write = {
+      svgIdPrefix: earlierIdPrefix(
+        ids,
+        prepared.pages.map((page) => page.id),
+      ),
+      // Kept only while no ID of the new version shares it.
+      earlierDiagramPrefix: ids.some((id) => id.startsWith(EARLIER_MERMAID_ID_PREFIX))
+        ? undefined
+        : EARLIER_MERMAID_ID_PREFIX,
+    };
+    // Until the markup PDF uses it, the one-column writing is reached by tests alone (7.3.5).
+    if (internals.writeInline === true) writeChangedPages(comparison, { next, old }, write);
+    diffDocument = writeDiffDocument(
+      comparison,
+      { pages: prepared.pages, sidebar: prepared.sidebar, trees: next },
+      { pages: earlierSite.pages, sidebar: earlierSite.sidebar, trees: old },
+      {
+        labels: resolveDiffLabels(config.labelOverrides),
+        // The earlier version is named by its own `document.version`, else by the argument that
+        // named it, as written.
+        names: {
+          from: earlierVersion?.trim() || earlierLabel(options.diff),
+          to: config.documentMetadata.version,
+        },
+        write,
+        elementIds: ids,
+        columns: internals.writeInline !== true,
+      },
+    );
+    earlierDiagrams = diffDocument.earlierDiagrams;
+    // The generated pages' routes are ones no path gives but a name beginning with a backslash,
+    // which `toRoute` reads as a separator (7.3.4).
+    const generated = new Set(
+      diffDocument.pages.filter((page) => page.sourcePath === "").map((page) => page.route),
+    );
+    const taken = prepared.pages.find((page) => generated.has(page.route));
+    if (taken !== undefined) {
+      throw new MonodocsError(
+        "page/duplicate-route",
+        t("pages.generatedRouteCollision", { route: taken.route, path: taken.relativePath }),
+      );
+    }
+    // An image both versions embed is counted once, under the new version's path (20.5).
+    const shared = new Set(prepared.embeddedImages.map((image) => image.dataUri));
+    earlierImages = earlierSite.embeddedImages.filter((image) => !shared.has(image.dataUri));
+    internals.onWritten?.(diffDocument.pages);
+  }
+  const { warnings, hasMermaid } = prepared;
+  const pages = diffDocument?.pages ?? prepared.pages;
+  const sidebar = diffDocument?.sidebar ?? prepared.sidebar;
   if (forceEmbed || forceLargeEmbed) {
     warnings.unshift(warn("image/embedded-for-pdf", t("build.pdfImagesEmbedded")));
   }
 
   // pre-render は静的 SVG なのでランタイム JS を注入しない（client mode のときだけ注入）。
-  const clientMermaid = hasMermaid && config.mermaidEnabled && config.mermaidMode === "client";
-  const bodyScripts = clientMermaid ? await mermaidRuntimeScript(config.mermaidRuntime) : "";
+  // A deleted diagram is drawn in the browser too, when the new version has none or has Mermaid
+  // off (7.3.2).
+  const ownMermaid = hasMermaid && config.mermaidEnabled && config.mermaidMode === "client";
+  const clientMermaid = ownMermaid || (earlierDiagrams > 0 && config.mermaidMode === "client");
+  // With a difference, a render leaves out a column the view hides (7.3.4).
+  const bodyScripts = clientMermaid
+    ? await mermaidRuntimeScript(
+        config.mermaidRuntime,
+        ...(diffDocument === undefined ? [] : [DIFF_MERMAID]),
+      )
+    : "";
 
   const labels = resolveLabels(config.labelOverrides);
 
-  const { html, siteDataJson } = await renderSingleHtmlParts({
+  const renderInput = {
     title: config.title,
     documentMetadata: config.documentMetadata,
     pages,
@@ -307,6 +517,19 @@ export async function buildSite(
     sidebarCollapseDepth: config.sidebarCollapseDepth,
     tocMaxLevel: config.tocMaxLevel,
     bodyScripts,
+  };
+  const { html, siteDataJson } = await renderSingleHtmlParts({
+    ...renderInput,
+    ...(diffDocument === undefined
+      ? {}
+      : {
+          diff: {
+            states: diffDocument.states,
+            labels: diffDocument.labels,
+            sidebars: diffDocument.sidebars,
+            earlierSearch: diffDocument.earlierSearch,
+          },
+        }),
   });
 
   const outputs = resolveOutputs(config, cwd);
@@ -318,12 +541,60 @@ export async function buildSite(
     await mkdir(dirname(outputs.html), { recursive: true });
     await writeFile(outputs.html, html, "utf8");
     written.push(outputs.html);
-    const size = await measureHtml(outputs.html, html, {
-      images: prepared.embeddedImages,
-      // Only the inline runtime is the runtime; a CDN reference is a few bytes of document.
-      mermaidRuntime: clientMermaid && config.mermaidRuntime === "inline" ? bodyScripts : "",
-      siteDataJson,
-    });
+    // The runtime a build without the difference writes; the difference's own selector is not part of
+    // the runtime's line but of the difference's (7.3.4), so the runtime counted is what the two share.
+    const ownScripts =
+      withoutDiff !== undefined && ownMermaid
+        ? await mermaidRuntimeScript(config.mermaidRuntime)
+        : bodyScripts;
+    // What the two share at the start and at the end: the selector between is the difference's.
+    let head = 0;
+    while (head < bodyScripts.length && bodyScripts[head] === ownScripts[head]) head++;
+    let tail = 0;
+    while (
+      tail < bodyScripts.length - head &&
+      tail < ownScripts.length - head &&
+      bodyScripts[bodyScripts.length - 1 - tail] === ownScripts[ownScripts.length - 1 - tail]
+    ) {
+      tail++;
+    }
+    const counted =
+      withoutDiff !== undefined && ownMermaid && ownScripts !== bodyScripts
+        ? [bodyScripts.slice(0, head), bodyScripts.slice(bodyScripts.length - tail)]
+        : bodyScripts;
+    const runtime = (on: boolean) => (on && config.mermaidRuntime === "inline" ? counted : "");
+    const images = [...prepared.embeddedImages, ...earlierImages];
+    // With a difference, the same document without it, rendered for the size report alone: what
+    // the file holds beyond it is the difference's line (20.5, 7.3.4).
+    const without =
+      withoutDiff === undefined
+        ? undefined
+        : await renderSingleHtmlParts({
+            ...renderInput,
+            pages: withoutDiff.pages,
+            sidebar: withoutDiff.sidebar,
+            bodyScripts: ownMermaid ? ownScripts : "",
+          });
+    const size = await measureHtml(
+      outputs.html,
+      html,
+      {
+        images,
+        // Only the inline runtime is the runtime; a CDN reference is a few bytes of document.
+        mermaidRuntime: runtime(clientMermaid),
+        siteDataJson,
+      },
+      without === undefined
+        ? undefined
+        : {
+            html: without.html,
+            parts: {
+              images,
+              mermaidRuntime: runtime(ownMermaid),
+              siteDataJson: without.siteDataJson,
+            },
+          },
+    );
     sizes.push(size);
     checkBudget(size, sizes, config.budget, onBudget, warnings);
   }
@@ -375,7 +646,8 @@ export async function buildSite(
     }
   }
 
-  return { outputs: written, pages: pages.length, warnings, sizes };
+  // The document's own pages: the list of changes is generated, not one of them.
+  return { outputs: written, pages: prepared.pages.length, warnings, sizes };
 }
 
 /**
@@ -425,6 +697,7 @@ export async function validateSite(options: BuildOptions = {}): Promise<Validate
   // problem happened to be fatal.
   const found: Diagnostic[] = [];
   try {
+    assertNoDiff(options, "validate");
     const config = await loadConfig(options, cwd);
     found.push(...config.warnings);
     // validate は出力を書き出さないため format（html/pdf/both）に関わらず同じ検証を行う。

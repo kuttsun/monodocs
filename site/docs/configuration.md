@@ -609,6 +609,10 @@ it also says where the bytes went, and the parts sum to the file:
   is of distinct files, and the largest image is named by its path relative to the root, with the
   size of one copy.
 - `mermaid` appears only when `mermaid.runtime: inline` put the runtime in the file.
+- `difference` appears only in a build with a difference from an earlier version (`--diff-from`,
+  `--diff-from-dir`): what the difference added — the earlier columns, the deleted pages, the list of
+  changes, the marks, and their rules and script. An image the earlier version embeds is counted under
+  `images`, and the difference's page data under `page data`, not on this line.
 - Code highlighting has no line: it happens at build time and leaves only markup in the document.
 
 Under `onBudget: error` the build fails with this report in the error message (a failed build prints
@@ -767,6 +771,38 @@ The full key set:
 | `version` | Version | Before `document.version` in the footer |
 | `cover` | Cover | The cover's page label, shown in the PDF viewer's page number box |
 | `contents` | Contents | The heading of the printed table of contents ([`pdf.toc`](#pdf-toc)) |
+
+A build with a difference from an earlier version (`--diff-from`, `--diff-from-dir`) uses these
+keys too. They are accepted in any configuration, and reach <span v-pre>`{{siteDataJson}}`</span> only in a
+build with a difference, so setting them changes nothing else. They have no <span v-pre>`{{label…}}`</span>
+template tokens: a theme reads them from that data. A count or a route is put next to a label, never
+into it.
+
+| Key | Default | Where it appears |
+| --- | --- | --- |
+| `diffChanges` | Changes | Title of the list of changes, followed by the two versions |
+| `diffAddedPages` | Added pages | Section of the list of changes |
+| `diffMovedPages` | Moved pages | Section of the list of changes |
+| `diffChangedPages` | Changed pages | Section of the list of changes |
+| `diffDeletedPages` | Deleted pages | Section of the list of changes |
+| `diffUnchangedPages` | Unchanged pages: | Before the number of unchanged pages |
+| `diffNoChanges` | No changes. | The list of changes when nothing changed |
+| `diffPageAdded` | This page was added. | Note in the earlier column of an added page |
+| `diffPageDeleted` | This page was deleted. | Note in the new column of a deleted page |
+| `diffPageMoved` | This page moved. Its earlier route: | Note at the top of a moved page, before its earlier route |
+| `diffViewSideBySide` | Side by side | The view that shows the two versions side by side |
+| `diffViewSideBySideHint` | Show the difference with the two versions side by side | The tooltip of that view's button |
+| `diffViewCurrent` | New version | The view that shows the new version |
+| `diffViewEarlier` | Earlier version | The view that shows the earlier version |
+| `diffShowMarks` | Show changes | The box that marks the changes in a version's own view |
+| `diffPrevious` | Previous change | The button to the previous change |
+| `diffNext` | Next change | The button to the next change |
+| `diffAdded` | Added | A changed page's count of added blocks, and the sidebar's mark of an added page |
+| `diffDeleted` | Deleted | A changed page's count of deleted blocks, and the sidebar's mark of a deleted page |
+| `diffChanged` | Changed | The sidebar's mark of a changed page |
+| `diffMoved` | Moved | The sidebar's mark of a moved page |
+| `diffTitleChanged` | The title changed. Its earlier title: | Note of a page whose front-matter title changed, before the earlier title |
+| `diffMergedInto` | Merged into: | A deleted page whose route another page took through its aliases |
 
 How a custom theme gets the labels:
 

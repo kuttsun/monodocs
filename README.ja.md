@@ -82,6 +82,19 @@ monodocs validate ./docs                              # リンク切れ・画像
 
 コマンド・オプションと `monodocs.config.yml` のリファレンスは[ドキュメントサイト](https://kuttsun.github.io/monodocs/ja/docs/getting-started)にあります。
 
+## さらにできること
+
+### 前の版との差分
+
+改訂した文書を渡すと、受け取った人はまず、前の版から何が変わったかを知りたがります。`--diff-from` を付けると、前の版との差分を書き込んだ HTML を出力します。2 つの版を左右に並べた表示、変更点の一覧、変更を 1 つずつたどる操作が付きます。Git を見ない読み手にも、何が変わったかが伝わります。
+
+```bash
+monodocs build ./docs -o ./dist/doc.html --diff-from v1.2                 # 前の版を Git のタグやコミットで指定
+monodocs build ./docs -o ./dist/doc.html --diff-from-dir ../project-1.2   # 前の版をディレクトリで指定
+```
+
+[`examples/diff/ja`](examples/diff/ja) の 2 つの版から作った[差分のサンプル](https://kuttsun.github.io/monodocs/ja/diff-sample.html)で、実際の表示を試せます。
+
 ## プロジェクトドキュメント
 
 開発方針・技術スタック・ロードマップ・実装状況・テストは [docs/](docs/) にまとめています。

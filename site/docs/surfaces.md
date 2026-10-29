@@ -96,6 +96,29 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `html.labels.version` | English |
 | `html.labels.cover` | English |
 | `html.labels.contents` | English |
+| `html.labels.diffChanges` | English |
+| `html.labels.diffAddedPages` | English |
+| `html.labels.diffMovedPages` | English |
+| `html.labels.diffChangedPages` | English |
+| `html.labels.diffDeletedPages` | English |
+| `html.labels.diffUnchangedPages` | English |
+| `html.labels.diffNoChanges` | English |
+| `html.labels.diffPageAdded` | English |
+| `html.labels.diffPageDeleted` | English |
+| `html.labels.diffPageMoved` | English |
+| `html.labels.diffViewSideBySide` | English |
+| `html.labels.diffViewSideBySideHint` | English |
+| `html.labels.diffViewCurrent` | English |
+| `html.labels.diffViewEarlier` | English |
+| `html.labels.diffShowMarks` | English |
+| `html.labels.diffPrevious` | English |
+| `html.labels.diffNext` | English |
+| `html.labels.diffAdded` | English |
+| `html.labels.diffDeleted` | English |
+| `html.labels.diffChanged` | English |
+| `html.labels.diffMoved` | English |
+| `html.labels.diffTitleChanged` | English |
+| `html.labels.diffMergedInto` | English |
 | `pdf.pageSize` | `A4` |
 | `pdf.margin.top` | `20mm` |
 | `pdf.margin.right` | `15mm` |
@@ -137,7 +160,7 @@ Two defaults stand for values, and the values are frozen with them.
 | --- | --- | --- |
 | (any) | — | `-V, --version`, `--lang <lang>`, `-h, --help` |
 | `init` | — | — |
-| `build` | `[input]` | `-o, --output <path>`, `-c, --config <file>`, `-f, --format <format>` |
+| `build` | `[input]` | `-o, --output <path>`, `-c, --config <file>`, `-f, --format <format>`, `--diff-from <ref>`, `--diff-from-dir <dir>` |
 | `watch` | `[input]` | `-o, --output <file>`, `-c, --config <file>` |
 | `serve` | `[input]` | `-o, --output <file>`, `-c, --config <file>`, `-p, --port <port>`, `-H, --host <host>`, `--open` |
 | `validate` | `[input]` | `-c, --config <file>`, `--format <format>`, `--strict` |
@@ -156,6 +179,15 @@ A diagnostic's `code` is what a job filters on, and is not renamed. The codes:
 - `config/input-outside-root`
 - `config/invalid`
 - `config/not-found`
+- `diff/conflicting-options`
+- `diff/dir-not-found`
+- `diff/git-failed`
+- `diff/git-unavailable`
+- `diff/lfs-pointer`
+- `diff/not-a-repository`
+- `diff/outside-version`
+- `diff/ref-not-found`
+- `diff/unsupported`
 - `font/missing`
 - `font/no-math-table`
 - `font/unchecked`
@@ -222,10 +254,11 @@ These are not in the tables above, but a script, a theme, or a link depends on t
 - **Where the configuration file is found**: the file `-c, --config` names, which is an error if it does not exist; otherwise, given an input argument, `monodocs.config.yml` in the input directory (for a single file, its directory) and nowhere else; given none, `monodocs.config.yml` in the current directory ([configuration](./configuration#where-the-config-file-lives)).
 - **Options' defaults**: `--lang` follows `MONODOCS_LANG`, then is `en`; the configuration's `lang` is the document's language, not the CLI's. `validate --format` is `human`, and without `--strict` a warning alone does not fail `validate`. `serve` listens at `127.0.0.1` on port `4173`, and without `--open` opens no browser. `-o` and `build -f` take their defaults from `output.path` and `output.format`, and `-c` from the file lookup above.
 - **Addresses**: a page's route is its path under the input root without the extension, case and characters kept, an `index` page at any level standing for its directory (`index.md` is `/`, `guide/index.md` is `/guide`), and the document opens it as `#/route`. A page's ID is made from its route: each segment is lowercased, spaces become hyphens, anything but letters, digits, and hyphens is dropped, runs of hyphens become one, hyphens at either end and empty segments are dropped, and the segments are joined with hyphens; an ID that would be empty is `index` (`/Setup/API_Reference` is `setup-apireference`, `/foo--bar` is `foo-bar`, `/` is `index`). An element's ID is the page's ID, a hyphen, and the ID the source gave it. A page that moves keeps its old route with `aliases` (`:sd-aliases:`).
+- **The difference from an earlier version** (`--diff-from`, `--diff-from-dir`; [command options](./commands#difference)): the list of changes is at the route `//changes`, and a deleted page at `//deleted` followed by its earlier route (`/guide/old` is `//deleted/guide/old`, with the page ID `deleted-guide-old`). No alias can take these routes, and a source file that does — only one whose path begins with a backslash, on a system that allows it — is `page/duplicate-route`. The list's page ID is `diff-changes`, and a deleted page's is `deleted-` followed by its earlier page ID; either has `-x` added until no page has it, no element has it or its article's ID, and no element ID starts with it followed by a hyphen. These attributes carry the difference, and a stylesheet or a script may select on them: `data-monodocs-diff` on every `<ins>` and `<del>` monodocs writes, `data-monodocs-diff-block` on an added or deleted block (`ins`, `del`), `data-monodocs-diff-page` on a page's article and its sidebar entry (`added`, `deleted`, `moved`, `changed`), and `data-monodocs-diff-pair` on the two blocks of an unchanged pair, which share its value. The rest of the difference's markup, its classes, and its script are not frozen.
 - **A custom theme** may hold `template.html`, `style.css`, and `app.js`, each one left out falling back to the default theme's, and a `template.html` must keep these tokens ([configuration](./configuration#html-theme-custom-theme)). The file names and these tokens are frozen; the optional tokens, the shape of the data <span v-pre>`{{siteDataJson}}`</span> carries, and the default theme's own markup and classes are not, so a theme that replaces `app.js` or styles the default markup may need changing in a minor release:
 
 ```text
 {{style}} {{sidebar}} {{pages}} {{siteDataJson}} {{appJs}} {{bodyScripts}}
 ```
 
-The test checks the options' defaults, the tokens, and the address examples against the code. The address rules, the file lookup, and the markup above are kept by review.
+The test checks the options' defaults, the tokens, and the address examples, the difference's included, against the code. The address rules, the file lookup, and the markup above are kept by review.

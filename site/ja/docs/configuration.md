@@ -561,6 +561,9 @@ figures:
 - `画像` は埋め込んだ写しをすべて数えるので、2 か所から参照した画像は 2 回数えます。ファイル数は
   異なるファイルの数で、最大の画像は、ルートからの相対パスと 1 枚分の大きさで示します。
 - `Mermaid` の行は、`mermaid.runtime: inline` がランタイムをファイルに入れたときだけ出ます。
+- `差分` の行は、以前の版との差分（`--diff-from`、`--diff-from-dir`）を出すビルドだけに出ます。差分が
+  足したもの——旧版の列、削除されたページ、変更点の一覧、印、そしてそれらの規則とスクリプト——です。
+  旧版が埋め込む画像は `画像` に、差分のページデータは `ページデータ` に数え、この行には数えません。
 - コードのハイライトには行がありません。ビルド時に行われ、文書にはマークアップしか残さないからです。
 
 `onBudget: error` でビルドが失敗したときは、この表示をエラーメッセージに含めます（失敗したビルドは
@@ -716,6 +719,34 @@ html:
 | `version` | Version | フッターの `document.version` の前 |
 | `cover` | Cover | PDF ビューアのページ番号欄に出る、表紙のページラベル |
 | `contents` | Contents | 印刷する目次（[`pdf.toc`](#pdf-toc)）の見出し |
+
+以前の版との差分（`--diff-from`、`--diff-from-dir`）を出すビルドは、次のキーも使います。どの設定でも受け付けますが、<span v-pre>`{{siteDataJson}}`</span> に入るのは差分を出すビルドだけなので、書いてもほかには何も変わりません。<span v-pre>`{{label…}}`</span> のテンプレートトークンは無く、テーマはそのデータから読みます。数や route はラベルの横に置き、ラベルの中には入れません。
+
+| キー | 既定 | 現れる場所 |
+| --- | --- | --- |
+| `diffChanges` | Changes | 変更点の一覧の題。後ろに 2 つの版が続く |
+| `diffAddedPages` | Added pages | 変更点の一覧の節 |
+| `diffMovedPages` | Moved pages | 変更点の一覧の節 |
+| `diffChangedPages` | Changed pages | 変更点の一覧の節 |
+| `diffDeletedPages` | Deleted pages | 変更点の一覧の節 |
+| `diffUnchangedPages` | Unchanged pages: | 変更のないページの数の前 |
+| `diffNoChanges` | No changes. | 何も変わっていないときの変更点の一覧 |
+| `diffPageAdded` | This page was added. | 追加されたページの旧版の列の注記 |
+| `diffPageDeleted` | This page was deleted. | 削除されたページの新版の列の注記 |
+| `diffPageMoved` | This page moved. Its earlier route: | 移動したページの先頭の注記。以前の route の前 |
+| `diffViewSideBySide` | Side by side | 2 つの版を左右に並べる表示 |
+| `diffViewSideBySideHint` | Show the difference with the two versions side by side | その表示のボタンのツールチップ |
+| `diffViewCurrent` | New version | 新しい版を見せる表示 |
+| `diffViewEarlier` | Earlier version | 以前の版を見せる表示 |
+| `diffShowMarks` | Show changes | 片方の版の表示で変更に印を付けるチェック |
+| `diffPrevious` | Previous change | 前の変更へのボタン |
+| `diffNext` | Next change | 次の変更へのボタン |
+| `diffAdded` | Added | 変更されたページの追加ブロック数と、サイドバーの追加ページの印 |
+| `diffDeleted` | Deleted | 変更されたページの削除ブロック数と、サイドバーの削除ページの印 |
+| `diffChanged` | Changed | サイドバーの変更ページの印 |
+| `diffMoved` | Moved | サイドバーの移動ページの印 |
+| `diffTitleChanged` | The title changed. Its earlier title: | front matter のタイトルが変わったページの注記。以前のタイトルの前 |
+| `diffMergedInto` | Merged into: | 別のページが aliases で route を引き継いだ、削除されたページ |
 
 カスタムテーマがラベルを受け取る方法は次のとおりです。
 

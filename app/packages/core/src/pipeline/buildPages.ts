@@ -20,6 +20,11 @@ export type BuildPagesOptions = {
   /** 明示タイトルではなく、見出し・ファイル名から導出した表示タイトルへ適用する変換。 */
   titleTransform?: TitleTransform;
   /**
+   * Rewrites a title as the renderer gave it, before {@link titleTransform}: the earlier version's
+   * location in it (`{docdir}`) is found only before a transform has rewritten its characters.
+   */
+  rewriteTitle?: (title: string) => string;
+  /**
    * 見出し（H1 / 文書タイトル）とファイル名のどちらをタイトルに使うか。
    * `"heading"`（既定）= frontmatter → 見出し → ファイル名。
    * `"filename"` = frontmatter → ファイル名（見出しは本文に残るがタイトルには使わない）。
@@ -52,14 +57,18 @@ function resolveTitle(
   relativePath: string,
   options: BuildPagesOptions,
 ): { title: string; fromFilename: boolean } {
+  const rewrite = options.rewriteTitle ?? ((title: string) => title);
   const explicit = meta.title?.trim();
-  if (explicit) return { title: explicit, fromFilename: false };
+  if (explicit) return { title: rewrite(explicit), fromFilename: false };
   const titleTransform = options.titleTransform ?? DEFAULT_TITLE_TRANSFORM;
 
   if ((options.titleFrom ?? "heading") !== "filename") {
     const heading = meta.headingTitle?.trim();
     if (heading) {
-      return { title: applyTitleTransform(heading, titleTransform), fromFilename: false };
+      return {
+        title: applyTitleTransform(rewrite(heading), titleTransform),
+        fromFilename: false,
+      };
     }
   }
 
@@ -208,6 +217,10 @@ export async function buildPages(
       order: meta.order,
       hidden: meta.hidden,
       description: meta.description,
+      // As the title is: the earlier version's location in it written as the new one's (7.3.2).
+      ...(meta.title?.trim()
+        ? { explicitTitle: (options.rewriteTitle ?? ((t: string) => t))(meta.title.trim()) }
+        : {}),
       // Normalised here so that a spelling cannot decide a collision; validated once every page is
       // known, because whether an alias is shadowed depends on routes that may not exist yet (15.5).
       aliases: dedupe(

@@ -63,6 +63,17 @@ loadConfig (config.ts)
 
 対応・非対応・意図的に制限する記法は [syntax.md](syntax.md) に記録し、記法対応の変更時に更新します。
 
+### 以前の版との差分
+
+`--diff-from` か `--diff-from-dir` を付けたビルド（[roadmap.md](roadmap.md) 7.3）は 2 つの版を 1 つの文書に書き込み、次を守ります。
+
+- **差分の無いビルドには何も起きません。** 差分の無いビルドは、この機能の前と同じバイト列になります。例外は既定のテーマの `app.js` で、検索の口が 1 度だけ加わりました。差分のラベルは別の表（`DIFF_LABEL_KEYS`）で、ページの状態や以前の版の検索用のページと同じく、差分があるときだけ `siteDataJson` に入ります。比較のために HAST に記録するものも、差分があるときだけ記録します。
+- **以前の版の列はアドレスを持ちません。** 以前の版の木から、ID、リンク、ビルドが振る番号を除いて複製し、外部のファイルのままにするローカルのファイルはパスで示します。SVG の中では、すべての ID とそれへの参照を、以前の版の列だけが使う接頭辞で付け替えます（以前の版の図は `mermaid-earlier-N`）。付け替えられずに残る以前の版の ID があれば、ビルドは `internal/unexpected` で失敗します（[`diff/write.ts`](../../app/packages/core/src/diff/write.ts) の `assertNoEarlierId`）。
+- **生成するページは衝突しません。** 変更の一覧は `//changes` に、削除されたページは `//deleted` に以前のルートを続けたルートに置きます。別名からは空の区切りを持つルートができず、そのルートを取るソースのページ——`toRoute` が区切りと読むバックスラッシュでパスが始まるファイルだけ——は `page/duplicate-route` になります。これらのページ ID は、すべてのページ ID、要素の ID、テンプレートの ID を避けて割り当てます（[`diff/changes.ts`](../../app/packages/core/src/diff/changes.ts) の `allocatePageId`）。
+- **印は差分のものだけに作用します。** monodocs が書くすべての `<ins>` と `<del>` は `data-monodocs-diff` を持ち、スタイルシートとスクリプトはそれと `data-monodocs-diff-block`、`-page`、`-pair` にだけ作用します。文書自身の `<del>`、`<ins>`、`mark.search-hit` は、どの表示でもそのままです。
+- **必須のトークンを通して、どのテーマにも届きます。** バーは `{{pages}}` を通してページの前に、規則は `{{style}}` を通して、スクリプトは `{{bodyScripts}}` を通して入ります。スクリプト（[`diff/client.ts`](../../app/packages/core/src/diff/client.ts)）はテンプレートリテラルの中の素の ES5 なので、バックスラッシュは 2 つ重ねて書きます。スクリプトは、既定のテーマの検索に対象のページを `window.__monodocsSearchPages(pages)` で渡します（null で閲覧するページに戻ります）。この口を持たない独自の `app.js` は、新しい版を検索し続けます。
+- **サイズの報告の合計は合います。** `difference` の行は、同じ文書を差分なしでもう 1 度描いたものと比べて測るので、画像、Mermaid のランタイム、`siteDataJson` はそれぞれの行に残ります。
+
 ## Mermaid
 
 Mermaid は `client` と `pre-render` の二つのモードを持ちます。

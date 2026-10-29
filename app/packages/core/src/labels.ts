@@ -48,6 +48,45 @@ export const LABEL_KEYS = [
 export type LabelKey = (typeof LABEL_KEYS)[number];
 export type Labels = Record<LabelKey, string>;
 
+/**
+ * The wording of a difference from an earlier version (roadmap 7.3.4): a table of its own beside
+ * {@link LABEL_KEYS}. `siteDataJson` carries every resolved label, so a key added to the main table
+ * would change the bytes of every build; these join it only in a build with a difference.
+ * `html.labels` accepts them in any configuration, as it accepts every label. Labels hold no
+ * placeholders: a count or a route is put next to one by code.
+ */
+export const DIFF_LABEL_KEYS = [
+  "diffChanges",
+  "diffAddedPages",
+  "diffMovedPages",
+  "diffChangedPages",
+  "diffDeletedPages",
+  "diffUnchangedPages",
+  "diffNoChanges",
+  "diffPageAdded",
+  "diffPageDeleted",
+  "diffPageMoved",
+  "diffViewSideBySide",
+  "diffViewSideBySideHint",
+  "diffViewCurrent",
+  "diffViewEarlier",
+  "diffShowMarks",
+  "diffPrevious",
+  "diffNext",
+  "diffAdded",
+  "diffDeleted",
+  "diffChanged",
+  "diffMoved",
+  "diffTitleChanged",
+  "diffMergedInto",
+] as const;
+
+export type DiffLabelKey = (typeof DIFF_LABEL_KEYS)[number];
+export type DiffLabels = Record<DiffLabelKey, string>;
+
+/** Every label `html.labels` accepts. */
+export type LabelOverrides = Partial<Labels & DiffLabels>;
+
 const DEFAULT_LABELS: Labels = {
   openSidebar: "Open sidebar",
   closeSidebar: "Close sidebar",
@@ -79,6 +118,32 @@ const DEFAULT_LABELS: Labels = {
   version: "Version",
   cover: "Cover",
   contents: "Contents",
+};
+
+const DEFAULT_DIFF_LABELS: DiffLabels = {
+  diffChanges: "Changes",
+  diffAddedPages: "Added pages",
+  diffMovedPages: "Moved pages",
+  diffChangedPages: "Changed pages",
+  diffDeletedPages: "Deleted pages",
+  diffUnchangedPages: "Unchanged pages:",
+  diffNoChanges: "No changes.",
+  diffPageAdded: "This page was added.",
+  diffPageDeleted: "This page was deleted.",
+  diffPageMoved: "This page moved. Its earlier route:",
+  diffViewSideBySide: "Side by side",
+  diffViewSideBySideHint: "Show the difference with the two versions side by side",
+  diffViewCurrent: "New version",
+  diffViewEarlier: "Earlier version",
+  diffShowMarks: "Show changes",
+  diffPrevious: "Previous change",
+  diffNext: "Next change",
+  diffAdded: "Added",
+  diffDeleted: "Deleted",
+  diffChanged: "Changed",
+  diffMoved: "Moved",
+  diffTitleChanged: "The title changed. Its earlier title:",
+  diffMergedInto: "Merged into:",
 };
 
 export const DEFAULT_LANG = "en";
@@ -146,6 +211,23 @@ export function isValidLanguageTag(tag: string): boolean {
 /**
  * 英語の表に `overrides` を重ねる。`lang` は見ない。表を選ばないので、どのタグでも警告は出ない。
  */
-export function resolveLabels(overrides: Partial<Labels> = {}): Labels {
-  return { ...DEFAULT_LABELS, ...overrides };
+export function resolveLabels(overrides: LabelOverrides = {}): Labels {
+  // Only the main table's keys: a difference's labels never reach a build without one.
+  const own = Object.fromEntries(
+    Object.entries(overrides).filter(([name]) => (LABEL_KEYS as readonly string[]).includes(name)),
+  ) as Partial<Labels>;
+  return { ...DEFAULT_LABELS, ...own };
+}
+
+/**
+ * A difference's labels: the English table with `overrides` laid over it. Like {@link resolveLabels},
+ * it does not look at `lang` (0.17.2, roadmap 23.4).
+ */
+export function resolveDiffLabels(overrides: LabelOverrides = {}): DiffLabels {
+  const own = Object.fromEntries(
+    Object.entries(overrides).filter(([name]) =>
+      (DIFF_LABEL_KEYS as readonly string[]).includes(name),
+    ),
+  ) as Partial<DiffLabels>;
+  return { ...DEFAULT_DIFF_LABELS, ...own };
 }

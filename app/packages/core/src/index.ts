@@ -9,6 +9,7 @@ export {
 export {
   DEFAULT_CONFIG_FILE,
   DEFAULT_EXCLUDE,
+  defaultConfigPath,
   loadConfig,
   parseSize,
   validatePdfDensity,
@@ -48,6 +49,12 @@ export {
   documentSubject,
   type DocumentMetadata,
 } from "./documentMeta.js";
+export {
+  assertDiffSupported,
+  earlierBuildOptions,
+  loadEarlierConfig,
+  mapToEarlier,
+} from "./diff/earlier.js";
 export { initSite, type InitResult } from "./init.js";
 export { readSourceFile, scanSourceFiles, type ScanOptions } from "./scan.js";
 export { detectFormat, FORMAT_EXTENSIONS } from "./sources/detectFormat.js";

@@ -1028,3 +1028,42 @@ describe("search clear button", () => {
     expect(input().value).toBe("");
   });
 });
+
+describe("v0.18 search hook (app.js)", () => {
+  beforeEach(() => {
+    window.location.hash = "";
+    document.body.innerHTML = "";
+  });
+
+  type Hook = (list: unknown) => void;
+  const hook = (): Hook =>
+    (window as unknown as { __monodocsSearchPages: Hook }).__monodocsSearchPages;
+  const EARLIER = [
+    { route: "/old", title: "Old", hidden: false, headings: [], text: "Only the earlier one." },
+  ];
+
+  it("searches the pages it is given, and the document's own again on null or a non-array", async () => {
+    await mountClient(SAMPLE);
+    hook()(EARLIER);
+    typeQuery("earlier");
+    expect(resultRoutes()).toEqual(["/old"]);
+    hook()(null);
+    expect(resultRoutes()).toEqual([]);
+    typeQuery("install");
+    expect(resultRoutes()).toContain("/guide");
+    hook()(EARLIER);
+    hook()("not a list");
+    expect(resultRoutes()).toContain("/guide");
+  });
+
+  it("searches anew with the query in the box, and draws nothing when the box is empty", async () => {
+    await mountClient(SAMPLE);
+    typeQuery("earlier");
+    expect(resultRoutes()).toEqual([]);
+    hook()(EARLIER);
+    expect(resultRoutes()).toEqual(["/old"]);
+    typeQuery("");
+    hook()(null);
+    expect(document.getElementById("search-results")!.hidden).toBe(true);
+  });
+});
