@@ -75,8 +75,10 @@ function markSectionSeparators(container: Element): void {
   let first = 0;
   while (first < children.length && before(children[first]!)) first++;
   const lead = children[first];
+  // The heading inside its own link (`:sectlinks:`, `a.link`); any other link opening it is a
+  // cross-reference, whose words are the author's.
   if (lead?.type === "element" && lead.tagName === "a" && !isNumeral(lead)) {
-    markSectionSeparators(lead);
+    if (classes(lead).includes("link")) markSectionSeparators(lead);
     return;
   }
   // A separator keeps whatever else its text node carried.

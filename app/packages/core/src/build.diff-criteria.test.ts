@@ -398,6 +398,15 @@ describe("an earlier :sectnums: against numbering.sections (item 27)", () => {
     expect(changes(page)).toEqual([]);
   });
 
+  it("reads a heading that opens with a cross-reference as its text, signifier and all", async () => {
+    // Only a section's own link (`:sectlinks:`) holds the heading's numbers; a reference's words
+    // are the author's, and changing them is a change.
+    const page = (refsig: string) =>
+      `= R\n:sectnums:\n:xrefstyle: short\n:section-refsig: ${refsig}\n\n[#two]\n== Two\n\nB.\n\n[discrete]\n=== <<two>>\n`;
+    const found = await onePage("docs/r.adoc", page("Section"), page("Part"));
+    expect(changes(found)).toEqual(["-h3 Section", "+h3 Part"]);
+  });
+
   it("pairs a book's chapters written with a signifier before the number", async () => {
     // `Chapter 1. One`: the earlier column shows `One`, the word and the number gone, and the
     // comparison reads it the same way.
