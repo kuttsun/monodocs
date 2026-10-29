@@ -1048,6 +1048,7 @@ jobs:
             echo "::error::a PDF with --diff-from built"; exit 1
           fi
           grep -q "HTML only" ../diff-pdf.err || { cat ../diff-pdf.err; echo "::error::the PDF refusal did not say why"; exit 1; }
+          [ ! -e ../diff.pdf ] || { echo "::error::a PDF was written although the build was refused"; exit 1; }
           cd ..
           node -e "
             const fs = require('node:fs');
@@ -1058,8 +1059,11 @@ jobs:
               if (!h.includes('class=\"monodocs-diff-bar\"')) fail(file + ': no bar');
               if (!h.includes('<del data-monodocs-diff=\"\">Gone.</del>')) fail(file + ': the deleted paragraph is not marked');
               if (!h.includes('<ins data-monodocs-diff=\"\">Added.</ins>')) fail(file + ': the added paragraph is not marked');
-              // The list of changes links a page without the sidebar's data-route.
-              if (!h.includes('<a href=\"#/new\">New</a>')) fail(file + ': the added page is not in the list of changes');
+              // The list of changes links a page without the sidebar's data-route, under its section.
+              if (!/Added pages<\/h2>\s*<ul>\s*<li><a href=\"#\/new\">New<\/a>/.test(h)) fail(file + ': the added page is not listed as added');
+              // What did not change is a pair in both columns, and marked in neither.
+              if ((h.match(/<p data-monodocs-diff-pair=\"\d+\">Kept\.<\/p>/g) || []).length !== 2) fail(file + ': the unchanged paragraph is not paired');
+              if (/<(?:del|ins) data-monodocs-diff=\"\">Kept\./.test(h)) fail(file + ': the unchanged paragraph is marked');
             }
             // Nothing changes for a build without one.
             if (fs.readFileSync('diff-none.html', 'utf8').includes('monodocs-diff')) fail('a build without a difference carries one');
