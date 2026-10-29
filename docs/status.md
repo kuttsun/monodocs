@@ -95,9 +95,10 @@ come first because what they add is a surface 1.0 freezes, cheap to change befor
 expensive after it ([roadmap.md](roadmap.md) 7.3, 12.4).
 0.18.0, the first of them, goes out under `latest` without a beta, with the CI guide pinned to it:
 nothing changes for a build without `--diff-from` or `--diff-from-dir`. It also carries the zod
-update for #232, which 0.17.2's package and binaries lack. The published package and the release
-binaries are verified, and a difference the released Linux binary builds driven in a browser, after
-`latest` moves.
+update for #232, which 0.17.2's package and binaries lack. After `latest` moves, the published
+package and the release binaries are verified, a difference the released Linux binary builds is
+driven in a browser, a difference built with `--diff-from` is looked at on Windows, and `next` moves
+onto 0.18.0.
 
 ## Completion Criteria Status
 
