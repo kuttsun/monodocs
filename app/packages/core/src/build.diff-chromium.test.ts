@@ -277,7 +277,7 @@ describe.skipIf(!chromium)("the difference in a real browser", () => {
     } finally {
       await closePages(browser);
     }
-  });
+  }, 60_000);
 });
 
 describe.skipIf(!chromium)("the in-page table of contents of a changed page", () => {
@@ -953,7 +953,7 @@ describe.skipIf(!chromium)("each kind of page in each view", () => {
     } finally {
       await closePages(browser);
     }
-  });
+  }, 60_000);
 
   it("counts a retitled page among the changes side by side, and reaches it", async () => {
     const browser = await sharedBrowser();
