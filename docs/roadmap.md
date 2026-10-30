@@ -1402,7 +1402,7 @@ bounded — six thousand blocks rewritten on each side would otherwise take giga
 
 ### 7.3.4 Writing the Difference into the HTML
 
-**The two versions stand side by side.** A page that changed is shown in two columns: the earlier
+**The two versions stand side by side.** Side by side, a page that changed is shown in two columns: the earlier
 page on the left, the new page on the right, each as its own version wrote it, so a list, a table,
 or a section reads whole in either column. The blocks the two have in common (7.3.3) are lined up:
 the script that comes with the difference measures each pair and adds space above the higher one, so
@@ -1541,50 +1541,65 @@ marked blocks — in the order the alignment puts them, the deletion first where
 the added and the deleted pages, and the pages whose change no block carries — a front-matter title,
 or a move with no block changed — each of the last three counted once at its note. In a view that
 hides a column, the changes in that column are skipped and the count is of those shown; a deleted
-block is counted once in every view, in the column that shows it. A version's own view walks the
+block is never counted twice: once in a view that shows it, in the column that shows it. A version's own view walks the
 pages its sidebar lists, in its order, as the previous and next pages under a page do: an added page
 is not in the earlier version's, nor a deleted one in the new version's. Where the plain view hides
 a page's note, the first block of what is shown stands for it. The navigation opens the page a
-change is on, scrolls it into view in both columns, and reaches each change without an ID on the
+change is on, scrolls it into view in the columns shown, and reaches each change without an ID on the
 earlier column.
 
-**One column writes the difference into the new version, as a word processor's tracked changes
-do.** It is the view v0.19 adds, for a reader who wants to read the document once, with what was
-deleted where it stood, rather than compare two columns. A changed page shows the new version's
-column alone, with every deleted block written into it at its place, marked `del`, by the rules
-`markup` writes one column by (7.3.5), and every added block marked `ins` as side by side. The
-column is the new version's own column, not a third copy: the deleted blocks are written into it
-once, for every view, and the other three views hide them, together with a container cloned to hold
-deleted blocks alone and what was cloned with it — an admonition's title, a table's `colgroup`. So
-no element of the new version is written twice and no ID is duplicated, a heading of the new version
-keeps the ID its links reach, and what the build adds is a second copy of each deleted block, which
-the size report counts under `difference`. A deleted diagram whose pre-rendered SVG stands in both
-columns has its IDs renamed with a prefix of its own in each, so the two copies share none. In one
-column the page takes `html.contentWidth` rather than the whole width, and the columns' headings are
-not shown: the bar names the view. An added page shows its note above the new page, and a deleted
-page its note above the earlier page; their content is not marked block by block, since such a page
-is marked once, by its note. A page whose change no block carries is shown as in every view. Side by side,
+**One column writes the difference into the new version, as a word processor's tracked changes do.**
+It is the view v0.19 adds, for a reader who wants to read the document once, with what was deleted
+where it stood, rather than compare two columns. A changed page shows the new version's column
+alone, with every deleted block written into it at its place, marked `del`, by the rules `markup`
+writes one column by (7.3.5), and every added block marked `ins` as side by side. The column is the
+new version's own column, not a third copy: the deleted blocks are written into it once, for every
+view, and the other three views hide them, together with a container cloned to hold deleted blocks
+alone and what was cloned with it — an admonition's title, a table's `colgroup` — which carries a
+class of its own for that, markup that is not frozen. Hidden, they change nothing in the layout:
+hidden with CSS alone, a deleted block would still take `:first-child` from the block after it, or
+shift a row's `nth-child` stripe, so whatever hides them keeps them out of the structure the
+stylesheets read — detached while hidden, for instance, a comment marking their place. The new
+version's view, and the new version's column side by side, lay out as the new version does in a
+build without a difference. So no element of the new version is written twice and no ID is
+duplicated, a heading of the new version keeps the ID its links reach, and what the build adds is a
+second copy of each deleted block, which the size report counts under `difference`. A deleted SVG, a
+pre-rendered diagram's or one an AsciiDoc page writes inline, stands in both columns, and its IDs
+are renamed with a prefix of its own in each, so the two copies share none; the earlier column keeps
+the IDs 7.3.2 and 7.3.5 give it — `mermaid-earlier-N` where those keep it — and the one column
+renames every ID in its copy, those included, with a prefix that neither starts with the earlier
+column's prefix nor begins it, so that no ID it gives is one of the new version's, one the earlier
+column holds, or a page ID the difference allocates (`diff-changes`, `deleted-…`). The deleted blocks are out of the structure
+the stylesheets read from the start, before the script runs and without it, so the HTML as written shows side by side
+without them in the new column. In one column the
+page takes the width a page without a difference takes — `html.contentWidth`, and the reader's
+toggle where there is one — rather than the whole width, and the columns' headings are not shown:
+the bar names the view. An added page shows its note above the new page, and a deleted page its note
+above the earlier page; their content is not marked block by block, since such a page is marked
+once, by its note. A page whose change no block carries is shown as in every view. Side by side,
 only the deleted blocks of the earlier column count and are walked, and in one column only those of
 the new version's; a Mermaid diagram is drawn only where the view shows it, so a deleted diagram is
-drawn in the column the view shows and in no hidden one. The four attributes 7.3.4 freezes keep
-their meaning: a deleted block carries `data-monodocs-diff-block="del"` and its `<del>` in either
-column, and an unchanged pair's two blocks still share `data-monodocs-diff-pair`. Until stage 3, a
-block with one character changed reads in one column as the earlier block struck through followed
-by the new block underlined: blocks are not paired by similarity, for the reason moves are not
-inferred (7.3.3), and stage 3 shows such a pair as one block with the difference inside it (7.3.6).
+drawn in the column the view shows and in no hidden one. The four attributes the "What 1.0 Freezes"
+page lists (12.4) keep their meaning, though a deleted block is now written, and marked, in each
+column it stands in: it carries `data-monodocs-diff-block="del"` and its `<del>` in either, and an
+unchanged pair's two blocks still share `data-monodocs-diff-pair`. Until stage 3, a block with one
+character changed reads in one column as the earlier block struck through followed by the new block
+underlined: blocks are not paired by similarity, for the reason moves are not inferred (7.3.3), and
+stage 3 shows such a pair as one block with the difference inside it (7.3.6).
 
 **The view a document opens in is a key, `html.diffViewDefault`:** `side-by-side`, `inline` (one
 column), `current`, or `earlier`, `side-by-side` by default. What to compare against is an option
 because it changes with every release and belongs to the build (7.3.1); how the document shows a
 difference does not change with the release, and is the author's choice of presentation, as
 `html.contentWidth` is. The key's name follows `html.contentWidthDefault`, the state a reader's
-toggle starts in. A value outside the four is `config/invalid`, naming them, as any enumerated key
+toggle starts in until the reader chooses; unlike that choice, a view chosen is not kept. A value outside the four is `config/invalid`, naming them, as any enumerated key
 is. Like `html.labels.diff*`, the key is accepted in every configuration and has effect only in a
 build with a difference. The earlier version's configuration does not set it: `html.*` comes from
 the new configuration (7.3.2), and the earlier file's value is checked and not used. Opening in a
 version's own view, the document opens on that version's first page, since the list of changes
 belongs to the views that show the difference. `--diff-pdf` (7.3.5) chooses a presentation in the
-same sense; whether it becomes a key too is reconsidered in v0.20 and is not changed here.
+same sense; whether it becomes a key too is reconsidered in v0.20 and is not changed here, with how
+the HTML printed from a browser gives the presentation chosen whichever view is on screen.
 
 **What the difference adds reaches every theme and no build without it.** The rules and the script
 come from core, through tokens every template is required to have (`{{style}}`, `{{bodyScripts}}`,
@@ -6428,12 +6443,15 @@ Completion criteria:
   footnote showing its new number
 - Side by side and in each version's own view, no deleted block written into the new version's
   column, no container cloned to hold one, and nothing cloned with it is shown, in Chromium; every
-  unchanged block still starts at the same height in both columns, for the fixtures v0.18 lined up
+  unchanged block still starts at the same height in both columns, for the fixtures v0.18 lined up;
+  and in the new version's view every block lies where it lies in the same build without a
+  difference, with a deleted block first and last in an admonition, a page's first heading
+  replaced, and a row deleted from a table striped by `nth-child`
 - The document has no duplicate ID, with pre-rendered diagrams deleted, an inline SVG with IDs
   deleted, and a heading of the new version linked to; a link to a heading of the new version
   reaches it in every view
-- In each of the four views, the bar's count equals the changes shown, each deleted block counted
-  once, and Next and Previous reach each of them and come round; the box is ticked and cannot be
+- In each of the four views, the bar's count equals the changes shown, no deleted block counted
+  twice, and Next and Previous reach each of them and come round; the box is ticked and cannot be
   changed side by side and in one column
 - In one column, the in-page table of contents lists that column's headings with the added and
   deleted marked and each with the changes in its section; the sidebar is the difference's, the list
@@ -6449,14 +6467,16 @@ Completion criteria:
 - Tests confirm that a build without a difference gives the bytes 0.18.0 gave, but for the version
   the generated HTML names, labels in `siteDataJson` included; the size report's lines add up to the
   file with deleted blocks shown in both columns
-- The configuration reference and the command reference describe the view and the key, and the
-  "What 1.0 Freezes" page lists `html.diffViewDefault` with its default and the two labels, in both
+- The configuration reference, the command reference, and the difference's invariants in
+  architecture.md — an SVG renamed in each column with a prefix of its own — describe the view and
+  the key, and the "What 1.0 Freezes" page lists `html.diffViewDefault` with its default and the two labels, in both
   languages, and `surfaces.test.ts` passes
 - testing.md lists the new tests in both languages
 - Nothing changes for a build without a difference, so 0.19.0 goes to `latest` without a beta, as
   0.18.0 did, with the verification 0.18.0 had: `verify-published.yml` gains a 0.19 gate and steps
-  that build a difference with `html.diffViewDefault: inline` and find the deleted block in the new
-  version's column; the browser pass over a difference the released Linux binary builds covers the
+  that build a difference with `html.diffViewDefault: inline` and, driven in a browser, find the
+  document opening in one column with the deleted block shown in the new version's column; the
+  browser pass over a difference the released Linux binary builds covers the view it opens in, the
   four views, previous and next, the sidebar marks, and the list of changes; and a person reads the
   one-column view in Edge on Windows. The release notes introduce the view and the key and say that
   nothing changes for a build without a difference
@@ -6499,6 +6519,8 @@ Completion criteria:
 - In `markup`, a deleted image appears even when the HTML configuration would not embed it; in
   `bars`, the list of changes names deleted pages without their content, and every block of an added
   page carries a bar
+- Before the PDF is implemented, whether `--diff-pdf` stays an option or becomes a key beside
+  `html.diffViewDefault` is decided and recorded in 7.3.5, and the criteria below follow it
 - Deleted headings are in neither the outline nor the printed table of contents
 - `--diff-pdf` given without a PDF output is `diff/pdf-without-pdf`
 - The command reference and the "What 1.0 Freezes" page list `--diff-pdf` with its default,
