@@ -28,8 +28,9 @@ Last updated: 2026-10-29
 | Checklists, wide accents, asciimath, search folding, figure alignment, search clear button, surfaces enumerated | ✅ Done   | v0.16 |
 | One math font for the PDF, KaTeX 0.18, Mermaid 12.2 | ✅ Done   | v0.17 |
 | Difference from an earlier version in HTML        | ✅ Done   | v0.18          |
-| Difference from an earlier version in PDF         | 🚧 Planned| v0.19          |
-| Word and character differences inside a block     | 🚧 Planned| v0.20          |
+| One-column view of the difference, its default view | 🚧 Planned| v0.19        |
+| Difference from an earlier version in PDF         | 🚧 Planned| v0.20          |
+| Word and character differences inside a block     | 🚧 Planned| v0.21          |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
 The VS Code extension is frozen and not scheduled: demand is unknown, the release and Marketplace pipeline is
@@ -89,8 +90,8 @@ patch, but it turns the UI labels of every `lang: ja` build that does not set `h
 (#224), by decision. After `latest` moved, the published package and the release binaries were
 verified, and `next` moved onto 0.17.2.
 
-v0.18 to v0.20 come before 1.0 too: HTML and PDF with the difference from an earlier version written
-into them, for readers who do not look at Git, in three releases. 12.4 would allow them in 1.x; they
+v0.18 to v0.21 come before 1.0 too: HTML and PDF with the difference from an earlier version written
+into them, for readers who do not look at Git, in four releases. 12.4 would allow them in 1.x; they
 come first because what they add is a surface 1.0 freezes, cheap to change before the number and
 expensive after it ([roadmap.md](roadmap.md) 7.3, 12.4).
 0.18.0, the first of them, went out under `latest` with the CI guide pinned to it, and without a
@@ -753,10 +754,45 @@ Nothing changes for an existing document, so this release goes to `latest` witho
 - [x] What only a person can answer, on Windows: a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, how the generated HTML looks in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — on a Windows 11 host with Git 2.42.0.windows.2 and git-lfs 3.4.0: in a new repository at `%USERPROFILE%\monodocs diff 検証` with `core.autocrlf true` and a file tracked by LFS, the released binary built `--diff-from v1` against a later commit that changed a paragraph and added a page. In Edge the document opened on `Changes v1` with the added and changed pages listed, the sidebar marked them `+` and `•`, the changed page stood side by side with the deleted paragraph struck in red and the added one in green, the unchanged paragraph level and unmarked although the checkout wrote CRLF, each version's view hid the other column, and nothing was garbled. `serve --open` opened the default browser on the served page. The asset downloaded through Edge carried no `Zone.Identifier` stream, so no Mark of the Web, and raised no SmartScreen prompt when double-clicked from Explorer, as with 0.17.0. The README's PowerShell line checking the download against its `.sha256`, run on Windows for the first time, printed `True` for the asset and `False` for a copy with a line appended
 - [x] Move the `next` dist-tag onto `0.18.0`, and confirm that the deployed CI guide pins `monodocs@0.18.0` in English and Japanese — `next` and `latest` both read `0.18.0`, and the deployed CI guide pins `monodocs@0.18.0` four times in each language, with no other version left; the difference samples are deployed in both languages
 
-### v0.19: The Difference on Paper
+### v0.19: One Column, and the View a Document Opens In
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
+- [ ] In one column, a changed page shows the new version with every deleted block at its place, marked `del`, and every added block marked `ins`; an added page shows its note above the new page, and a deleted page its note above the earlier page, neither marked block by block
+- [ ] In one column, the output for fixtures covering a nested list with an item deleted at each depth, an AsciiDoc table with a changed caption, header row, and `colgroup`, a row deleted under another cell's `rowspan`, a deleted anonymous block, a deleted admonition, and a deleted `div.title` and `summary` re-parses to the same tree and violates no content model; a deleted nested item appears at its own depth, and deleting an item of an ordered list or a footnote leaves every new item and footnote showing its new number
+- [ ] Side by side and in each version's own view, no deleted block written into the new version's column, no container cloned to hold one, and nothing cloned with it is shown, in Chromium; every unchanged block still starts at the same height in both columns, for the fixtures v0.18 lined up
+- [ ] The document has no duplicate ID, with pre-rendered diagrams deleted, an inline SVG with IDs deleted, and a heading of the new version linked to; a link to a heading of the new version reaches it in every view
+- [ ] In each of the four views, the bar's count equals the changes shown, each deleted block counted once, and Next and Previous reach each of them and come round; the box is ticked and cannot be changed side by side and in one column
+- [ ] In one column, the in-page table of contents lists that column's headings with the added and deleted marked and each with the changes in its section; the sidebar is the difference's, the list of changes is listed, and there are no previous and next pages under a page
+- [ ] Search covers the new version in one column, and its highlight stays out of the deleted blocks
+- [ ] In `client` mode, a deleted diagram is drawn in the column the view shows, in each view, and no diagram is drawn while hidden
+- [ ] `html.diffViewDefault` opens the document in each of its four values, `current` and `earlier` on that version's first page rather than the list of changes; a value outside them is `config/invalid` naming the four; the key in a build without a difference changes no byte, and in the earlier version's configuration it is not used; the view chosen is not kept when the file is opened again
+- [ ] Tests confirm that a build without a difference gives the bytes 0.18.0 gave, but for the version the generated HTML names, labels in `siteDataJson` included; the size report's lines add up to the file with deleted blocks shown in both columns
+- [ ] The configuration reference and the command reference describe the view and the key, and the "What 1.0 Freezes" page lists `html.diffViewDefault` with its default and the two labels, in English and Japanese, and `surfaces.test.ts` passes
+
+**Documentation and tests**
+
+- [ ] [testing.md](testing.md) lists the new tests in English and Japanese
+
+**Release**
+
+Nothing changes for a build without a difference, so this release goes to `latest` without a beta, as 0.18.0 did.
+
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.19.0` in the version change itself, before the `v0.19.0` tag is created
+- [ ] `verify-published.yml` gains a 0.19 gate and steps that build a difference with `html.diffViewDefault: inline` and find the deleted block in the new version's column, merged before anything below runs
+- [ ] Publish `0.19.0` under the `latest` tag, with release notes introducing the one-column view and `html.diffViewDefault` and stating that nothing changes for a build without a difference, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.19.0`, confirming that the 0.19 steps ran rather than being skipped
+- [ ] Verify the `v0.19.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.19.0` assets on a Linux x64 host without Node.js
+- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, as for 0.18.0: the four views, previous and next, the sidebar marks, and the list of changes
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.19.0` assets on a Windows 11 host
+- [ ] What only a person can answer, on Windows: what 0.18.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, how the generated HTML looks in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — and the one-column view read in Edge
+- [ ] Move the `next` dist-tag onto `0.19.0`, and confirm that the deployed CI guide pins `monodocs@0.19.0` in English and Japanese
+
+### v0.20: The Difference on Paper
+
+[roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
+
+- [ ] Before the PDF is implemented, whether `--diff-pdf` stays an option or becomes a key beside `html.diffViewDefault` is decided and recorded in [roadmap.md](roadmap.md) 7.3.5
 - [ ] PDFs in both presentations, made from two versions of `examples/ja`, are opened and checked on Linux and Windows
 - [ ] Additions and deletions remain distinguishable when the `markup` PDF is rendered in greyscale
 - [ ] In `bars`, a changed paragraph, code block, list item, table row, and a block inside a quotation and an admonition each carry a bar in the margin, outside their container, and their lines break and sit horizontally where they do in a PDF without a difference; a changed block that breaks across a page carries its bar on both pages
@@ -774,19 +810,19 @@ Nothing changes for an existing document, so this release goes to `latest` witho
 
 **Release**
 
-Nothing changes for a build without a difference, so this release goes to `latest` without a beta, as 0.18.0 did.
+Nothing changes for a build without a difference, so this release goes to `latest` without a beta, as 0.19.0 did.
 
-- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.19.0` in the version change itself, before the `v0.19.0` tag is created
-- [ ] `verify-published.yml` gains a 0.19 gate and steps that build a difference to PDF in both presentations, merged before anything below runs
-- [ ] Publish `0.19.0` under the `latest` tag, with release notes introducing `--diff-pdf`, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.19.0`, confirming that the 0.19 steps ran rather than being skipped
-- [ ] Verify the `v0.19.0` release binaries through `verify-release-binaries.yml` on both platforms
-- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.19.0` assets on a Linux x64 host without Node.js
-- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, as for 0.18.0: the three views, previous and next, the sidebar marks, and the list of changes
-- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.19.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: what 0.18.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, how the generated HTML looks in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — and a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
-- [ ] Move the `next` dist-tag onto `0.19.0`, and confirm that the deployed CI guide pins `monodocs@0.19.0` in English and Japanese
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.20.0` in the version change itself, before the `v0.20.0` tag is created
+- [ ] `verify-published.yml` gains a 0.20 gate and steps that build a difference to PDF in both presentations, merged before anything below runs
+- [ ] Publish `0.20.0` under the `latest` tag, with release notes introducing `--diff-pdf`, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.20.0`, confirming that the 0.20 steps ran rather than being skipped
+- [ ] Verify the `v0.20.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js
+- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, as for 0.19.0: the four views, previous and next, the sidebar marks, and the list of changes
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host
+- [ ] What only a person can answer, on Windows: what 0.19.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, how the generated HTML looks in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser — and a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
+- [ ] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese
 
-### v0.20: Words and Characters Inside a Changed Block
+### v0.21: Words and Characters Inside a Changed Block
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
@@ -796,7 +832,7 @@ Nothing changes for a build without a difference, so this release goes to `lates
 - [ ] A paired heading whose generated number changed shows no difference in the number
 - [ ] A deleted run inside bold text is bold inside its `<del>`, and carries no ID or link
 - [ ] A changed line in a code block without a language, and with `highlight.enabled: false`, is marked by line
-- [ ] The earlier-version view of a changed paragraph reads as the earlier paragraph
+- [ ] The earlier-version view of a changed paragraph reads as the earlier paragraph, and the one-column view shows a paired block once, with the difference inside it
 - [ ] The same old and new inputs, including a character assigned in a Unicode version newer than the older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two Node versions with different ICU and Unicode versions
 - [ ] The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in English and Japanese
 
@@ -806,21 +842,21 @@ Nothing changes for a build without a difference, so this release goes to `lates
 
 **Release**
 
-It changes only what a build with a difference shows inside a changed block, and 12.4 promises no output that stays the same across versions before 1.0, so this release goes to `latest` without a beta, as 0.19.0 did.
+It changes only what a build with a difference shows inside a changed block, and 12.4 promises no output that stays the same across versions before 1.0, so this release goes to `latest` without a beta, as 0.20.0 did.
 
-- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.20.0` in the version change itself, before the `v0.20.0` tag is created
-- [ ] `verify-published.yml` gains a 0.20 gate and a step that builds a difference with a paragraph changed by one word, merged before anything below runs
-- [ ] Publish `0.20.0` under the `latest` tag, with release notes stating how a changed block now reads, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.20.0`, confirming that the 0.20 steps ran rather than being skipped
-- [ ] Verify the `v0.20.0` release binaries through `verify-release-binaries.yml` on both platforms
-- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js
-- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, reading changed paragraphs in Japanese and English in the three views
-- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: what 0.19.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, the generated HTML in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser, and a `markup` and a `bars` PDF printed, the `markup` one in black and white — and how changed paragraphs in Japanese and English read, on screen and on paper
-- [ ] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese
+- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.21.0` in the version change itself, before the `v0.21.0` tag is created
+- [ ] `verify-published.yml` gains a 0.21 gate and a step that builds a difference with a paragraph changed by one word, merged before anything below runs
+- [ ] Publish `0.21.0` under the `latest` tag, with release notes stating how a changed block now reads, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.21.0`, confirming that the 0.21 steps ran rather than being skipped
+- [ ] Verify the `v0.21.0` release binaries through `verify-release-binaries.yml` on both platforms
+- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.21.0` assets on a Linux x64 host without Node.js
+- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, reading changed paragraphs in Japanese and English in the four views
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.21.0` assets on a Windows 11 host
+- [ ] What only a person can answer, on Windows: what 0.20.0 asked — a difference built with `--diff-from` in a repository at a path with spaces and Japanese characters, with `core.autocrlf` set and a file stored in LFS, the generated HTML in Edge, `serve --open` launching the default browser, and Mark of the Web with SmartScreen for an asset downloaded through a browser, and a `markup` and a `bars` PDF printed, the `markup` one in black and white — and how changed paragraphs in Japanese and English read, on screen and on paper
+- [ ] Move the `next` dist-tag onto `0.21.0`, and confirm that the deployed CI guide pins `monodocs@0.21.0` in English and Japanese
 
 ### 1.0
 
-[roadmap.md](roadmap.md) defines this release; it starts once v0.20 is released.
+[roadmap.md](roadmap.md) defines this release; it starts once v0.21 is released.
 
 - [ ] `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the enumeration no longer lists it
 - [ ] An earlier version whose configuration uses `sidebar.exclude` is still compared against with `--diff-from`, the key read as `sources.exclude` ([roadmap.md](roadmap.md) 7.3.2)
