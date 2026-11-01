@@ -81,7 +81,7 @@ range includes a secure version. Last checked 2026-11-02: stable is still VitePr
 (VitePress 2 is alpha only, `2.0.0-alpha.21` on `next`), so the override stays. It moved from `~6.4.3` to
 `~6.4.4` for the launch-editor advisories published 2026-10-20 (GHSA-587h-7wmj-h5pm, GHSA-698v-4r3x-3vcv,
 GHSA-r825-w8mm-5pxw), which cover Vite up to 6.4.3, and from `~6.4.4` to `~6.4.5` for GHSA-8g5g-mxqh-grgj
-(`server.fs.deny` bypassed with queries), which covers Vite 6.4.4.
+(`server.fs.deny` bypassed with queries), published 2026-10-29, which covers Vite 6.4.4.
 
 ### Site Theme
 
