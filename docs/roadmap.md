@@ -1052,7 +1052,7 @@ PDF
 
 PDF output will be supported after HTML output stabilizes.
 
-### 7.3 Difference from an Earlier Version (v0.18–v0.20)
+### 7.3 Difference from an Earlier Version (v0.18–v0.21)
 
 When a revised specification is handed over, the first thing the receiving side wants to know is
 what changed since the last version. A document written in Word shows that with tracked changes. The
@@ -1068,19 +1068,21 @@ monodocs build ./docs -o ./dist/docs.html --diff-from-dir ../project-1.2
 monodocs build ./docs -f pdf -o ./dist/docs.pdf --diff-from v1.2 --diff-pdf bars
 ```
 
-It arrives in three stages, each a release before 1.0. Stage 1, in v0.18, outputs the difference at
-the level of pages and blocks in HTML. Stage 2, in v0.19, outputs it in PDF. Stage 3, in v0.20,
-compares the inside of changed blocks — words, and characters for Japanese — and treats tables cell
-by cell. 12.4 would allow all three as additions in 1.x minor releases; they come before 1.0 instead
-because what they add is a surface 1.0 freezes, which 12.4 makes cheap to change before the number
-and expensive after it, so each is used in a release before 1.0 claims it. At every stage, a
-combination not yet handled is an error, not accepted and ignored (12.4).
+It arrives in three stages, over four releases before 1.0. Stage 1 outputs the difference at the
+level of pages and blocks in HTML: v0.18 writes it side by side, and v0.19 adds a view that writes
+it into one column and a key that chooses the view a document opens in. Stage 2, in v0.20, outputs
+it in PDF. Stage 3, in v0.21, compares the inside of changed blocks — words, and characters for
+Japanese — and treats tables cell by cell. 12.4 would allow all three as additions in 1.x minor
+releases; they come before 1.0 instead because what they add is a surface 1.0 freezes, which 12.4
+makes cheap to change before the number and expensive after it, so each is used in a release before
+1.0 claims it. At every stage, a combination not yet handled is an error, not accepted and ignored
+(12.4).
 
 **What this section decides, and what it leaves to the implementation.** The subsections below fix
 the interfaces, the rules a reader or a script can observe, the invariants the output keeps, and the
 facts measured on 2026-10-14. How a rule is reached in the HAST, in CSS, or through Asciidoctor's
-API is decided when each stage is implemented, against the completion criteria of the v0.18, v0.19,
-and v0.20 milestones, which name the cases a review of this design found — a nested list, a table's
+API is decided when each stage is implemented, against the completion criteria of the v0.18 to
+v0.21 milestones, which name the cases a review of this design found — a nested list, a table's
 `colgroup`, a code block's padding, Asciidoctor's own numbers, and so on. What the implementation
 decides is recorded here when that stage lands, as 6.4 records what v0.15 measured. A rule this
 section states and the code cannot keep is a change to this section, made in the open, not a quiet
@@ -1400,7 +1402,7 @@ bounded — six thousand blocks rewritten on each side would otherwise take giga
 
 ### 7.3.4 Writing the Difference into the HTML
 
-**The two versions stand side by side.** A page that changed is shown in two columns: the earlier
+**The two versions stand side by side.** Side by side, a page that changed is shown in two columns: the earlier
 page on the left, the new page on the right, each as its own version wrote it, so a list, a table,
 or a section reads whole in either column. The blocks the two have in common (7.3.3) are lined up:
 the script that comes with the difference measures each pair and adds space above the higher one, so
@@ -1437,36 +1439,38 @@ version — for `--diff-from`, a directory that no longer exists. The build fail
 `internal/unexpected` if an ID from the earlier tree survived without being renamed, inside an SVG
 or outside one.
 
-**Search reads the version the view reads.** Side by side and in the new version's view, search
-covers the new version: it is built from `Page.headings` and `Page.text`, which are the new
+**Search reads the version the view reads.** Side by side, in one column, and in the new version's
+view, search covers the new version: it is built from `Page.headings` and `Page.text`, which are the new
 version's and are not touched. In the earlier version's view it covers the earlier version: its
 pages in its own sidebar's order, each by the route of the page that shows it now — a changed page
 by its new route, a deleted one by its own — with its title, its text, and its formulas. The earlier
 headings have no ID, so an earlier result opens its page rather than a section. `siteDataJson`
 carries those pages, as `diffEarlierPages`, only with a difference. Changing the view searches anew
 what the box holds. The in-body search highlight (22.5) stays in the column of the version searched,
-so the highlight agrees with the index about what the version contains. The printed table of
+and out of the deleted blocks one column writes into the new version's, so the highlight agrees with
+the index about what the version contains. The printed table of
 contents is the new version's, and the PDF outline is built from the sidebar and lists pages only.
 
 **The in-page table of contents follows the view, as the sidebar does.** On a changed page, side by
 side, it lists both versions' headings in the order the alignment puts them, an unchanged pair once,
 an added heading marked `+` in green and a deleted one struck through and marked `−` in red, each
 with the number of changes in its section — counted in its own column up to that column's next
-heading, both columns for an unchanged pair. In a version's own view it lists that version's
+heading, both columns for an unchanged pair. In one column it lists the headings of that column, in
+its order, marked and counted the same way. In a version's own view it lists that version's
 headings, marked and counted only when the box shows the changes. A heading in it opens its section
 in the columns shown, the earlier column's included, though that has no ID. The difference's script
 draws it into the theme's own place for it, `#toc-nav`, in the theme's markup (`ul.toc-list`,
 `li.toc-item.toc-level-N`, the `active` class on the heading read); a page that did not change keeps
 the theme's own table of contents, and a theme without `#toc-nav` keeps its own on every page.
 
-**So do the previous and next pages under a page.** Side by side, where the two versions' orders
-meet, there are none. In a version's own view they follow that version's order, as its sidebar
+**So do the previous and next pages under a page.** Side by side and in one column, where the two
+versions' orders meet, there are none. In a version's own view they follow that version's order, as its sidebar
 lists it, the list of changes left out: in the earlier version's view a deleted page is reached in
 its place and an added one is not. The script writes them into the theme's own place, `#page-nav`,
 in the theme's markup.
 
 **The list of changes is the first page.** It is generated, not read from a file, and the document
-opens on it. Its route is `//changes`: a route built from a path never has an empty segment (15.1),
+opens on it, unless it opens in a version's own view (`html.diffViewDefault`, below). Its route is `//changes`: a route built from a path never has an empty segment (15.1),
 and an alias loses its leading slashes, so no alias can take it, and no source file can but one
 whose name begins with a backslash on a system that allows it, which `toRoute` reads as a separator;
 that page and the list of changes are reported as `page/duplicate-route`. Its page ID is allocated
@@ -1487,8 +1491,9 @@ the label alone. It lists, each linking to its page:
 It is in the sidebar, first and unnumbered — no page's number shifts because it is there — and in
 neither search nor the previous/next navigation: its entry in `siteDataJson` is `hidden`, which
 takes it out of both, because the default theme builds the two from one list of pages. It belongs
-to the side-by-side view, which surveys the two versions: a version's own sidebar does not list it,
-and choosing a version's own view from it opens that version's first page.
+to the views that show the difference, side by side and one column, which survey the two versions:
+a version's own sidebar does not list it, and choosing a version's own view from it — or opening the
+document in one — opens that version's first page.
 
 **A deleted page is a page of the document.** It keeps its earlier title and gets the route
 `//deleted` followed by its earlier route, which no path or alias can give, for the reason
@@ -1508,7 +1513,7 @@ in its colour with a symbol: green with `+` for added, red with `−` for delete
 changed, and blue with `→` for moved. The symbol is hidden from assistive technology and a visually
 hidden label says the state, so the mark is not colour alone.
 
-**The sidebar follows the view.** Side by side, it is the difference's: the new version's sidebar
+**The sidebar follows the view.** Side by side and in one column, it is the difference's: the new version's sidebar
 with the deleted pages where they stood. In the new version's view it is the new version's sidebar,
 without the deleted pages; in the earlier version's view, the earlier version's, in its order and
 with its titles, without the added pages, each page the new version still has linking to its page,
@@ -1516,27 +1521,85 @@ and a deleted one to its own. Each marks the changed pages it lists, as above. T
 has no section numbers, as the earlier column has none (19.1). All three are written into the
 sidebar, and the view shows one.
 
-**Three views and a way through the changes.** A bar written before `{{pages}}` stands fixed across
+**Four views and a way through the changes.** A bar written before `{{pages}}` stands fixed across
 the top of the window, above the sidebar, the content, and the table of contents, which start below
-it: what it switches and walks is the whole document, not one page. It holds three buttons — side by
-side, the earlier version, the new version, in the order the columns stand — and previous/next
-buttons with a count, `3 / 17`. The view is not stored: the next person to open the file starts side by side. The new
-version's view shows the right column alone, and the earlier version's view the left column alone,
-so an added page shows only its note there and a deleted page its content. A version's own view is
-that version, plain, as a word processor's "no markup" is: no mark on a block, no note above the
-page, no badge in the sidebar. A box in the bar beside the views, `labels.diffShowMarks`, marks its
-changes — the deletions in the earlier version, the additions in the new — and the navigation shows
-where each change is either way. The box starts unticked whenever the file is opened and keeps its
-choice between the two versions' views; side by side, where both columns are always marked, it
-stays in view, ticked, and cannot be changed. The changes are, in reading order, the marked blocks — in the order the alignment
-puts them, the deletion first where a block is replaced — the added and the deleted pages, and the
-pages whose change no block carries — a front-matter title, or a move with no block changed — each
-of the last three counted once at its note. In a view that hides a column, the changes in that
-column are skipped and the count is of those shown. A version's own view walks the pages its sidebar
-lists, in its order, as the previous and next pages under a page do: an added page is not in the
-earlier version's, nor a deleted one in the new version's. Where the plain view hides a page's
-note, the first block of what is shown stands for it. The navigation opens the page a change is on,
-scrolls it into view in both columns, and reaches each change without an ID on the earlier column.
+it: what it switches and walks is the whole document, not one page. It holds four buttons — side by
+side and one column, the two views that show the difference, then the earlier version and the new
+version, in the order the columns stand — and previous/next buttons with a count, `3 / 17`. The view
+is not stored: whoever opens the file starts in the view `html.diffViewDefault` names, side by side
+unless it names another. A choice kept in `localStorage` would follow the reader from one difference
+to the next, since every file opened from disk can share one origin. The new version's view shows
+the right column alone, and the earlier version's view the left column alone, so an added page shows
+only its note there and a deleted page its content. A version's own view is that version, plain, as
+a word processor's "no markup" is: no mark on a block, no note above the page, no badge in the
+sidebar. A box in the bar beside the views, `labels.diffShowMarks`, marks its changes — the
+deletions in the earlier version, the additions in the new — and the navigation shows where each
+change is either way. The box starts unticked whenever the file is opened and keeps its choice
+between the two versions' views; side by side and in one column, where the changes are always
+marked, it stays in view, ticked, and cannot be changed. The changes are, in reading order, the
+marked blocks — in the order the alignment puts them, the deletion first where a block is replaced —
+the added and the deleted pages, and the pages whose change no block carries — a front-matter title,
+or a move with no block changed — each of the last three counted once at its note. In a view that
+hides a column, the changes in that column are skipped and the count is of those shown; a deleted
+block is never counted twice: once in a view that shows it, in the column that shows it. A version's own view walks the
+pages its sidebar lists, in its order, as the previous and next pages under a page do: an added page
+is not in the earlier version's, nor a deleted one in the new version's. Where the plain view hides
+a page's note, the first block of what is shown stands for it. The navigation opens the page a
+change is on, scrolls it into view in the columns shown, and reaches each change without an ID on the
+earlier column.
+
+**One column writes the difference into the new version, as a word processor's tracked changes do.**
+It is the view v0.19 adds, for a reader who wants to read the document once, with what was deleted
+where it stood, rather than compare two columns. A changed page shows the new version's column
+alone, with every deleted block written into it at its place, marked `del`, by the rules `markup`
+writes one column by (7.3.5), and every added block marked `ins` as side by side. The column is the
+new version's own column, not a third copy: the deleted blocks are written into it once, for every
+view, and the other three views hide them, together with a container cloned to hold deleted blocks
+alone and what was cloned with it — an admonition's title, a table's `colgroup` — which carries a
+class of its own for that, markup that is not frozen. Hidden, they change nothing in the layout:
+hidden with CSS alone, a deleted block would still take `:first-child` from the block after it, or
+shift a row's `nth-child` stripe, so whatever hides them keeps them out of the structure the
+stylesheets read — detached while hidden, for instance, a comment marking their place. The new
+version's view, and the new version's column side by side, lay out as the new version does in a
+build without a difference. So no element of the new version is written twice and no ID is
+duplicated, a heading of the new version keeps the ID its links reach, and what the build adds is a
+second copy of each deleted block, which the size report counts under `difference`. A deleted SVG, a
+pre-rendered diagram's or one an AsciiDoc page writes inline, stands in both columns, and its IDs
+are renamed with a prefix of its own in each, so the two copies share none; the earlier column keeps
+the IDs 7.3.2 and 7.3.5 give it — `mermaid-earlier-N` where those keep it — and the one column
+renames every ID in its copy, those included, with a prefix that neither starts with the earlier
+column's prefix nor begins it, so that no ID it gives is one of the new version's, one the earlier
+column holds, or a page ID the difference allocates (`diff-changes`, `deleted-…`). The deleted blocks are out of the structure
+the stylesheets read from the start, before the script runs and without it, so the HTML as written shows side by side
+without them in the new column. In one column the
+page takes the width a page without a difference takes — `html.contentWidth`, and the reader's
+toggle where there is one — rather than the whole width, and the columns' headings are not shown:
+the bar names the view. An added page shows its note above the new page, and a deleted page its note
+above the earlier page; their content is not marked block by block, since such a page is marked
+once, by its note. A page whose change no block carries is shown as in every view. Side by side,
+only the deleted blocks of the earlier column count and are walked, and in one column only those of
+the new version's; a Mermaid diagram is drawn only where the view shows it, so a deleted diagram is
+drawn in the column the view shows and in no hidden one. The four attributes the "What 1.0 Freezes"
+page lists (12.4) keep their meaning, though a deleted block is now written, and marked, in each
+column it stands in: it carries `data-monodocs-diff-block="del"` and its `<del>` in either, and an
+unchanged pair's two blocks still share `data-monodocs-diff-pair`. Until stage 3, a block with one
+character changed reads in one column as the earlier block struck through followed by the new block
+underlined: blocks are not paired by similarity, for the reason moves are not inferred (7.3.3), and
+stage 3 shows such a pair as one block with the difference inside it (7.3.6).
+
+**The view a document opens in is a key, `html.diffViewDefault`:** `side-by-side`, `inline` (one
+column), `current`, or `earlier`, `side-by-side` by default. What to compare against is an option
+because it changes with every release and belongs to the build (7.3.1); how the document shows a
+difference does not change with the release, and is the author's choice of presentation, as
+`html.contentWidth` is. The key's name follows `html.contentWidthDefault`, the state a reader's
+toggle starts in until the reader chooses; unlike that choice, a view chosen is not kept. A value outside the four is `config/invalid`, naming them, as any enumerated key
+is. Like `html.labels.diff*`, the key is accepted in every configuration and has effect only in a
+build with a difference. The earlier version's configuration does not set it: `html.*` comes from
+the new configuration (7.3.2), and the earlier file's value is checked and not used. Opening in a
+version's own view, the document opens on that version's first page, since the list of changes
+belongs to the views that show the difference. `--diff-pdf` (7.3.5) chooses a presentation in the
+same sense; whether it becomes a key too is reconsidered in v0.20 and is not changed here, with how
+the HTML printed from a browser gives the presentation chosen whichever view is on screen.
 
 **What the difference adds reaches every theme and no build without it.** The rules and the script
 come from core, through tokens every template is required to have (`{{style}}`, `{{bodyScripts}}`,
@@ -1554,8 +1617,8 @@ application); without the hook, its search stays the new version's in every view
 **The wording joins the label table (23.4)**, English, and `html.labels` replaces it: `diffChanges`,
 `diffAddedPages`, `diffMovedPages`, `diffChangedPages`, `diffDeletedPages`, `diffUnchangedPages`,
 `diffNoChanges`, `diffPageAdded`, `diffPageDeleted`, `diffPageMoved`, `diffViewSideBySide`,
-`diffViewSideBySideHint` (its button's tooltip), `diffViewCurrent`, `diffViewEarlier`,
-`diffShowMarks`, `diffPrevious`, `diffNext`, `diffAdded`, `diffDeleted`,
+`diffViewSideBySideHint` (its button's tooltip), `diffViewInline`, `diffViewInlineHint` (v0.19),
+`diffViewCurrent`, `diffViewEarlier`, `diffShowMarks`, `diffPrevious`, `diffNext`, `diffAdded`, `diffDeleted`,
 `diffChanged`, `diffMoved` (the sidebar's marks), `diffTitleChanged` (the note of a page whose title
 changed), and `diffMergedInto` (a deleted page another took over through its aliases). They are a
 table of their own beside `LABEL_KEYS`: `siteDataJson` carries every resolved label, so a key added
@@ -1598,7 +1661,9 @@ Mermaid runtime, and `siteDataJson`, which keep their own lines.
 `--diff-pdf <markup|bars>`, passed to core as `diff.pdf` only when it is given; core reads its
 absence as `markup` when it outputs a PDF, so `--help` names the default in the description rather
 than through a value the CLI always passes. It is an option, not a key, for the reason the
-difference itself is (7.3.1). It is `diff/pdf-without-pdf` without `--diff-from` or
+difference itself is (7.3.1); v0.19 made the view on screen a key (7.3.4), on the ground that a
+presentation is the document's and not the release's, which holds for paper too, so v0.20 decides
+again whether `--diff-pdf` stays an option or becomes a key beside `html.diffViewDefault`. It is `diff/pdf-without-pdf` without `--diff-from` or
 `--diff-from-dir`, or when no PDF is output. The choice is written into the HTML, through
 `{{style}}`, not as an attribute of `<body>`, which a template may leave without `{{bodyAttrs}}`:
 the PDF is this HTML printed, as the density is (24.6), so the HTML of `-f both --diff-pdf bars`
@@ -1618,7 +1683,8 @@ printed from a browser gives the bars too, while on screen it keeps its toggle.
   quotations and admonitions their own borders, and tables collapsed borders, and each is a case the
   bar has to hold in
 
-**`markup` writes the difference into one column, the new version's tree its frame.** Unchanged and
+**`markup` writes the difference into one column, the new version's tree its frame** — the column
+the one-column view shows on screen from v0.19 (7.3.4), which `markup` prints. Unchanged and
 added blocks are the new version's elements, untouched apart from their mark. A deleted block is
 cloned from the earlier tree and appears where it stood relative to its unchanged neighbours, inside
 the containers it had: a deleted list item stays in its list at its depth, a deleted row in its
@@ -5905,10 +5971,10 @@ Completion criteria:
 Purpose:
 
 Clear what earlier milestones set aside, and enumerate what 1.0 will freeze, so that 1.0 is left
-with nothing but the removal 12.4 reserves for a major release and a final check. (v0.17 to v0.20,
-defined after 0.16.0, now sit between it and 1.0.) Most items here
-change what an existing document builds or add a surface 1.0 enumerates, which 12.4 makes cheap
-before the number and expensive after it; the rest are checks 1.0 should not be claimed without.
+with nothing but the removal 12.4 reserves for a major release and a final check. (v0.17 to v0.21,
+defined after 0.16.0, now sit between it and 1.0.) Most items here change what an existing document
+builds or add a surface 1.0 enumerates, which 12.4 makes cheap before the number and expensive after
+it; the rest are checks 1.0 should not be claimed without.
 
 - **AsciiDoc checklists are drawn with characters no default font has.** Asciidoctor renders an
   unchecked item as `❏` (U+274F) and a checked one as `✓`, where Markdown's task list renders a
@@ -6194,14 +6260,14 @@ Purpose:
 
 Output HTML with the difference from an earlier version written into it (7.3, stage 1). The readers
 are people who do not look at Git; this is not a substitute for `git diff`. It comes before 1.0,
-with the PDF in v0.19 and the comparison inside changed blocks in v0.20, because everything it adds
-— two options, diagnostic codes, labels, the attributes a theme or a script reads, the address of
-the list of changes — is a surface 1.0 freezes, and 12.4 makes a surface cheap to change before the
-number and expensive after it. Each surface is used in a release before 1.0 claims it. A build
-without a difference produces the output it did before, apart from the version the generated HTML
-names (12.4), so nothing changes for an existing document. v0.17 comes first; 1.0 now starts once
-v0.20 is released. Each of the three releases records in 7.3 what its implementation decided (7.3,
-"What this section decides").
+with the one-column view in v0.19, the PDF in v0.20, and the comparison inside changed blocks in
+v0.21, because everything it adds — two options, diagnostic codes, labels, the attributes a theme or
+a script reads, the address of the list of changes — is a surface 1.0 freezes, and 12.4 makes a
+surface cheap to change before the number and expensive after it. Each surface is used in a release
+before 1.0 claims it. A build without a difference produces the output it did before, apart from the
+version the generated HTML names (12.4), so nothing changes for an existing document. v0.17 comes
+first; 1.0 now starts once v0.21 is released. Each of the four releases records in 7.3 what its
+implementation decided (7.3, "What this section decides").
 
 Implementation scope:
 
@@ -6344,12 +6410,88 @@ Completion criteria:
 
 ---
 
-## v0.19: The Difference on Paper
+## v0.19: One Column, and the View a Document Opens In
+
+Purpose:
+
+Add a fourth view of the difference, one column with the deleted blocks written into the new
+version where they stood, and a key choosing the view a document opens in (7.3.4, stage 1), so that
+the view, the key, its values and default, and the two labels are used in a release before 1.0
+freezes them. A build without a difference produces the output it did before, apart from the version
+the generated HTML names (12.4). The one column is the one `markup` (7.3.5) prints in v0.20, written
+ahead of the PDF in v0.18 and shown on screen first.
+
+Implementation scope:
+
+- The one-column view of 7.3.4: the deleted blocks written once into the new version's column by
+  the rules of 7.3.5 and hidden in the other three views with the containers cloned for them; the
+  fourth button; the count, the navigation, the in-page table of contents, the sidebar, the search
+  highlight, and the Mermaid diagrams in each view
+- `html.diffViewDefault` (`side-by-side`, `inline`, `current`, `earlier`; `side-by-side` by default)
+  and the labels `diffViewInline` and `diffViewInlineHint`
+
+Completion criteria:
+
+- In one column, a changed page shows the new version with every deleted block at its place, marked
+  `del`, and every added block marked `ins`; an added page shows its note above the new page, and a
+  deleted page its note above the earlier page, neither marked block by block
+- In one column, the output for fixtures covering a nested list with an item deleted at each depth,
+  an AsciiDoc table with a changed caption, header row, and `colgroup`, a row deleted under another
+  cell's `rowspan`, a deleted anonymous block, a deleted admonition, and a deleted `div.title` and
+  `summary` re-parses to the same tree and violates no content model; a deleted nested item appears
+  at its own depth, and deleting an item of an ordered list or a footnote leaves every new item and
+  footnote showing its new number
+- Side by side and in each version's own view, no deleted block written into the new version's
+  column, no container cloned to hold one, and nothing cloned with it is shown, in Chromium; every
+  unchanged block still starts at the same height in both columns, for the fixtures v0.18 lined up;
+  and in the new version's view every block lies where it lies in the same build without a
+  difference, with a deleted block first and last in an admonition, a page's first heading
+  replaced, and a row deleted from a table striped by `nth-child`
+- The document has no duplicate ID, with pre-rendered diagrams deleted, an inline SVG with IDs
+  deleted, and a heading of the new version linked to; a link to a heading of the new version
+  reaches it in every view
+- In each of the four views, the bar's count equals the changes shown, no deleted block counted
+  twice, and Next and Previous reach each of them and come round; the box is ticked and cannot be
+  changed side by side and in one column
+- In one column, the in-page table of contents lists that column's headings with the added and
+  deleted marked and each with the changes in its section; the sidebar is the difference's, the list
+  of changes is listed, and there are no previous and next pages under a page
+- Search covers the new version in one column, and its highlight stays out of the deleted blocks
+- In `client` mode, a deleted diagram is drawn in the column the view shows, in each view, and no
+  diagram is drawn while hidden
+- `html.diffViewDefault` opens the document in each of its four values, `current` and `earlier` on
+  that version's first page rather than the list of changes; a value outside them is
+  `config/invalid` naming the four; the key in a build without a difference changes no byte, and in
+  the earlier version's configuration it is not used; the view chosen is not kept when the file is
+  opened again
+- Tests confirm that a build without a difference gives the bytes 0.18.0 gave, but for the version
+  the generated HTML names, labels in `siteDataJson` included; the size report's lines add up to the
+  file with deleted blocks shown in both columns
+- The configuration reference, the command reference, and the difference's invariants in
+  architecture.md — an SVG renamed in each column with a prefix of its own — describe the view and
+  the key, and the "What 1.0 Freezes" page lists `html.diffViewDefault` with its default and the two labels, in both
+  languages, and `surfaces.test.ts` passes
+- testing.md lists the new tests in both languages
+- Nothing changes for a build without a difference, so 0.19.0 goes to `latest` without a beta, as
+  0.18.0 did, with the verification 0.18.0 had: `verify-published.yml` gains a 0.19 gate and steps
+  that build a difference with `html.diffViewDefault: inline` and, driven in a browser, find the
+  document opening in one column with the deleted block shown in the new version's column; the
+  browser pass over a difference the released Linux binary builds covers the view it opens in, the
+  four views, previous and next, the sidebar marks, and the list of changes; and a person reads the
+  one-column view in Edge on Windows. The release notes introduce the view and the key and say that
+  nothing changes for a build without a difference
+
+---
+
+## v0.20: The Difference on Paper
 
 Purpose:
 
 Output the difference in PDF (7.3, stage 2), in the two presentations 7.3.5 describes, so that the
 option choosing between them, and its default, are used in a release before 1.0 freezes them.
+v0.19 made the view on screen a key (7.3.4); this release decides, before implementing it, whether
+`--diff-pdf` stays an option or becomes a key beside `html.diffViewDefault`, and records the
+decision in 7.3.5.
 
 Implementation scope:
 
@@ -6377,18 +6519,20 @@ Completion criteria:
 - In `markup`, a deleted image appears even when the HTML configuration would not embed it; in
   `bars`, the list of changes names deleted pages without their content, and every block of an added
   page carries a bar
+- Before the PDF is implemented, whether `--diff-pdf` stays an option or becomes a key beside
+  `html.diffViewDefault` is decided and recorded in 7.3.5, and the criteria below follow it
 - Deleted headings are in neither the outline nor the printed table of contents
 - `--diff-pdf` given without a PDF output is `diff/pdf-without-pdf`
 - The command reference and the "What 1.0 Freezes" page list `--diff-pdf` with its default,
   `markup`, and `diff/pdf-without-pdf`, in both languages, and `surfaces.test.ts` passes
 - testing.md lists the new tests in both languages
-- 0.19.0 goes to `latest` without a beta, nothing changing for a build without a difference, with
-  the verification 0.18.0 had, its steps building both presentations, and a person printing a
+- 0.20.0 goes to `latest` without a beta, nothing changing for a build without a difference, with
+  the verification 0.19.0 had, its steps building both presentations, and a person printing a
   `markup` and a `bars` PDF on Windows, the first in black and white
 
 ---
 
-## v0.20: Words and Characters Inside a Changed Block
+## v0.21: Words and Characters Inside a Changed Block
 
 Purpose:
 
@@ -6413,16 +6557,17 @@ Completion criteria:
 - A deleted run inside bold text is bold inside its `<del>`, and carries no ID or link
 - A changed line in a code block without a language, and with `highlight.enabled: false`, is marked
   by line
-- The earlier-version view of a changed paragraph reads as the earlier paragraph
+- The earlier-version view of a changed paragraph reads as the earlier paragraph, and the
+  one-column view shows a paired block once, with the difference inside it
 - The same old and new inputs, including a character assigned in a Unicode version newer than the
   older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two
   Node versions with different ICU and Unicode versions
 - The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in both languages
 - testing.md lists the new tests in both languages
-- 0.20.0 changes what a build with a difference shows inside a changed block, and nothing else; it
+- 0.21.0 changes what a build with a difference shows inside a changed block, and nothing else; it
   goes to `latest` without a beta, since before 1.0 12.4 promises no output that stays the same
-  across versions, with the verification 0.19.0 had, its browser pass reading changed paragraphs in
-  Japanese and English in the three views; the release notes say how a changed block now reads
+  across versions, with the verification 0.20.0 had, its browser pass reading changed paragraphs in
+  Japanese and English in the four views; the release notes say how a changed block now reads
 
 ---
 
