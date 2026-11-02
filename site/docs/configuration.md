@@ -146,6 +146,7 @@ html:
   contentWidth: 860px # a CSS length, or "full" for the full available width
   contentWidthToggle: true # show the standard/wide toggle
   contentWidthDefault: standard # standard | wide (used until the reader chooses)
+  diffViewDefault: side-by-side # side-by-side | inline | current | earlier (a build with a difference)
   imageLightbox: true # click unlinked, non-decorative content images and Mermaid diagrams to enlarge them
   # labels: # replace individual UI labels, which are English otherwise
   #   tocTitle: In this article
@@ -683,6 +684,7 @@ A formula is rendered by KaTeX to MathML only: no script or stylesheet is added 
 | `html.contentWidth`  | string / number | `860px`     | Max width of the content area. A CSS length (`px`, `rem`, `em`, `ch`, `vw`, `%`) or a number (px). `full` (or `none`) expands to the full available width. |
 | `html.contentWidthToggle` | boolean | `true` | Show the reader-facing standard/wide content toggle. When `false`, stored reader choices and `html.contentWidthDefault` are ignored. |
 | `html.contentWidthDefault` | `standard` `wide` | `standard` | Initial content-width state. A reader's saved choice takes precedence. |
+| `html.diffViewDefault` | `side-by-side` `inline` `current` `earlier` | `side-by-side` | The view a document with [the difference from an earlier version](/docs/commands#difference) opens in: the two versions side by side, the new version with the deletions written in (`inline`), or one version alone. `current` and `earlier` open on that version's first page rather than the list of changes. The reader can switch views; the choice is not kept, so the file opens in this view again. Accepted in every configuration, it only affects a build with a difference. |
 | `html.imageLightbox` | boolean | `true` | Open unlinked, non-decorative content images in a viewport-sized dialog when clicked or activated from the keyboard. Linked images retain their original link behavior, and images with an explicit empty `alt` remain decorative. An SVG image is scaled up to fill the dialog, keeping its proportions; a raster image is only shrunk to fit. When that differs from the image's actual size (one image pixel per CSS pixel for a raster image; for a local SVG image, the size its own `width` and `height`, or its `viewBox`, give it; an SVG the build cannot read or size, such as a remote one, a data URI, one outside the input, or one sized in `em`, gets no button), a button switches between the two, and the dialog scrolls at actual size; a raster image is never enlarged. An image is shown on a white panel, in dark mode too, so a transparent one stays readable. Mermaid diagrams open when clicked, or from a button that appears on keyboard focus, scaled to fill the dialog; a diagram with an `accTitle` uses it as the caption. The dialog is omitted from print and PDF output. |
 | `html.labels`        | map     | (English) | Replace individual UI labels. An unknown key is rejected. See below. |
 
@@ -792,6 +794,8 @@ into it.
 | `diffPageMoved` | This page moved. Its earlier route: | Note at the top of a moved page, before its earlier route |
 | `diffViewSideBySide` | Side by side | The view that shows the two versions side by side |
 | `diffViewSideBySideHint` | Show the difference with the two versions side by side | The tooltip of that view's button |
+| `diffViewInline` | Inline | The view that shows the new version with the deletions written in |
+| `diffViewInlineHint` | Show the difference in one document, the deletions and additions in place | The tooltip of that view's button |
 | `diffViewCurrent` | New version | The view that shows the new version |
 | `diffViewEarlier` | Earlier version | The view that shows the earlier version |
 | `diffShowMarks` | Show changes | The box that marks the changes in a version's own view |

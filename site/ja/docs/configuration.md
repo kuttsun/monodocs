@@ -145,6 +145,7 @@ html:
   contentWidth: 860px # CSS 長さ、または "full"（残り幅いっぱい）
   contentWidthToggle: true # 標準幅／ワイド幅切替ボタンを表示
   contentWidthDefault: standard # standard | wide（読者が選択するまでの初期状態）
+  diffViewDefault: side-by-side # side-by-side | inline | current | earlier（差分を出すビルド）
   imageLightbox: true # リンクのない装飾目的以外の本文画像と Mermaid 図をクリックして拡大表示
   # labels: # 個別の UI ラベルを差し替える（書かなければ英語）
   #   tocTitle: このページの内容
@@ -633,6 +634,7 @@ figures:
 | `html.contentWidth` | string / number | `860px`   | 本文領域の最大幅。CSS 長さ（`px`・`rem`・`em`・`ch`・`vw`・`%`）または数値（px）。`full`（または `none`）で残り幅いっぱいに広げる。 |
 | `html.contentWidthToggle` | boolean | `true` | 読者向けの標準幅／ワイド幅切替ボタンを表示する。`false` の場合は保存済みの読者設定と `html.contentWidthDefault` を無視する。 |
 | `html.contentWidthDefault` | `standard` `wide` | `standard` | 本文幅の初期状態。読者の選択が保存されている場合はそちらを優先する。 |
+| `html.diffViewDefault` | `side-by-side` `inline` `current` `earlier` | `side-by-side` | [以前の版との差分](/ja/docs/commands#difference)を書き込んだ文書を開いたときの表示。2 つの版を左右に並べる表示、削除を書き込んだ新しい版（`inline`）、片方の版だけのどれか。`current` と `earlier` では、変更の一覧ではなくその版の最初のページで開く。読者は表示を切り替えられるが、その選択は保存しないので、ファイルを開き直すとこの表示に戻る。どの設定でも受け付け、効くのは差分を出すビルドだけ。 |
 | `html.imageLightbox` | boolean | `true` | リンクのない装飾目的以外の本文画像をクリックまたはキーボード操作すると、画面内に収まる大きさのダイアログで表示する。リンク付き画像は元のリンク動作を維持し、`alt` が明示的に空の画像は装飾画像のままにする。SVG 画像は縦横比を保ってダイアログいっぱいまで拡大し、ラスター画像は収まるように縮めるだけにする。それが画像の実寸（ラスター画像は画像の 1 ピクセルを CSS の 1 ピクセルとする大きさ、ローカルの SVG 画像は SVG 自身の `width` と `height`、または `viewBox` による大きさ。リモートのもの、data URI、入力の外のもの、`em` で寸法を書いたものなど、ビルドが読めない・大きさを決められない SVG にはボタンを出さない）と違うときは、両者を切り替えるボタンを出し、実寸ではダイアログをスクロールさせる。ラスター画像はどちらでも拡大しない。画像はダークモードでも白いパネルに載せるので、背景が透明な画像も読める。Mermaid 図はクリックするか、キーボードでフォーカスしたときに現れるボタンで開き、ダイアログいっぱいまで拡大する。`accTitle` を持つ図はそれをキャプションにする。印刷および PDF 出力にはダイアログを含めない。 |
 | `html.labels`        | map     | （英語） | 個別の UI ラベルを差し替える。未知のキーは拒否する。下記参照。 |
 
@@ -736,6 +738,8 @@ html:
 | `diffPageMoved` | This page moved. Its earlier route: | 移動したページの先頭の注記。以前の route の前 |
 | `diffViewSideBySide` | Side by side | 2 つの版を左右に並べる表示 |
 | `diffViewSideBySideHint` | Show the difference with the two versions side by side | その表示のボタンのツールチップ |
+| `diffViewInline` | Inline | 削除を書き込んだ新しい版を見せる表示 |
+| `diffViewInlineHint` | Show the difference in one document, the deletions and additions in place | その表示のボタンのツールチップ |
 | `diffViewCurrent` | New version | 新しい版を見せる表示 |
 | `diffViewEarlier` | Earlier version | 以前の版を見せる表示 |
 | `diffShowMarks` | Show changes | 片方の版の表示で変更に印を付けるチェック |

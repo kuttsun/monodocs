@@ -63,6 +63,7 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `html.contentWidth` | `860px` |
 | `html.contentWidthToggle` | `true` |
 | `html.contentWidthDefault` | `standard` |
+| `html.diffViewDefault` | `side-by-side` |
 | `html.imageLightbox` | `true` |
 | `html.branding` | `true` |
 | `html.colorScheme` | `light` |
@@ -108,6 +109,8 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `html.labels.diffPageMoved` | English |
 | `html.labels.diffViewSideBySide` | English |
 | `html.labels.diffViewSideBySideHint` | English |
+| `html.labels.diffViewInline` | English |
+| `html.labels.diffViewInlineHint` | English |
 | `html.labels.diffViewCurrent` | English |
 | `html.labels.diffViewEarlier` | English |
 | `html.labels.diffShowMarks` | English |

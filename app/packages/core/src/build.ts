@@ -435,6 +435,16 @@ export async function buildSite(
         ? undefined
         : EARLIER_MERMAID_ID_PREFIX,
     };
+    // The one-column view's copies rename every ID of a deleted SVG, a diagram's included, with a
+    // prefix of their own, which neither starts with the earlier column's nor begins it (7.3.4).
+    const inline = {
+      svgIdPrefix: earlierIdPrefix(
+        ids,
+        prepared.pages.map((page) => page.id),
+        "inline",
+      ),
+      earlierDiagramPrefix: undefined,
+    };
     // Until the markup PDF uses it, the one-column writing is reached by tests alone (7.3.5).
     if (internals.writeInline === true) writeChangedPages(comparison, { next, old }, write);
     diffDocument = writeDiffDocument(
@@ -450,6 +460,7 @@ export async function buildSite(
           to: config.documentMetadata.version,
         },
         write,
+        inline,
         elementIds: ids,
         columns: internals.writeInline !== true,
       },
@@ -528,6 +539,7 @@ export async function buildSite(
             labels: diffDocument.labels,
             sidebars: diffDocument.sidebars,
             earlierSearch: diffDocument.earlierSearch,
+            view: config.diffViewDefault,
           },
         }),
   });

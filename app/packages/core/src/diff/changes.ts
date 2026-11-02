@@ -1,11 +1,11 @@
-import type { Root as HastRoot } from "hast";
+import type { Element, Root as HastRoot } from "hast";
 import { toHtml } from "hast-util-to-html";
 import { visit } from "unist-util-visit";
 import type { DiffLabels } from "../labels.js";
 import type { Page, SidebarNode } from "../types.js";
 import { escapeAttr, escapeHtml } from "../util/html.js";
 import type { PageComparison } from "./compare.js";
-import { earlierColumn, writeColumns, type WriteOptions } from "./write.js";
+import { earlierColumn, INLINE_MARK, writeColumns, type WriteOptions } from "./write.js";
 
 /**
  * The document a difference is read in (roadmap 7.3.4): the list of changes as its first page, each
@@ -150,19 +150,37 @@ function note(lines: string[]): string {
 
 /**
  * A page's two columns, each under the name of its version: the earlier page, or a note, beside
- * the new page, or a note.
+ * the new page, or a note. `inline` holds what the one-column view puts back into the new page.
  */
 function columns(
   heads: { earlier: string; current: string },
   earlier: string,
   current: string,
+  inline = "",
 ): string {
   return (
     `<div class="${COLUMNS_CLASS}">` +
     `<div class="${EARLIER_CLASS}">\n${heads.earlier}${earlier}\n</div>` +
     `<div class="${CURRENT_CLASS}">\n${heads.current}${current}\n</div>` +
-    `</div>`
+    `${inline}</div>`
   );
+}
+
+/**
+ * The deleted blocks the one-column view puts back into the new page (7.3.4), each in a template of
+ * its own, numbered as the comment that marks its place: a template's content is parsed by what
+ * starts it, so a row and a list item each stay what they are, and none of it is in the page's
+ * structure until it is put back.
+ */
+function inlineTemplates(blocks: readonly Element[]): string {
+  return blocks
+    .map(
+      (block, n) =>
+        `<template data-${INLINE_MARK}="${n}">` +
+        toHtml({ type: "root", children: [block] }, { allowDangerousHtml: true }) +
+        `</template>`,
+    )
+    .join("");
 }
 
 /** A column's heading: its version's label, and the version's name when it has one. */
@@ -217,6 +235,8 @@ export function writeDiffDocument(
     labels: DiffLabels;
     names: VersionNames;
     write: WriteOptions;
+    /** How the one-column view's copies of deleted SVGs rename their IDs. */
+    inline: WriteOptions;
     /** Every element ID of the document, which the generated pages' IDs avoid. */
     elementIds: Iterable<string>;
     /** Whether changed pages are written side by side; false when one column was written. */
@@ -269,9 +289,15 @@ export function writeDiffDocument(
       oldTree !== undefined &&
       edits.some((e) => e.op !== "equal")
     ) {
-      const earlier = writeColumns(nextTree, oldTree, edits, context.write);
-      earlierDiagrams += diagramsIn(earlier);
-      page.new.html = columns(heads, html(earlier), html(nextTree));
+      const { earlier, inline } = writeColumns(
+        nextTree,
+        oldTree,
+        edits,
+        context.write,
+        context.inline,
+      );
+      earlierDiagrams += diagramsIn(earlier) + diagramsIn({ type: "root", children: inline });
+      page.new.html = columns(heads, html(earlier), html(nextTree), inlineTemplates(inline));
     }
   }
 

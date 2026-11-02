@@ -418,6 +418,38 @@ describe("the two versions side by side", () => {
     const plain = await readFile(out(), "utf8");
     expect(plain).not.toContain("monodocs-diff");
   });
+
+  it("opens in the view html.diffViewDefault names, the new configuration's alone (v0.19)", async () => {
+    const opens = (html: string) => ({
+      set: /<script>document\.documentElement\.setAttribute\("data-monodocs-diff-view", "(\w+)"\);<\/script>/.exec(
+        html,
+      )?.[1],
+      bar: /data-monodocs-diff-opens="(\w+)"/.exec(html)?.[1],
+      pressed: /data-monodocs-diff-view="(\w+)" aria-pressed="true"/.exec(html)?.[1],
+    });
+    const { html } = await built(
+      { "docs/a.md": "# A\n", "monodocs.config.yml": "html:\n  diffViewDefault: earlier\n" },
+      { "docs/a.md": "# A\n\nNew.\n", "monodocs.config.yml": "html:\n  diffViewDefault: inline\n" },
+    );
+    expect(opens(html)).toEqual({ set: "inline", bar: "inline", pressed: "inline" });
+    // The earlier version's value is checked, not used: html.* is the new configuration's (7.3.2).
+    await write(now, { "monodocs.config.yml": "title: Docs\n" });
+    await buildSite({ outputFile: out(), diff: { dir: "../then", label: "v1" } });
+    expect(opens(await readFile(out(), "utf8"))).toEqual({
+      set: "both",
+      bar: "both",
+      pressed: "both",
+    });
+  });
+
+  it("changes no byte of a build without a difference (v0.19)", async () => {
+    await write(now, { "docs/a.md": "# A\n\nText.\n" });
+    await buildSite({ outputFile: out() });
+    const before = await readFile(out(), "utf8");
+    await write(now, { "monodocs.config.yml": "html:\n  diffViewDefault: inline\n" });
+    await buildSite({ outputFile: out() });
+    expect(await readFile(out(), "utf8")).toBe(before);
+  });
 });
 
 describe("a moved page whose title changed", () => {

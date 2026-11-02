@@ -63,6 +63,7 @@
 | `html.contentWidth` | `860px` |
 | `html.contentWidthToggle` | `true` |
 | `html.contentWidthDefault` | `standard` |
+| `html.diffViewDefault` | `side-by-side` |
 | `html.imageLightbox` | `true` |
 | `html.branding` | `true` |
 | `html.colorScheme` | `light` |
@@ -108,6 +109,8 @@
 | `html.labels.diffPageMoved` | 英語 |
 | `html.labels.diffViewSideBySide` | 英語 |
 | `html.labels.diffViewSideBySideHint` | 英語 |
+| `html.labels.diffViewInline` | 英語 |
+| `html.labels.diffViewInlineHint` | 英語 |
 | `html.labels.diffViewCurrent` | 英語 |
 | `html.labels.diffViewEarlier` | 英語 |
 | `html.labels.diffShowMarks` | 英語 |

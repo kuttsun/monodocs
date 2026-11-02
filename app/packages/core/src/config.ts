@@ -177,6 +177,11 @@ export type ColorScheme = "light" | "dark" | "auto";
  */
 export type ContentWidthDefault = "standard" | "wide";
 /**
+ * The view a document with a difference from an earlier version opens in (roadmap 7.3.4). It has
+ * effect only in a build with a difference, and a reader's choice is not kept.
+ */
+export type DiffViewDefault = "side-by-side" | "inline" | "current" | "earlier";
+/**
  * サイドバーの生成方式。`"folder"`（既定）はフォルダ構造から自動生成し、
  * `"custom"` は `sidebar.items` に書いた構造と順序をそのまま使う。
  */
@@ -487,6 +492,8 @@ export function buildConfigFileSchema() {
           contentWidthToggle: z.boolean().optional(),
           /** Initial content-width toggle state (default: standard). */
           contentWidthDefault: z.enum(["standard", "wide"]).optional(),
+          /** The view a document with a difference opens in (default: side-by-side). */
+          diffViewDefault: z.enum(["side-by-side", "inline", "current", "earlier"]).optional(),
           /** Whether unlinked, non-decorative content images open in a lightbox (default: true). */
           imageLightbox: z.boolean().optional(),
           /** Whether the generated document shows the monodocs branding footer (default: true). */
@@ -722,6 +729,8 @@ export type ResolvedConfig = {
   contentWidthToggle: boolean;
   /** Initial state when the content-width toggle is shown. */
   contentWidthDefault: ContentWidthDefault;
+  /** The view a document with a difference opens in. */
+  diffViewDefault: DiffViewDefault;
   /** Whether the image lightbox is enabled. */
   imageLightbox: boolean;
   /** monodocs のブランディングフッターを表示するか。 */
@@ -1336,6 +1345,7 @@ export async function loadConfig(
     contentWidth: parseContentWidth(fileConfig.html?.contentWidth),
     contentWidthToggle: fileConfig.html?.contentWidthToggle ?? true,
     contentWidthDefault: fileConfig.html?.contentWidthDefault ?? "standard",
+    diffViewDefault: fileConfig.html?.diffViewDefault ?? "side-by-side",
     imageLightbox: fileConfig.html?.imageLightbox ?? true,
     branding: fileConfig.html?.branding ?? true,
     embedImages: fileConfig.assets?.embedImages ?? true,

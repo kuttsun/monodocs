@@ -590,3 +590,43 @@ describe("loadConfig: figures.align", () => {
     await expect(loadConfig({}, dir)).rejects.toThrow(/figures: .*float/);
   });
 });
+
+describe("loadConfig: html.diffViewDefault (v0.19)", () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "monodocs-config-"));
+  });
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  async function writeConfig(yaml: string): Promise<void> {
+    await writeFile(join(dir, "monodocs.config.yml"), yaml);
+  }
+
+  it("opens side by side by default", async () => {
+    expect((await loadConfig({}, dir)).diffViewDefault).toBe("side-by-side");
+  });
+
+  it("takes each of the four views", async () => {
+    for (const value of ["side-by-side", "inline", "current", "earlier"]) {
+      await writeConfig(`html:\n  diffViewDefault: ${value}\n`);
+      expect((await loadConfig({}, dir)).diffViewDefault, value).toBe(value);
+    }
+  });
+
+  it("rejects any other value as config/invalid, naming the four", async () => {
+    // `both` is the script's own name for side by side, and `new` a guess at the new version's.
+    for (const value of ["both", "new", "true"]) {
+      await writeConfig(`html:\n  diffViewDefault: ${value}\n`);
+      await expect(loadConfig({}, dir), value).rejects.toMatchObject({
+        code: "config/invalid",
+        message: expect.stringMatching(
+          /html\.diffViewDefault.*side-by-side.*inline.*current.*earlier/s,
+        ),
+      });
+    }
+  });
+});

@@ -39,6 +39,9 @@ function written(
   return toHtml(next, { allowDangerousHtml: true });
 }
 
+const EARLIER = { svgIdPrefix: "earlier-", earlierDiagramPrefix: "mermaid-earlier-" };
+const INLINE = { svgIdPrefix: "inline-", earlierDiagramPrefix: undefined };
+
 describe("an SVG in deleted content", () => {
   it("renames every ID and every reference to one, so each still resolves inside it", () => {
     const svg =
@@ -218,12 +221,38 @@ describe("two columns", () => {
           ? { op: "delete", old: before[edit.old]! }
           : { op: "insert", new: after[edit.new]! },
     );
-    const earlier = writeColumns(next, old, edits, {
-      svgIdPrefix: "earlier-",
-      earlierDiagramPrefix: "mermaid-earlier-",
-    });
+    const { earlier } = writeColumns(next, old, edits, EARLIER, INLINE);
     const run = '<span class="monodocs-diff-run" data-monodocs-diff-pair="1">Shared text</span>';
     expect(toHtml(earlier)).toContain(run);
     expect(toHtml(next)).toContain(run);
+  });
+
+  it("writes a deleted block into the new tree and takes it back out, a numbered comment in its place", () => {
+    const old = parser.parse("<div><p>Old.</p>Shared <em>text</em> here<p>Gone.</p></div>");
+    const next = parser.parse("<div><p>New.</p>Shared <em>text</em> here</div>");
+    const before = blocksOf(old);
+    const after = blocksOf(next);
+    const edits = diffSequences(before, after, sameBlock).map((edit): BlockEdit =>
+      edit.op === "equal"
+        ? { op: "equal", old: before[edit.old]!, new: after[edit.new]! }
+        : edit.op === "delete"
+          ? { op: "delete", old: before[edit.old]! }
+          : { op: "insert", new: after[edit.new]! },
+    );
+    const { earlier, inline } = writeColumns(next, old, edits, EARLIER, INLINE);
+    // The new tree keeps its own blocks and a comment for each deleted one, after the whole run.
+    expect(toHtml(next)).toBe(
+      '<div><!-- monodocs-diff-inline 0 --><p data-monodocs-diff-block="ins"><ins data-monodocs-diff="">New.</ins></p>' +
+        '<span class="monodocs-diff-run" data-monodocs-diff-pair="1">Shared <em>text</em> here</span>' +
+        "<!-- monodocs-diff-inline 1 --></div>",
+    );
+    expect(inline.map((node) => toHtml(node))).toEqual([
+      '<p data-monodocs-diff-block="del"><del data-monodocs-diff="">Old.</del></p>',
+      '<p data-monodocs-diff-block="del"><del data-monodocs-diff="">Gone.</del></p>',
+    ]);
+    // The earlier column is marked as before, its pair kept.
+    expect(toHtml(earlier)).toContain(
+      '<p data-monodocs-diff-block="del"><del data-monodocs-diff="">Gone.</del></p>',
+    );
   });
 });

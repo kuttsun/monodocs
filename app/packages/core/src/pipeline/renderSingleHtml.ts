@@ -5,6 +5,7 @@ import {
   validatePdfDensity,
   type ColorScheme,
   type ContentWidthDefault,
+  type DiffViewDefault,
   type PdfDensity,
   type PdfPageBreakLevel,
 } from "../config.js";
@@ -84,6 +85,8 @@ export type RenderHtmlInput = {
     sidebars?: { current: SidebarNode[]; earlier: SidebarNode[] };
     /** What search covers in the earlier version's view. */
     earlierSearch?: EarlierSearchPage[];
+    /** The view the document opens in (`html.diffViewDefault`); side by side when absent. */
+    view?: DiffViewDefault;
   };
 };
 
@@ -497,7 +500,7 @@ export async function renderSingleHtmlParts(
           )
           .join("");
   const pagesHtml =
-    (diff === undefined ? "" : diffBar(diff.labels)) +
+    (diff === undefined ? "" : diffBar(diff.labels, diff.view)) +
     input.pages.map((page, index) => renderArticle(page, index, diff?.states)).join("\n");
   const siteData = safeJson({
     title: input.title,

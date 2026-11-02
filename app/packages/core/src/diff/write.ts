@@ -36,6 +36,15 @@ const DIFF_BLOCK = "dataMonodocsDiffBlock";
 /** The attribute the two blocks of an unchanged pair carry, with the same value. */
 const DIFF_PAIR = "dataMonodocsDiffPair";
 
+/**
+ * What the comment marking the place of a deleted block taken out of the new version's column reads,
+ * followed by the block's number (7.3.4): the one-column view puts the block back there.
+ */
+export const INLINE_MARK = "monodocs-diff-inline";
+
+/** The whole text of such a comment, as the script reads it. */
+const INLINE_MARK_TEXT = /^ monodocs-diff-inline \d+ $/;
+
 /** Elements marked by wrapping the element itself: they hold no content to wrap. */
 const WRAP_WHOLE = new Set([
   "img",
@@ -603,6 +612,7 @@ export function writeDifference(
   old: HastRoot,
   edits: readonly BlockEdit[],
   options: WriteOptions,
+  detached?: Element[],
 ): number {
   const newParents = new Parents(next);
   const oldParents = new Parents(old);
@@ -798,7 +808,28 @@ export function writeDifference(
   for (const row of rows) clampSpans(row, newParents);
   for (const list of lists) numberItems(list);
   for (const node of fromEarlier) assertNoEarlierId(node, options);
+  if (detached !== undefined) {
+    // Each node written from the earlier tree into one of the new version's is taken back out, a
+    // comment numbered as it is left in its place; what is written into those nodes goes with them.
+    const written = new Set<Node>(fromEarlier);
+    for (const node of fromEarlier) {
+      const parent = newParents.get(node);
+      if (parent === undefined || written.has(parent as Node)) continue;
+      const at = kids(parent).indexOf(node);
+      if (at === -1) continue;
+      const mark: Node = { type: "comment", value: ` ${INLINE_MARK} ${detached.length} ` };
+      newParents.splice(parent, at, 1, mark);
+      unpair(node);
+      detached.push(node);
+    }
+  }
   return edits.filter((edit) => edit.op === "delete" && edit.old.kind === "diagram").length;
+}
+
+/** Take the pair numbers off what was cloned from the earlier tree: they are its column's. */
+function unpair(node: Element): void {
+  delete node.properties[DIFF_PAIR];
+  for (const child of elements(node)) unpair(child);
 }
 
 /** Where each part of a table stands among the others: its caption, columns, head, body, foot. */
@@ -828,57 +859,82 @@ function inTableOrder(table: Element, at: number, node: Element): number {
   return Math.min(Math.max(at, after), before);
 }
 
+/** A changed page's difference as two columns, and what the one-column view adds (7.3.4). */
+export type Columns = {
+  /** The earlier column: the earlier tree cloned without an address, its deleted blocks marked. */
+  earlier: HastRoot;
+  /**
+   * The deleted blocks written into the new version's column and taken back out of it, each where
+   * the comment numbered as its index in this list stands.
+   */
+  inline: Element[];
+};
+
 /**
  * Write a page's difference as two columns (roadmap 7.3.4): the added blocks marked in the new
  * version's tree, `next`, and the deleted ones in the earlier tree, `old`, which is returned cloned
  * without an address — no ID but an SVG's, renamed, no link, no generated number — to stand beside
  * it. The two blocks of each unchanged pair carry the same `data-monodocs-diff-pair`, by which the
  * script lines them up; text read from a run is given an element of its own to carry it, a
- * `span.monodocs-diff-run`.
+ * `span.monodocs-diff-run`. The deleted blocks are also written into `next` by the rules of
+ * `markup` (7.3.5), with the IDs inside their SVGs renamed by `inline`, and taken back out, so the
+ * new version's column lays out as the new version does; the one-column view puts them back.
  */
 export function writeColumns(
   next: HastRoot,
   old: HastRoot,
   edits: readonly BlockEdit[],
   options: WriteOptions,
-): HastRoot {
+  inline: WriteOptions,
+): Columns {
+  // A comment the page wrote with the words that mark a deleted block's place is dropped, so it never
+  // takes a block (the script reads every such comment in the column).
+  const ownMarks = (parent: Parent) => {
+    parent.children = (parent.children as Node[]).filter(
+      (child) => !(child.type === "comment" && INLINE_MARK_TEXT.test(child.value)),
+    ) as typeof parent.children;
+    for (const child of parent.children) if (child.type === "element") ownMarks(child);
+  };
+  ownMarks(next);
   const newParents = new Parents(next);
   const oldParents = new Parents(old);
-  const newStructure = structure(
-    edits.flatMap((edit) => (edit.op === "delete" ? [] : [edit.new])),
-    newParents,
-  );
-  const oldStructure = structure(
-    edits.flatMap((edit) => (edit.op === "insert" ? [] : [edit.old])),
-    oldParents,
-  );
   let pair = 0;
   for (const edit of edits) {
-    if (edit.op === "equal") {
-      pair++;
-      // Text read from a run has no element of its own: it is given one, in each column.
-      const carrier = (block: Block, parents: Parents): Element => {
-        if (block.run === undefined) return block.node;
-        const parent = parents.get(block.run[0]!)!;
-        const at = kids(parent).indexOf(block.run[0]!);
-        const end = kids(parent).indexOf(block.run.at(-1)!);
-        const run = kids(parent).slice(at, end + 1);
-        const span: Element = {
-          type: "element",
-          tagName: "span",
-          properties: { className: ["monodocs-diff-run"] },
-          children: run,
-        };
-        parents.splice(parent, at, run.length, span);
-        for (const node of run) parents.set(node, span);
-        return span;
+    if (edit.op !== "equal") continue;
+    pair++;
+    // Text read from a run has no element of its own: it is given one, in each column.
+    const carrier = (block: Block, parents: Parents): Element => {
+      if (block.run === undefined) return block.node;
+      const parent = parents.get(block.run[0]!)!;
+      const at = kids(parent).indexOf(block.run[0]!);
+      const end = kids(parent).indexOf(block.run.at(-1)!);
+      const run = kids(parent).slice(at, end + 1);
+      const span: Element = {
+        type: "element",
+        tagName: "span",
+        properties: { className: ["monodocs-diff-run"] },
+        children: run,
       };
-      carrier(edit.old, oldParents).properties[DIFF_PAIR] = String(pair);
-      carrier(edit.new, newParents).properties[DIFF_PAIR] = String(pair);
-    } else if (edit.op === "insert") markInPlace(edit.new, "ins", newParents, newStructure);
-    else markInPlace(edit.old, "del", oldParents, oldStructure);
+      parents.splice(parent, at, run.length, span);
+      for (const node of run) parents.set(node, span);
+      return span;
+    };
+    carrier(edit.old, oldParents).properties[DIFF_PAIR] = String(pair);
+    carrier(edit.new, newParents).properties[DIFF_PAIR] = String(pair);
   }
-  return earlierColumn(old, options);
+  // The additions are marked here, and the deletions cloned from the earlier tree before it is
+  // marked itself.
+  const detached: Element[] = [];
+  writeDifference(next, old, edits, inline, detached);
+  const marked = new Parents(old);
+  const oldStructure = structure(
+    edits.flatMap((edit) => (edit.op === "insert" ? [] : [edit.old])),
+    marked,
+  );
+  for (const edit of edits) {
+    if (edit.op === "delete") markInPlace(edit.old, "del", marked, oldStructure);
+  }
+  return { earlier: earlierColumn(old, options), inline: detached };
 }
 
 /** The earlier tree cloned without an address, checked for any ID that kept one. */
@@ -1004,12 +1060,16 @@ export function elementIds(trees: Iterable<HastRoot>): string[] {
 /**
  * The prefix a deleted SVG's IDs are renamed with: `earlier-`, or `earlier-2-` and on, the first
  * no ID of the new version starts with — its pages' articles' and its elements' — so the same
- * input gives the same prefix.
+ * input gives the same prefix. The one-column view's copies take `inline-` and on the same way.
  */
-export function earlierIdPrefix(ids: readonly string[], pageIds: Iterable<string>): string {
+export function earlierIdPrefix(
+  ids: readonly string[],
+  pageIds: Iterable<string>,
+  base = "earlier",
+): string {
   const all = [...[...pageIds].map((id) => `page-${id}`), ...ids];
   for (let n = 1; ; n++) {
-    const prefix = n === 1 ? "earlier-" : `earlier-${n}-`;
+    const prefix = n === 1 ? `${base}-` : `${base}-${n}-`;
     if (!all.some((id) => id.startsWith(prefix))) return prefix;
   }
 }
