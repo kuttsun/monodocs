@@ -51,6 +51,7 @@ const SOURCE: { [K in keyof Required<ResolvedConfig>]: "earlier" | "new" } = {
   contentWidth: "new",
   contentWidthToggle: "new",
   contentWidthDefault: "new",
+  diffViewDefault: "new",
   imageLightbox: "new",
   branding: "new",
   embedImages: "new",

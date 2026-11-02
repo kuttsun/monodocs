@@ -110,6 +110,13 @@ document, and keeps these:
   reference to one is renamed with a prefix only the earlier column uses (an earlier diagram's
   `mermaid-earlier-N`). The build fails with `internal/unexpected` if any earlier ID survives unrenamed
   (`assertNoEarlierId` in [`diff/write.ts`](../app/packages/core/src/diff/write.ts)).
+- **One column adds no element twice.** The one-column view (v0.19) is the new version's column with each
+  deleted block written back where it stood, cloned by the same rules. The blocks are kept in one `<template>`
+  each, numbered as the comment that marks their place, and the script puts them back only in that view, so in
+  every other view the new column lays out as the new version does and no stylesheet's `:first-child` or
+  `nth-child` sees them. Inside their SVGs every ID, a diagram's `mermaid-earlier-N` included, is renamed with
+  a prefix of their own (`inline-`, or `inline-2-` and on), so no ID is shared with the new version or the
+  earlier column.
 - **Generated pages cannot collide.** The list of changes is at `//changes` and a deleted page at `//deleted`
   followed by its earlier route; no alias yields an empty segment, and a source page that takes one — only a
   path that begins with a backslash, which `toRoute` reads as a separator — is `page/duplicate-route`. Their

@@ -1655,6 +1655,17 @@ difference's own rules hide visually. The `difference` line is measured against 
 rendered once more without the difference: what the file holds beyond it, outside the images, the
 Mermaid runtime, and `siteDataJson`, which keep their own lines.
 
+v0.19 decided the one column this way. Each deleted block written into the new version's column is
+taken back out and kept in a `<template>` of its own after the columns, numbered as the comment
+`monodocs-diff-inline N` left in its place; a template's content is parsed by what starts it, so a
+row or an item stays what it is, and a comment is in no stylesheet's structure. The script puts the
+blocks back when the one column is shown and takes them out when it is left. The bar sets the view
+on the root as the document is read, by a script of its own written before it, so a diagram is never
+drawn in a column the view hides at once and measured as nothing. The one column's SVG prefix is
+`inline-`, or `inline-2-` and on, chosen as the earlier column's is. In the new version's column a
+deleted item of an ordered list shows no marker, and the heading that follows a column's heading
+keeps no top margin, as the page's first heading has none without a difference.
+
 ### 7.3.5 The Difference on Paper (stage 2)
 
 **The presentation is chosen at build time,** because paper has no toggle:
@@ -2386,6 +2397,8 @@ html:
   contentWidthToggle: true
   # Initial toggle state until the reader chooses: standard / wide
   contentWidthDefault: "standard"
+  # The view a document with a difference opens in: side-by-side / inline / current / earlier
+  diffViewDefault: "side-by-side"
   # Enlarge unlinked, non-decorative content images in a dialog
   imageLightbox: true
   # Show the generator name and version at the end of HTML and PDF output

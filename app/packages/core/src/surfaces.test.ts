@@ -212,6 +212,7 @@ function expectedDefaults(
     "html.contentWidth": code(r.contentWidth),
     "html.contentWidthToggle": code(r.contentWidthToggle),
     "html.contentWidthDefault": code(r.contentWidthDefault),
+    "html.diffViewDefault": code(r.diffViewDefault),
     "html.imageLightbox": code(r.imageLightbox),
     "html.branding": code(r.branding),
     "html.colorScheme": code(r.colorScheme),

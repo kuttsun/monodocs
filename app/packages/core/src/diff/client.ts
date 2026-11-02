@@ -1,3 +1,4 @@
+import type { DiffViewDefault } from "../config.js";
 import type { DiffLabels } from "../labels.js";
 import { escapeAttr, escapeHtml } from "../util/html.js";
 
@@ -16,7 +17,8 @@ import { escapeAttr, escapeHtml } from "../util/html.js";
 export const DIFF_MERMAID =
   "#content article:not([hidden]) .mermaid" +
   ':not(:root[data-monodocs-diff-view="current"] .monodocs-diff-earlier .mermaid)' +
-  ':not(:root[data-monodocs-diff-view="earlier"] .monodocs-diff-current .mermaid)';
+  ':not(:root[data-monodocs-diff-view="earlier"] .monodocs-diff-current .mermaid)' +
+  ':not(:root[data-monodocs-diff-view="inline"] .page:not([data-monodocs-diff-page="deleted"]) .monodocs-diff-earlier .mermaid)';
 
 /** The rules a difference adds to `{{style}}`. */
 export const DIFF_STYLE = `
@@ -49,18 +51,18 @@ export const DIFF_STYLE = `
   box-shadow: inset -3px 0 0 var(--monodocs-diff-deleted);
 }
 /* The band's room, only while the band is shown. */
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) p[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) li[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) h1[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) h2[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) h3[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) h4[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) h5[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) h6[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) dt[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) dd[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) div[data-monodocs-diff-block],
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"]) span[data-monodocs-diff-block] {
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) p[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) li[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) h1[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) h2[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) h3[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) h4[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) h5[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) h6[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) dt[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) dd[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) div[data-monodocs-diff-block],
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) span[data-monodocs-diff-block] {
   padding-inline: 0.5rem;
   margin-inline: -0.5rem;
 }
@@ -113,12 +115,15 @@ pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
 }
 /* While the band is shown, a deleted block's reaches towards the line between the columns, and an
    added block's stops at its column's edge. */
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"])
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"])
   .monodocs-diff-earlier
   [data-monodocs-diff-block="del"] { margin-inline-end: -0.75rem; }
-:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"])
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"])
   .monodocs-diff-current
   [data-monodocs-diff-block="ins"] { margin-inline-end: 0; }
+/* The column's heading stands above the page's own first heading, which keeps the margin it has as
+   the page's first block. */
+:is(#content, .monodocs-diff-columns) .monodocs-diff-column-title + :is(h1, h2) { margin-top: 0; }
 .monodocs-diff-column-title {
   position: sticky;
   top: var(--monodocs-diff-bar-height, 3.25rem);
@@ -170,6 +175,32 @@ pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
   .monodocs-diff-columns { grid-template-columns: minmax(0, 1fr); background: none; }
   .monodocs-diff-current { border-top: 1px solid var(--monodocs-diff-line); padding-top: 1.5rem; margin-top: 1.5rem; }
 }
+/* One column: the new version's column with its deleted blocks put back where they stood, at the
+   width a page without a difference has. An added or a deleted page shows its note above its
+   content, which is not marked block by block. */
+:root[data-monodocs-diff-view="inline"] .monodocs-diff-columns {
+  grid-template-columns: minmax(0, 1fr);
+  background: none;
+}
+:root[data-monodocs-diff-view="inline"] .monodocs-diff-column-title { display: none; }
+:root[data-monodocs-diff-view="inline"] .page:not([data-monodocs-diff-page="added"]):not([data-monodocs-diff-page="deleted"]) .monodocs-diff-earlier {
+  display: none;
+}
+:root[data-monodocs-diff-view="inline"] .page[data-monodocs-diff-page="deleted"] .monodocs-diff-current { order: -1; }
+:root[data-monodocs-diff-view="inline"] .monodocs-diff-current {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+}
+/* In one column a deletion's edge stands where an addition's does, at the start of the line. */
+:root[data-monodocs-diff-view="inline"]
+  .monodocs-diff-current
+  [data-monodocs-diff-block="del"]:not(img, svg, object, video, audio, iframe, embed, tr) {
+  box-shadow: inset 3px 0 0 var(--monodocs-diff-deleted);
+  margin-inline-end: 0;
+}
+/* A deleted item takes no number: the new items carry theirs (7.3.5). */
+.monodocs-diff-current ol > li[data-monodocs-diff-block="del"] { list-style-type: none; }
 
 /* A note stands for a change no block carries: an added, deleted, moved, or retitled page. */
 .monodocs-diff-note {
@@ -255,6 +286,7 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
 .monodocs-diff-sidebar { display: none; }
 :root:not([data-monodocs-diff-view]) [data-monodocs-diff-sidebar="both"],
 :root[data-monodocs-diff-view="both"] [data-monodocs-diff-sidebar="both"],
+:root[data-monodocs-diff-view="inline"] [data-monodocs-diff-sidebar="both"],
 :root[data-monodocs-diff-view="current"] [data-monodocs-diff-sidebar="current"],
 :root[data-monodocs-diff-view="earlier"] [data-monodocs-diff-sidebar="earlier"] { display: block; }
 
@@ -330,32 +362,33 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
   user-select: none;
 }
 .monodocs-diff-marks input { margin: 0; accent-color: var(--color-accent, auto); }
-/* Side by side, both columns are always marked: the box is ticked and cannot be changed. */
+/* Side by side and in one column, the changes are always marked: the box is ticked and cannot be
+   changed. */
 .monodocs-diff-marks:has(input:disabled) { opacity: 0.55; cursor: default; }
 
 /* A version's own view with its marks off is that version, plain: no band, no line, no note above
    the page, no badge in the sidebar. The way through the changes still shows where each one is. */
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) [data-monodocs-diff-block],
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) tr[data-monodocs-diff-block] > * {
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) [data-monodocs-diff-block],
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) tr[data-monodocs-diff-block] > * {
   background: none;
   box-shadow: none;
   outline: none;
 }
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) ins[data-monodocs-diff],
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) del[data-monodocs-diff] {
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) ins[data-monodocs-diff],
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) del[data-monodocs-diff] {
   text-decoration: none;
 }
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .page > .monodocs-diff-note,
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .monodocs-diff-mark,
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .monodocs-diff-label {
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) .page > .monodocs-diff-note,
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) .monodocs-diff-mark,
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) .monodocs-diff-label {
   display: none;
 }
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .sidebar-page[data-monodocs-diff-page="deleted"] > a {
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) .sidebar-page[data-monodocs-diff-page="deleted"] > a {
   color: inherit;
   text-decoration: none;
 }
 /* What the plain view takes off a block, the ring of the change the navigation is on puts back. */
-:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]) .monodocs-diff-change-current {
+:root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) .monodocs-diff-change-current {
   outline: 2px solid var(--color-accent, Highlight);
 }
 /* The in-page table of contents of a changed page: both versions' headings, the added and the
@@ -384,10 +417,11 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
   color: var(--monodocs-diff-changed);
   background: color-mix(in srgb, var(--monodocs-diff-changed) 14%, transparent);
 }
-/* The previous and next pages: none side by side, where two versions' orders meet; in a
+/* The previous and next pages: none side by side or in one column, where two versions' orders meet; in a
    version's own view, that version's order, which the script writes. */
 :root:not([data-monodocs-diff-view]) #page-nav,
-:root[data-monodocs-diff-view="both"] #page-nav { display: none; }
+:root[data-monodocs-diff-view="both"] #page-nav,
+:root[data-monodocs-diff-view="inline"] #page-nav { display: none; }
 @media print { .monodocs-diff-bar { display: none; } }
 `;
 
@@ -402,18 +436,36 @@ function arrow(up: boolean): string {
   );
 }
 
-/** The bar prepended to `{{pages}}`: the three views, and the way through the changes. */
-export function diffBar(labels: DiffLabels): string {
-  const view = (name: string, label: string, pressed: boolean, hint?: string) =>
-    `<button type="button" data-monodocs-diff-view="${name}" aria-pressed="${pressed}"` +
+/** Each `html.diffViewDefault` as the view the script and the stylesheet name it. */
+const VIEW_NAMES: Record<DiffViewDefault, string> = {
+  "side-by-side": "both",
+  inline: "inline",
+  current: "current",
+  earlier: "earlier",
+};
+
+/**
+ * The bar prepended to `{{pages}}`: the four views, the one the document opens in pressed, and the
+ * way through the changes.
+ */
+export function diffBar(labels: DiffLabels, opens: DiffViewDefault = "side-by-side"): string {
+  const start = VIEW_NAMES[opens];
+  const view = (name: string, label: string, hint?: string) =>
+    `<button type="button" data-monodocs-diff-view="${name}" aria-pressed="${name === start}"` +
     `${hint === undefined ? "" : ` title="${escapeAttr(hint)}"`}>${escapeHtml(label)}</button>`;
   return (
-    `<div class="monodocs-diff-bar" role="toolbar" aria-label="${escapeAttr(labels.diffChanges)}">` +
+    // The view is set while the document is still read, before anything is drawn: a diagram drawn
+    // in a column the view then hides would be measured as nothing.
+    `<script>document.documentElement.setAttribute("data-monodocs-diff-view", "${start}");</script>` +
+    `<div class="monodocs-diff-bar" role="toolbar" aria-label="${escapeAttr(labels.diffChanges)}"` +
+    ` data-monodocs-diff-opens="${start}">` +
     `<div class="monodocs-diff-views" role="group">` +
-    view("both", labels.diffViewSideBySide, true, labels.diffViewSideBySideHint) +
-    // In the order the columns stand: the earlier version on the left, the new on the right.
-    view("earlier", labels.diffViewEarlier, false) +
-    view("current", labels.diffViewCurrent, false) +
+    // The two views that show the difference, then the two versions in the order the columns
+    // stand: the earlier version on the left, the new on the right.
+    view("both", labels.diffViewSideBySide, labels.diffViewSideBySideHint) +
+    view("inline", labels.diffViewInline, labels.diffViewInlineHint) +
+    view("earlier", labels.diffViewEarlier) +
+    view("current", labels.diffViewCurrent) +
     `</div>` +
     // In a version's own view, whether its changes are marked: plain by default (7.3.4).
     `<label class="monodocs-diff-marks"><input type="checkbox" data-monodocs-diff-marks-toggle checked disabled>` +
@@ -432,7 +484,9 @@ export function diffBar(labels: DiffLabels): string {
  */
 export const DIFF_SCRIPT = `(function () {
   var root = document.documentElement;
-  var view = "both";
+  var bar = document.querySelector(".monodocs-diff-bar");
+  // The view the document opens in (html.diffViewDefault), named by the bar.
+  var view = (bar && bar.getAttribute("data-monodocs-diff-opens")) || "both";
   var padded = [];
   var position = { article: null, index: -1 };
 
@@ -444,7 +498,7 @@ export const DIFF_SCRIPT = `(function () {
   // next pages under a page go.
   function walked() {
     var all = articles();
-    if (view === "both") return all;
+    if (shows()) return all;
     var byRoute = {};
     all.forEach(function (article) { byRoute[article.getAttribute("data-route")] = article; });
     var out = [];
@@ -457,6 +511,68 @@ export const DIFF_SCRIPT = `(function () {
     );
     return out;
   }
+  // Whether the view shows the difference, side by side or in one column, rather than a version.
+  function shows() {
+    return view === "both" || view === "inline";
+  }
+  // The sidebar the view shows: the difference's in both views that show it.
+  function sidebarOf() {
+    return shows() ? "both" : view;
+  }
+  // The column a view hides on a page: in one column, the earlier one, but on an added or a deleted
+  // page, whose note and content stand one above the other.
+  function hiddenColumn(article) {
+    if (view === "current") return ".monodocs-diff-earlier";
+    if (view === "earlier") return ".monodocs-diff-current";
+    if (view !== "inline") return null;
+    var state = article.getAttribute("data-monodocs-diff-page");
+    return state === "added" || state === "deleted" ? null : ".monodocs-diff-earlier";
+  }
+
+  // The deleted blocks the one-column view puts back into the new version's column (7.3.4). Each is
+  // kept in a template and its place marked by a comment, so that in every other view the column
+  // lays out as the new version does; taken from its template once, each is put back or taken out
+  // as the view changes.
+  var inlined = null;
+  function inlineBlocks() {
+    if (inlined) return inlined;
+    inlined = [];
+    Array.prototype.forEach.call(document.querySelectorAll(".monodocs-diff-columns"), function (columns) {
+      var kept = {};
+      Array.prototype.forEach.call(columns.querySelectorAll(":scope > template[data-monodocs-diff-inline]"), function (template) {
+        kept[template.getAttribute("data-monodocs-diff-inline")] = template;
+      });
+      var current = columns.querySelector(":scope > .monodocs-diff-current");
+      if (!current) return;
+      var walker = document.createTreeWalker(current, NodeFilter.SHOW_COMMENT);
+      for (var mark = walker.nextNode(); mark; mark = walker.nextNode()) {
+        var found = /^ monodocs-diff-inline (\\d+) $/.exec(mark.nodeValue);
+        var template = found && kept[found[1]];
+        if (!template) continue;
+        var nodes = Array.prototype.slice.call(document.importNode(template.content, true).childNodes);
+        inlined.push({ mark: mark, nodes: nodes, shown: false });
+      }
+    });
+    return inlined;
+  }
+  function putInline(on) {
+    if (!on && !inlined) return;
+    inlineBlocks().forEach(function (entry) {
+      if (entry.shown === on) return;
+      entry.shown = on;
+      entry.nodes.forEach(function (node) {
+        if (on) entry.mark.parentNode.insertBefore(node, entry.mark);
+        else if (node.parentNode) node.parentNode.removeChild(node);
+      });
+    });
+  }
+  // Whether a node is inside a deleted block the one-column view put back.
+  function inInline(node) {
+    return (inlined || []).some(function (entry) {
+      return entry.nodes.some(function (block) { return block.contains(node); });
+    });
+  }
+
   function shown() {
     var list = articles();
     for (var i = 0; i < list.length; i++) if (!list[i].hidden) return list[i];
@@ -544,7 +660,7 @@ export const DIFF_SCRIPT = `(function () {
   function changes(article) {
     var state = article.getAttribute("data-monodocs-diff-page");
     if (!state) return [];
-    var hidden = view === "current" ? ".monodocs-diff-earlier" : view === "earlier" ? ".monodocs-diff-current" : null;
+    var hidden = hiddenColumn(article);
     var visible = function (node) { return !hidden || !node.closest(hidden); };
     var marks = own(article, "[data-monodocs-diff-block]").filter(visible);
     if (marks.length === 0) {
@@ -673,7 +789,7 @@ export const DIFF_SCRIPT = `(function () {
 
   // The sidebar shown keeps the page on display open in it, as the theme does for its own.
   function reveal() {
-    var link = document.querySelector('[data-monodocs-diff-sidebar="' + view + '"] a.active');
+    var link = document.querySelector('[data-monodocs-diff-sidebar="' + sidebarOf() + '"] a.active');
     for (var node = link && link.parentElement; node; node = node.parentElement) {
       if (node.classList && node.classList.contains("sidebar-dir")) node.classList.remove("collapsed");
     }
@@ -693,13 +809,14 @@ export const DIFF_SCRIPT = `(function () {
   function showBox() {
     var box = document.querySelector("[data-monodocs-diff-marks-toggle]");
     if (!box) return;
-    box.disabled = view === "both";
-    box.checked = view === "both" || marks;
+    box.disabled = shows();
+    box.checked = shows() || marks;
   }
 
   function setView(name) {
     view = name;
     root.setAttribute("data-monodocs-diff-view", name);
+    putInline(name === "inline");
     Array.prototype.forEach.call(document.querySelectorAll("[data-monodocs-diff-view]"), function (button) {
       if (button.tagName === "BUTTON") {
         button.setAttribute("aria-pressed", String(button.getAttribute("data-monodocs-diff-view") === name));
@@ -708,12 +825,10 @@ export const DIFF_SCRIPT = `(function () {
     var old = document.querySelector(".monodocs-diff-change-current");
     if (old) old.classList.remove("monodocs-diff-change-current");
     position = { article: null, index: -1 };
-    // The list of changes is the side-by-side view's: leaving it, a version's view opens its first page.
+    // The list of changes belongs to the views that show the difference: leaving it, a version's
+    // view opens its first page.
     var article = shown();
-    if (name !== "both" && article && article.getAttribute("data-route") === "//changes") {
-      var first = document.querySelector('[data-monodocs-diff-sidebar="' + name + '"] a[data-route]');
-      if (first) location.hash = "#" + encodeURI(first.getAttribute("data-route"));
-    }
+    if (!shows() && article && article.getAttribute("data-route") === "//changes") openFirst();
     showBox();
     reveal();
     searchView();
@@ -735,7 +850,12 @@ export const DIFF_SCRIPT = `(function () {
     return data && typeof data.tocMaxLevel === "number" ? data.tocMaxLevel : 3;
   }
   function marksShown() {
-    return view === "both" || marks;
+    return shows() || marks;
+  }
+  // A version's own view opens on the first page its sidebar lists.
+  function openFirst() {
+    var first = document.querySelector('[data-monodocs-diff-sidebar="' + view + '"] a[data-route]');
+    if (first) location.hash = "#" + encodeURI(first.getAttribute("data-route"));
   }
   function escapeText(text) {
     return text.replace(/[&<>"]/g, function (c) {
@@ -857,7 +977,7 @@ export const DIFF_SCRIPT = `(function () {
   function drawPageNav() {
     var nav = document.getElementById("page-nav");
     var article = shown();
-    if (!nav || !article || view === "both") return;
+    if (!nav || !article || shows()) return;
     var links = Array.prototype.slice
       .call(document.querySelectorAll('[data-monodocs-diff-sidebar="' + view + '"] a[data-route]'))
       .filter(function (link) { return link.getAttribute("data-route") !== "//changes"; });
@@ -893,11 +1013,13 @@ export const DIFF_SCRIPT = `(function () {
     window.__monodocsSearchPages(view === "earlier" && data ? data.diffEarlierPages : null);
   }
 
-  // The search highlight stays in the column of the version searched (22.5).
+  // The search highlight stays in the column of the version searched (22.5), and out of the
+  // deleted blocks the one-column view put back into the new version's.
   function unhighlight() {
     var other = view === "earlier" ? ".monodocs-diff-current" : ".monodocs-diff-earlier";
-    Array.prototype.forEach.call(document.querySelectorAll(other + " mark.search-hit"), function (mark) {
+    Array.prototype.forEach.call(document.querySelectorAll("mark.search-hit"), function (mark) {
       if (!mark.__monodocsSearchHit) return;
+      if (!mark.closest(other) && (view === "earlier" || !inInline(mark))) return;
       var parent = mark.parentNode;
       while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
       parent.removeChild(mark);
@@ -949,6 +1071,15 @@ export const DIFF_SCRIPT = `(function () {
   function start() {
     root.setAttribute("data-monodocs-diff-view", view);
     root.setAttribute("data-monodocs-diff-marks", "off");
+    putInline(view === "inline");
+    // The diagrams among them, which a render that ran before they were put back left out.
+    if (view === "inline" && typeof window.__sdRenderMermaid === "function") {
+      setTimeout(function () { window.__sdRenderMermaid().then(later); }, 0);
+    }
+    // Opening in a version's own view, the document opens on that version's first page rather than
+    // the list of changes, unless the address names another.
+    var route = decodeURI(location.hash.replace(/^#/, ""));
+    if (!shows() && (route === "" || route === "//changes")) openFirst();
     showBox();
     setTimeout(reveal, 0);
     document.addEventListener("change", function (event) {

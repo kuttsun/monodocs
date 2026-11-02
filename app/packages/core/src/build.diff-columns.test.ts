@@ -86,10 +86,11 @@ const EARLIER_START = '<div class="monodocs-diff-earlier">\n';
 const CURRENT_START = '</div><div class="monodocs-diff-current">\n';
 
 /**
- * A page's two columns, each the HTML written for it (after the column's heading), or undefined
- * when the page is not written side by side.
+ * A page's two columns, each the HTML written for it (after the column's heading), and the new
+ * version's column as the one-column view shows it, every deleted block put back from its template
+ * where its comment stands; or undefined when the page is not written side by side.
  */
-function columns(html: string): { earlier: string; current: string } | undefined {
+function columns(html: string): { earlier: string; current: string; inline: string } | undefined {
   const start = html.indexOf(EARLIER_START);
   if (start === -1) return undefined;
   const middle = html.indexOf(CURRENT_START, start);
@@ -99,9 +100,18 @@ function columns(html: string): { earlier: string; current: string } | undefined
     return part.slice(head.length);
   };
   const earlier = body(start + EARLIER_START.length, middle).replace(/\n$/, "");
-  const end = html.lastIndexOf("\n</div></div>");
+  const kept = html.indexOf("<template data-monodocs-diff-inline=", middle);
+  const end = kept === -1 ? html.lastIndexOf("\n</div></div>") : html.lastIndexOf("\n</div>", kept);
   const current = body(middle + CURRENT_START.length, end);
-  return { earlier, current };
+  const templates = new Map(
+    [...html.matchAll(/<template data-monodocs-diff-inline="(\d+)">([\s\S]*?)<\/template>/g)].map(
+      (match) => [match[1]!, match[2]!],
+    ),
+  );
+  const inline = current.replace(/<!-- monodocs-diff-inline (\d+) -->/g, (_, n: string) =>
+    templates.get(n)!,
+  );
+  return { earlier, current, inline };
 }
 
 /** One page's two columns, both versions of it written as `earlier` and `current`. */
@@ -110,7 +120,7 @@ async function onePage(
   earlier: string,
   current: string,
   files: Files = {},
-): Promise<{ earlier: string; current: string }> {
+): Promise<{ earlier: string; current: string; inline: string }> {
   const { pages } = await difference({ [path]: earlier, ...files }, { [path]: current, ...files });
   const route = `/${path.replace(/^docs\//, "").replace(/\.(?:md|adoc)$/, "")}`;
   return columns(pages.get(route)!)!;
@@ -485,6 +495,14 @@ describe("a table with a rowspan, side by side", () => {
         expect(column.match(/rowspan="\d+"/g)).toEqual(['rowspan="2"']);
         expectValid(column);
       }
+      // In one column the deleted row goes after the rows the span covers, so no value leaves its
+      // column.
+      expect(
+        marks(page.inline)
+          .map((m) => m.slice(0, 3))
+          .sort(),
+      ).toEqual(["+tr", "-tr"]);
+      expectValid(page.inline);
     }
   });
 });
@@ -504,6 +522,7 @@ describe("the earlier column is valid HTML", () => {
       ).toBe(true);
       expectValid(page.earlier);
       expectValid(page.current);
+      expectValid(page.inline);
     }
   });
 
@@ -521,6 +540,7 @@ describe("the earlier column is valid HTML", () => {
       /<table[^>]*>\n?<caption[\s\S]*<\/caption>\n?<colgroup>[\s\S]*<\/colgroup>\n?<thead>[\s\S]*<\/thead>\n?<tbody>/,
     );
     expectValid(changed.earlier);
+    expectValid(changed.inline);
     // The whole table deleted.
     const deleted = await onePage(
       "docs/a.adoc",
@@ -530,6 +550,7 @@ describe("the earlier column is valid HTML", () => {
     expect(marks(deleted.earlier)).toEqual(["-caption Old table", "-tr H1 H2", "-tr a b"]);
     expect(deleted.earlier).toMatch(/<caption[\s\S]*<\/caption>\n?<colgroup>[\s\S]*<thead>/);
     expectValid(deleted.earlier);
+    expectValid(deleted.inline);
   });
 
   it("re-parses and keeps every content model, for an anonymous block, a div.title, and a summary", async () => {
@@ -548,6 +569,7 @@ describe("the earlier column is valid HTML", () => {
     expect(page.earlier).toMatch(/<details[^>]*>\n?<summary[^>]*>/);
     expectValid(page.earlier);
     expectValid(page.current);
+    expectValid(page.inline);
   });
 
   it("re-parses and keeps every content model, for a deleted page holding all of them", async () => {
@@ -674,5 +696,118 @@ describe("a document's own struck and inserted text", () => {
     }
     expect(marks(page.earlier)).toEqual(["-p Was r a."]);
     expect(marks(page.current)).toEqual(["+p Now r b."]);
+  });
+});
+
+describe("the one-column view (v0.19)", () => {
+  /** A whole page as the one-column view shows it: every deleted block put back, templates gone. */
+  function expanded(html: string): string {
+    const templates = new Map(
+      [...html.matchAll(/<template data-monodocs-diff-inline="(\d+)">([\s\S]*?)<\/template>/g)].map(
+        (match) => [match[1]!, match[2]!],
+      ),
+    );
+    return html
+      .replace(/<template data-monodocs-diff-inline="\d+">[\s\S]*?<\/template>/g, "")
+      .replace(/<!-- monodocs-diff-inline (\d+) -->/g, (_, n: string) => templates.get(n)!);
+  }
+
+  it("writes each deleted block where it stood, the deletion before the addition, and keeps it out of the new column", async () => {
+    const page = await onePage(
+      "docs/a.md",
+      "# A\n\nKeep.\n\nOld one.\n\nMiddle.\n\nGone.\n",
+      "# A\n\nKeep.\n\nNew one.\n\nMiddle.\n",
+    );
+    expect(marks(page.inline)).toEqual(["-p Old one.", "+p New one.", "-p Gone."]);
+    // The new version's column holds no deleted block, only the comments marking their places.
+    expect(marks(page.current)).toEqual(["+p New one."]);
+    expect(page.current.match(/<!-- monodocs-diff-inline \d+ -->/g)).toHaveLength(2);
+    // Unchanged blocks keep their pair in the new column, and the put-back blocks carry none.
+    expect(page.inline).toMatch(/<p data-monodocs-diff-pair="\d+">Middle\.<\/p>/);
+    expect(page.inline).toMatch(
+      /<p data-monodocs-diff-block="del"><del data-monodocs-diff="">Gone\.<\/del><\/p>/,
+    );
+    expectValid(page.inline);
+  });
+
+  it("keeps a deleted item at its depth and every new item's number in an ordered list", async () => {
+    const page = await onePage(
+      "docs/a.md",
+      "# A\n\n1. one\n2. two\n   - nested\n3. three\n",
+      "# A\n\n1. one\n2. three\n",
+    );
+    expect(marks(page.inline)).toEqual(["-li two nested", "-li nested"]);
+    // The new items carry the numbers they have in the new version; the deleted one takes none.
+    expect(page.inline).toMatch(/<li [^>]*value="1">one<\/li>/);
+    expect(page.inline).toMatch(/<li [^>]*value="2">three<\/li>/);
+    expect(page.inline).toMatch(/<li data-monodocs-diff-block="del">/);
+    expectValid(page.inline);
+  });
+
+  it("keeps references and footnotes agreeing when a footnote is deleted", async () => {
+    const page = await onePage(
+      "docs/a.md",
+      "# A\n\nOne.[^a] Two.[^b]\n\n[^a]: First.\n[^b]: Second.\n",
+      "# A\n\nOne. Two.[^b]\n\n[^b]: Second.\n",
+    );
+    expect(marks(page.inline)).toContain("-li First.");
+    // The new footnote keeps its number in the list and at its reference.
+    expect(page.inline).toMatch(/<li id="[^"]*fn-b"[^>]* value="1">/);
+    expect(page.inline).toMatch(/<sup><a [^>]*data-footnote-ref[^>]*>1<\/a><\/sup>/);
+    expectValid(page.inline);
+  });
+
+  it("clones a deleted admonition around its blocks, with its title, kept out of the new column", async () => {
+    const page = await onePage(
+      "docs/a.adoc",
+      "= A\n\nKeep.\n\nNOTE: Gone.\n\nAfter.\n",
+      "= A\n\nKeep.\n\nAfter.\n",
+    );
+    expect(marks(page.inline)).toEqual(["-div Gone."]);
+    expect(page.inline).toContain(
+      '<div class="admonition admonition-note"><p class="admonition-title">',
+    );
+    expect(page.current).not.toContain("admonition");
+    expectValid(page.inline);
+  });
+
+  it("gives the deleted SVGs of each column IDs of their own, none shared, every reference resolving", async () => {
+    const diagram = (text: string) => `\`\`\`mermaid\ngraph TD\n  A-->${text}\n\`\`\`\n`;
+    const config = { "monodocs.config.yml": "mermaid:\n  mode: pre-render\n" };
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" aria-labelledby="t">' +
+      '<title id="t">Box</title><defs><linearGradient id="g"/></defs>' +
+      '<rect id="r" width="5" height="5" fill="url(#g)"/><use href="#r" x="5"/></svg>';
+    const { pages } = await difference(
+      {
+        "docs/a.md": `# A\n\nKeep.\n\n${diagram("B")}\n## Heading\n`,
+        "docs/b.adoc": "= B\n\nKeep.\n\nimage::b.svg[b,opts=inline]\n",
+        "docs/b.svg": svg,
+        ...config,
+      },
+      {
+        "docs/a.md": "# A\n\nKeep.\n\n## Heading\n\nSee [the heading](#heading).\n",
+        "docs/b.adoc": "= B\n\nKeep.\n",
+        "docs/b.svg": svg,
+        ...config,
+      },
+      { prerender: true },
+    );
+    // Each page put back on its own: templates are numbered within their page.
+    const html = [...pages.values()].map(expanded).join("\n");
+    const all = ids(html);
+    expect(all.filter((id, i) => all.indexOf(id) !== i)).toEqual([]);
+    const inline = ["/a", "/b"].map((route) => {
+      const page = columns(pages.get(route)!)!;
+      const own = ids(page.inline).filter((id) => !ids(page.current).includes(id));
+      expect(own.length, route).toBeGreaterThan(0);
+      return own;
+    });
+    expect(inline.flat().every((id) => id.startsWith("inline-"))).toBe(true);
+    expect(unresolvedInSvgs(html)).toEqual([]);
+    // The heading of the new version keeps the ID its link reaches.
+    const a = columns(pages.get("/a")!)!;
+    const heading = ids(a.current).find((id) => id.endsWith("heading"))!;
+    expect(a.inline).toContain(`href="#${heading}"`);
   });
 });
