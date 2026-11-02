@@ -1731,6 +1731,27 @@ describe.skipIf(!chromium)("the one-column view (v0.19)", () => {
             }));
           };
           expect(await opened(), key).toEqual({ view, pressed: view, route });
+          if (route === "/a") {
+            // Opened on that version's first page in place of the list, Back leaves the document.
+            await page.goBack();
+            expect(await page.evaluate(() => location.href), key).toBe("about:blank");
+            await page.goForward();
+            await sleep(300);
+          }
+          if (view === "earlier") {
+            // Search covers the earlier version from the start: "Old" is its word alone.
+            await page.type("#search-input", "Old");
+            const found = await until(
+              () =>
+                page.evaluate(() =>
+                  [...document.querySelectorAll("#search-results a[data-route]")].map((a) =>
+                    a.getAttribute("data-route"),
+                  ),
+                ),
+              (routes) => routes.length > 0,
+            );
+            expect(found).toEqual(["/a"]);
+          }
           // A view chosen is not kept: the file opens again in the configured one.
           await page.click(`[data-monodocs-diff-view="${view === "both" ? "inline" : "both"}"]`);
           expect(await opened(), key).toEqual({ view, pressed: view, route });
@@ -1841,7 +1862,8 @@ describe.skipIf(!chromium)("the one-column view (v0.19)", () => {
     const { dir, html } = await builtDiff(
       "inline-theme",
       { "docs/a.md": "# A\n\nKeep.\n\n```js\nconst a = 1;\n```\n\n1. one\n2. two\n", ...config },
-      { "docs/a.md": "# A\n\nKeep.\n", ...config },
+      // A comment the page wrote with the build's own words takes no block.
+      { "docs/a.md": "# A\n\n<!-- monodocs-diff-inline 1 -->\n\nKeep.\n", ...config },
     );
     const browser = await sharedBrowser();
     try {

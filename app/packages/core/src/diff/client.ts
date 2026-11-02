@@ -553,6 +553,8 @@ export const DIFF_SCRIPT = `(function () {
         var found = /^ monodocs-diff-inline (\\d+) $/.exec(mark.nodeValue);
         var template = found && kept[found[1]];
         if (!template) continue;
+        // Each block once: a comment a page wrote itself with the same words takes none.
+        delete kept[found[1]];
         var nodes = Array.prototype.slice.call(document.importNode(template.content, true).childNodes);
         inlined.push({ mark: mark, nodes: nodes, shown: false });
       }
@@ -866,10 +868,14 @@ export const DIFF_SCRIPT = `(function () {
   function marksShown() {
     return shows() || marks;
   }
-  // A version's own view opens on the first page its sidebar lists.
-  function openFirst() {
+  // A version's own view opens on the first page its sidebar lists; opening the document there, the
+  // address is replaced rather than added to, so Back does not return to the list of changes.
+  function openFirst(replace) {
     var first = document.querySelector('[data-monodocs-diff-sidebar="' + view + '"] a[data-route]');
-    if (first) location.hash = "#" + encodeURI(first.getAttribute("data-route"));
+    if (!first) return;
+    var hash = "#" + encodeURI(first.getAttribute("data-route"));
+    if (replace) location.replace(hash);
+    else location.hash = hash;
   }
   function escapeText(text) {
     return text.replace(/[&<>"]/g, function (c) {
@@ -1083,6 +1089,9 @@ export const DIFF_SCRIPT = `(function () {
   }
 
   function start() {
+    // The bar is read again here: a template may run this script before the pages are written.
+    bar = document.querySelector(".monodocs-diff-bar");
+    view = (bar && bar.getAttribute("data-monodocs-diff-opens")) || view;
     root.setAttribute("data-monodocs-diff-view", view);
     root.setAttribute("data-monodocs-diff-marks", "off");
     putInline(view === "inline");
@@ -1098,7 +1107,9 @@ export const DIFF_SCRIPT = `(function () {
     } catch (e) {
       // A malformed escape is read as it is written, as the theme reads it.
     }
-    if (!shows() && (route === "" || route === "//changes")) openFirst();
+    if (!shows() && (route === "" || route === "//changes")) openFirst(true);
+    // Search covers the version the view opens in.
+    searchView();
     showBox();
     setTimeout(reveal, 0);
     document.addEventListener("change", function (event) {
@@ -1153,7 +1164,8 @@ export const DIFF_SCRIPT = `(function () {
   // its blocks when it is loaded — the default one gives a code block its toolbar and an image or a
   // diagram its preview — sets them up too; the view takes them back out once it starts.
   if (document.readyState === "loading") {
-    putInline(true);
+    // Only once the pages are written before this script, as the required tokens usually place them.
+    if (bar) putInline(true);
     document.addEventListener("DOMContentLoaded", start);
   } else start();
 })();`;
