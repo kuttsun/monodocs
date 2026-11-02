@@ -1555,37 +1555,37 @@ alone, with every deleted block written into it at its place, marked `del`, by t
 writes one column by (7.3.5), and every added block marked `ins` as side by side. The column is the
 new version's own column, not a third copy: the deleted blocks are written into it once, for every
 view, and the other three views hide them, together with a container cloned to hold deleted blocks
-alone and what was cloned with it — an admonition's title, a table's `colgroup` — which carries a
-class of its own for that, markup that is not frozen. Hidden, they change nothing in the layout:
-hidden with CSS alone, a deleted block would still take `:first-child` from the block after it, or
-shift a row's `nth-child` stripe, so whatever hides them keeps them out of the structure the
-stylesheets read — detached while hidden, for instance, a comment marking their place. The new
-version's view, and the new version's column side by side, lay out as the new version does in a
-build without a difference. So no element of the new version is written twice and no ID is
-duplicated, a heading of the new version keeps the ID its links reach, and what the build adds is a
-second copy of each deleted block, which the size report counts under `difference`. A deleted SVG, a
-pre-rendered diagram's or one an AsciiDoc page writes inline, stands in both columns, and its IDs
-are renamed with a prefix of its own in each, so the two copies share none; the earlier column keeps
-the IDs 7.3.2 and 7.3.5 give it — `mermaid-earlier-N` where those keep it — and the one column
-renames every ID in its copy, those included, with a prefix that neither starts with the earlier
-column's prefix nor begins it, so that no ID it gives is one of the new version's, one the earlier
-column holds, or a page ID the difference allocates (`diff-changes`, `deleted-…`). The deleted blocks are out of the structure
-the stylesheets read from the start, before the script runs and without it, so the HTML as written shows side by side
-without them in the new column. In one column the
-page takes the width a page without a difference takes — `html.contentWidth`, and the reader's
-toggle where there is one — rather than the whole width, and the columns' headings are not shown:
-the bar names the view. An added page shows its note above the new page, and a deleted page its note
-above the earlier page; their content is not marked block by block, since such a page is marked
-once, by its note. A page whose change no block carries is shown as in every view. Side by side,
-only the deleted blocks of the earlier column count and are walked, and in one column only those of
-the new version's; a Mermaid diagram is drawn only where the view shows it, so a deleted diagram is
-drawn in the column the view shows and in no hidden one. The four attributes the "What 1.0 Freezes"
-page lists (12.4) keep their meaning, though a deleted block is now written, and marked, in each
-column it stands in: it carries `data-monodocs-diff-block="del"` and its `<del>` in either, and an
-unchanged pair's two blocks still share `data-monodocs-diff-pair`. Until stage 3, a block with one
-character changed reads in one column as the earlier block struck through followed by the new block
-underlined: blocks are not paired by similarity, for the reason moves are not inferred (7.3.3), and
-stage 3 shows such a pair as one block with the difference inside it (7.3.6).
+alone and what was cloned with it — an admonition's title, a table's `colgroup` — which goes with
+the blocks it holds. Hidden, they change nothing in the layout: hidden with CSS alone, a deleted
+block would still take `:first-child` from the block after it, or shift a row's `nth-child` stripe,
+so whatever hides them keeps them out of the structure the stylesheets read — detached while hidden,
+for instance, a comment marking their place. The new version's view, and the new version's column
+side by side, lay out as the new version does in a build without a difference. So no element of the
+new version is written twice and no ID is duplicated, a heading of the new version keeps the ID its
+links reach, and what the build adds is a second copy of each deleted block, which the size report
+counts under `difference`. A deleted SVG, a pre-rendered diagram's or one an AsciiDoc page writes
+inline, stands in both columns, and its IDs are renamed with a prefix of its own in each, so the two
+copies share none; the earlier column keeps the IDs 7.3.2 and 7.3.5 give it — `mermaid-earlier-N`
+where those keep it — and the one column renames every ID in its copy, those included, with a prefix
+that neither starts with the earlier column's prefix nor begins it, so that no ID it gives is one of
+the new version's, one the earlier column holds, or a page ID the difference allocates
+(`diff-changes`, `deleted-…`). The deleted blocks are out of the structure the stylesheets read in
+the HTML as written, so without the script it shows side by side without them in the new column, and
+once the script starts they stand in it only in the one column. In one column the page takes the
+width a page without a difference takes — `html.contentWidth`, and the reader's toggle where there
+is one — rather than the whole width, and the columns' headings are not shown: the bar names the
+view. An added page shows its note above the new page, and a deleted page its note above the earlier
+page; their content is not marked block by block, since such a page is marked once, by its note. A
+page whose change no block carries is shown as in every view. Side by side, only the deleted blocks
+of the earlier column count and are walked, and in one column only those of the new version's; a
+Mermaid diagram is drawn only where the view shows it, so a deleted diagram is drawn in the column
+the view shows and in no hidden one. The four attributes the "What 1.0 Freezes" page lists (12.4)
+keep their meaning, though a deleted block is now written, and marked, in each column it stands in:
+it carries `data-monodocs-diff-block="del"` and its `<del>` in either, and an unchanged pair's two
+blocks still share `data-monodocs-diff-pair`. Until stage 3, a block with one character changed
+reads in one column as the earlier block struck through followed by the new block underlined: blocks
+are not paired by similarity, for the reason moves are not inferred (7.3.3), and stage 3 shows such
+a pair as one block with the difference inside it (7.3.6).
 
 **The view a document opens in is a key, `html.diffViewDefault`:** `side-by-side`, `inline` (one
 column), `current`, or `earlier`, `side-by-side` by default. What to compare against is an option
@@ -1659,12 +1659,17 @@ v0.19 decided the one column this way. Each deleted block written into the new v
 taken back out and kept in a `<template>` of its own after the columns, numbered as the comment
 `monodocs-diff-inline N` left in its place; a template's content is parsed by what starts it, so a
 row or an item stays what it is, and a comment is in no stylesheet's structure. The script puts the
-blocks back when the one column is shown and takes them out when it is left. The bar sets the view
-on the root as the document is read, by a script of its own written before it, so a diagram is never
-drawn in a column the view hides at once and measured as nothing. The one column's SVG prefix is
-`inline-`, or `inline-2-` and on, chosen as the earlier column's is. In the new version's column a
-deleted item of an ordered list shows no marker, and the heading that follows a column's heading
-keeps no top margin, as the page's first heading has none without a difference.
+blocks back when the one column is shown and takes them out when it is left. It also puts them in
+while the document is still loading and takes them out when the view starts, so that a theme setting
+up its blocks once the document is loaded — the default one gives a code block its toolbar, and an
+image or a diagram its preview — sets these up too; a theme that wraps a block is followed to the
+wrapper when the block is taken out, and a diagram among them is drawn only in the one column. The
+bar sets the view on the root as the document is read, by a script of its own written before it, so
+a diagram is never drawn in a column the view hides at once and measured as nothing. The one
+column's SVG prefix is `inline-`, or `inline-2-` and on, chosen as the earlier column's is. In the
+new version's column a deleted item of an ordered list that keeps new items shows no marker, and the
+heading that follows a column's heading keeps no top margin, as the page's first heading has none
+without a difference.
 
 ### 7.3.5 The Difference on Paper (stage 2)
 

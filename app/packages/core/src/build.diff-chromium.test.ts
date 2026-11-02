@@ -1835,4 +1835,53 @@ describe.skipIf(!chromium)("the one-column view (v0.19)", () => {
       await rm(dir, { recursive: true, force: true });
     }
   }, 60_000);
+
+  it("lets the theme set up the blocks it puts back, takes its ring with it, and starts on any address", async () => {
+    const config = { "monodocs.config.yml": "html:\n  diffViewDefault: inline\n" };
+    const { dir, html } = await builtDiff(
+      "inline-theme",
+      { "docs/a.md": "# A\n\nKeep.\n\n```js\nconst a = 1;\n```\n\n1. one\n2. two\n", ...config },
+      { "docs/a.md": "# A\n\nKeep.\n", ...config },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1300, height: 900 });
+      await page.goto(`${pathToFileURL(html).href}#/a`);
+      await sleep(400);
+      const state = () =>
+        page.evaluate(() => {
+          const column = document.querySelector("article:not([hidden]) .monodocs-diff-current")!;
+          const item = column.querySelector("ol > li");
+          return {
+            toolbar: column.querySelectorAll(".code-block pre").length,
+            deleted: column.querySelectorAll('[data-monodocs-diff-block="del"]').length,
+            numbers: item ? getComputedStyle(item).listStyleType : "none",
+            ring: document.querySelectorAll(".monodocs-diff-change-current").length,
+          };
+        });
+      // The default theme gave the deleted code block its toolbar, and a list deleted whole keeps
+      // its numbers.
+      expect(await state()).toEqual({ toolbar: 1, deleted: 3, numbers: "decimal", ring: 0 });
+      // Leaving the one column takes the block out whole, toolbar and all, and its ring with it.
+      await page.click('[data-monodocs-diff-go="1"]');
+      await sleep(300);
+      expect((await state()).ring).toBe(1);
+      await page.click('.monodocs-diff-views [data-monodocs-diff-view="current"]');
+      expect(await state()).toMatchObject({ toolbar: 0, deleted: 0, ring: 0 });
+      await page.click('.monodocs-diff-views [data-monodocs-diff-view="inline"]');
+      expect(await state()).toEqual({ toolbar: 1, deleted: 3, numbers: "decimal", ring: 0 });
+      // An address with a malformed escape still starts the bar.
+      await page.goto("about:blank");
+      await page.goto(`${pathToFileURL(html).href}#%E0`);
+      await sleep(300);
+      await page.click('.monodocs-diff-views [data-monodocs-diff-view="both"]');
+      expect(
+        await page.evaluate(() => document.documentElement.getAttribute("data-monodocs-diff-view")),
+      ).toBe("both");
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
 });

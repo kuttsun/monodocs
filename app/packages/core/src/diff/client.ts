@@ -18,7 +18,8 @@ export const DIFF_MERMAID =
   "#content article:not([hidden]) .mermaid" +
   ':not(:root[data-monodocs-diff-view="current"] .monodocs-diff-earlier .mermaid)' +
   ':not(:root[data-monodocs-diff-view="earlier"] .monodocs-diff-current .mermaid)' +
-  ':not(:root[data-monodocs-diff-view="inline"] .page:not([data-monodocs-diff-page="deleted"]) .monodocs-diff-earlier .mermaid)';
+  ':not(:root[data-monodocs-diff-view="inline"] .page:not([data-monodocs-diff-page="deleted"]) .monodocs-diff-earlier .mermaid)' +
+  ':not(:root:not([data-monodocs-diff-view="inline"]) .monodocs-diff-current .mermaid[data-monodocs-diff-block="del"])';
 
 /** The rules a difference adds to `{{style}}`. */
 export const DIFF_STYLE = `
@@ -199,8 +200,11 @@ pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
   box-shadow: inset 3px 0 0 var(--monodocs-diff-deleted);
   margin-inline-end: 0;
 }
-/* A deleted item takes no number: the new items carry theirs (7.3.5). */
-.monodocs-diff-current ol > li[data-monodocs-diff-block="del"] { list-style-type: none; }
+/* A deleted item takes no number where new items carry theirs (7.3.5); a list deleted whole keeps
+   its own. */
+.monodocs-diff-current ol:has(> li:not([data-monodocs-diff-block="del"])) > li[data-monodocs-diff-block="del"] {
+  list-style-type: none;
+}
 
 /* A note stands for a change no block carries: an added, deleted, moved, or retitled page. */
 .monodocs-diff-note {
@@ -560,9 +564,18 @@ export const DIFF_SCRIPT = `(function () {
     inlineBlocks().forEach(function (entry) {
       if (entry.shown === on) return;
       entry.shown = on;
-      entry.nodes.forEach(function (node) {
-        if (on) entry.mark.parentNode.insertBefore(node, entry.mark);
-        else if (node.parentNode) node.parentNode.removeChild(node);
+      var parent = entry.mark.parentNode;
+      if (on) {
+        entry.nodes.forEach(function (node) { parent.insertBefore(node, entry.mark); });
+        return;
+      }
+      // What stands where a block was put back: a theme may have wrapped it, as the default one wraps
+      // a code block in its toolbar.
+      entry.nodes = entry.nodes.map(function (node) {
+        var top = node;
+        while (top.parentNode && top.parentNode !== parent) top = top.parentNode;
+        if (top.parentNode === parent) parent.removeChild(top);
+        return top;
       });
     });
   }
@@ -816,14 +829,15 @@ export const DIFF_SCRIPT = `(function () {
   function setView(name) {
     view = name;
     root.setAttribute("data-monodocs-diff-view", name);
+    // The ring comes off before a block it is on is taken out of the document.
+    var old = document.querySelector(".monodocs-diff-change-current");
+    if (old) old.classList.remove("monodocs-diff-change-current");
     putInline(name === "inline");
     Array.prototype.forEach.call(document.querySelectorAll("[data-monodocs-diff-view]"), function (button) {
       if (button.tagName === "BUTTON") {
         button.setAttribute("aria-pressed", String(button.getAttribute("data-monodocs-diff-view") === name));
       }
     });
-    var old = document.querySelector(".monodocs-diff-change-current");
-    if (old) old.classList.remove("monodocs-diff-change-current");
     position = { article: null, index: -1 };
     // The list of changes belongs to the views that show the difference: leaving it, a version's
     // view opens its first page.
@@ -1078,7 +1092,12 @@ export const DIFF_SCRIPT = `(function () {
     }
     // Opening in a version's own view, the document opens on that version's first page rather than
     // the list of changes, unless the address names another.
-    var route = decodeURI(location.hash.replace(/^#/, ""));
+    var route = location.hash.replace(/^#/, "");
+    try {
+      route = decodeURI(route);
+    } catch (e) {
+      // A malformed escape is read as it is written, as the theme reads it.
+    }
     if (!shows() && (route === "" || route === "//changes")) openFirst();
     showBox();
     setTimeout(reveal, 0);
@@ -1130,6 +1149,11 @@ export const DIFF_SCRIPT = `(function () {
     });
     later();
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
-  else start();
+  // The deleted blocks stand in the document while it is still loading, so that a theme setting up
+  // its blocks when it is loaded — the default one gives a code block its toolbar and an image or a
+  // diagram its preview — sets them up too; the view takes them back out once it starts.
+  if (document.readyState === "loading") {
+    putInline(true);
+    document.addEventListener("DOMContentLoaded", start);
+  } else start();
 })();`;
