@@ -1885,6 +1885,15 @@ describe.skipIf(!chromium)("the one-column view (v0.19)", () => {
       // The default theme gave the deleted code block its toolbar, and a list deleted whole keeps
       // its numbers.
       expect(await state()).toEqual({ toolbar: 1, deleted: 3, numbers: "decimal", ring: 0 });
+      // The page's own comment took no block: the deleted list stands after "Keep.", where it stood.
+      expect(
+        await page.evaluate(() => {
+          const column = document.querySelector("article:not([hidden]) .monodocs-diff-current")!;
+          const keep = [...column.querySelectorAll("p")].find((p) => p.textContent === "Keep.")!;
+          const list = column.querySelector("ol")!;
+          return Boolean(keep.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING);
+        }),
+      ).toBe(true);
       // Leaving the one column takes the block out whole, toolbar and all, and its ring with it.
       await page.click('[data-monodocs-diff-go="1"]');
       await sleep(300);

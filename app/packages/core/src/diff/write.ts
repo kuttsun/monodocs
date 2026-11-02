@@ -42,6 +42,9 @@ const DIFF_PAIR = "dataMonodocsDiffPair";
  */
 export const INLINE_MARK = "monodocs-diff-inline";
 
+/** The whole text of such a comment, as the script reads it. */
+const INLINE_MARK_TEXT = /^ monodocs-diff-inline \d+ $/;
+
 /** Elements marked by wrapping the element itself: they hold no content to wrap. */
 const WRAP_WHOLE = new Set([
   "img",
@@ -884,6 +887,15 @@ export function writeColumns(
   options: WriteOptions,
   inline: WriteOptions,
 ): Columns {
+  // A comment the page wrote with the words that mark a deleted block's place is dropped, so it never
+  // takes a block (the script reads every such comment in the column).
+  const ownMarks = (parent: Parent) => {
+    parent.children = (parent.children as Node[]).filter(
+      (child) => !(child.type === "comment" && INLINE_MARK_TEXT.test(child.value)),
+    ) as typeof parent.children;
+    for (const child of parent.children) if (child.type === "element") ownMarks(child);
+  };
+  ownMarks(next);
   const newParents = new Parents(next);
   const oldParents = new Parents(old);
   let pair = 0;

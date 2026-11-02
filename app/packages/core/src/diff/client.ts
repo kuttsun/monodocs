@@ -458,8 +458,8 @@ export function diffBar(labels: DiffLabels, opens: DiffViewDefault = "side-by-si
     `<button type="button" data-monodocs-diff-view="${name}" aria-pressed="${name === start}"` +
     `${hint === undefined ? "" : ` title="${escapeAttr(hint)}"`}>${escapeHtml(label)}</button>`;
   return (
-    // The view is set while the document is still read, before anything is drawn: a diagram drawn
-    // in a column the view then hides would be measured as nothing.
+    // The view is set while the document is still read, before the pages are: a diagram drawn in a
+    // column the view then hides would be measured as nothing.
     `<script>document.documentElement.setAttribute("data-monodocs-diff-view", "${start}");</script>` +
     `<div class="monodocs-diff-bar" role="toolbar" aria-label="${escapeAttr(labels.diffChanges)}"` +
     ` data-monodocs-diff-opens="${start}">` +
