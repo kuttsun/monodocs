@@ -470,16 +470,19 @@ describe("a build without a difference (item 30)", () => {
 
   /**
    * Two documents, one with numbering.sections and one with :sectnums:, lang: ja, and a label of
-   * the author's, built by monodocs 0.17.2 (the release before this feature) with that theme: each
-   * output's size and SHA-256. They are core's `buildSite` without `generatorVersion`, as this test
-   * builds: the CLI passes its version, and the footer then reads `monodocs v0.17.2`, which changes
-   * both. 0.17.2 and this build differ only in the default theme's `app.js`
-   * (measured on `examples/en`, `ja`, and `math`: the search hook alone), so replacing it leaves
-   * every other byte to compare, siteDataJson with its labels among them. A change made on purpose
+   * the author's, built with that theme: each output's size and SHA-256. The first is monodocs
+   * 0.17.2's (the release before this feature). The second is 0.19.0's: the `ja` label table came
+   * back then (roadmap 23.4), and building it at the commit before and at that change showed the
+   * labels, and `lang="en"` on the branding line, as the only difference. They are core's
+   * `buildSite` without `generatorVersion`, as this test builds: the CLI passes its version, and
+   * the footer then reads `monodocs v…`, which changes both. 0.17.2 and the build of this feature
+   * differed only in the default theme's `app.js` (measured on `examples/en`, `ja`, and `math`:
+   * the search hook alone), so replacing it leaves every other byte to compare, siteDataJson with
+   * its labels among them. A change made on purpose
    * to what a build writes changes these measures too: build the fixtures through `buildSite` at the
    * commit before that change and at the change, check that the change is the only difference, and
-   * take the new measures. They are then no longer 0.17.2's: say which release they are in this
-   * comment and in the test's title, and in docs/status.md's v0.18 item that names 0.17.2.
+   * take the new measures. They are then no longer the release's they were: say which release they
+   * are in this comment and in `measuredIn`, and in docs/status.md's v0.18 item that names them.
    */
   const fixtures = [
     {
@@ -487,6 +490,7 @@ describe("a build without a difference (item 30)", () => {
       config: "title: Fixture\nnumbering:\n  sections: 3\n",
       html: "html:\n  theme: ./theme\n",
       guide: guide(""),
+      measuredIn: "0.17.2",
       before: {
         size: 60061,
         sha256: "fb32d545bc7df941e3f6cc6c021a49d515df9d236a69429b989276a5ae8c0558",
@@ -497,15 +501,16 @@ describe("a build without a difference (item 30)", () => {
       config: "title: Fixture\nlang: ja\n",
       html: "html:\n  theme: ./theme\n  labels:\n    searchPlaceholder: 検索\n",
       guide: guide(":sectnums:\n"),
+      measuredIn: "0.19.0",
       before: {
-        size: 59200,
-        sha256: "b37cb68198922d2ae2aa79bd0db1f8150becca13b7ba6f91b6c50386d5e53d1d",
+        size: 59555,
+        sha256: "f0296007258212cda72f31aad856c0540446247fbf0a1d6db3c8083960ad408e",
       },
     },
   ];
 
   for (const fixture of fixtures) {
-    it(`gives the bytes 0.17.2 gave but for the default theme's app.js (${fixture.name})`, async () => {
+    it(`gives the bytes ${fixture.measuredIn} gave but for the default theme's app.js (${fixture.name})`, async () => {
       await write(now, {
         ...pages,
         "docs/02-guide.adoc": fixture.guide,
@@ -535,7 +540,7 @@ describe("a build without a difference (item 30)", () => {
     });
   }
 
-  it("writes the labels 0.17.2 wrote in siteDataJson", async () => {
+  it("writes the labels 0.19.0 wrote in siteDataJson", async () => {
     await write(now, {
       "docs/a.md": "# A\n",
       "monodocs.config.yml": "lang: ja\nhtml:\n  labels:\n    searchPlaceholder: 検索\n",
@@ -543,40 +548,41 @@ describe("a build without a difference (item 30)", () => {
     await buildSite({ outputFile: out() });
     const html = await readFile(out(), "utf8");
     const json = /window\.__MONODOCS_DATA__\s*=\s*(\{[\s\S]*?\});?\s*<\/script>/.exec(html)![1]!;
-    // As the 0.17.2 output of the second fixture above has them, in that order.
+    // As the 0.19.0 output of the second fixture above has them, in that order: the `ja` table,
+    // `generatedBy` English in it, and the author's label.
     const labels = (JSON.parse(json) as { labels: Record<string, string> }).labels;
     expect(Object.entries(labels)).toEqual(
       Object.entries({
-        openSidebar: "Open sidebar",
-        closeSidebar: "Close sidebar",
+        openSidebar: "サイドバーを開く",
+        closeSidebar: "サイドバーを閉じる",
         searchPlaceholder: "検索",
-        searchLabel: "Search documents",
-        clearSearch: "Clear search",
-        searchResults: "Search results",
-        noResults: "No results",
-        contentWidthToggle: "Toggle content width",
-        useWideContent: "Use wide content",
-        useStandardContent: "Use standard content width",
-        darkModeToggle: "Toggle dark mode",
-        tocLabel: "Table of contents",
-        tocTitle: "On this page",
-        pageNavLabel: "Page navigation",
-        prev: "← Prev",
-        next: "Next →",
-        wrapToggle: "Toggle word wrap",
-        copyCode: "Copy code",
-        copy: "Copy",
-        copied: "Copied!",
-        copyFailed: "Copy failed",
-        openImagePreview: "Open image preview",
-        imagePreview: "Image preview",
-        closeImagePreview: "Close image preview",
-        actualSize: "Actual size",
-        fitToScreen: "Fit to screen",
+        searchLabel: "ドキュメントを検索",
+        clearSearch: "検索語を消去",
+        searchResults: "検索結果",
+        noResults: "該当なし",
+        contentWidthToggle: "本文幅を切り替え",
+        useWideContent: "本文を広く表示",
+        useStandardContent: "本文を標準の幅で表示",
+        darkModeToggle: "ダークモードを切り替え",
+        tocLabel: "目次",
+        tocTitle: "このページの内容",
+        pageNavLabel: "ページ移動",
+        prev: "← 前へ",
+        next: "次へ →",
+        wrapToggle: "折り返しを切り替え",
+        copyCode: "コードをコピー",
+        copy: "コピー",
+        copied: "コピーしました",
+        copyFailed: "コピーできませんでした",
+        openImagePreview: "画像を拡大表示",
+        imagePreview: "画像プレビュー",
+        closeImagePreview: "画像プレビューを閉じる",
+        actualSize: "実寸で表示",
+        fitToScreen: "画面に合わせる",
         generatedBy: "Generated by",
-        version: "Version",
-        cover: "Cover",
-        contents: "Contents",
+        version: "バージョン",
+        cover: "表紙",
+        contents: "目次",
       }),
     );
   });

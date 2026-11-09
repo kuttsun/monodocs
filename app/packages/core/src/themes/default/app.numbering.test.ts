@@ -46,7 +46,7 @@ async function mountClient(pages: ClientPage[]): Promise<void> {
     `<aside id="toc"><nav id="toc-nav"></nav></aside>` +
     `</div>`;
   (window as unknown as { __MONODOCS_DATA__: unknown }).__MONODOCS_DATA__ = {
-    labels: resolveLabels(),
+    labels: resolveLabels("en").labels,
     initialRoute: pages[0]?.route,
     pages,
   };

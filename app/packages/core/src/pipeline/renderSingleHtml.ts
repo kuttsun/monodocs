@@ -32,11 +32,16 @@ export type RenderHtmlInput = {
   /** 文書の言語（BCP 47）。`{{lang}}` を持つテンプレートの `<html lang>` に入る。未指定は "en"。 */
   lang?: string;
   /**
-   * 解決済みの UI ラベル。解決（英語の表への `html.labels` の適用）は呼び出し側で 1 度だけ
-   * 行い、ここへは結果を渡す。未指定のときは英語の表を使う（この境界を直接呼ぶ
+   * 解決済みの UI ラベル。解決（表の選択と `html.labels` の適用）は呼び出し側で 1 度だけ
+   * 行い、ここへは結果を渡す。未指定のときは `lang` から解決する（この境界を直接呼ぶ
    * 利用者が、ラベルを組み立てずに済むようにするため）。
    */
   labels?: Labels;
+  /**
+   * Whether the branding line is marked `lang="en"`: `generatorInEnglish` of the resolution that
+   * gave `labels` (roadmap 23.4). Read only with `labels`; without them it comes from `lang`.
+   */
+  generatorInEnglish?: boolean;
   /** ドキュメントを開いたときの初期配色（未指定は "light"）。読者の選択があればそちらが優先。 */
   colorScheme?: ColorScheme;
   /** 本文領域の最大幅。`full` / `none` の場合は利用可能な横幅いっぱいに広げる。 */
@@ -474,7 +479,9 @@ export async function renderSingleHtmlParts(
   const colorScheme: ColorScheme = input.colorScheme ?? "light";
   const contentWidthDefault: ContentWidthDefault = input.contentWidthDefault ?? "standard";
   const lang = input.lang ?? DEFAULT_LANG;
-  const labels = input.labels ?? resolveLabels();
+  const resolved = input.labels === undefined ? resolveLabels(lang) : undefined;
+  const labels = input.labels ?? resolved!.labels;
+  const generatorInEnglish = resolved?.generatorInEnglish ?? input.generatorInEnglish === true;
   const contentWidthState = contentWidthToggleState(contentWidthDefault, labels);
   const generatorVersion = input.generatorVersion?.trim();
   // The document's own line, composed here so that the HTML footer and the PDF's Subject agree.
@@ -553,6 +560,8 @@ export async function renderSingleHtmlParts(
     // `<html lang="…">` を直接書いたカスタムテンプレートは書いたものをそのまま保つ。
     lang: escapeAttr(lang),
     htmlAttrs: rootThemeAttr(colorScheme),
+    // 任意のトークン。英語のまま残る `generatedBy` の行を、日本語の文書の中で英語として読ませる。
+    generatorAttrs: generatorInEnglish ? ' lang="en"' : "",
     bodyAttrs: bodyContentWidthAttr(input.contentWidthToggle, contentWidthDefault),
     contentWidthTogglePressed: contentWidthState.pressed,
     // これもラベル由来なので labelTokens と同じ扱いにする。ここだけ生のまま渡すと、

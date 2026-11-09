@@ -257,12 +257,11 @@ describe("what the build hands the PDF generator", () => {
     expect(await tocOption("")).toBeUndefined();
   });
 
+  // Checked here rather than on the sheet: the test's text extraction does not decode the CJK
+  // font Chromium selects under lang: ja.
   it("titles the table from the document's labels", async () => {
     expect((await tocOption("pdf:\n  toc:\n    enabled: true\n"))?.title).toBe("Contents");
-    // lang selects no labels (23.4).
-    expect((await tocOption("lang: ja\npdf:\n  toc:\n    enabled: true\n"))?.title).toBe(
-      "Contents",
-    );
+    expect((await tocOption("lang: ja\npdf:\n  toc:\n    enabled: true\n"))?.title).toBe("目次");
     expect(
       (await tocOption("html:\n  labels:\n    contents: Index\npdf:\n  toc:\n    enabled: true\n"))
         ?.title,

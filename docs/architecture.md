@@ -184,7 +184,7 @@ precedence over automatic system-browser discovery.
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
 {{contentWidthTogglePressed}} {{contentWidthToggleTitle}}
 {{#contentWidthToggle}}...{{/contentWidthToggle}}
-{{generatorVersion}}
+{{generatorVersion}} {{generatorAttrs}}
 {{#branding}}...{{/branding}} {{#generatorVersion}}...{{/generatorVersion}}
 ```
 
@@ -324,12 +324,15 @@ file may not reference anything external (a webfont would have to be inlined int
 embeds no webfont and uses system font stacks.
 Treat the difference from the site as a decision, not as an inconsistency to be fixed.
 
-Theme UI labels are English whatever the document's `lang`, which describes the pages only (0.17.2). Core is
-the source of truth: it applies `html.labels` over the English table and publishes the result in
-`siteDataJson`. `app.js` consumes that rather than holding its own copy, so the table and an override cannot
-drift apart; static labels come from tokens in `template.html`. From v0.10 to 0.17.1 `lang` also selected a
-label table, with one shipped for `ja`; see [roadmap.md](roadmap.md) 23.4 for both reversals and what a custom
-theme is guaranteed.
+Theme UI labels follow the document's `lang`. Core is the source of truth: it resolves the table for `lang`,
+applies `html.labels` over it, and publishes the result in `siteDataJson`. `app.js` consumes that rather than
+holding its own copy, so a table and an override cannot drift apart; static labels come from tokens in
+`template.html`. Tables ship for `en` and `ja`; a `lang` with no shipped table falls back to English labels
+with `lang/no-label-table`. The `ja` table keeps `generatedBy` English, because a label holds no placeholder
+and the link the template writes after it fixes the word order; where it is in use and `html.labels` does
+not set `generatedBy`, the optional `{{generatorAttrs}}` token marks that line `lang="en"`. 0.17.2 to 0.18
+showed English labels whatever `lang` said; see [roadmap.md](roadmap.md) 23.4 for the reversals and what a
+custom theme is guaranteed.
 
 > [!WARNING]
 > TypeScript compilation does not copy `.html`, `.css`, or `.js` theme assets. The core build must run

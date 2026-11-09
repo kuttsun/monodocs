@@ -1,11 +1,13 @@
+import { type Diagnostic, warn } from "./diagnostics.js";
+import { t } from "./messages.js";
 /**
  * 生成した文書の UI ラベル（chrome）。
  *
  * 文書には一致する理由のない 2 つの言語がある。ページ本文の言語と、monodocs がその周りに
- * 被せる UI の言語である。`lang` は前者だけを表し、UI のラベルは常に英語の表から始まる
- * （0.17.2 で言語ごとの表をやめた。roadmap 23.4）。`html.labels` がその上に個別のエントリを
- * 差し替え、英語以外の UI はここで入れる。解決は core だけで行い、結果を `siteDataJson` に
- * 載せる。テーマ側（app.js）が自前の文字列を持つと、表と上書きが 2 箇所で食い違うため。
+ * 被せる UI の言語である。`lang` が後者の表を選び、`html.labels` がその上に個別のエントリを
+ * 差し替える（0.17.2 で表をやめ、0.19.0 で `generatedBy` を英語のまま残して表を戻した。roadmap 23.4）。
+ * 解決は core だけで行い、結果を `siteDataJson` に載せる。テーマ側（app.js）が自前の文字列を
+ * 持つと、表と上書きが 2 箇所で食い違うため。
  */
 
 /**
@@ -89,7 +91,7 @@ export type DiffLabels = Record<DiffLabelKey, string>;
 /** Every label `html.labels` accepts. */
 export type LabelOverrides = Partial<Labels & DiffLabels>;
 
-const DEFAULT_LABELS: Labels = {
+const EN: Labels = {
   openSidebar: "Open sidebar",
   closeSidebar: "Close sidebar",
   searchPlaceholder: "Search…",
@@ -122,7 +124,7 @@ const DEFAULT_LABELS: Labels = {
   contents: "Contents",
 };
 
-const DEFAULT_DIFF_LABELS: DiffLabels = {
+const EN_DIFF: DiffLabels = {
   diffChanges: "Changes",
   diffAddedPages: "Added pages",
   diffMovedPages: "Moved pages",
@@ -148,6 +150,79 @@ const DEFAULT_DIFF_LABELS: DiffLabels = {
   diffMoved: "Moved",
   diffTitleChanged: "The title changed. Its earlier title:",
   diffMergedInto: "Merged into:",
+};
+
+const JA: Labels = {
+  openSidebar: "サイドバーを開く",
+  closeSidebar: "サイドバーを閉じる",
+  searchPlaceholder: "検索…",
+  searchLabel: "ドキュメントを検索",
+  clearSearch: "検索語を消去",
+  searchResults: "検索結果",
+  noResults: "該当なし",
+  contentWidthToggle: "本文幅を切り替え",
+  useWideContent: "本文を広く表示",
+  useStandardContent: "本文を標準の幅で表示",
+  darkModeToggle: "ダークモードを切り替え",
+  tocLabel: "目次",
+  tocTitle: "このページの内容",
+  pageNavLabel: "ページ移動",
+  prev: "← 前へ",
+  next: "次へ →",
+  wrapToggle: "折り返しを切り替え",
+  copyCode: "コードをコピー",
+  copy: "コピー",
+  copied: "コピーしました",
+  copyFailed: "コピーできませんでした",
+  openImagePreview: "画像を拡大表示",
+  imagePreview: "画像プレビュー",
+  closeImagePreview: "画像プレビューを閉じる",
+  actualSize: "実寸で表示",
+  fitToScreen: "画面に合わせる",
+  // 英語のまま。後ろにテンプレートが `monodocs v0.19.0` のリンクを書くので、語順の決まった
+  // 日本語の句にできない（#224。プレースホルダを持たないラベルでは後ろに続くものを動かせない）。
+  generatedBy: EN.generatedBy,
+  version: "バージョン",
+  cover: "表紙",
+  contents: "目次",
+};
+
+const JA_DIFF: DiffLabels = {
+  diffChanges: "変更点",
+  diffAddedPages: "追加されたページ",
+  diffMovedPages: "移動したページ",
+  diffChangedPages: "変更されたページ",
+  diffDeletedPages: "削除されたページ",
+  diffUnchangedPages: "変更のないページ:",
+  diffNoChanges: "変更はありません。",
+  diffPageAdded: "このページは追加されました。",
+  diffPageDeleted: "このページは削除されました。",
+  diffPageMoved: "このページは移動しました。以前のルート:",
+  diffViewSideBySide: "左右に並べる",
+  diffViewSideBySideHint: "2 つの版を左右に並べて差分を表示",
+  diffViewInline: "1 列",
+  diffViewInlineHint: "削除と追加をもとの位置に書き込み、1 つの文書として差分を表示",
+  diffViewCurrent: "新版",
+  diffViewEarlier: "旧版",
+  diffShowMarks: "変更箇所を表示",
+  diffPrevious: "前の変更",
+  diffNext: "次の変更",
+  diffAdded: "追加",
+  diffDeleted: "削除",
+  diffChanged: "変更",
+  diffMoved: "移動",
+  diffTitleChanged: "タイトルが変わりました。以前のタイトル:",
+  diffMergedInto: "統合先:",
+};
+
+/**
+ * 同梱する表。**en と ja だけ**にとどめる。中途半端に訳した言語を core に同梱するのは、
+ * その言語の読者にとって何も無いより悪く、しかも保守するのは話者ではなく維持者になる。
+ * 他の言語は `html.labels` で入れられる。
+ */
+const TABLES: Record<string, { labels: Labels; diff: DiffLabels }> = {
+  en: { labels: EN, diff: EN_DIFF },
+  ja: { labels: JA, diff: JA_DIFF },
 };
 
 export const DEFAULT_LANG = "en";
@@ -213,25 +288,77 @@ export function isValidLanguageTag(tag: string): boolean {
 }
 
 /**
- * 英語の表に `overrides` を重ねる。`lang` は見ない。表を選ばないので、どのタグでも警告は出ない。
+ * タグから同梱の表を探すためのキー（主言語サブタグを小文字化したもの）。
+ * `en-GB` / `ja-JP` / `JA` はいずれも表に行き着く。照合先の無いタグ
+ * （私用のみのタグ、grandfathered タグ）は undefined を返す。
  */
-export function resolveLabels(overrides: LabelOverrides = {}): Labels {
+function primarySubtag(tag: string): string | undefined {
+  const first = tag.split("-")[0]?.toLowerCase();
+  if (first === undefined || first === "" || first === "x") return undefined;
+  // 主言語サブタグは 2〜3 文字（または 4〜8 文字の登録済み言語）。数字を含むものは
+  // 主言語サブタグではない。
+  return /^[a-z]{2,8}$/.test(first) ? first : undefined;
+}
+
+/** The shipped table `lang` matches, or undefined when none does. */
+function tableFor(lang: string) {
+  const key = primarySubtag(lang);
+  return key === undefined ? undefined : TABLES[key];
+}
+
+export type ResolvedLabels = {
+  labels: Labels;
+  /** The finding reported when no shipped table matched and English was used instead. */
+  warning?: Diagnostic;
+  /**
+   * Whether the `generatedBy` label is the English one inside a table of another language, so the
+   * line it starts is marked `lang="en"` (roadmap 23.4). False under `en`, under the English
+   * fallback, where the whole chrome is English, and when `html.labels` sets it.
+   */
+  generatorInEnglish: boolean;
+};
+
+/**
+ * `lang` に対する表を選び、`overrides` をその上に重ねる。
+ *
+ * 同梱の表が無いタグは拒否せず en の表へ落として警告する。拒否すると、フランス語の文書が
+ * ビルドを通すためだけに自分を英語だと偽ることになり、上書きできる英語ラベルより読者にとって
+ * 悪い。警告はビルド 1 回につき 1 度、タグ名を挙げて出す（呼び出し側が 1 回だけ呼ぶ）。
+ * 差分のラベルの表は {@link resolveDiffLabels} が同じ照合で選び、警告はこちらだけが出す。
+ */
+export function resolveLabels(lang: string, overrides: LabelOverrides = {}): ResolvedLabels {
+  const table = tableFor(lang);
   // Only the main table's keys: a difference's labels never reach a build without one.
   const own = Object.fromEntries(
     Object.entries(overrides).filter(([name]) => (LABEL_KEYS as readonly string[]).includes(name)),
   ) as Partial<Labels>;
-  return { ...DEFAULT_LABELS, ...own };
+  const labels = { ...(table?.labels ?? EN), ...own };
+  const generatorInEnglish =
+    table !== undefined && table.labels !== EN && own.generatedBy === undefined;
+  if (table !== undefined) return { labels, generatorInEnglish };
+  return {
+    labels,
+    generatorInEnglish,
+    warning: warn(
+      "lang/no-label-table",
+      t("labels.noTable", {
+        lang,
+        fallback: DEFAULT_LANG,
+        shipped: Object.keys(TABLES).join(", "),
+      }),
+    ),
+  };
 }
 
 /**
- * A difference's labels: the English table with `overrides` laid over it. Like {@link resolveLabels},
- * it does not look at `lang` (0.17.2, roadmap 23.4).
+ * A difference's labels: the table `lang` selects, as {@link resolveLabels} selects it, with
+ * `overrides` laid over it. It reports nothing; a tag no table matches is reported once, there.
  */
-export function resolveDiffLabels(overrides: LabelOverrides = {}): DiffLabels {
+export function resolveDiffLabels(lang: string, overrides: LabelOverrides = {}): DiffLabels {
   const own = Object.fromEntries(
     Object.entries(overrides).filter(([name]) =>
       (DIFF_LABEL_KEYS as readonly string[]).includes(name),
     ),
   ) as Partial<DiffLabels>;
-  return { ...DEFAULT_DIFF_LABELS, ...own };
+  return { ...(tableFor(lang)?.diff ?? EN_DIFF), ...own };
 }

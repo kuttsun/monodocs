@@ -452,7 +452,7 @@ export async function buildSite(
       { pages: prepared.pages, sidebar: prepared.sidebar, trees: next },
       { pages: earlierSite.pages, sidebar: earlierSite.sidebar, trees: old },
       {
-        labels: resolveDiffLabels(config.labelOverrides),
+        labels: resolveDiffLabels(config.lang, config.labelOverrides),
         // The earlier version is named by its own `document.version`, else by the argument that
         // named it, as written.
         names: {
@@ -503,7 +503,10 @@ export async function buildSite(
       )
     : "";
 
-  const labels = resolveLabels(config.labelOverrides);
+  // ラベルの解決はここで 1 度だけ行う。同梱の表が無いタグの警告も、ビルド 1 回につき 1 度になる。
+  const resolvedLabels = resolveLabels(config.lang, config.labelOverrides);
+  if (resolvedLabels.warning !== undefined) warnings.push(resolvedLabels.warning);
+  const labels = resolvedLabels.labels;
 
   const renderInput = {
     title: config.title,
@@ -512,6 +515,7 @@ export async function buildSite(
     sidebar,
     lang: config.lang,
     labels,
+    generatorInEnglish: resolvedLabels.generatorInEnglish,
     theme: config.theme,
     colorScheme: config.colorScheme,
     contentWidth: config.contentWidth,

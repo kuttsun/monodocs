@@ -541,7 +541,7 @@ describe("pages and the sidebar carry their state", () => {
 });
 
 describe("labels", () => {
-  it("are English under lang: ja, follow html.labels, and join siteDataJson only with a difference", async () => {
+  it("come from the ja table under lang: ja, follow html.labels, and join siteDataJson only with a difference", async () => {
     const config = {
       "monodocs.config.yml": "lang: ja\nhtml:\n  labels:\n    diffChanges: 改訂の一覧\n",
     };
@@ -550,11 +550,13 @@ describe("labels", () => {
       { ...config, "docs/a.md": "# A\n\nNew.\n" },
     );
     expect(article(html, "//changes")).toContain(">改訂の一覧 v1</h1>");
-    // lang selects no labels (0.17.2, roadmap 23.4): what html.labels leaves is English.
-    expect(html).toContain("Changed pages");
+    // lang selects the table (0.19.0, roadmap 23.4): what html.labels leaves is the ja table's.
+    expect(html).toContain("変更されたページ");
+    expect(html).not.toContain("Changed pages");
     expect(siteData(html).labels).toMatchObject({
       diffChanges: "改訂の一覧",
-      diffNext: "Next change",
+      diffNext: "次の変更",
+      diffViewInline: "1 列",
     });
 
     // Without a difference, the same configuration writes what a build without the label writes.
@@ -566,6 +568,19 @@ describe("labels", () => {
     expect(Object.keys(siteData(withLabel).labels).some((key) => key.startsWith("diff"))).toBe(
       false,
     );
+  });
+
+  it("are English under a tag no table matches", async () => {
+    const config = { "monodocs.config.yml": "lang: fr\n" };
+    const { html } = await built(
+      { ...config, "docs/a.md": "# A\n" },
+      { ...config, "docs/a.md": "# A\n\nNew.\n" },
+    );
+    expect(html).toContain("Changed pages");
+    expect(siteData(html).labels).toMatchObject({
+      diffChanges: "Changes",
+      diffNext: "Next change",
+    });
   });
 
   it("refuses a key no table has, as before", async () => {

@@ -108,7 +108,7 @@ pre-render の次の不変条件を守ってください。
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
 {{contentWidthTogglePressed}} {{contentWidthToggleTitle}}
 {{#contentWidthToggle}}...{{/contentWidthToggle}}
-{{generatorVersion}}
+{{generatorVersion}} {{generatorAttrs}}
 {{#branding}}...{{/branding}} {{#generatorVersion}}...{{/generatorVersion}}
 ```
 
@@ -165,7 +165,7 @@ pre-render の次の不変条件を守ってください。
 
 既定テーマは意図的に中立で、[`site/`](../../site/) のドキュメントサイトのデザインには揃えません。サイトは monodocs を売り込むものですが、出力は文書を書いた人を表すものだからです。中立であることは、このディレクトリを差し替える `html.theme` の出発点としても適切です。同じ理由に加え、単一ファイルは外部を参照できない（webfont は全成果物へインライン埋め込みするしかない）ため、テーマは webfont を埋め込まず、システムフォントスタックを使います。サイトとの違いは、直すべき不整合ではなく決定として扱ってください。
 
-テーマ UI ラベルは、文書の `lang` によらず英語です。`lang` はページの言語だけを表します（0.17.2）。正本は core です。core が英語の表の上に `html.labels` を適用し、結果を `siteDataJson` に公開します。`app.js` は文字列の写しを持たずそれを消費するので、表と上書きがずれません。静的ラベルは `template.html` のトークンから取ります。v0.10 から 0.17.1 までは `lang` がラベルの表も選び、`ja` の表を同梱していました。2 度の方針転換の理由とカスタムテーマに対する保証の範囲は [roadmap.md](roadmap.md) 23.4 を参照してください。
+テーマ UI ラベルは文書の `lang` に従います。正本は core です。core が `lang` に対する表を解決し、その上に `html.labels` を適用し、結果を `siteDataJson` に公開します。`app.js` は文字列の写しを持たずそれを消費するので、表と上書きがずれません。静的ラベルは `template.html` のトークンから取ります。表は `en` と `ja` を同梱し、同梱の表が無い `lang` は `lang/no-label-table` を出して英語のラベルにフォールバックします。`ja` の表でも `generatedBy` は英語のままです。ラベルはプレースホルダを持たず、テンプレートがその後ろに書くリンクが語順を決めてしまうからです。`ja` の表を使っていて `html.labels` が `generatedBy` を設定していないときは、任意のトークン `{{generatorAttrs}}` がその行に `lang="en"` を付けます。0.17.2 から 0.18 までは `lang` によらず英語のラベルを表示していました。方針転換の理由とカスタムテーマに対する保証の範囲は [roadmap.md](roadmap.md) 23.4 を参照してください。
 
 > [!WARNING]
 > TypeScript コンパイルは `.html`、`.css`、`.js` のテーマ資産をコピーしません。コンパイル後に `dist/themes` を使えるよう、core build で `packages/core/scripts/copy-theme.mjs` を実行してください。テーマ資産を変えたら再ビルドが必要です。

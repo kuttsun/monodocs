@@ -52,6 +52,7 @@ export const DIAGNOSTIC_CODES = [
   "input/not-found",
   "input/unsupported-file",
   "internal/unexpected",
+  "lang/no-label-table",
   "lang/unsupported",
   "link/unresolved",
   "link/unresolved-anchor",
