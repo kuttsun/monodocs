@@ -66,7 +66,8 @@ jobs:
       # asciimath rendered, search folding, figure alignment, and the search clear button in 0.16,
       # and, in 0.17, the math font a PDF's formulas are set in. 0.17.2 keeps the UI labels English
       # under `lang: ja`, the one gate on a patch release. 0.18 writes the difference from an earlier
-      # version into the HTML. 0.19 brings the Japanese labels back under `lang: ja`.
+      # version into the HTML. 0.19 adds the one-column view and `html.diffViewDefault`, and brings
+      # the Japanese labels back under `lang: ja`.
       # Verifying an older release must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
@@ -1073,4 +1074,64 @@ jobs:
             }
             // Nothing changes for a build without one.
             if (fs.readFileSync('diff-none.html', 'utf8').includes('monodocs-diff')) fail('a build without a difference carries one');
+          "
+
+      # v0.19. A fourth view of the difference, one column with the deleted blocks written back where
+      # they stood, and html.diffViewDefault choosing the view a document opens in (7.3.4). The view
+      # is set by the script, so the page is driven in the Chrome the PDF steps use. lang: ja also
+      # checks the bar's Japanese label, which 0.19 brings back (23.4).
+      - name: One column, and the view a document opens in (0.19)
+        if: env.SUPPORTS_V019 == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p inline/now/docs inline/then/docs
+          printf '# Guide\n\nKept.\n\nGone.\n' > inline/then/docs/guide.md
+          printf '# Guide\n\nKept.\n\nAdded.\n' > inline/now/docs/guide.md
+          printf 'lang: ja\nhtml:\n  diffViewDefault: inline\n' > inline/now/monodocs.config.yml
+          # The earlier version needs its own configuration, as the build names one; the view is the new one's.
+          printf 'lang: ja\n' > inline/then/monodocs.config.yml
+          cd inline/now
+          monodocs build docs -c monodocs.config.yml -o ../inline.html --diff-from-dir ../then
+          cd ../..
+          MONODOCS_ROOT="$(npm root -g | tr -d '\r')/monodocs" node -e "
+            const path = require('node:path');
+            const { pathToFileURL } = require('node:url');
+            const puppeteer = require(require.resolve('puppeteer-core', { paths: [process.env.MONODOCS_ROOT] }));
+            const fail = (m) => { throw new Error(m); };
+            (async () => {
+              const browser = await puppeteer.launch({ headless: true, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+              try {
+                const page = await browser.newPage();
+                await page.setViewport({ width: 1300, height: 900 });
+                const url = pathToFileURL(path.resolve('inline/inline.html')).href;
+                await page.goto(url);
+                await new Promise((r) => setTimeout(r, 400));
+                const opened = await page.evaluate(() => ({
+                  view: document.documentElement.getAttribute('data-monodocs-diff-view'),
+                  pressed: document.querySelector('.monodocs-diff-views [aria-pressed=\"true\"]')?.getAttribute('data-monodocs-diff-view'),
+                  label: document.querySelector('.monodocs-diff-views [data-monodocs-diff-view=\"inline\"]')?.textContent.trim(),
+                }));
+                if (opened.view !== 'inline' || opened.pressed !== 'inline') fail('the document did not open in one column: ' + JSON.stringify(opened));
+                if (opened.label !== '1 \u5217') fail('the one-column button is not labelled in Japanese: ' + JSON.stringify(opened.label));
+                await page.goto(url + '#/guide');
+                await new Promise((r) => setTimeout(r, 400));
+                const shown = await page.evaluate(() => {
+                  const article = [...document.querySelectorAll('article.page')].find((a) => !a.hidden);
+                  if (!article) return null;
+                  const visible = (el) => el !== null && el.getBoundingClientRect().height > 0;
+                  const current = article.querySelector('.monodocs-diff-current');
+                  const deleted = [...article.querySelectorAll('.monodocs-diff-current [data-monodocs-diff-block=\"del\"]')];
+                  return {
+                    earlier: getComputedStyle(article.querySelector('.monodocs-diff-earlier')).display,
+                    deleted: deleted.filter(visible).map((el) => el.textContent.trim()),
+                    added: [...current.querySelectorAll('ins')].filter(visible).map((el) => el.textContent.trim()),
+                    order: current.textContent.indexOf('Gone.') < current.textContent.indexOf('Added.'),
+                  };
+                });
+                const want = { earlier: 'none', deleted: ['Gone.'], added: ['Added.'], order: true };
+                if (JSON.stringify(shown) !== JSON.stringify(want)) fail('one column does not show the new version with the deletion in place: ' + JSON.stringify(shown));
+              } finally {
+                await browser.close();
+              }
+            })().catch((e) => { console.error(e); process.exit(1); });
           "
