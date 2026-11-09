@@ -6465,8 +6465,9 @@ Add a fourth view of the difference, one column with the deleted blocks written 
 version where they stood, and a key choosing the view a document opens in (7.3.4, stage 1), so that
 the view, the key, its values and default, and the two labels are used in a release before 1.0
 freezes them. A build without a difference produces the output it did before, apart from the version
-the generated HTML names (12.4), and from what 23.4's return of the `ja` table changes. The one column is the one `markup` (7.3.5) prints in v0.20, written
-ahead of the PDF in v0.18 and shown on screen first.
+the generated HTML names (12.4), and from what 23.4's return of the `ja` table changes. The one
+column is the one `markup` (7.3.5) prints in v0.20, written ahead of the PDF in v0.18 and shown on
+screen first.
 
 Implementation scope:
 
