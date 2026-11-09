@@ -25,13 +25,13 @@
     "ci:check": "pnpm format:check && pnpm build && pnpm typecheck && pnpm test && pnpm bundle"
   },
   "devDependencies": {
-    "@types/node": "^22.20.4",
+    "@types/node": "^22.20.5",
     "esbuild": "^0.28.2",
     "postject": "^1.0.0-alpha.6",
-    "prettier": "^3.9.9",
+    "prettier": "^3.9.10",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vite": "^8.3.3",
-    "vitest": "^5.0.5"
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
   }
 }
