@@ -41,7 +41,7 @@ describe("document language and UI labels", () => {
     expect(html).toContain('<html lang="en"');
     expect(html).toContain(">On this page<");
     expect(siteData(html).labels.noResults).toBe("No results");
-    expect(warnings.map((w) => w.message).join("\n")).not.toContain("label table");
+    expect(warnings).toEqual([]);
   });
 
   it("declares ja and shows Japanese labels under lang: ja", async () => {
@@ -53,7 +53,7 @@ describe("document language and UI labels", () => {
     expect(html).toContain('placeholder="検索…"');
     // 動的に書かれる文言も同じ表から来る。
     expect(siteData(html).labels.noResults).toBe("該当なし");
-    expect(warnings.map((w) => w.message).join("\n")).not.toContain("label table");
+    expect(warnings).toEqual([]);
   });
 
   it("keeps generatedBy English under lang: ja, and marks only that line English", async () => {

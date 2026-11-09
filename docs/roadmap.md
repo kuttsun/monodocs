@@ -4216,8 +4216,8 @@ condition can no longer occur.
 entry. `generatedBy` is the only label that runs into what follows it — `monodocs v0.19.0`, a link
 the template writes after it — so it is the only one whose Japanese wording depended on a word order
 a label without placeholders cannot give. Every other label is a phrase that stands alone: a button's
-name, a heading, a note ending in a colon before a route a reader sees as a separate thing. The v0.10
-table carried 29 of them without a complaint; the one complaint was #224. Leaving that entry out
+name, a heading, a note ending in a colon before a route a reader sees as a separate thing. The table
+v0.10 introduced carried 29 of them by 0.17.1 without a complaint; the one complaint was #224. Leaving that entry out
 removes the cost and keeps the rest of what the table was for, and it does so without adding
 placeholders, which would widen a surface 1.0 freezes for the sake of one key.
 

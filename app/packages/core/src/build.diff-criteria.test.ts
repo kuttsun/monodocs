@@ -473,11 +473,12 @@ describe("a build without a difference (item 30)", () => {
    * the author's, built with that theme: each output's size and SHA-256. The first is monodocs
    * 0.17.2's (the release before this feature). The second is 0.19.0's: the `ja` label table came
    * back then (roadmap 23.4), and building it at the commit before and at that change showed the
-   * labels, and `lang="en"` on the branding line, as the only difference. They are core's `buildSite` without `generatorVersion`, as this test
-   * builds: the CLI passes its version, and the footer then reads `monodocs v0.17.2`, which changes
-   * both. 0.17.2 and this build differ only in the default theme's `app.js`
-   * (measured on `examples/en`, `ja`, and `math`: the search hook alone), so replacing it leaves
-   * every other byte to compare, siteDataJson with its labels among them. A change made on purpose
+   * labels, and `lang="en"` on the branding line, as the only difference. They are core's
+   * `buildSite` without `generatorVersion`, as this test builds: the CLI passes its version, and
+   * the footer then reads `monodocs v…`, which changes both. 0.17.2 and the build of this feature
+   * differed only in the default theme's `app.js` (measured on `examples/en`, `ja`, and `math`:
+   * the search hook alone), so replacing it leaves every other byte to compare, siteDataJson with
+   * its labels among them. A change made on purpose
    * to what a build writes changes these measures too: build the fixtures through `buildSite` at the
    * commit before that change and at the change, check that the change is the only difference, and
    * take the new measures. They are then no longer the release's they were: say which release they
