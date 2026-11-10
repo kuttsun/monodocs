@@ -188,8 +188,11 @@ try {
     for (const view of ["both", "inline"]) {
       await open(`${lang}.html`, "#//changes");
       if (view !== "both") await choose(view);
-      // Each step waits for the count it should reach, and lands on a change the page rings.
+      // Each step waits for the count it should reach, and lands on a change the page rings. The
+      // ringed element is named by its page and its place in it, so that the walk is held to 31
+      // different changes, not to a count that moves while the ring stays put.
       let ringless = 0;
+      const visited = [];
       const step = async (direction, want) => {
         await page.click(`[data-monodocs-diff-go="${direction}"]`);
         let count;
@@ -203,15 +206,14 @@ try {
         const ringed = await page.evaluate(() => {
           const ring = document.querySelector(".monodocs-diff-change-current");
           const article = ring?.closest("article.page");
-          return (
-            ring !== null &&
-            article !== null &&
-            article !== undefined &&
-            !article.hidden &&
-            ring.getBoundingClientRect().height > 0
-          );
+          if (!ring || !article || article.hidden || ring.getBoundingClientRect().height <= 0) {
+            return null;
+          }
+          const place = [...article.querySelectorAll("*")].indexOf(ring);
+          return `${article.getAttribute("data-route")}#${place}`;
         });
-        if (!ringed) ringless++;
+        if (ringed === null) ringless++;
+        visited.push(ringed);
         return count;
       };
       const exactly = (text) => new RegExp(`^${text.replace(/[/]/g, "\\/")}$`);
@@ -227,10 +229,24 @@ try {
         if (reached !== `${index} / ${total}`) break;
       }
       check(`${view}: Next walks to ${total} / ${total}`, reached === `${total} / ${total}`, reached);
+      const walked = visited.slice(0, total);
+      check(
+        `${view}: Next rings ${total} different changes`,
+        walked.length === total && new Set(walked).size === total,
+        `${new Set(walked).size} different of ${walked.length}`,
+      );
       const round = await step(1, exactly(`1 / ${total}`));
-      check(`${view}: Next comes round to 1 / ${total}`, round === `1 / ${total}`, round);
+      check(
+        `${view}: Next comes round to 1 / ${total}, on the first change`,
+        round === `1 / ${total}` && visited.at(-1) === walked[0],
+        `${round} ${visited.at(-1)} vs ${walked[0]}`,
+      );
       const back = await step(-1, exactly(`${total} / ${total}`));
-      check(`${view}: Previous steps back to ${total} / ${total}`, back === `${total} / ${total}`, back);
+      check(
+        `${view}: Previous steps back to ${total} / ${total}, on the last change`,
+        back === `${total} / ${total}` && visited.at(-1) === walked.at(-1),
+        `${back} ${visited.at(-1)} vs ${walked.at(-1)}`,
+      );
       check(`${view}: every step lands on a ringed change on the page shown`, ringless === 0, `${ringless} without a ring`);
     }
     check(
