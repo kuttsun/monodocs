@@ -56,6 +56,9 @@ const LANGUAGES = {
   },
 };
 const SIGNS = { added: "+", deleted: "−", changed: "•", moved: "→" };
+// The changes the samples hold, which Next has to reach: a count the page reports for itself would
+// let a document that lost changes pass.
+const CHANGES = 31;
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 const server = createServer((request, response) => {
@@ -185,32 +188,40 @@ try {
     for (const view of ["both", "inline"]) {
       await open(`${lang}.html`, "#//changes");
       if (view !== "both") await choose(view);
+      // Each step waits for the count it should reach, and lands on a change the page rings.
+      let ringless = 0;
       const step = async (direction, want) => {
         await page.click(`[data-monodocs-diff-go="${direction}"]`);
         let count;
         for (let tries = 0; tries < 50; tries++) {
           await sleep(100);
           count = (await state()).count;
-          if (want === undefined || count === want) break;
+          if (want.test(count ?? "")) break;
         }
+        const ringed = await page.evaluate(
+          () => document.querySelector(".monodocs-diff-change-current") !== null,
+        );
+        if (!ringed) ringless++;
         return count;
       };
-      const first = await step(1, undefined);
+      const exactly = (text) => new RegExp(`^${text.replace(/[/]/g, "\\/")}$`);
+      const first = await step(1, /^1 \/ \d+$/);
       const match = /^1 \/ (\d+)$/.exec(first ?? "");
-      check(`${view}: Next starts at 1 / N`, match !== null, first);
+      check(`${view}: Next starts at 1 / ${CHANGES}`, match !== null && Number(match[1]) === CHANGES, first);
       if (!match) continue;
       const total = Number(match[1]);
       totals[view] = total;
       let reached = `1 / ${total}`;
       for (let index = 2; index <= total; index++) {
-        reached = await step(1, `${index} / ${total}`);
+        reached = await step(1, exactly(`${index} / ${total}`));
         if (reached !== `${index} / ${total}`) break;
       }
       check(`${view}: Next walks to ${total} / ${total}`, reached === `${total} / ${total}`, reached);
-      const round = await step(1, `1 / ${total}`);
+      const round = await step(1, exactly(`1 / ${total}`));
       check(`${view}: Next comes round to 1 / ${total}`, round === `1 / ${total}`, round);
-      const back = await step(-1, `${total} / ${total}`);
+      const back = await step(-1, exactly(`${total} / ${total}`));
       check(`${view}: Previous steps back to ${total} / ${total}`, back === `${total} / ${total}`, back);
+      check(`${view}: every step lands on a ringed change`, ringless === 0, `${ringless} without a ring`);
     }
     check(
       "one column walks as many changes as side by side",
