@@ -6543,8 +6543,8 @@ Completion criteria:
   browser pass over a difference the released Linux binary builds covers the view it opens in, the
   four views, previous and next, the sidebar marks, and the list of changes; and the one-column view
   is read in Edge on Windows, which `verify-published.yml` came to do, driving the difference
-  samples there and keeping a screenshot of each view. `verify-published.yml` expects the clear button's Japanese
-  name under `lang: ja` again from 0.19. The release notes introduce the view and the key, say that
+  samples there and keeping a screenshot of each view. `verify-published.yml` expects the clear
+  button's Japanese name under `lang: ja` again from 0.19. The release notes introduce the view and the key, say that
   a `lang: ja` build shows Japanese labels again but for `generatedBy`, and say that nothing else
   changes for a build without a difference
 

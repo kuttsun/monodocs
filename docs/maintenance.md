@@ -68,7 +68,8 @@ absent. It exists to catch a broken or missing asset without waiting for someone
 On Windows it passes `-CheckServeOpen`: a fresh runner has no browser already running to take the
 address over, so the script can look for a browser process started with the served address. The
 Linux script has no such check: a Linux runner has no desktop session, so `xdg-open` has no browser
-to hand the address to.
+to hand the address to. A person's own run leaves `-CheckServeOpen` off, since a browser already
+running there takes the address over; the runner's check stands for `serve --open`.
 
 The Windows script attaches the Mark of the Web a browser download carries (`Zone.Identifier`,
 `ZoneId=3`) to a copy of the binary, since its own downloads attach none, and runs it from the
@@ -95,7 +96,6 @@ What stays manual, because a script cannot settle it:
 
 - Browser rendering beyond the difference samples: sidebar, search interaction, dark mode, and the
   narrow-width drawer of `examples/en`, and a look over the screenshots the workflow keeps.
-- `serve --open` on a person's own machine, where a browser already running takes the address over.
 - On Windows, SmartScreen, which only Explorer raises and which depends on the binary's reputation.
   The binary is unsigned by policy ([roadmap.md](roadmap.md) 8.5) and the site documents the warning;
   see [status.md](status.md).

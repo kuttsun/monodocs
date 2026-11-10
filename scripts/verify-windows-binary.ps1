@@ -584,7 +584,8 @@ try {
         $openHandle = $null
         # A browser process started with the served address on its command line: the default
         # browser, given the address by `cmd /c start`. The `cmd.exe` that hands it over carries the
-        # address too, and is not a browser. The port must not run on into more digits, so that
+        # address too, and is not a browser; nor is OpenWith.exe, which asks which program to use
+        # when no browser is registered for http. The port must not run on into more digits, so that
         # 4174 does not find a process on 41740, which the finally block would otherwise stop.
         # A browser already running with that address, from an earlier --open, is not this run's
         # and is never stopped: the processes found before serve starts are left out.
@@ -592,7 +593,7 @@ try {
         function Get-OpenedBrowser {
             @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
                 $_.CommandLine -and $_.CommandLine -match $addressPattern -and
-                $_.Name -notin @('cmd.exe', 'conhost.exe') -and
+                $_.Name -notin @('cmd.exe', 'conhost.exe', 'OpenWith.exe') -and
                 $_.ProcessId -ne $script:openHandle.Process.Id -and
                 $script:browsersBefore -notcontains $_.ProcessId
             })
@@ -671,8 +672,10 @@ Write-Host '     navigation, search (kana folding, highlighting, arrow keys and 
 Write-Host '     and the drawer at a narrow window width.'
 Write-Host '  2. SmartScreen, which only Explorer raises: run the binary downloaded through a browser.'
 Write-Host '     The binary is unsigned by policy, so a warning is expected; see docs/status.md.'
+Write-Host '  3. On a Windows 11 host, whether Smart App Control is on, and if so whether it blocked'
+Write-Host '     the unsigned binary carrying the Mark of the Web.'
 if (-not $CheckServeOpen) {
-    Write-Host '  3. serve --open, which launches the default browser (or rerun with -CheckServeOpen).'
+    Write-Host '  4. serve --open, which launches the default browser (or rerun with -CheckServeOpen).'
 }
 
 if ($failed.Count -eq 0 -and $Clean) {
