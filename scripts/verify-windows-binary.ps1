@@ -585,14 +585,19 @@ try {
         # browser, given the address by `cmd /c start`. The `cmd.exe` that hands it over carries the
         # address too, and is not a browser. The port must not run on into more digits, so that
         # 4174 does not find a process on 41740, which the finally block would otherwise stop.
+        # A browser already running with that address, from an earlier --open, is not this run's
+        # and is never stopped: the processes found before serve starts are left out.
         $addressPattern = '127\.0\.0\.1:' + $openPort + '(?!\d)'
         function Get-OpenedBrowser {
             @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
                 $_.CommandLine -and $_.CommandLine -match $addressPattern -and
                 $_.Name -notin @('cmd.exe', 'conhost.exe') -and
-                $_.ProcessId -ne $script:openHandle.Process.Id
+                $_.ProcessId -ne $script:openHandle.Process.Id -and
+                $script:browsersBefore -notcontains $_.ProcessId
             })
         }
+        $browsersBefore = @()
+        $browsersBefore = @(Get-OpenedBrowser | ForEach-Object { $_.ProcessId })
         try {
             Invoke-Check "serve --open launches the default browser on $openUrl" {
                 Assert-That (-not (Test-PortOpen '127.0.0.1' $openPort)) "Port $openPort is already in use; rerun with -Port"

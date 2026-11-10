@@ -99,8 +99,8 @@ v0.18〜v0.21 も 1.0 の前に置く。Git を見ない読み手のために、
 の遅延でリリースのワークフローは 9 分遅れて起動し、その npm のジョブは `npm` 環境の承認を待った。`latest` を
 動かしたあとに、公開パッケージとリリースバイナリを検証し、リリースした Linux バイナリが組んだ差分をブラウザで
 操作して確かめ、`next` を 0.19.0 に移した。人が Windows で行っていた確認は `verify-published.yml` と
-`verify-windows-binary.ps1` の手順にし、Windows のランナーで 0.19.0 に対して走らせた。SmartScreen と
-Windows 11 ホストでの実行は人の確認として残る。
+`verify-windows-binary.ps1` の手順にし、Windows のランナーで 0.19.0 に対して走らせた。SmartScreen、
+Windows 11 ホストでの実行、生成した HTML の Edge での見え方、スクリーンショットをざっと見ることは人の確認として残る。
 
 ## 完了条件の達成状況
 
@@ -820,7 +820,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] Node.js の無い Linux x64 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
 - [ ] リリースした Linux バイナリが組んだ差分を、0.19.0 と同じく目視ではなく操作して確かめる。4 つの表示、前後の移動、サイドバーの印、変更の一覧である
 - [ ] Windows 11 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
-- [ ] 人にしか答えられない Windows での確認。ブラウザでダウンロードしたアセットの SmartScreen と、`verify-published.yml` が残す Edge のスクリーンショットをざっと見ること（0.18.0 で確かめたことの残りは 0.19.0 から手順で走る）に加え、`markup` と `bars` の PDF を開いて印刷すること。`markup` は白黒でも印刷する
+- [ ] 人にしか答えられない Windows での確認。ブラウザでダウンロードしたアセットの SmartScreen、生成した HTML の Edge での見え方（`examples/en` のサイドバー、検索、ダークモード、狭い画面でのドロワー）、`verify-published.yml` が残す Edge のスクリーンショットをざっと見ること（0.18.0 で確かめたことの残りは 0.19.0 から手順で走る）に加え、`markup` と `bars` の PDF を開いて印刷すること。`markup` は白黒でも印刷する
 - [ ] `next` の dist-tag を `0.20.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.20.0` に固定していることを確かめる
 
 ### v0.21: 変更されたブロックの中の語と文字
@@ -852,7 +852,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] Node.js の無い Linux x64 ホストで、公開した `v0.21.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
 - [ ] リリースした Linux バイナリが組んだ差分を、目視ではなく操作して確かめる。変更された日本語と英語の段落を 4 つの表示で読む
 - [ ] Windows 11 ホストで、公開した `v0.21.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
-- [ ] 人にしか答えられない Windows での確認。0.20.0 で確かめたこと——ブラウザでダウンロードしたアセットの SmartScreen、`verify-published.yml` が残す Edge のスクリーンショットをざっと見ること、`markup` と `bars` の PDF の印刷（`markup` は白黒でも）——に加え、変更された日本語と英語の段落が画面と紙でどう読めるか
+- [ ] 人にしか答えられない Windows での確認。0.20.0 で確かめたこと——ブラウザでダウンロードしたアセットの SmartScreen、生成した HTML の Edge での見え方、`verify-published.yml` が残す Edge のスクリーンショットをざっと見ること、`markup` と `bars` の PDF の印刷（`markup` は白黒でも）——に加え、変更された日本語と英語の段落が画面と紙でどう読めるか
 - [ ] `next` の dist-tag を `0.21.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.21.0` に固定していることを確かめる
 
 ### 1.0

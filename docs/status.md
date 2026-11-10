@@ -110,8 +110,8 @@ minutes late, while GitHub Actions was degraded, and its npm job waited for the 
 approval. After `latest` moved, the published package and the release binaries were verified, a
 difference the released Linux binary built was driven in a browser, and `next` moved onto 0.19.0.
 The Windows checks a person had made became steps of `verify-published.yml` and
-`verify-windows-binary.ps1`, and ran against 0.19.0 on a Windows runner; SmartScreen and a Windows 11
-host remain a person's.
+`verify-windows-binary.ps1`, and ran against 0.19.0 on a Windows runner; SmartScreen, a Windows 11
+host, how the generated HTML looks in Edge, and a look over the screenshots remain a person's.
 
 ## Completion Criteria Status
 
@@ -831,7 +831,7 @@ Nothing changes for a build without a difference, so this release goes to `lates
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js
 - [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, as for 0.19.0: the four views, previous and next, the sidebar marks, and the list of changes
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: SmartScreen for an asset downloaded through a browser, and a look over the Edge screenshots `verify-published.yml` keeps (the rest of what 0.18.0 asked runs as steps from 0.19.0) — and a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
+- [ ] What only a person can answer, on Windows: SmartScreen for an asset downloaded through a browser, how the generated HTML looks in Edge (the sidebar, search, dark mode, and the narrow-width drawer of `examples/en`), and a look over the Edge screenshots `verify-published.yml` keeps (the rest of what 0.18.0 asked runs as steps from 0.19.0) — and a `markup` and a `bars` PDF opened and printed, the `markup` one in black and white too
 - [ ] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese
 
 ### v0.21: Words and Characters Inside a Changed Block
@@ -863,7 +863,7 @@ It changes only what a build with a difference shows inside a changed block, and
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.21.0` assets on a Linux x64 host without Node.js
 - [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, reading changed paragraphs in Japanese and English in the four views
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.21.0` assets on a Windows 11 host
-- [ ] What only a person can answer, on Windows: what 0.20.0 asked — SmartScreen for an asset downloaded through a browser, a look over the Edge screenshots `verify-published.yml` keeps, and a `markup` and a `bars` PDF printed, the `markup` one in black and white — and how changed paragraphs in Japanese and English read, on screen and on paper
+- [ ] What only a person can answer, on Windows: what 0.20.0 asked — SmartScreen for an asset downloaded through a browser, how the generated HTML looks in Edge, a look over the Edge screenshots `verify-published.yml` keeps, and a `markup` and a `bars` PDF printed, the `markup` one in black and white — and how changed paragraphs in Japanese and English read, on screen and on paper
 - [ ] Move the `next` dist-tag onto `0.21.0`, and confirm that the deployed CI guide pins `monodocs@0.21.0` in English and Japanese
 
 ### 1.0
