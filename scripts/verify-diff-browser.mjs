@@ -198,9 +198,19 @@ try {
           count = (await state()).count;
           if (want.test(count ?? "")) break;
         }
-        const ringed = await page.evaluate(
-          () => document.querySelector(".monodocs-diff-change-current") !== null,
-        );
+        // The ring has to be on the page shown, and shown itself: a route switch that failed would
+        // still ring a change inside a hidden page.
+        const ringed = await page.evaluate(() => {
+          const ring = document.querySelector(".monodocs-diff-change-current");
+          const article = ring?.closest("article.page");
+          return (
+            ring !== null &&
+            article !== null &&
+            article !== undefined &&
+            !article.hidden &&
+            ring.getBoundingClientRect().height > 0
+          );
+        });
         if (!ringed) ringless++;
         return count;
       };
@@ -221,7 +231,7 @@ try {
       check(`${view}: Next comes round to 1 / ${total}`, round === `1 / ${total}`, round);
       const back = await step(-1, exactly(`${total} / ${total}`));
       check(`${view}: Previous steps back to ${total} / ${total}`, back === `${total} / ${total}`, back);
-      check(`${view}: every step lands on a ringed change`, ringless === 0, `${ringless} without a ring`);
+      check(`${view}: every step lands on a ringed change on the page shown`, ringless === 0, `${ringless} without a ring`);
     }
     check(
       "one column walks as many changes as side by side",
