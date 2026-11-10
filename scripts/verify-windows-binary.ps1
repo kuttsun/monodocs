@@ -17,9 +17,10 @@
 
     Downloads here use curl.exe or Invoke-WebRequest, neither of which attaches a Mark of the Web,
     so the script attaches the one a browser download carries itself and runs the binary from the
-    terminal with it. A terminal starts the binary without consulting the mark, so this shows that
-    it runs with the mark attached; whether a browser attaches one, and what Explorer then shows,
-    stays with SmartScreen below.
+    terminal with it. SmartScreen does not look at a launch from a terminal, so this shows that it
+    runs with the mark attached; whether a browser attaches one, and what Explorer then shows, stays
+    with SmartScreen below. Smart App Control, on a Windows 11 host that has it on, checks a launch
+    from a terminal too, so a run there answers what a CI runner cannot.
 
     What this script deliberately does NOT cover, and still needs a person:
       * Browser rendering: sidebar, search interaction, dark mode, narrow-width drawer.

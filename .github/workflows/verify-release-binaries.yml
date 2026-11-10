@@ -7,7 +7,8 @@ name: Verify release binaries
 # is absent — the property a binary release is making a claim about. It is an additional net that
 # catches a broken or missing asset without waiting for someone to find a machine.
 #
-# Browser rendering, `serve --open`, and SmartScreen / Mark of the Web stay manual either way.
+# On Windows it also runs the binary with a Mark of the Web attached and, with -CheckServeOpen,
+# checks serve --open. Browser rendering, SmartScreen, and a Windows 11 host stay manual either way.
 
 on:
   release:

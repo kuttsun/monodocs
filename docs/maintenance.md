@@ -72,11 +72,14 @@ to hand the address to.
 
 The Windows script attaches the Mark of the Web a browser download carries (`Zone.Identifier`,
 `ZoneId=3`) to a copy of the binary, since its own downloads attach none, and runs it from the
-terminal. A terminal starts it without consulting the mark, so this shows that the binary runs with
-the mark attached, not what a browser attaches or what Explorer shows; that stays with SmartScreen.
+terminal. SmartScreen does not look at a launch from a terminal, so this shows that the binary runs
+with the mark attached, not what a browser attaches or what Explorer shows; that stays with
+SmartScreen. Smart App Control, on a Windows 11 host that has it on, checks a launch from a terminal
+too, and no runner has it; that stays with the Windows 11 host.
 
 `verify-published.yml` also does, on Linux and Windows, what a person used to do on Windows for a
-release (from 0.19.0):
+release (added after 0.19.0 was published, and run against it; the first step is gated on 0.18,
+the second on 0.19):
 
 - A difference built with `--diff-from` in a repository at a path with a space and Japanese
   characters, with `core.autocrlf` true, the working tree in CRLF and the repository in LF, and an
@@ -96,7 +99,7 @@ What stays manual, because a script cannot settle it:
 - On Windows, SmartScreen, which only Explorer raises and which depends on the binary's reputation.
   The binary is unsigned by policy ([roadmap.md](roadmap.md) 8.5) and the site documents the warning;
   see [status.md](status.md).
-- A host without Node.js, which no runner is.
+- A host without Node.js, which no runner is, and a Windows 11 host with Smart App Control on.
 
 ## Quarterly review
 
