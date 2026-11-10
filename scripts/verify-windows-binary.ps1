@@ -15,12 +15,18 @@
     host which deliberately has no Node.js does not need PowerShell installed either, and because
     the platform-specific checks differ. docs/maintenance.md records the checks both must cover.
 
+    Downloads here use curl.exe or Invoke-WebRequest, neither of which attaches a Mark of the Web,
+    so the script attaches one itself, as a browser does, and runs the binary from the terminal
+    with it.
+
     What this script deliberately does NOT cover, and still needs a person:
       * Browser rendering: sidebar, search interaction, dark mode, narrow-width drawer.
-      * SmartScreen / Mark of the Web. Downloads here use curl.exe or Invoke-WebRequest, neither of
-        which attaches a Mark of the Web, so the warning is not exercised. The binary is unsigned by
-        policy (docs/roadmap.md 8.5) and the site documents the warning; see docs/status.md.
-      * `serve --open`, which launches the default browser.
+      * SmartScreen, which only Explorer raises, and which depends on the binary's reputation. The
+        binary is unsigned by policy (docs/roadmap.md 8.5) and the site documents the warning; see
+        docs/status.md.
+      * `serve --open`, which launches the default browser, unless -CheckServeOpen is given: it then
+        looks for a browser process started with the served address, which suits a fresh machine
+        such as a CI runner, where no browser is already running to take the address over.
 
 .PARAMETER Version
     Release to verify, with or without the leading "v" (for example v0.9.0).
@@ -47,6 +53,10 @@
 .PARAMETER Clean
     Remove the work directory when every check passed.
 
+.PARAMETER CheckServeOpen
+    Also check that `serve --open` launches the default browser on the served address, on port
+    -Port + 1. It stops the browser processes it finds started with that address, and no others.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\scripts\verify-windows-binary.ps1 -Version v0.9.0
 
@@ -63,7 +73,8 @@ param(
     [string]$NoticesPath,
     [string]$SourcePath,
     [int]$Port = 4173,
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$CheckServeOpen
 )
 
 $ErrorActionPreference = 'Stop'
@@ -487,6 +498,33 @@ try {
         Assert-That (-not ($notices -match [regex]::Escape($unknownEntry))) 'Unresolved license entry found'
     }
 
+    Write-Section 'Mark of the Web'
+
+    $motwDir = Join-Path $WorkDir 'motw'
+    New-Item -ItemType Directory -Force -Path $motwDir | Out-Null
+    $markedBin = Join-Path $motwDir $AssetName
+    Invoke-Check 'runs from a terminal with the Mark of the Web a browser download carries' {
+        Copy-Item -LiteralPath $Bin -Destination $markedBin -Force
+        # What a browser writes beside a file downloaded from the internet zone.
+        $mark = "[ZoneTransfer]`r`nZoneId=3`r`nHostUrl=https://github.com/$Repository/releases/download/$Tag/$AssetName`r`n"
+        Set-Content -LiteralPath $markedBin -Stream 'Zone.Identifier' -Value $mark -Encoding Ascii
+        $zone = Get-Content -LiteralPath $markedBin -Stream 'Zone.Identifier' -Raw
+        Assert-That ($zone -match 'ZoneId=3') 'The Mark of the Web was not attached'
+        $unmarked = $script:Bin
+        try {
+            $script:Bin = $markedBin
+            $result = Invoke-Bin @('--version') $motwDir
+            Assert-That ($result.ExitCode -eq 0) "--version exit code $($result.ExitCode): $($result.StdErr)"
+            Assert-That ($result.StdOut.Trim() -eq $PlainVersion) "Reported '$($result.StdOut.Trim())'"
+            $markedOutput = Join-Path $motwDir 'out\docs.html'
+            $result = Invoke-Bin @('build', $docsEn, '-o', $markedOutput) $motwDir
+            Assert-That ($result.ExitCode -eq 0) "build exit code $($result.ExitCode): $($result.StdErr)"
+            Assert-That (Test-Path -LiteralPath $markedOutput) 'build wrote no output'
+        } finally {
+            $script:Bin = $unmarked
+        }
+    }
+
     Write-Section 'serve (long-running; out of scope for verify-published.yml)'
 
     $serveDir = Join-Path $WorkDir 'serve'
@@ -533,6 +571,40 @@ try {
     } finally {
         Close-SseStream $sse
         Stop-BinProcess $serveHandle
+    }
+
+    if ($CheckServeOpen) {
+        Write-Section 'serve --open'
+
+        $openPort = $Port + 1
+        $openUrl = "http://127.0.0.1:$openPort/"
+        $openHandle = $null
+        # A browser process started with the served address on its command line: the default
+        # browser, given the address by `cmd /c start`.
+        function Get-OpenedBrowser {
+            @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+                $_.CommandLine -and $_.CommandLine.Contains("127.0.0.1:$openPort")
+            } | Where-Object { $_.ProcessId -ne $script:openHandle.Process.Id })
+        }
+        try {
+            Invoke-Check "serve --open launches the default browser on $openUrl" {
+                Assert-That (-not (Test-PortOpen '127.0.0.1' $openPort)) "Port $openPort is already in use; rerun with -Port"
+                $script:openHandle = Start-BinProcess @('serve', $docsEn, '-p', "$openPort", '--open') $serveDir 'serve-open'
+                Wait-Until -TimeoutSec 90 -Message 'serve --open did not start listening' -Condition {
+                    (Read-Utf8File $script:openHandle.OutLog) -match 'Serving at' -and (Test-PortOpen '127.0.0.1' $openPort)
+                }
+                Wait-Until -TimeoutSec 60 -Message 'No browser process was started with the served address' -Condition {
+                    (Get-OpenedBrowser).Count -gt 0
+                }
+                $names = (Get-OpenedBrowser | ForEach-Object { $_.Name } | Sort-Object -Unique) -join ', '
+                Write-Host "         opened by: $names"
+            }
+        } finally {
+            Stop-BinProcess $openHandle
+            foreach ($opened in (Get-OpenedBrowser)) {
+                Stop-Process -Id $opened.ProcessId -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 
     Write-Section 'watch (long-running; out of scope for verify-published.yml)'
@@ -584,9 +656,11 @@ Write-Host 'Still to check by hand:' -ForegroundColor Yellow
 Write-Host ("  1. Open {0} in a browser: sidebar, previous/next" -f $defaultOutput)
 Write-Host '     navigation, search (kana folding, highlighting, arrow keys and Enter), dark mode,'
 Write-Host '     and the drawer at a narrow window width.'
-Write-Host '  2. SmartScreen / Mark of the Web, which downloads from this script never attach.'
+Write-Host '  2. SmartScreen, which only Explorer raises: run the binary downloaded through a browser.'
 Write-Host '     The binary is unsigned by policy, so a warning is expected; see docs/status.md.'
-Write-Host '  3. serve --open, which launches the default browser.'
+if (-not $CheckServeOpen) {
+    Write-Host '  3. serve --open, which launches the default browser (or rerun with -CheckServeOpen).'
+}
 
 if ($failed.Count -eq 0 -and $Clean) {
     Remove-Item -LiteralPath $WorkDir -Recurse -Force

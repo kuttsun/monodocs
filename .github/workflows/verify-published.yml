@@ -31,9 +31,12 @@ jobs:
           - name: Linux
             os: ubuntu-latest
             chromium: /usr/bin/google-chrome
+            # The browser the difference samples are driven in (0.19): a reader's on each platform.
+            diffbrowser: /usr/bin/google-chrome
           - name: Windows
             os: windows-latest
             chromium: 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+            diffbrowser: 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
     env:
       PUPPETEER_EXECUTABLE_PATH: ${{ matrix.chromium }}
     defaults:
@@ -1076,6 +1079,73 @@ jobs:
             if (fs.readFileSync('diff-none.html', 'utf8').includes('monodocs-diff')) fail('a build without a difference carries one');
           "
 
+      # v0.18, at a path and with settings a Windows user's repository has, which the step above
+      # leaves out: a directory whose name has a space and Japanese characters, `core.autocrlf` true
+      # with the working tree in CRLF and the repository in LF, and an image kept in Git LFS. The
+      # earlier version is read from git and the current one from the working tree, so neither the
+      # line endings nor the LFS pointer may show as a difference. node drives git and the CLI, so no
+      # shell's code page decides the bytes of the path.
+      - name: A difference from git at a path with spaces and Japanese, with autocrlf and LFS (0.18)
+        if: env.SUPPORTS_V018 == 'true'
+        run: |
+          set -euo pipefail
+          git lfs version
+          cat > diffwin.cjs <<'EOF'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { spawnSync } = require('node:child_process');
+          const root = process.env.MONODOCS_ROOT;
+          const cli = path.join(root, require(path.join(root, 'package.json')).bin.monodocs);
+          const repo = path.resolve('diff 作業 dir');
+          fs.mkdirSync(path.join(repo, 'docs'), { recursive: true });
+          const run = (command, args) => {
+            const result = spawnSync(command, args, { cwd: repo, encoding: 'utf8' });
+            if (result.status !== 0) throw new Error(command + ' ' + args.join(' ') + ' failed: ' + result.stderr + result.stdout);
+            return result;
+          };
+          const git = (...args) => run('git', args);
+          const write = (file, text) => fs.writeFileSync(path.join(repo, 'docs', file), text.replace(/\n/g, '\r\n'));
+          git('init', '-q');
+          git('config', 'user.email', 'verify@example.invalid');
+          git('config', 'user.name', 'verify');
+          git('config', 'core.autocrlf', 'true');
+          git('lfs', 'install', '--local');
+          git('lfs', 'track', '*.png');
+          fs.writeFileSync(path.join(repo, 'docs', 'dot.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'));
+          write('index.md', '# Intro\n\nSame.\n\n![Dot](dot.png)\n');
+          write('guide.md', '# Guide\n\nKept.\n\nGone.\n');
+          git('add', '-A');
+          git('commit', '-q', '-m', 'v1');
+          git('tag', 'v1');
+          // The repository holds an LFS pointer for the image and LF for the pages.
+          if (!git('cat-file', '-p', 'v1:docs/dot.png').stdout.startsWith('version https://git-lfs')) throw new Error('the image is not kept in LFS');
+          if (git('cat-file', '-p', 'v1:docs/guide.md').stdout.includes('\r')) throw new Error('the repository kept CRLF');
+          write('guide.md', '# Guide\n\nKept.\n\nAdded.\n');
+          git('add', '-A');
+          git('commit', '-q', '-m', 'v2');
+          if (!fs.readFileSync(path.join(repo, 'docs', 'index.md'), 'utf8').includes('\r\n')) throw new Error('the working tree is not CRLF');
+          const out = path.join(repo, 'out 差分.html');
+          const built = spawnSync(process.execPath, [cli, 'build', 'docs', '-o', out, '--diff-from', 'v1'], { cwd: repo, encoding: 'utf8' });
+          if (built.status !== 0) throw new Error('the build failed: ' + built.stderr + built.stdout);
+          if (/lfs-pointer/.test(built.stderr + built.stdout)) throw new Error('the image was read as an LFS pointer');
+          const h = fs.readFileSync(out, 'utf8');
+          const fail = (m) => { throw new Error(m); };
+          if (!h.includes('<del data-monodocs-diff="">Gone.</del>')) fail('the deleted paragraph is not marked');
+          if (!h.includes('<ins data-monodocs-diff="">Added.</ins>')) fail('the added paragraph is not marked');
+          // Line endings are no difference: what both versions of the changed page say is a pair,
+          // marked in neither.
+          if ((h.match(/<p data-monodocs-diff-pair="\d+">Kept\.<\/p>/g) || []).length !== 2) fail('the unchanged paragraph is not paired');
+          if (/<(?:del|ins) data-monodocs-diff="">Kept\./.test(h)) fail('the unchanged paragraph is marked');
+          // The page whose only differences from the repository are its line endings and an image
+          // the repository keeps in LFS is unchanged: the guide is the one changed page.
+          const list = h.slice(h.indexOf('id="diff-changes"'), h.indexOf('</article>', h.indexOf('id="diff-changes"')));
+          if (!list.includes('<p>Unchanged pages: 1</p>')) fail('the page with the LFS image is not counted unchanged');
+          if (list.includes('Intro')) fail('the page with the LFS image is listed as a change');
+          if (!/<img[^>]*src="data:image\/png/.test(h)) fail('the image was not embedded');
+          console.log('built ' + path.relative(process.cwd(), out));
+          EOF
+          MONODOCS_ROOT="$(npm root -g | tr -d '\r')/monodocs" node diffwin.cjs
+
       # v0.19. A fourth view of the difference, one column with the deleted blocks written back where
       # they stood, and html.diffViewDefault choosing the view a document opens in (7.3.4). The view
       # is set by the script, so the page is driven in the Chrome the PDF steps use. lang: ja also
@@ -1135,3 +1205,33 @@ jobs:
               }
             })().catch((e) => { console.error(e); process.exit(1); });
           "
+
+      # v0.19. The difference samples (examples/diff), built with `--diff-from-dir` as a reader's
+      # release criterion builds them, and driven in a browser by scripts/verify-diff-browser.mjs:
+      # Edge on Windows, where a person had read them, and Chrome on Linux. The view each opens in,
+      # the four views, previous and next, the sidebar marks, and the list of changes, in English and
+      # Japanese. The screenshots of each view are kept for a person to look over.
+      - name: The difference samples driven in the browser (0.19)
+        if: env.SUPPORTS_V019 == 'true'
+        env:
+          DIFF_BROWSER: ${{ matrix.diffbrowser }}
+        run: |
+          set -euo pipefail
+          mkdir -p diffsamples
+          for lang in en ja; do
+            cp -R "examples/diff/$lang" "diffsamples/$lang"
+            (cd "diffsamples/$lang/current" && monodocs build . -o "../../$lang.html" --diff-from-dir ../earlier)
+            printf 'html:\n  diffViewDefault: inline\n' >> "diffsamples/$lang/current/monodocs.config.yml"
+            (cd "diffsamples/$lang/current" && monodocs build . -o "../../$lang-inline.html" --diff-from-dir ../earlier)
+          done
+          node scripts/verify-diff-browser.mjs --dir diffsamples --browser "$DIFF_BROWSER" \
+            --shots diffsamples/shots --puppeteer-from "$(npm root -g | tr -d '\r')/monodocs"
+
+      - name: Keep the difference samples' screenshots (0.19)
+        if: ${{ !cancelled() && env.SUPPORTS_V019 == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: diff-screenshots-${{ matrix.name }}
+          path: diffsamples/shots/*.png
+          if-no-files-found: warn
+          retention-days: 14
