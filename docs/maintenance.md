@@ -66,11 +66,14 @@ demand for any tag. It does not replace the pass above: GitHub runners have Node
 green run there says the asset is intact and the CLI behaves, not that it works where Node.js is
 absent. It exists to catch a broken or missing asset without waiting for someone to find a machine.
 On Windows it passes `-CheckServeOpen`: a fresh runner has no browser already running to take the
-address over, so the script can look for a browser process started with the served address.
+address over, so the script can look for a browser process started with the served address. The
+Linux script has no such check: a Linux runner has no desktop session, so `xdg-open` has no browser
+to hand the address to.
 
 The Windows script attaches the Mark of the Web a browser download carries (`Zone.Identifier`,
 `ZoneId=3`) to a copy of the binary, since its own downloads attach none, and runs it from the
-terminal.
+terminal. A terminal starts it without consulting the mark, so this shows that the binary runs with
+the mark attached, not what a browser attaches or what Explorer shows; that stays with SmartScreen.
 
 `verify-published.yml` also does, on Linux and Windows, what a person used to do on Windows for a
 release (from 0.19.0):

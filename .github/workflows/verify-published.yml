@@ -1221,7 +1221,10 @@ jobs:
           for lang in en ja; do
             cp -R "examples/diff/$lang" "diffsamples/$lang"
             (cd "diffsamples/$lang/current" && monodocs build . -o "../../$lang.html" --diff-from-dir ../earlier)
-            printf 'html:\n  diffViewDefault: inline\n' >> "diffsamples/$lang/current/monodocs.config.yml"
+            config="diffsamples/$lang/current/monodocs.config.yml"
+            # The key is added as a new html block, so the sample must not have one of its own.
+            if grep -q '^html:' "$config"; then echo "::error::$config already has an html block"; exit 1; fi
+            printf '\nhtml:\n  diffViewDefault: inline\n' >> "$config"
             (cd "diffsamples/$lang/current" && monodocs build . -o "../../$lang-inline.html" --diff-from-dir ../earlier)
           done
           node scripts/verify-diff-browser.mjs --dir diffsamples --browser "$DIFF_BROWSER" \

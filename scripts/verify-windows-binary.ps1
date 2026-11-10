@@ -16,8 +16,10 @@
     the platform-specific checks differ. docs/maintenance.md records the checks both must cover.
 
     Downloads here use curl.exe or Invoke-WebRequest, neither of which attaches a Mark of the Web,
-    so the script attaches one itself, as a browser does, and runs the binary from the terminal
-    with it.
+    so the script attaches the one a browser download carries itself and runs the binary from the
+    terminal with it. A terminal starts the binary without consulting the mark, so this shows that
+    it runs with the mark attached; whether a browser attaches one, and what Explorer then shows,
+    stays with SmartScreen below.
 
     What this script deliberately does NOT cover, and still needs a person:
       * Browser rendering: sidebar, search interaction, dark mode, narrow-width drawer.
@@ -580,11 +582,16 @@ try {
         $openUrl = "http://127.0.0.1:$openPort/"
         $openHandle = $null
         # A browser process started with the served address on its command line: the default
-        # browser, given the address by `cmd /c start`.
+        # browser, given the address by `cmd /c start`. The `cmd.exe` that hands it over carries the
+        # address too, and is not a browser. The port must not run on into more digits, so that
+        # 4174 does not find a process on 41740, which the finally block would otherwise stop.
+        $addressPattern = '127\.0\.0\.1:' + $openPort + '(?!\d)'
         function Get-OpenedBrowser {
             @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
-                $_.CommandLine -and $_.CommandLine.Contains("127.0.0.1:$openPort")
-            } | Where-Object { $_.ProcessId -ne $script:openHandle.Process.Id })
+                $_.CommandLine -and $_.CommandLine -match $addressPattern -and
+                $_.Name -notin @('cmd.exe', 'conhost.exe') -and
+                $_.ProcessId -ne $script:openHandle.Process.Id
+            })
         }
         try {
             Invoke-Check "serve --open launches the default browser on $openUrl" {
