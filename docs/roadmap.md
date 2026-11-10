@@ -6541,8 +6541,9 @@ Completion criteria:
   that build a difference with `html.diffViewDefault: inline` and, driven in a browser, find the
   document opening in one column with the deleted block shown in the new version's column; the
   browser pass over a difference the released Linux binary builds covers the view it opens in, the
-  four views, previous and next, the sidebar marks, and the list of changes; and a person reads the
-  one-column view in Edge on Windows. `verify-published.yml` expects the clear button's Japanese
+  four views, previous and next, the sidebar marks, and the list of changes; and the one-column view is read
+  in Edge on Windows, which `verify-published.yml` came to do, driving the difference samples there
+  and keeping a screenshot of each view. `verify-published.yml` expects the clear button's Japanese
   name under `lang: ja` again from 0.19. The release notes introduce the view and the key, say that
   a `lang: ja` build shows Japanese labels again but for `generatedBy`, and say that nothing else
   changes for a build without a difference

@@ -65,14 +65,35 @@ its two implementations — a check added to one belongs in the other unless it 
 demand for any tag. It does not replace the pass above: GitHub runners have Node.js installed, so a
 green run there says the asset is intact and the CLI behaves, not that it works where Node.js is
 absent. It exists to catch a broken or missing asset without waiting for someone to find a machine.
+On Windows it passes `-CheckServeOpen`: a fresh runner has no browser already running to take the
+address over, so the script can look for a browser process started with the served address.
+
+The Windows script attaches the Mark of the Web a browser download carries (`Zone.Identifier`,
+`ZoneId=3`) to a copy of the binary, since its own downloads attach none, and runs it from the
+terminal.
+
+`verify-published.yml` also does, on Linux and Windows, what a person used to do on Windows for a
+release (from 0.19.0):
+
+- A difference built with `--diff-from` in a repository at a path with a space and Japanese
+  characters, with `core.autocrlf` true, the working tree in CRLF and the repository in LF, and an
+  image kept in Git LFS. Neither the line endings nor the LFS pointer may show as a difference.
+- The difference samples (`examples/diff`) built with `--diff-from-dir` and driven in Edge on Windows
+  and Chrome on Linux by [`scripts/verify-diff-browser.mjs`](../scripts/verify-diff-browser.mjs): the
+  view each opens in, the four views, previous and next, the sidebar marks, and the list of changes,
+  in English and Japanese. A screenshot of each view is kept as an artifact for a person to look
+  over. The same script drives the samples a released Linux binary builds for that release
+  criterion.
 
 What stays manual, because a script cannot settle it:
 
-- Browser rendering: sidebar, search interaction, dark mode, and the narrow-width drawer.
-- `serve --open`, which launches the default browser.
-- On Windows, SmartScreen and Mark of the Web. Downloads made by the script do not attach a Mark of
-  the Web, so the warning is not exercised. The binary is unsigned by policy
-  ([roadmap.md](roadmap.md) 8.5) and the site documents the warning; see [status.md](status.md).
+- Browser rendering beyond the difference samples: sidebar, search interaction, dark mode, and the
+  narrow-width drawer of `examples/en`, and a look over the screenshots the workflow keeps.
+- `serve --open` on a person's own machine, where a browser already running takes the address over.
+- On Windows, SmartScreen, which only Explorer raises and which depends on the binary's reputation.
+  The binary is unsigned by policy ([roadmap.md](roadmap.md) 8.5) and the site documents the warning;
+  see [status.md](status.md).
+- A host without Node.js, which no runner is.
 
 ## Quarterly review
 
