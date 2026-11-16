@@ -812,7 +812,7 @@ Nothing changes for a build without a difference but a comment in the default th
 
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
-- [ ] The examples measured in [roadmap.md](roadmap.md) 7.3.6 come out as recorded there, and a test pins them
+- [x] The examples measured in [roadmap.md](roadmap.md) 7.3.6 come out as recorded there, and a test pins them — `diff/text.test.ts` aligns the five measured pairs and writes each as roadmap 7.3.6 records it, `[-…-]` and `{+…+}` around the equal text, and shows the rewritten paragraph that keeps less than half of itself whole
 - [ ] In a paragraph mixing Japanese and English, a change to a single word shows as a difference in that word only
 - [ ] An emoji joined by ZWJ and a flag are never split, and the script and cluster table is generated from one Unicode version, with a test that fails when the table and its data file disagree
 - [ ] A paired heading whose generated number changed shows no difference in the number
