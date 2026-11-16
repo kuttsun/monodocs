@@ -11,7 +11,7 @@
  * the tokens do not follow the Node that runs the build.
  */
 import { gcbOf, graphemeClusters, inRanges } from "./graphemes.js";
-import { CJK_RANGES, SPACE_RANGES, WORD_RANGES } from "./unicodeTables.js";
+import { CJK_RANGES, PICTOGRAPHIC_RANGES, SPACE_RANGES, WORD_RANGES } from "./unicodeTables.js";
 
 export type TokenKind = "cjk" | "word" | "space" | "other";
 
@@ -26,6 +26,19 @@ export function clusterKind(cluster: string): TokenKind {
   let cp = cluster.codePointAt(0)!;
   // SOFT HYPHEN and WORD JOINER sit inside a word, though their Grapheme_Cluster_Break is Control.
   if (cluster === "\u00AD" || cluster === "\u2060") return "word";
+  // An emoji is a token of its own even when it starts with a letter or a digit: a keycap (1️⃣),
+  // or a letter with a skin-tone modifier, would otherwise join the word beside it.
+  for (const ch of cluster) {
+    const c = ch.codePointAt(0)!;
+    if (
+      c === 0x20e3 ||
+      c === 0xfe0f ||
+      (c >= 0x1f3fb && c <= 0x1f3ff) ||
+      inRanges(PICTOGRAPHIC_RANGES, c)
+    ) {
+      return "other";
+    }
+  }
   for (const ch of cluster) {
     cp = ch.codePointAt(0)!;
     if (gcbOf(cp) !== "Prepend") break;

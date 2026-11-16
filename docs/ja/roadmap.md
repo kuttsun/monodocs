@@ -1684,7 +1684,9 @@ Set the output [-directory-]{+folder+} before [-running-]{+starting+} the build.
 数字は一般カテゴリ L と N のすべてであり、`²` や `Ⅻ` も `x` と同じく語に加わる。結合文字などのマーク（M）も
 それと同じに数える。ミャンマー文字やタイ・タム文字の結合文字には、語の途中でそれだけでクラスタを始めるものが
 あるためである。空白は White_Space プロパティである。Grapheme_Cluster_Break が Control であるソフトハイフンと
-WORD JOINER は、語の中に残る。1 文字で 1 トークンにする文字は、Script が Han、Hiragana、Katakana のものと、
+WORD JOINER は、語の中に残る。一方、絵文字の部品（U+20E3、U+FE0F、肌の色の修飾子、
+Extended_Pictographic の文字）を含むクラスタは、キーキャップの `1️⃣` のように数字や文字で始まっても、
+それだけで 1 トークンにする。1 文字で 1 トークンにする文字は、Script が Han、Hiragana、Katakana のものと、
 Script が Common である `〆`、`ー`、半角の `ｰ` である。`々`、`ヵ`、`ヶ` はすでに Han と Katakana であり、
 どれも 1 文字で 1 トークンなので、3 つのどれに属するかは何も変えない。クラスタは Prepend でない最初の符号位置の
 種類を取るので、Extend である半角の濁点はかなと一緒に残り、Prepend であるアラビア語の数字記号を前に付けた

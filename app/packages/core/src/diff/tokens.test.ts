@@ -63,6 +63,9 @@ describe("tokenize", () => {
 
   it("never splits a grapheme cluster", () => {
     expect(texts("👩‍💻👍🏽🇯🇵")).toEqual(["👩‍💻", "👍🏽", "🇯🇵"]);
+    // A keycap and a modified letter are emoji, tokens of their own beside letters and digits.
+    expect(texts("1️⃣2 abc1️⃣#️⃣")).toEqual(["1️⃣", "2", " ", "abc", "1️⃣", "#️⃣"]);
+    expect(texts("a🏽b")).toEqual(["a🏽", "b"]);
     // A combining mark joins the cluster it follows, and so the word.
     expect(texts("café ok")).toEqual(["café", " ", "ok"]);
     expect(texts("ｶﾞｲﾄﾞ")).toEqual(["ｶﾞ", "ｲ", "ﾄﾞ"]);
