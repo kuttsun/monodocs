@@ -1679,6 +1679,18 @@ Set the output [-directory-]{+folder+} before [-running-]{+starting+} the build.
 - **どの文字種も 1 文字ずつ比べる方法**は、同じく実測すると、英語の語を共有する文字のところで割る。
   `before [-runn-]{+start+}ing the build` となる
 
+**表で決めたこと（v0.20）。** 表は、`sources/eastAsianWidth.ts` がすでに使っている Unicode 18.0.0 から
+`scripts/generate-diff-unicode.mjs` で生成し、表と同梱のデータファイルが食い違うとテストが失敗する。文字と
+数字は一般カテゴリ L と N のすべてであり、`²` や `Ⅻ` も `x` と同じく語に加わる。空白は White_Space
+プロパティである。1 文字で 1 トークンにする文字は、Script が Han、Hiragana、Katakana のものと、Script が
+Common である `〆`、`ー`、半角の `ｰ` である。`々`、`ヵ`、`ヶ` はすでに Han と Katakana であり、どれも
+1 文字で 1 トークンなので、3 つのどれに属するかは何も変えない。クラスタは最初の符号位置の種類を取るので、
+Extend である半角の濁点はかなと一緒に残る。クラスタは 18.0.0 の UAX #29 に従う。その結合子音の規則は
+`ConjunctLinker ConjunctExtender* × LinkingConsonant` であり、`diff/graphemes.test.ts` はその
+GraphemeBreakTest.txt のすべてのケースを走らせる。1 MB を超える DerivedCoreProperties.txt は、読む部分で
+ある Indic_Conjunct_Break の節だけを、元のファイルの SHA-256 とともに同梱する。テキストは正規化せず、
+書き手が書いたとおりに比べる。合成済みの `é` と分解された `é` は別のテキストである。
+
 ---
 
 ## 8. 提供形態

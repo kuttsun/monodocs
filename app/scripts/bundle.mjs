@@ -186,9 +186,11 @@ async function collectNotices(pkgDirs) {
 // roadmap 21.3), appended below as their own section.
 const notices = await collectNotices(new Set(packageDirsFromMetafile(result.metafile)));
 
-// The East_Asian_Width table behind `sources.lineBreak: join` is first-party source generated from
-// Unicode data, so no package in the graph carries its license. It is added by hand, with the
-// version read from the vendored data file the table was generated from.
+// The East_Asian_Width table behind `sources.lineBreak: join`, and the script, general category,
+// White_Space, grapheme break, Extended_Pictographic, and Indic_Conjunct_Break tables behind the
+// comparison inside a changed block, are first-party source generated from Unicode data, so no
+// package in the graph carries its license. It is added by hand, with the version read from the
+// vendored data files the tables were generated from, which must all be of one version.
 const unicodeDataDir = resolve(appRoot, "packages/core/scripts/data");
 const eawFiles = (await readdir(unicodeDataDir)).filter((f) => /^EastAsianWidth-.+\.txt$/.test(f));
 // Exactly one, so the notice cannot name a version other than the one the table came from.
@@ -199,8 +201,22 @@ if (eawFiles.length !== 1) {
 }
 const eawFile = eawFiles[0];
 const unicodeVersion = eawFile.slice("EastAsianWidth-".length, -".txt".length);
+const diffDataFiles = (await readdir(unicodeDataDir)).filter((f) =>
+  /^(Scripts|DerivedGeneralCategory|PropList|GraphemeBreakProperty|emoji-data|DerivedCoreProperties)-/.test(
+    f,
+  ),
+);
+const otherVersions = diffDataFiles.filter((f) => !f.includes(`-${unicodeVersion}`));
+if (diffDataFiles.length !== 6 || otherVersions.length > 0) {
+  throw new Error(
+    `expected the six Unicode data files of the comparison at ${unicodeVersion} in ${unicodeDataDir}, ` +
+      `found ${diffDataFiles.join(", ")}`,
+  );
+}
 notices.push({
-  name: "Unicode Character Database (EastAsianWidth.txt, derived table)",
+  name:
+    "Unicode Character Database (EastAsianWidth, Scripts, DerivedGeneralCategory, PropList, " +
+    "GraphemeBreakProperty, emoji-data, and DerivedCoreProperties; derived tables)",
   version: unicodeVersion,
   license: "Unicode-3.0",
   url: `https://www.unicode.org/Public/${unicodeVersion}/ucd/`,
