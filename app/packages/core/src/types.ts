@@ -243,7 +243,7 @@ export type DiffOptions = {
   tree?: string;
   /** The earlier version's name in messages, and in the output when it has no document.version. */
   label?: string;
-  /** Stage 2: the PDF presentation (7.3.5). Not output yet, so given, it is `diff/unsupported`. */
+  /** Stage 2: the PDF presentation (7.3.5), deferred past 1.0: given, it is `diff/unsupported`. */
   pdf?: "markup" | "bars";
 };
 

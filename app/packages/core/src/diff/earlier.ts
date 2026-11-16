@@ -274,7 +274,7 @@ export async function inEarlierVersion<T>(
 
 /**
  * Refuse a difference asked of what does not output one yet (roadmap 7.3.1): a PDF, from `-f` or
- * `output.format`, and `diff.pdf`, which is stage 2's.
+ * `output.format`, and `diff.pdf`, which is stage 2's, deferred past 1.0.
  */
 export function assertDiffSupported(config: ResolvedConfig, diff: DiffOptions): void {
   if (diff.pdf !== undefined) {

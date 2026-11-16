@@ -282,8 +282,8 @@ export type BuildInternals = {
   /** Called with each version's pages once they are built, in a build with a difference. */
   onPrepared?: (version: "new" | "earlier", site: PreparedSite) => void;
   /**
-   * Write the difference into one column, as the markup PDF will (7.3.5), rather than side by side.
-   * For tests, until the PDF uses it.
+   * Write the difference into one column, as the markup PDF would (7.3.5), rather than side by
+   * side. For tests: the PDF is deferred past 1.0, and the one-column view writes its own.
    */
   writeInline?: boolean;
   /** Called with the new version's pages once the difference is written into them. For tests. */
@@ -445,7 +445,8 @@ export async function buildSite(
       ),
       earlierDiagramPrefix: undefined,
     };
-    // Until the markup PDF uses it, the one-column writing is reached by tests alone (7.3.5).
+    // The one-column writing the markup PDF would print, reached by tests alone while the PDF is
+    // deferred past 1.0 (7.3.5).
     if (internals.writeInline === true) writeChangedPages(comparison, { next, old }, write);
     diffDocument = writeDiffDocument(
       comparison,
