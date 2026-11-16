@@ -24,7 +24,7 @@ export type Segment = { op: "equal" | "delete" | "insert"; text: string };
 export type TextDifference = { whole: true } | { whole: false; segments: Segment[] };
 
 /** The number of grapheme clusters in `text`. */
-const clusterCount = (text: string) => graphemeClusters(text).length;
+const clusterCount = (text: string, atomsFrom: number) => graphemeClusters(text, atomsFrom).length;
 
 /** Whether `text` is made only of whitespace and punctuation. */
 function onlySpaceAndPunctuation(text: string): boolean {
@@ -39,9 +39,9 @@ function onlySpaceAndPunctuation(text: string): boolean {
  * The aligned texts as runs: each change, whatever order the edit script interleaves its
  * deletions and insertions in, as its deleted text followed by its inserted text.
  */
-function runsOf(oldText: string, newText: string): Segment[] {
-  const old = tokenize(oldText);
-  const next = tokenize(newText);
+function runsOf(oldText: string, newText: string, atomsFrom: number): Segment[] {
+  const old = tokenize(oldText, atomsFrom);
+  const next = tokenize(newText, atomsFrom);
   const segments: Segment[] = [];
   let deleted = "";
   let inserted = "";
@@ -71,7 +71,7 @@ function runsOf(oldText: string, newText: string): Segment[] {
  * only whitespace and punctuation: the run joins both the deleted and the inserted text, and the
  * two changes become one.
  */
-function cleanUp(runs: Segment[]): Segment[] {
+function cleanUp(runs: Segment[], atomsFrom: number): Segment[] {
   // Each change as one deleted and one inserted text, between the equal runs.
   type Change = { deleted: string; inserted: string };
   const parts: (Segment | Change)[] = [];
@@ -100,7 +100,7 @@ function cleanUp(runs: Segment[]): Segment[] {
       !("op" in before) &&
       after !== undefined &&
       !("op" in after) &&
-      (clusterCount(part.text) < 2 || onlySpaceAndPunctuation(part.text))
+      (clusterCount(part.text, atomsFrom) < 2 || onlySpaceAndPunctuation(part.text))
     ) {
       before.deleted += part.text + after.deleted;
       before.inserted += part.text + after.inserted;
@@ -120,13 +120,16 @@ function cleanUp(runs: Segment[]): Segment[] {
   return segments;
 }
 
-/** The difference between `oldText` and `newText`. */
-export function diffText(oldText: string, newText: string): TextDifference {
-  const segments = cleanUp(runsOf(oldText, newText));
+/**
+ * The difference between `oldText` and `newText`. A code point from `atomsFrom` up stands for what
+ * is not text, and is a cluster of its own (graphemeClusters).
+ */
+export function diffText(oldText: string, newText: string, atomsFrom = Infinity): TextDifference {
+  const segments = cleanUp(runsOf(oldText, newText, atomsFrom), atomsFrom);
   const equal = segments
     .filter((s) => s.op === "equal")
-    .reduce((n, s) => n + clusterCount(s.text), 0);
-  const longer = Math.max(clusterCount(oldText), clusterCount(newText));
+    .reduce((n, s) => n + clusterCount(s.text, atomsFrom), 0);
+  const longer = Math.max(clusterCount(oldText, atomsFrom), clusterCount(newText, atomsFrom));
   if (equal * 2 < longer) return { whole: true };
   return { whole: false, segments };
 }

@@ -49,10 +49,13 @@ export function clusterKind(cluster: string): TokenKind {
   return "other";
 }
 
-/** Splits `text` into tokens: runs of word and space clusters are one token, any other one each. */
-export function tokenize(text: string): Token[] {
+/**
+ * Splits `text` into tokens: runs of word and space clusters are one token, any other one each. A
+ * code point from `atomsFrom` up is a cluster of its own (graphemeClusters).
+ */
+export function tokenize(text: string, atomsFrom = Infinity): Token[] {
   const tokens: Token[] = [];
-  for (const cluster of graphemeClusters(text)) {
+  for (const cluster of graphemeClusters(text, atomsFrom)) {
     const kind = clusterKind(cluster);
     const last = tokens[tokens.length - 1];
     if (last && last.kind === kind && (kind === "word" || kind === "space")) last.text += cluster;

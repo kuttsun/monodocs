@@ -52,8 +52,12 @@ const incbOf = (cp: number): Incb => INCB_VALUES[codeIn(CONJUNCT_RANGES, cp)]!;
 
 const isControl = (g: Gcb) => g === "Control" || g === "CR" || g === "LF";
 
-/** Splits `text` into extended grapheme clusters. */
-export function graphemeClusters(text: string): string[] {
+/**
+ * Splits `text` into extended grapheme clusters. A code point from `atomsFrom` up is a cluster of its
+ * own: a private-use character standing for what is not text (diff/inside.ts) takes no combining
+ * mark after it and no Prepend before it, as the element it stands for would not.
+ */
+export function graphemeClusters(text: string, atomsFrom = Infinity): string[] {
   const clusters: string[] = [];
   let current = "";
   let prev: Gcb | undefined;
@@ -63,12 +67,17 @@ export function graphemeClusters(text: string): string[] {
   let linked = false;
   // GB12, GB13: how many regional indicators in a row end just before the current character.
   let regional = 0;
+  let afterAtom = false;
   for (const ch of text) {
     const cp = ch.codePointAt(0)!;
     const g = gcbOf(cp);
     const incb = incbOf(cp);
     const pictographic = inRanges(PICTOGRAPHIC_RANGES, cp);
-    if (prev !== undefined && breaksBetween(prev, g, incb, pictographic, emoji, linked, regional)) {
+    const atom = cp >= atomsFrom;
+    if (
+      prev !== undefined &&
+      (atom || afterAtom || breaksBetween(prev, g, incb, pictographic, emoji, linked, regional))
+    ) {
       clusters.push(current);
       current = "";
     }
@@ -82,6 +91,7 @@ export function graphemeClusters(text: string): string[] {
     else if (!(linked && incb === "Extend")) linked = false;
     regional = g === "Regional_Indicator" ? regional + 1 : 0;
     prev = g;
+    afterAtom = atom;
   }
   if (current !== "") clusters.push(current);
   return clusters;
