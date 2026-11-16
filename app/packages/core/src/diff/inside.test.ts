@@ -29,9 +29,22 @@ describe("extract", () => {
     expect(out.text).toBe("one two");
     expect(out.origin).toHaveLength(7);
     expect(out.origin[0]).toEqual({ node: a, start: 2, end: 3 });
-    // The space stands for the first whitespace after "one", in the node it starts in.
-    expect(out.origin[3]).toMatchObject({ node: a, start: 5 });
+    // The space stands for all the whitespace after "one", in the node it is in.
+    expect(out.origin[3]).toEqual({ space: [{ node: a, start: 5, end: 8 }] });
     expect(out.origin[4]).toEqual({ node: b, start: 0, end: 1 });
+  });
+
+  it("maps a space whose whitespace spans two text nodes to both", () => {
+    const a = text("a ");
+    const b = text(" b");
+    const out = extract([a, h("em", {}, [b])], new Atoms(), "page");
+    expect(out.text).toBe("a b");
+    expect(out.origin[1]).toEqual({
+      space: [
+        { node: a, start: 1, end: 2 },
+        { node: b, start: 0, end: 1 },
+      ],
+    });
   });
 
   it("leaves generated numbers and section-number elements out", () => {
@@ -117,6 +130,8 @@ describe("linesOf", () => {
     expect(linesOf(plain).map((l) => l.text)).toEqual(["let a = 1;", "let b = 2;"]);
     expect(linesOf(shiki).map((l) => l.text)).toEqual(["let a = 1;", "let b = 2;"]);
     expect(linesOf(h("pre", {}, [])).map((l) => l.text)).toEqual([""]);
+    // A carriage return before a line break is not part of the line.
+    expect(linesOf(h("pre", {}, [text("a\r\nb\r\n")])).map((l) => l.text)).toEqual(["a", "b"]);
   });
 });
 
@@ -150,6 +165,11 @@ describe("insideDifference", () => {
     ).toBeUndefined();
   });
 
+  it("does not pair blocks that read the same inside, though their keys differ", () => {
+    // NEXT LINE is whitespace by White_Space, which the key's \s does not read as such.
+    expect(inside(p(text("one two three")), p(text("one\u0085two three")))).toBeUndefined();
+  });
+
   it("compares the text of a list item without what is nested in it", () => {
     const item = (own: string, nested: string) =>
       root(h("ul", {}, [h("li", {}, [text(own), h("ul", {}, [h("li", {}, [text(nested)])])])]));
@@ -171,6 +191,14 @@ describe("insideDifference", () => {
       expect(plan.edits.map((e) => e.op)).toEqual(["equal", "delete", "insert", "equal"]);
     }
     expect(inside(code("js", "a();\nb();\n"), code("ts", "a();\nb();\n"))).toBeUndefined();
+    // Sources that differ but render the same lines are not a pair with nothing inside.
+    const rendered = (source: string) =>
+      root(
+        h("pre", {}, [h("code", {}, [text("same();\n")])], {
+          monodocsSource: { kind: "code", lang: "js", source },
+        }),
+      );
+    expect(inside(rendered("{attr}();"), rendered("same();"))).toBeUndefined();
     // Less than half of the lines kept: not paired.
     expect(inside(code("js", "a\nb\nc\n"), code("js", "x\ny\nc\n"))).toBeUndefined();
   });
@@ -206,8 +234,30 @@ describe("insideDifference", () => {
     );
     expect(rewritten?.kind === "row" && rewritten.cells[1]).toBe("whole");
     expect(inside(row(["td", "a"], ["td", "b"]), row(["td", "a"], ["th", "b"]))).toBeUndefined();
+    // A row whose cells read the same here is not a pair with nothing inside.
+    expect(
+      inside(row(["td", "a b"], ["td", "c"]), row(["td", "a\u0085b"], ["td", "c"])),
+    ).toBeUndefined();
     expect(inside(row(["td", "a"], ["td", "b"]), row(["td", "a"], ["td", "b", 2]))).toBeUndefined();
     expect(inside(row(["td", "a"], ["td", "b"]), row(["td", "a"]))).toBeUndefined();
+  });
+
+  it("compares a cell that holds blocks as the row's key does, whole when it changed", () => {
+    const row = (blocky: string, plain: string) =>
+      root(
+        h("table", {}, [
+          h("tbody", {}, [
+            h("tr", {}, [
+              h("td", {}, [h("div", { className: ["paragraph"] }, [h("p", {}, [text(blocky)])])]),
+              h("td", {}, [text(plain)]),
+            ]),
+          ]),
+        ]),
+      );
+    const kept = inside(row("Kept block", "one two three"), row("Kept block", "one two four"));
+    expect(kept?.kind === "row" && kept.cells[0]).toBe("same");
+    const changed = inside(row("Old block", "one two three"), row("New block", "one two four"));
+    expect(changed?.kind === "row" && changed.cells[0]).toBe("whole");
   });
 
   it("shows a display formula and a diagram whole, and does not pair an image", () => {

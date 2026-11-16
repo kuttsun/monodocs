@@ -17,14 +17,30 @@
 import type { Element, ElementContent, Text } from "hast";
 import { isGenerated, isGeneratedSeparator } from "../pipeline/generatedNumbers.js";
 import { recordedData } from "../pipeline/postprocess.js";
-import { has, holdsBlocks, imageKey, mediaKey, MEDIA, svgKey, type Block } from "./blocks.js";
+import {
+  cellKey,
+  has,
+  holdsBlocks,
+  imageKey,
+  mediaKey,
+  MEDIA,
+  svgKey,
+  type Block,
+} from "./blocks.js";
 import { inRanges } from "./graphemes.js";
 import { diffSequences } from "./myers.js";
 import { diffText, type Segment } from "./text.js";
 import { SPACE_RANGES } from "./unicodeTables.js";
 
-/** Where one UTF-16 unit of an extracted text came from: part of a text node, or a whole element. */
-export type Origin = { node: Text; start: number; end: number } | { atom: Element };
+/** A part of a text node. */
+export type Span = { node: Text; start: number; end: number };
+
+/**
+ * Where one UTF-16 unit of an extracted text came from: part of a text node, a whole element, or,
+ * for the one space a run of whitespace is collapsed to, every part of every text node the run
+ * spans.
+ */
+export type Origin = Span | { atom: Element } | { space: Span[] };
 
 /** A block's text, with where each of its UTF-16 units came from. */
 export type Extract = { text: string; origin: Origin[] };
@@ -108,7 +124,7 @@ export function extract(nodes: readonly ElementContent[], atoms: Atoms, pageId: 
   let text = "";
   const origin: Origin[] = [];
   // A space is written only before the next thing that is not one, so none is left at the end.
-  let pending: Origin | undefined;
+  let pending: { space: Span[] } | undefined;
   const put = (piece: string, from: Origin) => {
     if (pending !== undefined && text !== "") {
       text += " ";
@@ -125,8 +141,10 @@ export function extract(nodes: readonly ElementContent[], atoms: Atoms, pageId: 
         let i = 0;
         for (const ch of child.value) {
           if (isSpace(ch)) {
-            if (pending === undefined) pending = { node: child, start: i, end: i + ch.length };
-            else if ("node" in pending && pending.node === child) pending.end = i + ch.length;
+            pending ??= { space: [] };
+            const last = pending.space[pending.space.length - 1];
+            if (last?.node === child && last.end === i) last.end = i + ch.length;
+            else pending.space.push({ node: child, start: i, end: i + ch.length });
           } else {
             put(ch, { node: child, start: i, end: i + ch.length });
           }
@@ -221,6 +239,9 @@ function textPlan(
   if (atoms.overflowed) return undefined;
   const difference = diffText(a.text, b.text);
   if (difference.whole) return undefined;
+  // Texts whose keys differ but which read the same here (whitespace the key reads otherwise) are
+  // not a pair with nothing inside it: they stay as stage 1 shows them.
+  if (difference.segments.every((s) => s.op === "equal")) return undefined;
   return { kind: "text", old: a, new: b, segments: difference.segments };
 }
 
@@ -237,6 +258,8 @@ export function linesOf(pre: Element): Line[] {
       if (child.type === "text") {
         for (let i = 0; i < child.value.length; i++) {
           if (child.value[i] === "\n") end();
+          // A carriage return before a line break ends the line with it, and is not its text.
+          else if (child.value[i] === "\r" && child.value[i + 1] === "\n") continue;
           else {
             current.text += child.value[i];
             current.origin.push({ node: child, start: i, end: i + 1 });
@@ -266,6 +289,8 @@ function codePlan(old: Block, next: Block): CodePlan | undefined {
   const edits = diffSequences(a, b, (x, y) => x.text === y.text);
   const equal = edits.filter((e) => e.op === "equal").length;
   if (equal * 2 < Math.max(a.length, b.length)) return undefined;
+  // Sources whose rendered lines are the same (an attribute substituted alike) are not a pair.
+  if (equal === edits.length) return undefined;
   return { kind: "code", old: a, new: b, edits };
 }
 
@@ -285,12 +310,24 @@ function rowPlan(old: Block, next: Block): RowPlan | undefined {
   if (a.some((cell, i) => shape(cell) !== shape(b[i]!))) return undefined;
   const cells = a.map((cell, i): TextPlan | "same" | "whole" => {
     const other = b[i]!;
-    // A cell that holds blocks of its own (AsciiDoc's `a|`) is compared whole.
-    if (holdsBlocks(cell) || holdsBlocks(other)) return "whole";
-    const plan = textPlan(cell.children, other.children, old.pageId, next.pageId);
-    if (plan === undefined) return "whole";
-    return plan.segments.every((s) => s.op === "equal") ? "same" : plan;
+    // A cell that holds blocks of its own (AsciiDoc's `a|`) is compared as the row's key reads it,
+    // and shown whole when it changed.
+    if (holdsBlocks(cell) || holdsBlocks(other)) {
+      const prefix = (page: string) => (page === "" ? "" : `${page}-`);
+      const same = cellKey(cell, prefix(old.pageId)) === cellKey(other, prefix(next.pageId));
+      return same ? "same" : "whole";
+    }
+    const atoms = new Atoms(rawText(cell.children), rawText(other.children));
+    if (
+      extract(cell.children, atoms, old.pageId).text ===
+      extract(other.children, atoms, next.pageId).text
+    ) {
+      return "same";
+    }
+    return textPlan(cell.children, other.children, old.pageId, next.pageId) ?? "whole";
   });
+  // A row whose cells all read the same here is not a pair with nothing inside it.
+  if (cells.every((cell) => cell === "same")) return undefined;
   return { kind: "row", cells };
 }
 

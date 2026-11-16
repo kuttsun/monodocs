@@ -509,10 +509,13 @@ export function blocksOf(tree: HastRoot, pageId = ""): Block[] {
  * What a table cell reads as: its text, or, for a cell that holds blocks (AsciiDoc's `a|`), each of
  * them as it is compared — a diagram by its source, code with its language.
  */
-function cellKey(cell: Element): string {
+export function cellKey(cell: Element, idPrefix: string = pagePrefix): string {
   if (!holdsBlocks(cell)) return textOf(cell.children);
-  // Read with the page's prefix, which blocksOf sets again as it is.
-  const inner = blocksOf({ type: "root", children: cell.children }, pagePrefix.replace(/-$/, ""));
+  // Read with the page's prefix, which blocksOf sets again as it is; restored after, for a caller
+  // reading the page that set it.
+  const outer = pagePrefix;
+  const inner = blocksOf({ type: "root", children: cell.children }, idPrefix.replace(/-$/, ""));
+  pagePrefix = outer;
   // Each with its kind and chain, so a nested list made flat inside a cell is a change.
   return JSON.stringify(inner.map((block) => [block.kind, block.chain, block.key]));
 }
