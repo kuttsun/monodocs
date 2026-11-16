@@ -1,14 +1,19 @@
 import type { Root as HastRoot } from "hast";
 import type { Page } from "../types.js";
 import { blocksOf, sameBlock, type Block } from "./blocks.js";
+import type { Inside } from "./inside.js";
 import { diffSequences } from "./myers.js";
 import { matchPages, type PageMatch } from "./pages.js";
 
-/** One block of a matched page: kept, deleted from the earlier version, or added. */
+/**
+ * One block of a matched page: kept, deleted from the earlier version, added, or changed — a
+ * deleted and an added block paired, with what differs inside them (7.3.6).
+ */
 export type BlockEdit =
   | { op: "equal"; old: Block; new: Block }
   | { op: "delete"; old: Block }
-  | { op: "insert"; new: Block };
+  | { op: "insert"; new: Block }
+  | { op: "change"; old: Block; new: Block; inside: Inside };
 
 /** A page in the difference, with what changed on it when it is in both versions. */
 export type PageComparison = PageMatch & {
