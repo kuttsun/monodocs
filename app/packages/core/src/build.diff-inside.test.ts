@@ -260,6 +260,16 @@ describe("the words inside a changed block (7.3.6)", () => {
     );
   });
 
+  it("changes a reference's words alone when only some of them changed", async () => {
+    const page = (caption: string) => ({
+      "docs/a.adoc": `= A\n:xrefstyle: short\n:figure-caption: ${caption}\n\n[[f]]\n.Cap\nimage::x.png[]\n\nSee <<f>> for the shape of the thing here.\n`,
+    });
+    const pages = await difference(page("The figure"), page("The diagram"));
+    expect(marked(columns(pages.get("/a")!).inline)).toContain(
+      "See The [-figure-]{+diagram+} 1 for the shape of the thing here.",
+    );
+  });
+
   it("counts a changed block once in the list of changes, and shows it once in one column", async () => {
     const pages = await difference(
       { "docs/a.md": "# A\n\nOld word here.\n\nKeep.\n" },

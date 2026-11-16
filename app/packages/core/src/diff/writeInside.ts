@@ -362,7 +362,16 @@ function cloneRange(
     else if ("node" in origin) add(origin);
     else origin.space.forEach(add);
   }
-  const whole = linkTexts(own, (node) => covered.has(node));
+  // A word is in the range when every character of it but a space is.
+  const all = (node: Text) => {
+    const parts = covered.get(node) ?? [];
+    for (let i = 0; i < node.value.length; i++) {
+      if (node.value[i]!.trim() === "") continue;
+      if (!parts.some((part) => part.start <= i && i < part.end)) return false;
+    }
+    return parts.length > 0;
+  };
+  const whole = linkTexts(own, all);
   const walk = (list: readonly ElementContent[]): ElementContent[] =>
     list.flatMap((child): ElementContent[] => {
       if (child.type === "text") {
