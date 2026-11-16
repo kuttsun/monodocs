@@ -131,22 +131,34 @@ export function extract(nodes: readonly ElementContent[], atoms: Atoms, pageId: 
   const origin: Origin[] = [];
   // A space is written only before the next thing that is not one, so none is left at the end.
   let pending: { space: Span[] } | undefined;
+  // Whether a generated number was left out after the pending space: the space that counts is the
+  // one after the number, outside the reference that ends with it, and with none there, there is
+  // none (`Figure 1.` reads `Figure.`).
+  let broken = false;
   const put = (piece: string, from: Origin) => {
-    if (pending !== undefined && text !== "") {
+    if (pending !== undefined && text !== "" && !broken) {
       text += " ";
       origin.push(pending);
     }
     pending = undefined;
+    broken = false;
     text += piece;
     for (let i = 0; i < piece.length; i++) origin.push(from);
   };
   const walk = (list: readonly ElementContent[]) => {
     for (const child of list) {
       if (child.type === "text") {
-        if (isGenerated(child) || isGeneratedSeparator(child)) continue;
+        if (isGenerated(child) || isGeneratedSeparator(child)) {
+          if (pending !== undefined) broken = true;
+          continue;
+        }
         let i = 0;
         for (const ch of child.value) {
           if (isSpace(ch)) {
+            if (broken) {
+              pending = undefined;
+              broken = false;
+            }
             pending ??= { space: [] };
             const last = pending.space[pending.space.length - 1];
             if (last?.node === child && last.end === i) last.end = i + ch.length;

@@ -281,9 +281,9 @@ describe("a changed text block (v0.20)", () => {
       '<p>Keep the <strong id="s">bold old</strong> words here.</p>',
       '<p>Keep the <strong id="s">bold new</strong> words here.</p>',
     );
-    // Deleted bold text stays bold, and keeps no ID.
+    // Deleted bold text stays bold: written inside the new bold run, it takes no second one.
     expect(out.inline).toBe(
-      '<p data-monodocs-diff-block="changed">Keep the <strong id="s">bold <del data-monodocs-diff=""><strong>old</strong></del><ins data-monodocs-diff="">new</ins></strong> words here.</p>',
+      '<p data-monodocs-diff-block="changed">Keep the <strong id="s">bold <del data-monodocs-diff="">old</del><ins data-monodocs-diff="">new</ins></strong> words here.</p>',
     );
     // The earlier column marks its deleted words where they stand; the new one takes them out to
     // a template, a comment in their place.
@@ -293,7 +293,7 @@ describe("a changed text block (v0.20)", () => {
     expect(out.current).toBe(
       '<p data-monodocs-diff-pair="1" data-monodocs-diff-block="changed">Keep the <strong id="s">bold <!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="">new</ins></strong> words here.</p>',
     );
-    expect(out.detached).toEqual(['<del data-monodocs-diff=""><strong>old</strong></del>']);
+    expect(out.detached).toEqual(['<del data-monodocs-diff="">old</del>']);
   });
 
   it("keeps deleted words inside the link they were in, and never links them", () => {
@@ -351,6 +351,97 @@ describe("a changed text block (v0.20)", () => {
       '<p data-monodocs-diff-pair="1" data-monodocs-diff-block="changed">One and two words.</p>',
     );
     expect(footnote.detached).toEqual([]);
+  });
+
+  it("keeps the earlier column's spaces round a deleted word set in bold", () => {
+    const out = changed(
+      "<p>Keep this <b>very</b> important sentence here.</p>",
+      "<p>Keep this important sentence here.</p>",
+    );
+    expect(out.earlier).toBe(
+      '<p data-monodocs-diff-pair="1" data-monodocs-diff-block="changed">Keep this <b><del data-monodocs-diff="">very</del></b><del data-monodocs-diff=""> </del>important sentence here.</p>',
+    );
+    // Deleted bold text written where nothing is bold stays bold, and keeps no ID.
+    expect(out.detached).toEqual(['<del data-monodocs-diff=""><b>very</b> </del>']);
+    // A space deleted alone is written, so the change shows.
+    expect(
+      changed("<p>設定 ファイルを変更した。</p>", "<p>設定ファイルを変更した。</p>").inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed">設定<del data-monodocs-diff=""> </del>ファイルを変更した。</p>',
+    );
+  });
+
+  it("keeps a deletion at an item's start or end inside the paragraph the item's text is in", () => {
+    expect(
+      changed(
+        "<ul><li><p>Very foo bar baz qux</p></li></ul>",
+        "<ul><li><p>foo bar baz qux</p></li></ul>",
+      ).current,
+    ).toBe(
+      '<ul><li data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><p><!-- monodocs-diff-inline 0 -->foo bar baz qux</p></li></ul>',
+    );
+    expect(
+      changed(
+        "<ul><li><p>foo bar baz qux end</p></li></ul>",
+        "<ul><li><p>foo bar baz qux</p></li></ul>",
+      ).inline,
+    ).toBe(
+      '<ul><li data-monodocs-diff-block="changed"><p>foo bar baz qux<del data-monodocs-diff=""> end</del></p></li></ul>',
+    );
+    expect(
+      changed(
+        "<dl><dt>T</dt><dd><p>Old text here and more</p></dd></dl>",
+        "<dl><dt>T</dt><dd><p>text here and more</p></dd></dl>",
+      ).inline,
+    ).toBe(
+      '<dl><dt>T</dt><dd data-monodocs-diff-block="changed"><p><del data-monodocs-diff="">Old </del>text here and more</p></dd></dl>',
+    );
+  });
+
+  it("puts a deletion before the code or bold run its replacement starts, not inside it", () => {
+    expect(
+      changed(
+        "<p>Use <code>foo</code> to start the build.</p>",
+        "<p>Use <code>bar</code> to start the build.</p>",
+      ).inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed">Use <del data-monodocs-diff=""><code>foo</code></del><code><ins data-monodocs-diff="">bar</ins></code> to start the build.</p>',
+    );
+    // In the middle of the run, the deletion is inside it, and takes no second one.
+    expect(
+      changed(
+        "<p>Run the <code>build --old</code> command before you start.</p>",
+        "<p>Run the <code>build --new</code> command before you start.</p>",
+      ).inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed">Run the <code>build --<del data-monodocs-diff="">old</del><ins data-monodocs-diff="">new</ins></code> command before you start.</p>',
+    );
+  });
+
+  it("leaves a deleted block holding only a footnote reference as stage 1 writes it", () => {
+    expect(
+      changed('<p>Keep.</p><p><sup><a href="#f" data-footnote-ref>1</a></sup></p>', "<p>Keep.</p>")
+        .earlier,
+    ).toBe(
+      '<p data-monodocs-diff-pair="1">Keep.</p><p data-monodocs-diff-block="del"><del data-monodocs-diff=""></del></p>',
+    );
+  });
+
+  it("clones a character outside the BMP once, and an element of another class around it", () => {
+    expect(
+      changed(
+        "<p>担当者は𠮷田さんから佐藤さんに変わった。</p>",
+        "<p>担当者は佐藤さんに変わった。</p>",
+      ).detached,
+    ).toEqual(['<del data-monodocs-diff="">𠮷田さんから</del>']);
+    expect(
+      changed(
+        '<p><span class="big">Some <span class="line-through">old</span> words in it</span></p>',
+        '<p><span class="big">Some words in it</span></p>',
+      ).inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed"><span class="big">Some <del data-monodocs-diff=""><span class="line-through">old</span> </del>words in it</span></p>',
+    );
   });
 
   it("gives text between blocks an element to carry its mark", () => {

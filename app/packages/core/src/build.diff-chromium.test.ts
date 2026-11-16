@@ -2002,4 +2002,34 @@ describe.skipIf(!chromium)("a changed block (v0.20)", () => {
       await rm(dir, { recursive: true, force: true });
     }
   }, 60_000);
+
+  it("tints the words that changed, not a block added or deleted inside the changed one", async () => {
+    const { dir, html } = await builtDiff(
+      "changed-nested",
+      { "docs/a.md": "# A\n\n- one two three four\n  - sub\n  - removed entirely\n" },
+      { "docs/a.md": "# A\n\n- one two three five\n  - sub\n  - quite new\n" },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      await openView(page, html, "both", "/a");
+      const tints = await page.evaluate(() => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        const bg = (selector: string) =>
+          getComputedStyle(article.querySelector(selector)!).backgroundColor;
+        return {
+          word: bg('.monodocs-diff-current li[data-monodocs-diff-block="changed"] > ins'),
+          added: bg('.monodocs-diff-current li[data-monodocs-diff-block="ins"] > ins'),
+          deleted: bg('.monodocs-diff-earlier li[data-monodocs-diff-block="del"] > del'),
+        };
+      });
+      expect(tints.word).not.toBe("rgba(0, 0, 0, 0)");
+      expect(tints.added).toBe("rgba(0, 0, 0, 0)");
+      expect(tints.deleted).toBe("rgba(0, 0, 0, 0)");
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
 });

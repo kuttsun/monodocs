@@ -161,6 +161,105 @@ describe("the words inside a changed block (7.3.6)", () => {
     expect(marked(earlier)).toEqual(["Install the [-tool-]"]);
   });
 
+  it("deletes a cross-reference's number with the words around it", async () => {
+    const figure = "[[f]]\n.Cap\nimage::x.png[]\n\n";
+    const pages = await difference(
+      {
+        "docs/a.adoc": `= A\n:xrefstyle: short\n\n${figure}See <<f>> for the shape of the thing here.\n`,
+      },
+      { "docs/a.adoc": `= A\n:xrefstyle: short\n\n${figure}For the shape of the thing here.\n` },
+    );
+    const { earlier, inline } = columns(pages.get("/a")!);
+    expect(marked(inline)).toEqual(["[-See Figure 1 for -]{+For +}the shape of the thing here."]);
+    expect(marked(earlier)).toEqual(["[-See -][-Figure 1-][- for -]the shape of the thing here."]);
+    // At the range's end, and added: the number goes with its reference.
+    const atEnd = await difference(
+      {
+        "docs/a.adoc": `= A\n:xrefstyle: short\n\n${figure}The shape of the thing is shown in <<f>>\n`,
+      },
+      { "docs/a.adoc": `= A\n:xrefstyle: short\n\n${figure}The shape of the thing is shown\n` },
+    );
+    expect(marked(columns(atEnd.get("/a")!).inline)).toEqual([
+      "The shape of the thing is shown[- in Figure 1-]",
+    ]);
+    expect(marked(columns(atEnd.get("/a")!).earlier)).toEqual([
+      "The shape of the thing is shown[- in -][-Figure 1-]",
+    ]);
+    const added = await difference(
+      { "docs/a.adoc": `= A\n:xrefstyle: short\n\n${figure}The shape of the thing is here now.\n` },
+      {
+        "docs/a.adoc": `= A\n:xrefstyle: short\n\n${figure}The shape of the thing is in <<f>> now.\n`,
+      },
+    );
+    expect(marked(columns(added.get("/a")!).current)).toEqual([
+      "The shape of the thing is {+in +}{+Figure 1+}{+ +}now.",
+    ]);
+  });
+
+  it("changes the words after a reference that ends with its number, the reference untouched", async () => {
+    const figure = "[[f]]\n.Cap\nimage::x.png[]\n\n";
+    const page = (text: string) => ({
+      "docs/a.adoc": `= A\n:xrefstyle: short\n\n${figure}${text}\n`,
+    });
+    const one = async (earlier: string, current: string) => {
+      const pages = await difference(page(earlier), page(current));
+      const { earlier: left, inline } = columns(pages.get("/a")!);
+      return { inline: marked(inline), earlier: marked(left) };
+    };
+    expect(await one("The shape is shown in <<f>> again", "The shape is shown in <<f>>")).toEqual({
+      inline: ["The shape is shown in Figure 1[- again-]"],
+      earlier: ["The shape is shown in Figure 1[- again-]"],
+    });
+    expect(await one("The shape is shown in <<f>>", "The shape is shown in <<f>> again")).toEqual({
+      inline: ["The shape is shown in Figure 1{+ again+}"],
+      earlier: ["The shape is shown in Figure 1"],
+    });
+    expect(await one("The shape is shown in <<f>> again.", "The shape is shown in <<f>>.")).toEqual(
+      {
+        inline: ["The shape is shown in Figure 1[- again-]."],
+        earlier: ["The shape is shown in Figure 1[- again-]."],
+      },
+    );
+  });
+
+  it("leaves a changed caption label out of the earlier column with its number", async () => {
+    const figure = "[[f]]\n.Shape of the thing on the page\nimage::x.png[]\n";
+    const pages = await difference(
+      { "docs/a.adoc": `= A\n\n${figure}` },
+      { "docs/a.adoc": `= A\n:figure-caption: Fig\n\n${figure}` },
+    );
+    const { earlier, inline } = columns(pages.get("/a")!);
+    expect(marked(inline)).toEqual(["[-Figure-]{+Fig+} 1. Shape of the thing on the page"]);
+    expect(marked(earlier)).toEqual(["Shape of the thing on the page"]);
+    // The label taken off, and changed with the title's first word: the separator goes too.
+    const off = await difference(
+      { "docs/a.adoc": `= A\n\n${figure}` },
+      { "docs/a.adoc": `= A\n:figure-caption!:\n\n${figure}` },
+    );
+    expect(marked(columns(off.get("/a")!).earlier)).toEqual(["Shape of the thing on the page"]);
+    const both = await difference(
+      { "docs/a.adoc": `= A\n\n${figure}` },
+      {
+        "docs/a.adoc": `= A\n:figure-caption: Fig\n\n${figure.replace("Shape", "Form")}`,
+      },
+    );
+    expect(marked(columns(both.get("/a")!).earlier)).toEqual([
+      "[-Shape-] of the thing on the page",
+    ]);
+  });
+
+  it("keeps a linked word before a reference that is a number alone, as before", async () => {
+    const page = (extra: string) => ({
+      "docs/a.adoc":
+        "= A\n:sectnums:\n:xrefstyle: short\n:section-refsig!:\n\n== Intro\n\n" +
+        `https://example.com[Docs] <<_next>> are here.\n\n${extra}\n\n== Next\n\nBody.\n`,
+    });
+    const pages = await difference(page("Old words."), page("New words."));
+    expect(columns(pages.get("/a")!).earlier).toMatch(
+      /<p data-monodocs-diff-pair="\d+">Docs +are here\.<\/p>/,
+    );
+  });
+
   it("counts a changed block once in the list of changes, and shows it once in one column", async () => {
     const pages = await difference(
       { "docs/a.md": "# A\n\nOld word here.\n\nKeep.\n" },

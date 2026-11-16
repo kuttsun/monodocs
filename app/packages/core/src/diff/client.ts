@@ -103,12 +103,13 @@ del[data-monodocs-diff] {
   text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 75%, transparent);
   text-decoration-thickness: 1px;
 }
-/* Inside a changed block, the words added and deleted are tinted as well as underlined and struck. */
-[data-monodocs-diff-block="changed"] ins[data-monodocs-diff] {
+/* Inside a changed block, the words added and deleted are tinted as well as underlined and struck:
+   not a block added or deleted inside it, whose mark stands for the block, nor what is in one. */
+[data-monodocs-diff-block="changed"] ins[data-monodocs-diff]:not([data-monodocs-diff-block], :has(> [data-monodocs-diff-block]), [data-monodocs-diff-block="ins"] *, [data-monodocs-diff-block="del"] *) {
   background: color-mix(in srgb, var(--monodocs-diff-added) calc(var(--monodocs-diff-tint) * 2.5), transparent);
   border-radius: 2px;
 }
-[data-monodocs-diff-block="changed"] del[data-monodocs-diff] {
+[data-monodocs-diff-block="changed"] del[data-monodocs-diff]:not([data-monodocs-diff-block], :has(> [data-monodocs-diff-block]), [data-monodocs-diff-block="ins"] *, [data-monodocs-diff-block="del"] *) {
   background: color-mix(in srgb, var(--monodocs-diff-deleted) calc(var(--monodocs-diff-tint) * 2.5), transparent);
   border-radius: 2px;
 }
@@ -132,11 +133,11 @@ pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
   column-gap: 3rem;
   background: linear-gradient(var(--monodocs-diff-line), var(--monodocs-diff-line)) center / 1px 100% no-repeat;
 }
-/* While the band is shown, a deleted block's reaches towards the line between the columns, and an
-   added block's stops at its column's edge. */
+/* While the band is shown, a deleted or changed block's reaches towards the line between the
+   columns in the earlier one, and an added block's stops at its column's edge. */
 :is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"])
   .monodocs-diff-earlier
-  [data-monodocs-diff-block="del"] { margin-inline-end: -0.75rem; }
+  :is([data-monodocs-diff-block="del"], [data-monodocs-diff-block="changed"]) { margin-inline-end: -0.75rem; }
 :is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"])
   .monodocs-diff-current
   [data-monodocs-diff-block="ins"] { margin-inline-end: 0; }

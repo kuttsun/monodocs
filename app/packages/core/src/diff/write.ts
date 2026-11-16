@@ -416,16 +416,7 @@ class Cloner {
     }
     const toc =
       inToc || (node.tagName === "ul" && classes(node).some((name) => /^sectlevel\d+$/.test(name)));
-    const children = this.cleanChildren(node.children, inLink, toc);
-    // A changed block's mark around what is not kept — a footnote reference — marks nothing.
-    if (
-      (node.tagName === "del" || node.tagName === "ins") &&
-      node.properties[DIFF] !== undefined &&
-      !children.some(significant)
-    ) {
-      return [];
-    }
-    const shell = this.shell(node, children);
+    const shell = this.shell(node, this.cleanChildren(node.children, inLink, toc));
     // Other sources of the image, and a video's poster, would be read from the new version too.
     delete shell.properties.srcSet;
     if (typeof shell.properties.poster === "string" && isLocal(shell.properties.poster)) {
@@ -455,13 +446,25 @@ class Cloner {
       if (number && !inLink) {
         if (out.length === 1 && out[0]!.type === "text" && /^\S+\s+$/.test(out[0]!.value)) {
           out.length = 0;
-        }
+        } else if (isMarkedLabel(out)) out.length = 0;
         after = true;
         continue;
       }
       const cleaned = this.clean(child, inLink, inToc);
       const first = cleaned[0];
       if (after && first?.type === "text") first.value = first.value.replace(/^[.:]\s*/, "");
+      // The separator marked in a changed title's deleted words goes as an unmarked one does.
+      if (
+        after &&
+        first?.type === "element" &&
+        first.tagName === "del" &&
+        first.properties[DIFF] !== undefined &&
+        first.properties[DIFF_BLOCK] === undefined
+      ) {
+        const text = first.children[0];
+        if (text?.type === "text") text.value = text.value.replace(/^[.:]\s*/, "");
+        if (first.children.every((c) => c.type === "text" && c.value === "")) cleaned.shift();
+      }
       if (cleaned.length > 0) after = false;
       out.push(...cleaned);
     }
@@ -492,6 +495,33 @@ class Cloner {
       ),
     };
   }
+}
+
+/**
+ * Whether `nodes` are a label a changed title's deleted word was marked in (`<del>Figure</del> `,
+ * `<del>Figure </del>`):
+ * text and monodocs `<del>`s alone, reading as one word and a space, as an unmarked label does.
+ */
+function isMarkedLabel(nodes: readonly ElementContent[]): boolean {
+  let text = "";
+  let marked = false;
+  for (const node of nodes) {
+    if (node.type === "text") text += node.value;
+    else if (
+      node.type === "element" &&
+      node.tagName === "del" &&
+      node.properties[DIFF] !== undefined &&
+      node.properties[DIFF_BLOCK] === undefined
+    ) {
+      marked = true;
+      for (const child of node.children) {
+        if (child.type !== "text") return false;
+        text += child.value;
+      }
+    } else return false;
+  }
+  // Text alone is a label only as one text node, as it was before a title could change.
+  return marked && /^\S+\s+$/.test(text);
 }
 
 /** Whether all the text in `node` is generated numbers, and there is some. */
@@ -967,18 +997,22 @@ export function writeColumns(
   // marked itself.
   const detached: Element[] = [];
   writeDifference(next, old, edits, inline, detached);
+  const marked = new Parents(old);
+  // Read before a changed block's text nodes are split, while each block's first node is in place.
+  const oldStructure = structure(
+    edits.flatMap((edit) => (edit.op === "insert" ? [] : [edit.old])),
+    marked,
+  );
   // A changed block in the earlier column: its deleted text marked where it stands.
   for (const edit of edits) {
     if (edit.op !== "change") continue;
     const root = carrierOf(edit.old, oldParents);
     root.properties[DIFF_BLOCK] = "changed";
-    if (edit.inside.kind === "text") writeOldText(root, edit.inside);
+    // What the column does not keep — a footnote reference — is not marked, which would mark nothing.
+    if (edit.inside.kind === "text") {
+      writeOldText(root, edit.inside, (node) => !isGeneratedElement(node));
+    }
   }
-  const marked = new Parents(old);
-  const oldStructure = structure(
-    edits.flatMap((edit) => (edit.op === "insert" ? [] : [edit.old])),
-    marked,
-  );
   for (const edit of edits) {
     if (edit.op === "delete") markInPlace(edit.old, "del", marked, oldStructure);
   }

@@ -10,6 +10,7 @@
  * token, or before the added text that replaces it.
  */
 import type { Element, ElementContent, Text } from "hast";
+import { isGenerated } from "../pipeline/generatedNumbers.js";
 import type { Extract, Span, TextPlan } from "./inside.js";
 
 /** A node a range is made of once the text nodes are split: a part of a text node, or an atom. */
@@ -47,6 +48,79 @@ export function rangesOf(plan: TextPlan): { ins: Range[]; del: { old: Range; at:
     }
   }
   return { ins, del };
+}
+
+/**
+ * The inline elements a deletion is put outside of when its place starts or ends one: a link, which
+ * it never joins where it was not, and phrasing such as bold or code, whose look the deleted text
+ * carries in its clone. A paragraph is never left: an item's text stays in it.
+ */
+const INLINE = new Set([
+  "a",
+  "abbr",
+  "b",
+  "bdi",
+  "bdo",
+  "cite",
+  "code",
+  "data",
+  "del",
+  "dfn",
+  "em",
+  "i",
+  "ins",
+  "kbd",
+  "mark",
+  "q",
+  "s",
+  "samp",
+  "small",
+  "span",
+  "strong",
+  "sub",
+  "sup",
+  "time",
+  "u",
+  "var",
+]);
+
+/** What an inline element looks like: its tag and its classes, which a theme styles it by. */
+function look(node: Element): string {
+  const value = node.properties.className;
+  const names = Array.isArray(value) ? value.map(String).sort() : [];
+  return [node.tagName, ...names].join(".");
+}
+
+/**
+ * Every text node of each link in `list` that holds a generated number and whose words are all
+ * `covered`: a cross-reference deleted or added whole is deleted or added with its number and the
+ * spaces around it, which comparison leaves out.
+ */
+function linkTexts(list: readonly ElementContent[], covered: (node: Text) => boolean): Set<Text> {
+  const out = new Set<Text>();
+  const visit = (children: readonly ElementContent[]) => {
+    for (const child of children) {
+      if (child.type !== "element") continue;
+      if (child.tagName !== "a") {
+        visit(child.children);
+        continue;
+      }
+      const texts: Text[] = [];
+      const collect = (inner: readonly ElementContent[]) => {
+        for (const node of inner) {
+          if (node.type === "text") texts.push(node);
+          else if (node.type === "element") collect(node.children);
+        }
+      };
+      collect(child.children);
+      const words = texts.filter((node) => !isGenerated(node) && node.value.trim() !== "");
+      if (texts.some(isGenerated) && words.length > 0 && words.every(covered)) {
+        for (const node of texts) out.add(node);
+      }
+    }
+  };
+  visit(list);
+  return out;
 }
 
 function significant(node: ElementContent): boolean {
@@ -162,6 +236,24 @@ class Split {
     return out;
   }
 
+  /**
+   * `leaves`, in the order of the tree, with the rest of each link whose words are all among them
+   * and which holds a generated number (`linkTexts`).
+   */
+  withNumbers(leaves: readonly Leaf[]): Leaf[] {
+    const wanted = new Set<ElementContent>(leaves);
+    for (const node of linkTexts(this.root.children, (text) => wanted.has(text))) wanted.add(node);
+    const out: Leaf[] = [];
+    const walk = (list: readonly ElementContent[]) => {
+      for (const child of list) {
+        if (wanted.has(child)) out.push(child as Leaf);
+        else if (child.type === "element") walk(child.children);
+      }
+    };
+    walk(this.root.children);
+    return out;
+  }
+
   /** The leaf a place in the text starts at. */
   leafAt(p: number): Leaf {
     return this.leaves({ start: p, end: p + 1 })[0]!;
@@ -204,35 +296,62 @@ class Split {
   }
 
   /**
-   * Put `node` before `leaf`, or after it, outside every element of the block that `leaf` starts —
-   * or ends — so deleted text never lands inside a link that begins where it was.
+   * Put `node` before `leaf`, or after it, outside every inline element that `leaf` starts — or
+   * ends — so deleted text never lands inside a link, or a bold or code run, that begins where it
+   * was.
    */
   put(node: Element, leaf: ElementContent, after: boolean): void {
     let at: ElementContent = leaf;
-    for (let parent = this.parentOf(at); parent !== undefined && parent !== this.root;) {
+    for (
+      let parent = this.parentOf(at);
+      parent !== undefined && parent !== this.root && INLINE.has(parent.tagName);
+    ) {
       const siblings = parent.children;
       const index = siblings.indexOf(at);
       const others = after ? siblings.slice(index + 1) : siblings.slice(0, index);
-      if (others.some(significant)) break;
+      // A generated number is part of what the place ends, as a reference's is.
+      if (
+        others.some((other) => significant(other) && !(other.type === "text" && isGenerated(other)))
+      ) {
+        break;
+      }
       at = parent;
       parent = this.parentOf(at);
     }
     const parent = this.parentOf(at)!;
-    parent.children.splice(parent.children.indexOf(at) + (after ? 1 : 0), 0, node);
+    let index = parent.children.indexOf(at) + (after ? 1 : 0);
+    // After a place, past the generated numbers that end it where nothing was left.
+    while (after) {
+      const next = parent.children[index];
+      if (next === undefined || next.type !== "text" || !isGenerated(next)) break;
+      index++;
+    }
+    parent.children.splice(index, 0, node);
     this.parents.set(node, parent);
   }
 }
 
 /**
  * A deleted range of the old block cloned without an address: the parts of the text nodes in it, and
- * the atoms, with the inline elements around them — a link replaced by its content.
+ * the atoms, with the inline elements around them — a link replaced by its content, and an element
+ * whose look is in `around`, which the place it is written in is inside already, left out. A
+ * cross-reference deleted whole keeps its generated number, as a deleted block keeps it.
  */
-function cloneRange(own: readonly ElementContent[], extract: Extract, range: Range, cloner: Clean) {
+function cloneRange(
+  own: readonly ElementContent[],
+  extract: Extract,
+  range: Range,
+  cloner: Clean,
+  /** The looks (`look`) of the inline elements the place is inside. */
+  around: ReadonlySet<string>,
+) {
   const covered = new Map<Text, Range[]>();
   const atoms = new Set<Element>();
   const add = (span: Span) => {
     const list = covered.get(span.node) ?? [];
     const last = list.at(-1);
+    // A character outside the BMP is two units with one span: it is taken once.
+    if (last !== undefined && last.start <= span.start && span.end <= last.end) return;
     if (last !== undefined && last.end === span.start) last.end = span.end;
     else list.push({ start: span.start, end: span.end });
     covered.set(span.node, list);
@@ -243,10 +362,14 @@ function cloneRange(own: readonly ElementContent[], extract: Extract, range: Ran
     else if ("node" in origin) add(origin);
     else origin.space.forEach(add);
   }
+  const whole = linkTexts(own, (node) => covered.has(node));
   const walk = (list: readonly ElementContent[]): ElementContent[] =>
     list.flatMap((child): ElementContent[] => {
       if (child.type === "text") {
-        return (covered.get(child) ?? []).map((part) => ({
+        if (whole.has(child)) return [{ type: "text", value: child.value }];
+        const parts = covered.get(child);
+        if (parts === undefined) return [];
+        return parts.map((part) => ({
           type: "text",
           value: child.value.slice(part.start, part.end),
         }));
@@ -256,7 +379,7 @@ function cloneRange(own: readonly ElementContent[], extract: Extract, range: Ran
       const inner = walk(child.children);
       if (inner.length === 0) return [];
       // A link points into the earlier version: its text is kept, not the link.
-      if (child.tagName === "a") return inner;
+      if (child.tagName === "a" || around.has(look(child))) return inner;
       return [cloner.shell(child, inner)];
     });
   return walk(own);
@@ -285,38 +408,54 @@ export function writeNewText(
   const places = del.map((d) => (d.at < length ? split.leafAt(d.at) : split.leafAt(length - 1)));
   const starts = new Map<number, Element>();
   for (const range of ins) {
-    const wrappers = split.wrap(split.leaves(range), "ins");
+    const wrappers = split.wrap(split.withNumbers(split.leaves(range)), "ins");
     if (wrappers[0] !== undefined) starts.set(range.start, wrappers[0]);
   }
   const written: Element[] = [];
   del.forEach((d, i) => {
-    const children = cloneRange(own, plan.old, d.old, cloner);
-    if (!children.some(significant)) return;
     const node: Element = {
       type: "element",
       tagName: "del",
       properties: { dataMonodocsDiff: "" },
-      children,
+      children: [],
     };
+    // Before the added text that replaces it, else the next equal word, outside what either starts.
     const start = starts.get(d.at);
-    if (start !== undefined) {
-      const parent = split.parentOf(start)!;
-      parent.children.splice(parent.children.indexOf(start), 0, node);
-      split.index();
-    } else split.put(node, places[i]!, d.at === length);
+    if (start !== undefined) split.put(node, start, false);
+    else split.put(node, places[i]!, d.at === length);
+    // The inline elements the place is inside already: the clone does not repeat them.
+    const around = new Set<string>();
+    for (let at = split.parentOf(node); at !== undefined && at !== root; at = split.parentOf(at)) {
+      around.add(look(at));
+    }
+    node.children = cloneRange(own, plan.old, d.old, cloner, around);
+    // Nothing kept — a deleted footnote reference — writes nothing; a deleted space is written.
+    if (node.children.length === 0) {
+      const parent = split.parentOf(node)!;
+      parent.children.splice(parent.children.indexOf(node), 1);
+    } else written.push(node);
     split.index();
-    written.push(node);
   });
   return written;
 }
 
-/** Wrap a text plan's deleted ranges in the old block, whose own content is under `root`. */
-export function writeOldText(root: Element, plan: TextPlan): void {
+/**
+ * Wrap a text plan's deleted ranges in the old block, whose own content is under `root`: every part
+ * of them but an element `kept` says the earlier column leaves out.
+ */
+export function writeOldText(
+  root: Element,
+  plan: TextPlan,
+  kept: (node: Element) => boolean,
+): void {
   const { del } = rangesOf(plan);
   const split = new Split(root, plan.old);
   split.cut(
     del.map((d) => d.old.start),
     del.map((d) => d.old.end - 1),
   );
-  for (const d of del) split.wrap(split.leaves(d.old), "del");
+  for (const d of del) {
+    const leaves = split.leaves(d.old).filter((leaf) => leaf.type === "text" || kept(leaf));
+    split.wrap(split.withNumbers(leaves), "del");
+  }
 }
