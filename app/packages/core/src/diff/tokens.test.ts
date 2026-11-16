@@ -45,8 +45,11 @@ describe("tokenize", () => {
     ]);
     // Digits next to Japanese are a word of their own; the Japanese around them are not.
     expect(texts("2026年10月")).toEqual(["2026", "年", "10", "月"]);
-    // A Devanagari word, its conjunct included, is one run.
+    // A Devanagari word, its conjunct included, is one run, and so is a Myanmar or Tai Tham word
+    // whose spacing marks start clusters of their own.
     expect(texts("क्षमा करें")).toEqual(["क्षमा", " ", "करें"]);
+    expect(texts("မြန်မာ စာ")).toEqual(["မြန်မာ", " ", "စာ"]);
+    expect(texts("ᨠᩣ")).toEqual(["ᨠᩣ"]);
   });
 
   it("makes a run of whitespace one token, and any other character one each", () => {

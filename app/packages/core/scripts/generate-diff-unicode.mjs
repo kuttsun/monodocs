@@ -128,11 +128,13 @@ export async function parse() {
   }
   for (const cp of CJK_EXTRA) cjk.push([cp, cp]);
 
-  // Letters and numbers of every general category: a run of them in a script other than the
-  // three above is one token (with `_`, which the tokenizer adds).
+  // Letters, marks, and numbers of every general category: a run of them in a script other than
+  // the three above is one token (with `_`, which the tokenizer adds). Marks are there because a
+  // spacing mark of Myanmar or Tai Tham is Grapheme_Cluster_Break Other, so it starts a cluster of
+  // its own in the middle of a word.
   const word = [];
   for (const e of entries(gc, "DerivedGeneralCategory")) {
-    if (/^[LN]/.test(e.value)) word.push([e.start, e.end]);
+    if (/^[LMN]/.test(e.value)) word.push([e.start, e.end]);
   }
 
   const space = [];
@@ -150,6 +152,27 @@ export async function parse() {
   const pictographic = [];
   for (const e of entries(emoji, "emoji-data")) {
     if (e.value === "Extended_Pictographic") pictographic.push([e.start, e.end]);
+  }
+
+  // The excerpt is cut by hand, so each value's count is checked against the UCD's own
+  // `# Total code points` line after it: a cut that lost lines fails here.
+  let counted = 0;
+  for (const line of incb.split("\n")) {
+    const total = /^# Total code points: (\d+)$/.exec(line);
+    if (total) {
+      if (counted !== Number(total[1])) {
+        throw new Error(
+          `DerivedCoreProperties excerpt: ${counted} code points where it says ${total[1]}`,
+        );
+      }
+      counted = 0;
+      continue;
+    }
+    const m = /^([0-9A-F]+)(?:\.\.([0-9A-F]+))?\s*;/.exec(line);
+    if (m) counted += (m[2] ? parseInt(m[2], 16) : parseInt(m[1], 16)) - parseInt(m[1], 16) + 1;
+  }
+  if ((incb.match(/^# Total code points: /gm) ?? []).length !== 3) {
+    throw new Error("DerivedCoreProperties excerpt: not the three Indic_Conjunct_Break values");
   }
 
   const conjunct = [];
@@ -211,7 +234,7 @@ ${table(
   "Characters that are one token each: Han, Hiragana, Katakana, 〆, ー, and ｰ. Flattened [start, end, …].",
   t.cjk,
 )}
-${table("WORD_RANGES", "Letters and numbers (general category L and N). Flattened [start, end, …].", t.word)}
+${table("WORD_RANGES", "Letters, marks, and numbers (general category L, M, and N). Flattened [start, end, …].", t.word)}
 ${table("SPACE_RANGES", "White_Space. Flattened [start, end, …].", t.space)}
 ${table(
   "GRAPHEME_BREAK_RANGES",
