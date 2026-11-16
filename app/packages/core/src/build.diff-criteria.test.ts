@@ -470,19 +470,20 @@ describe("a build without a difference (item 30)", () => {
 
   /**
    * Two documents, one with numbering.sections and one with :sectnums:, lang: ja, and a label of
-   * the author's, built with that theme: each output's size and SHA-256. The first is monodocs
-   * 0.17.2's (the release before this feature). The second is 0.19.0's: the `ja` label table came
-   * back then (roadmap 23.4), and building it at the commit before and at that change showed the
-   * labels, and `lang="en"` on the branding line, as the only difference. They are core's
-   * `buildSite` without `generatorVersion`, as this test builds: the CLI passes its version, and
-   * the footer then reads `monodocs v…`, which changes both. 0.17.2 and the build of this feature
-   * differed only in the default theme's `app.js` (measured on `examples/en`, `ja`, and `math`:
-   * the search hook alone), so replacing it leaves every other byte to compare, siteDataJson with
-   * its labels among them. A change made on purpose
-   * to what a build writes changes these measures too: build the fixtures through `buildSite` at the
-   * commit before that change and at the change, check that the change is the only difference, and
-   * take the new measures. They are then no longer the release's they were: say which release they
-   * are in this comment and in `measuredIn`, and in docs/status.md's v0.18 item that names them.
+   * the author's, built with that theme: each output's size and SHA-256. Both are 0.20.0's:
+   * hast-util-to-text 4.0.3 separates a table's cells by a tab and its rows by a line break in the
+   * search text, and building them at the commit before and with that update showed those
+   * separators as the only difference. Before, the first was 0.17.2's (the release before this
+   * feature) and the second 0.19.0's, when the `ja` label table came back (roadmap 23.4). They are
+   * core's `buildSite` without `generatorVersion`, as this test builds: the CLI passes its version,
+   * and the footer then reads `monodocs v…`, which changes both. 0.17.2 and the build of this
+   * feature differed only in the default theme's `app.js` (measured on `examples/en`, `ja`, and
+   * `math`: the search hook alone), so replacing it leaves every other byte to compare,
+   * siteDataJson with its labels among them. A change made on purpose to what a build writes
+   * changes these measures too: build the fixtures through `buildSite` at the commit before that
+   * change and at the change, check that the change is the only difference, and take the new
+   * measures. They are then no longer the release's they were: say which release they are in this
+   * comment and in `measuredIn`, and in docs/status.md's v0.18 item that names them.
    */
   const fixtures = [
     {
@@ -490,10 +491,10 @@ describe("a build without a difference (item 30)", () => {
       config: "title: Fixture\nnumbering:\n  sections: 3\n",
       html: "html:\n  theme: ./theme\n",
       guide: guide(""),
-      measuredIn: "0.17.2",
+      measuredIn: "0.20.0",
       before: {
-        size: 60061,
-        sha256: "fb32d545bc7df941e3f6cc6c021a49d515df9d236a69429b989276a5ae8c0558",
+        size: 60060,
+        sha256: "730964a11efe2152b9b618ac99ddf044da430cbdc6027bed366568e43f7b4dab",
       },
     },
     {
@@ -501,10 +502,10 @@ describe("a build without a difference (item 30)", () => {
       config: "title: Fixture\nlang: ja\n",
       html: "html:\n  theme: ./theme\n  labels:\n    searchPlaceholder: 検索\n",
       guide: guide(":sectnums:\n"),
-      measuredIn: "0.19.0",
+      measuredIn: "0.20.0",
       before: {
-        size: 59555,
-        sha256: "f0296007258212cda72f31aad856c0540446247fbf0a1d6db3c8083960ad408e",
+        size: 59554,
+        sha256: "c49af883e6bbd26f65f579d4bcd8bb908065f36875d738f2eea0f31291adc91a",
       },
     },
   ];

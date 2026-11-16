@@ -41,6 +41,12 @@ updates:
       # supported Node pass typecheck. Revisit when the supported floor moves to a new major.
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+      # KaTeX renders the formulas and the Mermaid runtime bundles its own copy, built from
+      # mermaid's lockfile; the two are kept at one version so that a formula reads the same in
+      # prose and in a diagram and the notices name one KaTeX (mathRender.test.ts checks it). An
+      # update of KaTeX alone, patch or minor, breaks that, so KaTeX is moved by hand, together with
+      # the Mermaid update whose runtime bundles the version moved to.
+      - dependency-name: 'katex'
     groups:
       app:
         patterns: ['*']
