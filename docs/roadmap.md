@@ -1843,6 +1843,26 @@ elements around it — so deleted bold text stays bold — stripped as in 7.3.4,
 - **Characters for every script**, measured the same way, split English words where they share
   letters: `before [-runn-]{+start+}ing the build`
 
+**What the tables decided (v0.20).** The tables are generated from Unicode 18.0.0, the version
+`sources/eastAsianWidth.ts` already uses, by `scripts/generate-diff-unicode.mjs`, and a test fails
+when they and the vendored data files disagree. A letter or a digit is general category L or N, all
+of them, so `²` and `Ⅻ` join a word as `x` does, and a mark (M) counts with them, since a spacing
+mark of Myanmar or Tai Tham starts a cluster of its own in the middle of a word; whitespace is the
+White_Space property, and SOFT HYPHEN and WORD JOINER, whose Grapheme_Cluster_Break is Control, stay
+inside their word, while a cluster holding an emoji part (U+20E3, U+FE0F, a skin-tone modifier, or
+an Extended_Pictographic character) is a token of its own though it starts with a digit or a letter,
+as a keycap `1️⃣` does. One-token characters are Script Han, Hiragana, and Katakana, with `〆`, `ー`,
+and the halfwidth `ｰ`, whose Script is Common: `々`, `ヵ`, and `ヶ` are Han and Katakana already, and
+since every one of these is a token of its own, which of the three a character belongs to changes
+nothing. A cluster takes the class of its first code point that is not Prepend, so a halfwidth
+voiced mark, which is Extend, stays with its kana, and ARABIC NUMBER SIGN, which is Prepend, makes
+`؀1234` one number. Clusters follow UAX #29 for 18.0.0, whose conjunct rule GB9c reads
+`\p{InCB=Linker} \p{InCB=Extend}* × \p{InCB=Consonant}`, and `diff/graphemes.test.ts` runs every
+case of its GraphemeBreakTest.txt. DerivedCoreProperties.txt, over 1 MB, is vendored as its
+Indic_Conjunct_Break section, the only part read, with the full file's SHA-256, and each value's
+count is checked against the section's own totals. Text is compared as the author wrote it, not
+normalized: a precomposed `é` and a decomposed one are different text.
+
 ---
 
 ## 8. Delivery Forms

@@ -145,6 +145,28 @@ Unicode のバージョンを上げるときは、データファイルを差し
 scripts/app.sh sh -c 'cd packages/core && node scripts/generate-east-asian-width.mjs'
 ```
 
+### ブロックの中の比較の Unicode データ
+
+変更されたブロックの中の比較（v0.20、roadmap 7.3.6）は、テキストを書記素クラスタと用字ごとのトークンに分ける。
+その表は、ビルドを走らせる Node に従う正規表現エンジンや `Intl.Segmenter` ではなく、1 つの Unicode の版から
+生成する。
+
+- `app/packages/core/src/diff/unicodeTables.ts` の表は、`scripts/generate-diff-unicode.mjs` が、同梱の
+  `Scripts`、`DerivedGeneralCategory`、`PropList`、`GraphemeBreakProperty`、`emoji-data` と、
+  `DerivedCoreProperties-<version>-InCB.txt` から生成する。最後のものは Indic_Conjunct_Break の節の抜粋で、
+  元のファイル（1 MB を超える）の SHA-256 を記す。表とファイルが食い違うとテストが失敗する。
+- `diff/graphemes.ts` はその版の UAX #29 に従い、`diff/graphemes.test.ts` は同梱の
+  `GraphemeBreakTest-<version>.txt` のすべてのケースを走らせる。
+- これらのデータファイルは `EastAsianWidth-<version>.txt` と同じ版でなければならない。
+  `app/scripts/bundle.mjs` は `THIRD-PARTY-NOTICES.txt` に 1 つの Unicode の版を記し、食い違いを拒否する。
+
+Unicode のバージョンを上げるときは、ファイルを差し替え（Indic_Conjunct_Break の抜粋も同じように切り出す）、
+生成スクリプトの `VERSION` を変えて再生成し、テストが期待するバージョンも更新する。
+
+```bash
+scripts/app.sh sh -c 'cd packages/core && node scripts/generate-diff-unicode.mjs'
+```
+
 ### inline の Mermaid ランタイムの表記
 
 `mermaid.runtime: inline` でビルドした HTML は、mermaid のビルド済み `mermaid.min.js` と
