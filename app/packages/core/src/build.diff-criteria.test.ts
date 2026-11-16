@@ -354,7 +354,7 @@ describe("an earlier :sectnums: against numbering.sections (item 27)", () => {
     expect(earlier).not.toContain("section-number");
     // Nor the numbers Asciidoctor writes itself, on the headings that stayed as on those deleted.
     expect(earlier).not.toMatch(/<h[2-6][^>]*>\s*(?:<a[^>]*><\/a>)?\d+(?:\.\d+)*\. /);
-    // In one column, as the markup PDF will.
+    // In one column, as the markup PDF would.
     const inline = (await writtenInline()).get("/g")!;
     const inlineDeleted = marks(inline).filter((mark) => /^-h[2-6] /.test(mark));
     expect(inlineDeleted).toContain("-h2 One");

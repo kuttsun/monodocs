@@ -87,8 +87,8 @@ dist/
 - Make it usable as a GitHub Action
 - Provide a standalone binary
 - Make themes and layouts extensible
-- Output the difference from an earlier version as HTML and PDF that readers who never look at Git
-  can be handed (7.3)
+- Output the difference from an earlier version as HTML that readers who never look at Git can be
+  handed, and as PDF after 1.0 (7.3)
 
 ---
 
@@ -1052,37 +1052,38 @@ PDF
 
 PDF output will be supported after HTML output stabilizes.
 
-### 7.3 Difference from an Earlier Version (v0.18–v0.21)
+### 7.3 Difference from an Earlier Version (v0.18–v0.20)
 
 When a revised specification is handed over, the first thing the receiving side wants to know is
 what changed since the last version. A document written in Word shows that with tracked changes. The
 difference between two versions of a monodocs document can be read with `git diff`, but what it
 shows is the difference in the Markdown and AsciiDoc sources, and only the author can read that.
-Customers, approvers, and people on site do not look at Git. So monodocs can output HTML and PDF
-with the difference from an earlier version (additions, deletions, changes) written into them. It
+Customers, approvers, and people on site do not look at Git. So monodocs can output HTML with the
+difference from an earlier version (additions, deletions, changes) written into it. It
 does not replace `git diff`; it is for the readers `git diff` does not reach.
 
 ```bash
 monodocs build ./docs -o ./dist/docs.html --diff-from v1.2
 monodocs build ./docs -o ./dist/docs.html --diff-from-dir ../project-1.2
-monodocs build ./docs -f pdf -o ./dist/docs.pdf --diff-from v1.2 --diff-pdf bars
 ```
 
-It arrives in three stages, over four releases before 1.0. Stage 1 outputs the difference at the
+It was planned in three stages, over four releases before 1.0. Stage 1 outputs the difference at the
 level of pages and blocks in HTML: v0.18 writes it side by side, and v0.19 adds a view that writes
-it into one column and a key that chooses the view a document opens in. Stage 2, in v0.20, outputs
-it in PDF. Stage 3, in v0.21, compares the inside of changed blocks — words, and characters for
-Japanese — and treats tables cell by cell. 12.4 would allow all three as additions in 1.x minor
-releases; they come before 1.0 instead because what they add is a surface 1.0 freezes, which 12.4
-makes cheap to change before the number and expensive after it, so each is used in a release before
-1.0 claims it. At every stage, a combination not yet handled is an error, not accepted and ignored
-(12.4).
+it into one column and a key that chooses the view a document opens in. Stage 2 was to output it in
+PDF, in v0.20. Stage 3, now v0.20, compares the inside of changed blocks — words, and characters for
+Japanese — and treats tables cell by cell. 12.4 would allow all of them as additions in 1.x minor
+releases; stages 1 and 3 come before 1.0 instead because what they add is a surface 1.0 freezes,
+which 12.4 makes cheap to change before the number and expensive after it, so each is used in a
+release before 1.0 claims it. Stage 2 is deferred past 1.0 instead, because on paper it cannot be
+made to read well enough for what it costs (7.3.5); what it would add is new to every document, so a
+minor release after 1.0 can still add it. At every stage, a combination not yet handled is an error,
+not accepted and ignored (12.4).
 
 **What this section decides, and what it leaves to the implementation.** The subsections below fix
 the interfaces, the rules a reader or a script can observe, the invariants the output keeps, and the
 facts measured on 2026-10-14. How a rule is reached in the HAST, in CSS, or through Asciidoctor's
 API is decided when each stage is implemented, against the completion criteria of the v0.18 to
-v0.21 milestones, which name the cases a review of this design found — a nested list, a table's
+v0.20 milestones, which name the cases a review of this design found — a nested list, a table's
 `colgroup`, a code block's padding, Asciidoctor's own numbers, and so on. What the implementation
 decides is recorded here when that stage lands, as 6.4 records what v0.15 measured. A rule this
 section states and the code cannot keep is a change to this section, made in the open, not a quiet
@@ -1106,7 +1107,7 @@ type BuildOptions = {
     tree?: string;
     /** The earlier version's name in messages, and in the output when it has no document.version. */
     label?: string;
-    /** Stage 2: the PDF presentation (7.3.5). Only with a PDF output; diff/unsupported before. */
+    /** Stage 2: the PDF presentation (7.3.5), deferred past 1.0: given, it is diff/unsupported. */
     pdf?: "markup" | "bars";
   };
 };
@@ -1199,7 +1200,7 @@ contents are not extracted; a submodule appears as an empty directory, as in a c
 | `--diff-from-dir` does not exist or is not a directory | `diff/dir-not-found` |
 | Both options are given | `diff/conflicting-options` |
 | A path of the earlier version leaves `diff.tree`, or a mapped path is missing from it | `diff/outside-version` |
-| A difference is asked of what does not output one yet: a PDF in stage 1, from `-f` or `output.format`; `watchSite`, `serveSite`, or `validateSite` | `diff/unsupported` |
+| A difference is asked of what does not output one yet: a PDF, until stage 2 is taken up after 1.0, from `-f` or `output.format`; `watchSite`, `serveSite`, or `validateSite` | `diff/unsupported` |
 
 15.5 declined to generate aliases automatically because that would make the output depend on the
 clone's history. A difference may depend on history, because the author names the ref; in exchange,
@@ -1597,9 +1598,10 @@ is. Like `html.labels.diff*`, the key is accepted in every configuration and has
 build with a difference. The earlier version's configuration does not set it: `html.*` comes from
 the new configuration (7.3.2), and the earlier file's value is checked and not used. Opening in a
 version's own view, the document opens on that version's first page, since the list of changes
-belongs to the views that show the difference. `--diff-pdf` (7.3.5) chooses a presentation in the
-same sense; whether it becomes a key too is reconsidered in v0.20 and is not changed here, with how
-the HTML printed from a browser gives the presentation chosen whichever view is on screen.
+belongs to the views that show the difference. `--diff-pdf` (7.3.5) would choose a presentation in
+the same sense; whether it becomes a key too is left to the release that takes up the PDF, deferred
+past 1.0, with how the HTML printed from a browser gives the presentation chosen whichever view is
+on screen.
 
 **What the difference adds reaches every theme and no build without it.** The rules and the script
 come from core, through tokens every template is required to have (`{{style}}`, `{{bodyScripts}}`,
@@ -1672,15 +1674,30 @@ new version's column a deleted item of an ordered list that keeps new items show
 heading that follows a column's heading keeps no top margin, as the page's first heading has none
 without a difference.
 
-### 7.3.5 The Difference on Paper (stage 2)
+### 7.3.5 The Difference on Paper (stage 2, deferred past 1.0)
+
+**Deferred past 1.0 (2026-11-16).** A PDF cannot switch views, and that is what makes the difference
+readable in HTML: side by side, one column, and each version alone, chosen by the reader. On paper
+one presentation has to stand for all of them, and neither below reads well on its own. `markup`
+interleaves what was deleted with what was added, and `bars` leaves the reader no way to learn from
+the paper what was deleted. What they cost is out of proportion to that: legibility in black and
+white, a bar that follows a block across a page break, and measuring it against the theme's code
+blocks, quotations, and tables. So the PDF is not output before 1.0, and a PDF with `--diff-from`
+or `--diff-from-dir` stays `diff/unsupported`, saying so. Stage 2 adds an option or a key and a
+diagnostic code that no existing document or configuration uses, which 12.4 lets a minor release
+add, so it can be taken up after 1.0 without breaking anything. The design below is kept as it was
+for that release, which decides again, before implementing it, whether the presentation is an
+option or a key; its milestone is kept under "Deferred past 1.0" after the 1.0 milestone. The HTML
+one-column view (7.3.4) needs none of it.
 
 **The presentation is chosen at build time,** because paper has no toggle:
 `--diff-pdf <markup|bars>`, passed to core as `diff.pdf` only when it is given; core reads its
 absence as `markup` when it outputs a PDF, so `--help` names the default in the description rather
 than through a value the CLI always passes. It is an option, not a key, for the reason the
 difference itself is (7.3.1); v0.19 made the view on screen a key (7.3.4), on the ground that a
-presentation is the document's and not the release's, which holds for paper too, so v0.20 decides
-again whether `--diff-pdf` stays an option or becomes a key beside `html.diffViewDefault`. It is `diff/pdf-without-pdf` without `--diff-from` or
+presentation is the document's and not the release's, which holds for paper too, so the release
+that takes this up decides again whether `--diff-pdf` stays an option or becomes a key beside
+`html.diffViewDefault`. It is `diff/pdf-without-pdf` without `--diff-from` or
 `--diff-from-dir`, or when no PDF is output. The choice is written into the HTML, through
 `{{style}}`, not as an attribute of `<body>`, which a template may leave without `{{bodyAttrs}}`:
 the PDF is this HTML printed, as the density is (24.6), so the HTML of `-f both --diff-pdf bars`
@@ -6018,7 +6035,7 @@ Completion criteria:
 Purpose:
 
 Clear what earlier milestones set aside, and enumerate what 1.0 will freeze, so that 1.0 is left
-with nothing but the removal 12.4 reserves for a major release and a final check. (v0.17 to v0.21,
+with nothing but the removal 12.4 reserves for a major release and a final check. (v0.17 to v0.20,
 defined after 0.16.0, now sit between it and 1.0.) Most items here change what an existing document
 builds or add a surface 1.0 enumerates, which 12.4 makes cheap before the number and expensive after
 it; the rest are checks 1.0 should not be claimed without.
@@ -6307,14 +6324,15 @@ Purpose:
 
 Output HTML with the difference from an earlier version written into it (7.3, stage 1). The readers
 are people who do not look at Git; this is not a substitute for `git diff`. It comes before 1.0,
-with the one-column view in v0.19, the PDF in v0.20, and the comparison inside changed blocks in
-v0.21, because everything it adds — two options, diagnostic codes, labels, the attributes a theme or
-a script reads, the address of the list of changes — is a surface 1.0 freezes, and 12.4 makes a
-surface cheap to change before the number and expensive after it. Each surface is used in a release
-before 1.0 claims it. A build without a difference produces the output it did before, apart from the
-version the generated HTML names (12.4), so nothing changes for an existing document. v0.17 comes
-first; 1.0 now starts once v0.21 is released. Each of the four releases records in 7.3 what its
-implementation decided (7.3, "What this section decides").
+with the one-column view in v0.19 and the comparison inside changed blocks in v0.20 (the PDF,
+planned for v0.20 at first, was deferred past 1.0; 7.3.5), because everything it adds — two options,
+diagnostic codes, labels, the attributes a theme or a script reads, the address of the list of
+changes — is a surface 1.0 freezes, and 12.4 makes a surface cheap to change before the number and
+expensive after it. Each surface is used in a release before 1.0 claims it. A build without a
+difference produces the output it did before, apart from the version the generated HTML names
+(12.4), so nothing changes for an existing document. v0.17 comes first; 1.0 now starts once v0.20 is
+released. Each of these releases records in 7.3 what its implementation decided (7.3, "What this
+section decides").
 
 Implementation scope:
 
@@ -6466,8 +6484,8 @@ version where they stood, and a key choosing the view a document opens in (7.3.4
 the view, the key, its values and default, and the two labels are used in a release before 1.0
 freezes them. A build without a difference produces the output it did before, apart from the version
 the generated HTML names (12.4), and from what 23.4's return of the `ja` table changes. The one
-column is the one `markup` (7.3.5) prints in v0.20, written ahead of the PDF in v0.18 and shown on
-screen first.
+column is the one `markup` (7.3.5) would print, written ahead of the PDF in v0.18 and shown on
+screen first; the PDF has since been deferred past 1.0.
 
 Implementation scope:
 
@@ -6550,12 +6568,83 @@ Completion criteria:
 
 ---
 
-## v0.20: The Difference on Paper
+## v0.20: Words and Characters Inside a Changed Block
 
 Purpose:
 
-Output the difference in PDF (7.3, stage 2), in the two presentations 7.3.5 describes, so that the
-option choosing between them, and its default, are used in a release before 1.0 freezes them.
+Compare the inside of changed blocks word by word, and Japanese character by character (7.3, stage
+3), so that what a reader sees of a changed paragraph, and the attribute value that marks it, are
+settled before 1.0.
+
+Implementation scope:
+
+- Pairing deleted and added blocks, the script-based tokens over grapheme clusters, the cleanup, and
+  the whole-block fallback below half (7.3.6)
+- Code by line, highlighted or not; table cells by position; formulas and Mermaid side by side
+
+Completion criteria:
+
+- The examples measured in 7.3.6 come out as recorded there, and a test pins them
+- In a paragraph mixing Japanese and English, a change to a single word shows as a difference in
+  that word only
+- An emoji joined by ZWJ and a flag are never split, and the script and cluster table is generated
+  from one Unicode version, with a test that fails when the table and its data file disagree
+- A paired heading whose generated number changed shows no difference in the number
+- A deleted run inside bold text is bold inside its `<del>`, and carries no ID or link
+- A changed line in a code block without a language, and with `highlight.enabled: false`, is marked
+  by line
+- The earlier-version view of a changed paragraph reads as the earlier paragraph, and the
+  one-column view shows a paired block once, with the difference inside it
+- The same old and new inputs, including a character assigned in a Unicode version newer than the
+  older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two
+  Node versions with different ICU and Unicode versions
+- The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in both languages
+- testing.md lists the new tests in both languages
+- 0.20.0 changes what a build with a difference shows inside a changed block, and nothing else; it
+  goes to `latest` without a beta, since before 1.0 12.4 promises no output that stays the same
+  across versions, with the verification 0.19.0 had, its browser pass reading changed paragraphs in
+  Japanese and English in the four views; the release notes say how a changed block now reads
+
+---
+
+## 1.0
+
+Purpose:
+
+Claim the number, on the terms 12.4 wrote down. 1.0 is not a feature milestone: it is the release
+that says the surfaces are stable, which is only worth saying once everything that would have
+changed them has been done.
+
+What it contains:
+
+- `sidebar.exclude` — deprecated since v0.10 — removed, as the first exercise of the deprecation
+  shape 12.4 defines
+- The enumeration of the frozen surfaces, written in v0.16, checked again against the code
+- Documentation, in both languages, that describes the tool as it is: no key in the reference that
+  the schema does not have, and no behaviour in architecture.md that the code does not do. v0.11
+  makes this true; 1.0 is where it is checked again, because that is what the number claims
+
+Completion criteria:
+
+- `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the
+  enumeration no longer lists it
+- An earlier version whose configuration uses `sidebar.exclude` is still compared against with
+  `--diff-from`, the key read as `sources.exclude` (7.3.2)
+- The enumeration's test passes, and the documentation is checked against the code in both
+  languages as described above
+
+---
+
+## Deferred past 1.0: The Difference on Paper
+
+This was the v0.20 milestone until 2026-11-16, when the PDF was deferred past 1.0 (7.3.5). It is
+kept, with only its number and its place before 1.0 taken out, for the release after 1.0 that takes
+the PDF up; that release gives it its number, decides the option or the key first, and asks of
+itself only what a minor release may add (12.4).
+
+Purpose:
+
+Output the difference in PDF (7.3, stage 2), in the two presentations 7.3.5 describes.
 v0.19 made the view on screen a key (7.3.4); this release decides, before implementing it, whether
 `--diff-pdf` stays an option or becomes a key beside `html.diffViewDefault`, and records the
 decision in 7.3.5.
@@ -6593,76 +6682,9 @@ Completion criteria:
 - The command reference and the "What 1.0 Freezes" page list `--diff-pdf` with its default,
   `markup`, and `diff/pdf-without-pdf`, in both languages, and `surfaces.test.ts` passes
 - testing.md lists the new tests in both languages
-- 0.20.0 goes to `latest` without a beta, nothing changing for a build without a difference, with
-  the verification 0.19.0 had, its steps building both presentations, and a person printing a
-  `markup` and a `bars` PDF on Windows, the first in black and white
-
----
-
-## v0.21: Words and Characters Inside a Changed Block
-
-Purpose:
-
-Compare the inside of changed blocks word by word, and Japanese character by character (7.3, stage
-3), so that what a reader sees of a changed paragraph, and the attribute value that marks it, are
-settled before 1.0.
-
-Implementation scope:
-
-- Pairing deleted and added blocks, the script-based tokens over grapheme clusters, the cleanup, and
-  the whole-block fallback below half (7.3.6)
-- Code by line, highlighted or not; table cells by position; formulas and Mermaid side by side
-
-Completion criteria:
-
-- The examples measured in 7.3.6 come out as recorded there, and a test pins them
-- In a paragraph mixing Japanese and English, a change to a single word shows as a difference in
-  that word only
-- An emoji joined by ZWJ and a flag are never split, and the script and cluster table is generated
-  from one Unicode version, with a test that fails when the table and its data file disagree
-- A paired heading whose generated number changed shows no difference in the number
-- A deleted run inside bold text is bold inside its `<del>`, and carries no ID or link
-- A changed line in a code block without a language, and with `highlight.enabled: false`, is marked
-  by line
-- The earlier-version view of a changed paragraph reads as the earlier paragraph, and the
-  one-column view shows a paired block once, with the difference inside it
-- The same old and new inputs, including a character assigned in a Unicode version newer than the
-  older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two
-  Node versions with different ICU and Unicode versions
-- The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in both languages
-- testing.md lists the new tests in both languages
-- 0.21.0 changes what a build with a difference shows inside a changed block, and nothing else; it
-  goes to `latest` without a beta, since before 1.0 12.4 promises no output that stays the same
-  across versions, with the verification 0.20.0 had, its browser pass reading changed paragraphs in
-  Japanese and English in the four views; the release notes say how a changed block now reads
-
----
-
-## 1.0
-
-Purpose:
-
-Claim the number, on the terms 12.4 wrote down. 1.0 is not a feature milestone: it is the release
-that says the surfaces are stable, which is only worth saying once everything that would have
-changed them has been done.
-
-What it contains:
-
-- `sidebar.exclude` — deprecated since v0.10 — removed, as the first exercise of the deprecation
-  shape 12.4 defines
-- The enumeration of the frozen surfaces, written in v0.16, checked again against the code
-- Documentation, in both languages, that describes the tool as it is: no key in the reference that
-  the schema does not have, and no behaviour in architecture.md that the code does not do. v0.11
-  makes this true; 1.0 is where it is checked again, because that is what the number claims
-
-Completion criteria:
-
-- `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the
-  enumeration no longer lists it
-- An earlier version whose configuration uses `sidebar.exclude` is still compared against with
-  `--diff-from`, the key read as `sources.exclude` (7.3.2)
-- The enumeration's test passes, and the documentation is checked against the code in both
-  languages as described above
+- Its release goes to `latest` without a beta, nothing changing for a build without a difference,
+  with the verification the release before it had, its steps building both presentations, and a
+  person printing a `markup` and a `bars` PDF on Windows, the first in black and white
 
 ---
 
