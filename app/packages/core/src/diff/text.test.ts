@@ -42,7 +42,7 @@ describe("diffText", () => {
       whole: true,
     });
     // At half exactly (4 of 8 clusters equal) it is still compared.
-    expect(diff("abcd efgh", "abcd wxy")).toBe("abcd [-efgh-]{+wxy+}");
+    expect(diff("aa bb cc", "xx bb yy")).toBe("[-aa-]{+xx+} bb [-cc-]{+yy+}");
   });
 
   it("absorbs a one-character equal run between two changes, and one of only punctuation", () => {
@@ -62,6 +62,13 @@ describe("diffText", () => {
     );
     // An equal run at either end is not between two changes, and stays.
     expect(diff("a。b", "a。c")).toBe("a。[-b-]{+c+}");
+  });
+
+  it("counts in grapheme clusters, not code points", () => {
+    // A family emoji is one cluster of seven code points: the text keeps half of itself.
+    expect(diff("👨‍👩‍👧‍👦 ab", "🍌 ab")).toBe("[-👨‍👩‍👧‍👦-]{+🍌+} ab");
+    // An emoji joined by ZWJ is one character between two changes, and is absorbed.
+    expect(diff("aa👩‍💻bb keep keep", "cc👩‍💻dd keep keep")).toBe("[-aa👩‍💻bb-]{+cc👩‍💻dd+} keep keep");
   });
 
   it("writes a change's deletion before its insertion, and keeps grapheme clusters whole", () => {
