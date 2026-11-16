@@ -32,7 +32,7 @@
     "mdast-util-from-markdown": "^2.1.0",
     "mdast-util-to-hast": "^13.2.1",
     "mdast-util-to-string": "^4.0.0",
-    "mermaid": "^12.2.0",
+    "mermaid": "^12.3.0",
     "micromark-util-decode-numeric-character-reference": "^2.0.2",
     "pdf-lib": "^1.17.1",
     "picomatch": "^4.0.7",
