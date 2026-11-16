@@ -49,6 +49,8 @@ export type Extract = { text: string; origin: Origin[] };
 export class Atoms {
   private readonly byKey = new Map<string, string>();
   private next: number;
+  /** The first character the atoms take: every one from here up stands for what is not text. */
+  readonly first: number;
   /** Whether more distinct keys came than private-use characters remain: the pair is not compared. */
   overflowed = false;
 
@@ -61,7 +63,9 @@ export class Atoms {
         if (cp >= 0xf0000 && cp <= 0x10fffd && cp > highest) highest = cp;
       }
     }
-    this.next = highest === 0xffffd ? 0x100000 : highest + 1;
+    // Past Plane 15's last character, U+FFFFD, the next is Plane 16's first.
+    this.next = highest >= 0xffffd && highest < 0x100000 ? 0x100000 : highest + 1;
+    this.first = this.next;
   }
 
   /** The character for `key`, the same for the same key. */
@@ -175,7 +179,10 @@ export type TextPlan = { kind: "text"; old: Extract; new: Extract; segments: Seg
 /** One line of a code block: its text, without the line break, and the text nodes it spans. */
 export type Line = { text: string; extract: Extract };
 
-/** A pair of code blocks, compared by line. */
+/**
+ * A pair of code blocks, compared by line in their recorded sources. An equal line may still render
+ * otherwise, by a generated number in it: the new one is what is written.
+ */
 export type CodePlan = {
   kind: "code";
   old: Line[];
@@ -237,7 +244,7 @@ function textPlan(
   const a = extract(old, atoms, oldPage);
   const b = extract(next, atoms, newPage);
   if (atoms.overflowed) return undefined;
-  const difference = diffText(a.text, b.text);
+  const difference = diffText(a.text, b.text, atoms.first);
   if (difference.whole) return undefined;
   // Texts whose keys differ but which read the same here (whitespace the key reads otherwise) are
   // not a pair with nothing inside it: they stay as stage 1 shows them.
@@ -256,6 +263,8 @@ export function linesOf(pre: Element): Line[] {
   const walk = (list: readonly ElementContent[]) => {
     for (const child of list) {
       if (child.type === "text") {
+        // A generated number, as the key's source leaves it out (pipeline/postprocess.ts).
+        if (isGenerated(child) || isGeneratedSeparator(child)) continue;
         for (let i = 0; i < child.value.length; i++) {
           if (child.value[i] === "\n") end();
           // A carriage return before a line break ends the line with it, and is not its text.
@@ -265,7 +274,11 @@ export function linesOf(pre: Element): Line[] {
             current.origin.push({ node: child, start: i, end: i + 1 });
           }
         }
-      } else if (child.type === "element") walk(child.children);
+      } else if (child.type === "element") {
+        // A `br` in raw HTML's `pre` breaks the line, as the source's text reads it.
+        if (child.tagName === "br") end();
+        else walk(child.children);
+      }
     }
   };
   walk(pre.children);
@@ -286,12 +299,26 @@ function codePlan(old: Block, next: Block): CodePlan | undefined {
   if (languageOf(old) !== languageOf(next)) return undefined;
   const a = linesOf(old.node);
   const b = linesOf(next.node);
-  const edits = diffSequences(a, b, (x, y) => x.text === y.text);
+  // Lines are compared as the key reads them, in the recorded source: highlighting rebuilds a block
+  // from its text, so a generated number in it (a cross-reference in a listing) is no longer marked
+  // in the rendered lines, and only the source leaves it out. The rendered lines are what is written.
+  const sa = sourceLines(old, a);
+  const sb = sourceLines(next, b);
+  if (sa.length !== a.length || sb.length !== b.length) return undefined;
+  const edits = diffSequences(sa, sb, (x, y) => x === y);
   const equal = edits.filter((e) => e.op === "equal").length;
   if (equal * 2 < Math.max(a.length, b.length)) return undefined;
-  // Sources whose rendered lines are the same (an attribute substituted alike) are not a pair.
   if (equal === edits.length) return undefined;
   return { kind: "code", old: a, new: b, edits };
+}
+
+/** A code block's lines as its recorded source has them, split as `linesOf` splits. */
+function sourceLines(block: Block, rendered: Line[]): string[] {
+  const source = recordedData(block.node).monodocsSource?.source;
+  if (source === undefined) return rendered.map((line) => line.text);
+  const lines = source.split(/\r?\n/);
+  if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+  return lines;
 }
 
 function cellsOf(row: Element): Element[] {
@@ -318,12 +345,11 @@ function rowPlan(old: Block, next: Block): RowPlan | undefined {
       return same ? "same" : "whole";
     }
     const atoms = new Atoms(rawText(cell.children), rawText(other.children));
-    if (
+    const same =
       extract(cell.children, atoms, old.pageId).text ===
-      extract(other.children, atoms, next.pageId).text
-    ) {
-      return "same";
-    }
+      extract(other.children, atoms, next.pageId).text;
+    // Out of private-use characters, two different elements may read the same: not "same".
+    if (same && !atoms.overflowed) return "same";
     return textPlan(cell.children, other.children, old.pageId, next.pageId) ?? "whole";
   });
   // A row whose cells all read the same here is not a pair with nothing inside it.

@@ -27,6 +27,13 @@ describe("graphemeClusters", () => {
     .map((line) => line.replace(/#.*/, "").trim())
     .filter((line) => line !== "");
 
+  it("keeps a code point from atomsFrom up a cluster of its own", () => {
+    // A combining mark after it, and a Prepend before it, do not join it.
+    expect(graphemeClusters("\u{F0000}\u0301", 0xf0000)).toEqual(["\u{F0000}", "\u0301"]);
+    expect(graphemeClusters("\u0600\u{F0000}", 0xf0000)).toEqual(["\u0600", "\u{F0000}"]);
+    expect(graphemeClusters("\u{F0000}\u0301")).toEqual(["\u{F0000}\u0301"]);
+  });
+
   it("reads the conformance file of the tables' Unicode version", () => {
     expect(readFileSync(file, "utf8")).toMatch(
       new RegExp(`^# GraphemeBreakTest-${DIFF_UNICODE_VERSION.replace(/\./g, "\\.")}\\.txt$`, "m"),

@@ -41,7 +41,8 @@ export function pairEdits(edits: readonly BlockEdit[]): BlockEdit[] {
         : ({ op: "change", old: d.old, new: a.new, inside } as const);
     });
     if (pairs.every((pair) => pair === undefined)) {
-      out.push(...run);
+      // One by one: a spread of a long run would pass more arguments than a call takes.
+      for (const edit of run) out.push(edit);
       continue;
     }
     for (let slot = 0; slot < slots; slot++) {

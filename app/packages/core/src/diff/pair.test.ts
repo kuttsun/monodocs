@@ -89,4 +89,10 @@ describe("pairEdits", () => {
       "+One two three five",
     ]);
   });
+
+  it("returns a long run in which nothing pairs without exceeding a call's arguments", () => {
+    const added = block("p", "Added");
+    const edits: BlockEdit[] = Array.from({ length: 150000 }, () => ({ op: "insert", new: added }));
+    expect(pairEdits(edits)).toHaveLength(150000);
+  });
 });

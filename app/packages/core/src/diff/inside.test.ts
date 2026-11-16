@@ -96,6 +96,7 @@ describe("extract", () => {
     expect(edge.of("a").codePointAt(0)).toBe(0xffffd);
     expect(edge.of("b").codePointAt(0)).toBe(0x100000);
     expect(new Atoms("\u{FFFFD}").of("a").codePointAt(0)).toBe(0x100000);
+    expect(new Atoms("\u{FFFFE}").of("a").codePointAt(0)).toBe(0x100000);
   });
 
   it("says when it runs out of characters, rather than reusing one", () => {
@@ -137,6 +138,21 @@ describe("linesOf", () => {
     expect(linesOf(h("pre", {}, [])).map((l) => l.text)).toEqual([""]);
     // A carriage return before a line break is not part of the line.
     expect(linesOf(h("pre", {}, [text("a\r\nb\r\n")])).map((l) => l.text)).toEqual(["a", "b"]);
+    // A generated number is not part of the line, as the key's source leaves it out.
+    const numbered = h("pre", {}, [
+      text("see "),
+      text("3", { monodocsGenerated: true } as Text["data"]),
+      text("\nkept\n"),
+    ]);
+    expect(linesOf(numbered).map((l) => l.text)).toEqual(["see ", "kept"]);
+    const broken = h("pre", {}, [
+      text("same"),
+      h("br", {}),
+      text("old"),
+      h("br", {}),
+      text("tail"),
+    ]);
+    expect(linesOf(broken).map((l) => l.text)).toEqual(["same", "old", "tail"]);
   });
 });
 
@@ -170,6 +186,18 @@ describe("insideDifference", () => {
     ).toBeUndefined();
   });
 
+  it("keeps what is not text a token of its own, beside a combining mark", () => {
+    const img = () => h("img", { src: "i.png", alt: "I" });
+    // The mark after the image is deleted: the image is kept, not deleted and added again.
+    const plan = inside(
+      p(text("Look "), img(), text("\u0301 here")),
+      p(text("Look "), img(), text(" here")),
+    );
+    expect(plan?.kind).toBe("text");
+    const segments = (plan as TextPlan).segments;
+    expect(segments.filter((s) => s.op !== "equal").map((s) => s.text)).toEqual(["\u0301"]);
+  });
+
   it("does not pair blocks that read the same inside, though their keys differ", () => {
     // NEXT LINE is whitespace by White_Space, which the key's \s does not read as such.
     expect(inside(p(text("one two three")), p(text("one\u0085two three")))).toBeUndefined();
@@ -196,14 +224,24 @@ describe("insideDifference", () => {
       expect(plan.edits.map((e) => e.op)).toEqual(["equal", "delete", "insert", "equal"]);
     }
     expect(inside(code("js", "a();\nb();\n"), code("ts", "a();\nb();\n"))).toBeUndefined();
-    // Sources that differ but render the same lines are not a pair with nothing inside.
-    const rendered = (source: string) =>
+    // A generated number highlighting left unmarked: the lines are compared in the source, which
+    // leaves it out, so the line it is in is equal and the pair keeps two lines of three.
+    const numbered = (rendered: string, source: string) =>
       root(
-        h("pre", {}, [h("code", {}, [text("same();\n")])], {
+        h("pre", {}, [h("code", {}, [text(rendered)])], {
           monodocsSource: { kind: "code", lang: "js", source },
         }),
       );
-    expect(inside(rendered("{attr}();"), rendered("same();"))).toBeUndefined();
+    const renumbered = inside(
+      numbered("see(1);\nold();\ntail();\n", "see();\nold();\ntail();\n"),
+      numbered("see(2);\nnew();\ntail();\n", "see();\nnew();\ntail();\n"),
+    );
+    expect(renumbered?.kind === "code" && renumbered.edits.map((e) => e.op)).toEqual([
+      "equal",
+      "delete",
+      "insert",
+      "equal",
+    ]);
     // Less than half of the lines kept: not paired.
     expect(inside(code("js", "a\nb\nc\n"), code("js", "x\ny\nc\n"))).toBeUndefined();
   });
@@ -244,6 +282,20 @@ describe("insideDifference", () => {
       inside(row(["td", "a b"], ["td", "c"]), row(["td", "a\u0085b"], ["td", "c"])),
     ).toBeUndefined();
     expect(inside(row(["td", "a"], ["td", "b"]), row(["td", "a"], ["td", "b", 2]))).toBeUndefined();
+    // Out of private-use characters, a cell with a changed image is not read as the same.
+    const imaged = (src: string, value: string) =>
+      root(
+        h("table", {}, [
+          h("tbody", {}, [
+            h("tr", {}, [
+              h("td", {}, [text("\u{10FFFD}"), h("img", { src, alt: "" })]),
+              h("td", {}, [text(value)]),
+            ]),
+          ]),
+        ]),
+      );
+    const overflowed = inside(imaged("a.png", "abc"), imaged("b.png", "xyz"));
+    expect(overflowed?.kind === "row" && overflowed.cells).toEqual(["whole", "whole"]);
     expect(inside(row(["td", "a"], ["td", "b"]), row(["td", "a"]))).toBeUndefined();
   });
 
