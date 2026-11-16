@@ -171,6 +171,9 @@ export async function parse() {
     const m = /^([0-9A-F]+)(?:\.\.([0-9A-F]+))?\s*;/.exec(line);
     if (m) counted += (m[2] ? parseInt(m[2], 16) : parseInt(m[1], 16)) - parseInt(m[1], 16) + 1;
   }
+  if (counted !== 0) {
+    throw new Error(`DerivedCoreProperties excerpt: ${counted} code points after its last total`);
+  }
   if ((incb.match(/^# Total code points: /gm) ?? []).length !== 3) {
     throw new Error("DerivedCoreProperties excerpt: not the three Indic_Conjunct_Break values");
   }

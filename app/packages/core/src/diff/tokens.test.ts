@@ -50,6 +50,8 @@ describe("tokenize", () => {
     expect(texts("क्षमा करें")).toEqual(["क्षमा", " ", "करें"]);
     expect(texts("မြန်မာ စာ")).toEqual(["မြန်မာ", " ", "စာ"]);
     expect(texts("ᨠᩣ")).toEqual(["ᨠᩣ"]);
+    // SOFT HYPHEN and WORD JOINER stay inside their word.
+    expect(texts("hyph\u00ADen\u2060ated x")).toEqual(["hyph\u00ADen\u2060ated", " ", "x"]);
   });
 
   it("makes a run of whitespace one token, and any other character one each", () => {

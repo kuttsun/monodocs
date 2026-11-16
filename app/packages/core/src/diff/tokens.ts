@@ -3,12 +3,12 @@
  *
  * A token is one Han character (with 々, 〆, ヵ, ヶ), one hiragana, or one katakana (with ー and its
  * halfwidth form ｰ); a run of letters, marks, digits, and `_` in any other script; a run of
- * whitespace; or any other character — where a character is a grapheme cluster, never split. Japanese is compared
- * character by character, since a word boundary there needs a dictionary that the single CJS bundle
- * and the standalone binary would both have to carry; English word by word, since characters there
- * split words where they share letters. Which class a cluster has is read from its first code point
- * that is not Prepend, in tables generated from one Unicode version, so the tokens do not follow
- * the Node that runs the build.
+ * whitespace; or any other character — where a character is a grapheme cluster, never split.
+ * Japanese is compared character by character, since a word boundary there needs a dictionary that
+ * the single CJS bundle and the standalone binary would both have to carry; English word by word,
+ * since characters there split words where they share letters. Which class a cluster has is read
+ * from its first code point that is not Prepend, in tables generated from one Unicode version, so
+ * the tokens do not follow the Node that runs the build.
  */
 import { gcbOf, graphemeClusters, inRanges } from "./graphemes.js";
 import { CJK_RANGES, SPACE_RANGES, WORD_RANGES } from "./unicodeTables.js";
@@ -24,6 +24,8 @@ export type Token = { text: string; kind: TokenKind };
  */
 export function clusterKind(cluster: string): TokenKind {
   let cp = cluster.codePointAt(0)!;
+  // SOFT HYPHEN and WORD JOINER sit inside a word, though their Grapheme_Cluster_Break is Control.
+  if (cluster === "\u00AD" || cluster === "\u2060") return "word";
   for (const ch of cluster) {
     cp = ch.codePointAt(0)!;
     if (gcbOf(cp) !== "Prepend") break;
