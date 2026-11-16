@@ -822,6 +822,11 @@ Nothing changes for a build without a difference but a comment in the default th
 - [ ] The same old and new inputs, including a character assigned in a Unicode version newer than the older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two Node versions with different ICU and Unicode versions
 - [ ] The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in English and Japanese
 
+**Dependencies**
+
+- [x] The minor and patch updates Dependabot proposed in #245, but for KaTeX and Mermaid, taken in #248: hast-util-to-text 4.0.3 separates a table's cells and rows in the search text, the one byte a build without a difference changes, and KaTeX stays 0.18.11, moved by hand with the Mermaid runtime that carries it
+- [x] Mermaid 12.3.0, with the runtime's notices regenerated and the pinned CDN runtime moved with it, measured as [roadmap.md](roadmap.md) 21.3 records: DOMPurify 3.4.17 past #229, ELK as `elkjs@0.12.0` under the EPL-2.0, uuid gone, KaTeX still 0.18.11, and every diagram in `examples/en` and `examples/ja` pixel-identical to its drawing under 12.2.0
+
 **Documentation and tests**
 
 - [ ] [testing.md](testing.md) lists the new tests in English and Japanese

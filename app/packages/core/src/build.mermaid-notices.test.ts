@@ -59,13 +59,21 @@ describe("the Mermaid runtime notices", () => {
     // Exits 1 when the runtime's components differ from those the committed notices list.
     await expect(promisify(execFile)(process.execPath, [script, "--check"])).resolves.toBeDefined();
     const notices = await loadMermaidNotices();
-    // ELK, EPL-2.0, with where its corresponding source is (roadmap 21.3).
-    expect(notices).toMatch(/^elkjs@0\.9\.3 {2}— {2}EPL-2\.0$/m);
-    expect(notices).toContain("9bc93474e1dc649450e8c97abb45d16b7c88e35b");
+    // ELK, offered under the EPL-2.0 with the GPL as a Secondary License and distributed under the
+    // EPL-2.0, with where its corresponding source is (roadmap 21.3).
+    expect(notices).toMatch(/^elkjs@0\.12\.0 {2}— {2}EPL-2\.0 OR GPL-3\.0-or-later$/m);
+    expect(notices).toContain("monodocs distributes it under the EPL-2.0");
+    expect(notices).toContain("323312916048544e4e594eab3303cdb0d01e2929");
     expect(notices).toContain("Copyright (c) 2017, 2021 Kiel University and others.");
     // EMF for GWT, compiled into ELK's worker, is EPL-1.0, and its text is carried in full.
     expect(notices).toContain("Eclipse Public License - v 1.0");
-    expect(notices).toMatch(/^web-worker@1\.3\.0 \(bundled inside elkjs@0\.9\.3\)/m);
+    expect(notices).toMatch(/^web-worker@1\.4\.1 \(bundled inside elkjs@0\.12\.0\)/m);
+    // DOMPurify past the advisories 3.4.12 was subject to (#229), and the helpers its build
+    // injected, named in the header so that its licence block stays shared.
+    expect(notices).toMatch(/^dompurify@3\.4\.17 {2}— /m);
+    expect(notices.slice(0, notices.indexOf("=".repeat(80)))).toContain(
+      "although it\ncarries none of regenerator-runtime's code",
+    );
     // The vulnerable lodash-es mermaid 12.0.0 carried is gone (chevrotain 13 dropped it).
     expect(notices).not.toMatch(/^lodash-es@4\.17\./m);
     expect(notices).toMatch(/^@mermaid-js\/parser \(built with mermaid@\d+\.\d+\.\d+\)/m);

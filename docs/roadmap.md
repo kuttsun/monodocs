@@ -3783,6 +3783,31 @@ and do not block the bump.
 - Every diagram in `examples/en` and `examples/ja`, three in each, drawn by the inline runtime in
   Chromium 154, is pixel-identical to its drawing under 12.1.0.
 
+**Measured again on 12.3.0 (v0.20), with KaTeX 0.18.11.**
+
+- Components: the runtime has 87, 12.2.0's but for uuid, which mermaid no longer uses, and four new
+  versions: DOMPurify 3.4.17, past the advisories 3.4.12 was subject to (#229); js-yaml 4.3.2; ELK
+  as `elkjs@0.12.0`, built from ELK 0.12.0 with GWT 2.11.0 and Xtext 2.36.0; and web-worker 1.4.1
+  inside it. KaTeX is still 0.18.11, the version the runtime carries. Each pre-built source was read
+  again: js-yaml's changes are its own code; DOMPurify's build now starts with Babel's helpers for
+  array destructuring and async generators, under the MIT License, and keeps regenerator-runtime's
+  licence comment though none of its code, which the notices' header names so that DOMPurify keeps
+  sharing its Apache-2.0 block; and the notices record what ELK's bundle now carries, which is Babel
+  7's helpers rather than Babel 6's and GWT 2.11.0's runtime. elkjs 0.12.0, like ELK 0.12.0, is
+  offered under the EPL-2.0 with the GNU GPL 3.0 or later as a Secondary License; monodocs
+  distributes it under the EPL-2.0, which the code compiled in with it — EMF for GWT under the
+  EPL-1.0 alone, and Xtext's xbase library under the EPL-2.0 alone — leaves as the only choice for
+  the compiled file. The citations in mermaid's own sources are the same twelve as 12.2.0's, and the
+  only new URLs in the sources the source map names, the EPL-2.0's and the GPL's in ELK's licence
+  headers, are references. DOMPurify's helpers carry a URL of their own, Babel's licence, in a
+  comment the source map does not reach.
+- Size: the inline runtime is 5,537,838 bytes raw and 1,581,915 gzip (from 5,494,801 and 1,568,811),
+  and the CLI bundle grows by 44,430 bytes (21,095,381 to 21,139,811). Its notices are 152,521 bytes
+  raw, 25,379 gzip.
+- The CDN runtime loads `mermaid@12.3.0`.
+- Every diagram in `examples/en` and `examples/ja`, three in each, drawn by the inline runtime in
+  Chromium 155, is pixel-identical to its drawing under 12.2.0.
+
 **Code whose source states no licence (v0.15).** Generating the notices meant reading every source the
 runtime is made of, and four pieces of code in it come from places that state no licence: Michael
 Jackson's RGB/HSL conversions (in cytoscape and in khroma), a blog post's label wrapping (in venn.js),

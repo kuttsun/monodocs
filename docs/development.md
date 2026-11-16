@@ -194,7 +194,8 @@ A source map cannot see inside a package that ships its own pre-built file, so g
   in `NOT_IN_RUNTIME`;
 - a component with a large or pre-built source not covered by `PREBUILT_AUDITED` at that exact version — read
   the file and record in `PREBUILT_AUDITED` the packages it carries and any code copied in under another
-  licence (or that it carries none);
+  licence (or that it carries none). Code copied into a component whose licence block others share goes in
+  its `note`, which the notices print in their header, so that the block is not repeated for it;
 - a URL cited in a source comment that `REVIEWED_URLS` does not record.
 
 It also fails on a component with no licence text.

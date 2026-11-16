@@ -108,7 +108,8 @@ const W3C_SOFTWARE_AND_DOCUMENT_LICENSE = [
  * Components with a source over 20 KB, minified, or under bundled/, build/ or umd/, audited by hand
  * at the version named: `bundled` lists the packages the file carries (its own build picked their
  * versions, so each is named by the range it declares and the version its licence text is read
- * from), and `vendored` describes code copied into it under another licence. An empty entry records
+ * from), `vendored` describes code copied into it under another licence, and `note` does so in the
+ * notices' header instead, for a component whose licence block others share. An empty entry records
  * that the file was read and carries only the package's own code.
  */
 const PREBUILT_AUDITED = {
@@ -181,41 +182,60 @@ const PREBUILT_AUDITED = {
   },
   "dagre-d3-es@7.0.14": {},
   "dayjs@1.11.21": {},
-  "dompurify@3.4.12": {},
-  "js-yaml@4.3.0": {},
+  "dompurify@3.4.17": {
+    // A note in the header rather than `vendored`, so that DOMPurify keeps sharing the Apache-2.0
+    // block with the components whose licence text is the same.
+    note: [
+      "dompurify@3.4.17's build (dist/purify.es.mjs, which mermaid bundles) starts with helper",
+      "functions Babel injected, for array destructuring and async generators (@babel/helpers,",
+      "Copyright (c) 2014-present Sebastian McKenzie and other contributors), under the MIT",
+      "License, whose text is reproduced in this document. It also keeps regenerator-runtime's",
+      'licence comment, "Copyright (c) 2014-present, Facebook, Inc. -- license (MIT):',
+      'https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE", although it',
+      "carries none of regenerator-runtime's code.",
+    ],
+  },
+  "js-yaml@4.3.2": {},
   // lib/elk.bundled.js is a browserify bundle of elkjs's API, its worker, and web-worker's browser
   // entry; the worker (elk-worker.min.js) is ELK compiled to JavaScript by GWT, together with the
   // Java libraries ELK uses and GWT's own runtime.
-  "elkjs@0.9.3": {
+  "elkjs@0.12.0": {
     bundled: [
       {
         name: "web-worker",
-        version: "1.3.0",
-        declared: "^1.0.0 (devDependency); only its browser entry, identical in 1.0.0 to 1.3.0",
+        version: "1.4.1",
+        declared: "1.4.1 (devDependency); only its browser entry, identical in 1.4.0 to 1.5.0",
       },
     ],
     vendored: [
+      "elkjs is offered under the EPL-2.0 with the GNU GPL 3.0 or later as a Secondary License",
+      "(Exhibit A of LICENSE.md above); monodocs distributes it under the EPL-2.0. The EMF for GWT",
+      "code compiled in with it is under the EPL-1.0 alone, and Xtext's xbase library under the",
+      "EPL-2.0 alone.",
+      "",
       "Source Code (EPL-2.0, section 3.1(a)): the Source Code of the ELK and elkjs code in this",
       "component is available under the Eclipse Public License 2.0 above, from:",
-      "  ELK: https://github.com/eclipse/elk, branch master at commit",
-      "    9bc93474e1dc649450e8c97abb45d16b7c88e35b (2024-04-15). lib/elk-worker.min.js contains the",
-      "    change master took in commit 7ca51784e42a24201f29bc13e458728b6fc61cdc (2024-04-09), which no",
-      "    ELK release before it has, and the commits from there to 9bc93474 change only ELK's",
-      "    meta-compiler, which is not compiled in, so either commit yields the same code. The bundle",
-      "    itself does not record the commit.",
-      "  elkjs: https://github.com/kieler/elkjs, tag 0.9.3 (commit",
-      "    a8304cf79fde75bc2ab1a89d28320f53f8637436), which compiles ELK to JavaScript with GWT 2.10.0",
-      "    against EMF for GWT 2.12.4, Guava 31.1-jre, and Xtext 2.28.0, generating code from ELK's",
-      "    .melk files with ELK's own meta-compiler, whose source is the same ELK tree",
-      "    (plugins/org.eclipse.elk.core.meta at 9bc93474).",
+      "  ELK: https://github.com/eclipse-elk/elk, tag v0.12.0 (commit",
+      "    323312916048544e4e594eab3303cdb0d01e2929), as elkjs's release notes state (\"Based on ELK",
+      '    0.12.0"). lib/elk-worker.min.js has the option ELK added in 0.12.0 in pull request #1194',
+      "    (layered nodePlacement.networkSimplex.nodeFlexibility.recomputeNodePlacement). The tag",
+      "    differs from its parent",
+      "    0c51a28df40d0334b41b94c05b9fa9a07f3752ba, and master on the day elkjs committed its build",
+      "    (2026-07-13) differs from that parent, only in version numbers and release notes, so",
+      "    either yields the same code. The bundle itself does not record the commit.",
+      "  elkjs: https://github.com/kieler/elkjs, tag 0.12.0 (commit",
+      "    ff5771d7165445c42c408bb8a090c8035272218c), which compiles ELK to JavaScript with GWT 2.11.0",
+      "    against EMF for GWT 2.12.4, Guava 31.1-jre, and Xtext 2.36.0, generating code from ELK's",
+      "    .melk files with ELK's own meta-compiler (the published org.eclipse.elk.core.meta",
+      "    0.12.0-SNAPSHOT, which is not compiled in).",
       "ELK: Copyright (c) 2017, 2021 Kiel University and others.",
       "",
       "Compiled into lib/elk-worker.min.js with ELK:",
-      "  Xtext's xbase library (org.eclipse.xtext.xbase.lib 2.28.0), under the EPL-2.0 above:",
+      "  Xtext's xbase library (org.eclipse.xtext.xbase.lib 2.36.0), under the EPL-2.0 above:",
       "    Copyright (c) itemis AG (http://www.itemis.eu) and others. Source Code:",
-      "    https://github.com/eclipse/xtext-lib, tag v2.28.0, and",
-      "    org.eclipse.xtext.xbase.lib-2.28.0-sources.jar at",
-      "    https://repo1.maven.org/maven2/org/eclipse/xtext/org.eclipse.xtext.xbase.lib/2.28.0/.",
+      "    https://github.com/eclipse-xtext/xtext, tag v2.36.0 (directory org.eclipse.xtext.xbase.lib),",
+      "    and org.eclipse.xtext.xbase.lib-2.36.0-sources.jar at",
+      "    https://repo1.maven.org/maven2/org/eclipse/xtext/org.eclipse.xtext.xbase.lib/2.36.0/.",
       "  EMF for GWT (com.genmymodel.emf.gwt emf-common and emf-ecore 2.12.4), under the Eclipse",
       "    Public License 1.0, whose full text follows below: Copyright IBM Corporation and others,",
       "    and in part Ed Merks and others. Its Source Code is available under the EPL-1.0 as",
@@ -230,12 +250,13 @@ const PREBUILT_AUDITED = {
       "  Under the Apache License, Version 2.0, whose full text is reproduced in this document under",
       "  the Apache-2.0 components:",
       "    Guava 31.1-jre (com.google.common): Copyright (C) The Guava Authors.",
-      "    GWT 2.10.0's runtime and Java emulation (com.google.gwt, java.lang, java.util): Copyright",
-      "      Google Inc.; its java.math emulation derives from Apache Harmony, licensed to the Apache",
-      "      Software Foundation.",
+      "    GWT 2.11.0's runtime and Java emulation (com.google.gwt, java.lang, java.util, java.io,",
+      "      java.math): Copyright Google Inc.; its java.math emulation derives from Apache Harmony,",
+      "      licensed to the Apache Software Foundation.",
       "lib/elk.bundled.js also contains, under the MIT License, whose text is reproduced in this",
-      "document: the helper functions Babel 6 injected (Copyright (c) 2014-2017 Sebastian McKenzie),",
-      "browserify's module prelude (browser-pack, Copyright James Halliday), and its UMD wrapper",
+      "document: the helper functions Babel 7 injected (@babel/helpers, Copyright (c) 2014-present",
+      "Sebastian McKenzie and other contributors), browserify's module prelude and global wrapper",
+      "(browser-pack and insert-module-globals, Copyright James Halliday), and its UMD wrapper",
       "(umd, Copyright Forbes Lindesay).",
     ],
     // EMF for GWT is EPL-1.0, with a Xerces-derived part also under ASL 1.1: both texts in full.
@@ -289,7 +310,7 @@ const PREBUILT_AUDITED = {
     apache: true,
   },
   "marked@16.3.0": {},
-  "mermaid@12.2.0": {
+  "mermaid@12.3.0": {
     vendored: [
       "src/diagrams/gantt/ganttRenderer.js contains checkUnique, adapted from a Stack Overflow answer",
       "by Justin Johnson (https://stackoverflow.com/a/1890233), posted 2009-12-12 and so licensed",
@@ -454,6 +475,9 @@ const REVIEWED_URLS = {
     "reference",
   "https://stackoverflow.com/a/4228528": "reference",
   "https://www.eclipse.org/legal/epl-2.0/": "reference",
+  // elkjs 0.12.0's licence headers: the EPL-2.0 and its Secondary License (the elkjs entry).
+  "https://www.eclipse.org/legal/epl-2.0.": "reference",
+  "https://www.gnu.org/licenses/gpl-3.0-standalone.html.": "reference",
   "https://www.typescriptlang.org/docs/handbook/functions.html#this-parameters": "reference",
   "http://dl.acm.org/citation.cfm?id=1498047": "reference",
   "http://engelschall.com": "attributed",
@@ -840,7 +864,21 @@ export async function render(components, mermaidVersion) {
           "",
         ]
       : []),
+    ...components.flatMap((c) => {
+      const note = c.version ? PREBUILT_AUDITED[`${c.name}@${c.version}`]?.note : undefined;
+      return note ? [...note, ""] : [];
+    }),
   ].join("\n");
+  // A note that refers to the MIT text relies on a component carrying it, as Apache-2.0 below.
+  const needsMit = components.some((c) =>
+    PREBUILT_AUDITED[`${c.name}@${c.version}`]?.note?.join(" ").includes("MIT License"),
+  );
+  if (
+    needsMit &&
+    ![...blocks.keys()].some((b) => /Permission is hereby granted, free of charge/.test(b))
+  ) {
+    throw new Error("a note refers to the MIT licence text no component carries");
+  }
   // Vendored code that refers to the Apache-2.0 text relies on another component carrying it.
   const needsApache = components.some((c) => PREBUILT_AUDITED[`${c.name}@${c.version}`]?.apache);
   if (needsApache && ![...blocks.keys()].some((b) => /Apache License\s+Version 2\.0/.test(b))) {
