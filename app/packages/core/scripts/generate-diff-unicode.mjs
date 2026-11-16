@@ -113,11 +113,12 @@ export async function parse() {
     header(incb, "DerivedCoreProperties"),
   ]);
   if (copyrights.size !== 1) throw new Error(`the data files disagree: ${[...copyrights]}`);
-  if (
-    !/^# Excerpt made by monodocs: .*\n# from DerivedCoreProperties-[\d.]+\.txt \(SHA-256 [0-9a-f]{64}\)/m.test(
-      incb,
-    )
-  ) {
+  const provenance = new RegExp(
+    `^# Excerpt made by monodocs: .*\n# from DerivedCoreProperties-${VERSION.replace(/\./g, "\\.")}` +
+      `\\.txt \\(SHA-256 [0-9a-f]{64}\\)`,
+    "m",
+  );
+  if (!provenance.test(incb)) {
     throw new Error("DerivedCoreProperties excerpt: no line naming its source and SHA-256");
   }
 

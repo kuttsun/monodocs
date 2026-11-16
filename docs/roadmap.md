@@ -1850,9 +1850,10 @@ of them, so `²` and `Ⅻ` join a word as `x` does; whitespace is the White_Spac
 characters are Script Han, Hiragana, and Katakana, with `〆`, `ー`, and the halfwidth `ｰ`, whose
 Script is Common: `々`, `ヵ`, and `ヶ` are Han and Katakana already, and since every one of these is
 a token of its own, which of the three a character belongs to changes nothing. A cluster takes the
-class of its first code point, so a halfwidth voiced mark, which is Extend, stays with its kana.
-Clusters follow UAX #29 for 18.0.0, whose conjunct rule reads `ConjunctLinker ConjunctExtender* ×
-LinkingConsonant`, and `diff/graphemes.test.ts` runs every case of its GraphemeBreakTest.txt.
+class of its first code point that is not Prepend, so a halfwidth voiced mark, which is Extend,
+stays with its kana, and ARABIC NUMBER SIGN, which is Prepend, makes `؀1234` one number. Clusters
+follow UAX #29 for 18.0.0, whose conjunct rule GB9c reads `\p{InCB=Linker} \p{InCB=Extend}* ×
+\p{InCB=Consonant}`, and `diff/graphemes.test.ts` runs every case of its GraphemeBreakTest.txt.
 DerivedCoreProperties.txt, over 1 MB, is vendored as its Indic_Conjunct_Break section, the only part
 read, with the full file's SHA-256. Text is compared as the author wrote it, not normalized: a
 precomposed `é` and a decomposed one are different text.

@@ -61,9 +61,12 @@ describe("tokenize", () => {
     // A combining mark joins the cluster it follows, and so the word.
     expect(texts("café ok")).toEqual(["café", " ", "ok"]);
     expect(texts("ｶﾞｲﾄﾞ")).toEqual(["ｶﾞ", "ｲ", "ﾄﾞ"]);
+    // A Prepend character joins the cluster after it, and takes the class of what it precedes:
+    // ARABIC NUMBER SIGN before digits is one number.
+    expect(texts("؀1234 x")).toEqual(["؀1234", " ", "x"]);
   });
 
-  it("gives the same tokens however the text is held", () => {
+  it("compares text as written, without normalizing it", () => {
     // Decomposed and precomposed forms are different text, and stay so: the comparison sees
     // what the author wrote.
     expect(texts("é")).toEqual(["é"]);

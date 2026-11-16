@@ -46,7 +46,8 @@ function codeIn(ranges: readonly number[], cp: number): number {
   return 0;
 }
 
-const gcbOf = (cp: number): Gcb => GCB_VALUES[codeIn(GRAPHEME_BREAK_RANGES, cp)]!;
+/** The Grapheme_Cluster_Break value of `cp`. */
+export const gcbOf = (cp: number): Gcb => GCB_VALUES[codeIn(GRAPHEME_BREAK_RANGES, cp)]!;
 const incbOf = (cp: number): Incb => INCB_VALUES[codeIn(CONJUNCT_RANGES, cp)]!;
 
 const isControl = (g: Gcb) => g === "Control" || g === "CR" || g === "LF";
