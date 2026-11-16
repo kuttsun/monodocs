@@ -133,8 +133,12 @@ export async function parse() {
   // spacing mark of Myanmar or Tai Tham is Grapheme_Cluster_Break Other, so it starts a cluster of
   // its own in the middle of a word.
   const word = [];
+  // Punctuation (general category P): an equal run of nothing but it and whitespace between two
+  // changes is absorbed into them by the cleanup.
+  const punctuation = [];
   for (const e of entries(gc, "DerivedGeneralCategory")) {
     if (/^[LMN]/.test(e.value)) word.push([e.start, e.end]);
+    if (/^P/.test(e.value)) punctuation.push([e.start, e.end]);
   }
 
   const space = [];
@@ -192,6 +196,7 @@ export async function parse() {
     cjk: merge(cjk),
     word: merge(word),
     space: merge(space),
+    punctuation: merge(punctuation),
     breaks: mergeCoded(breaks),
     pictographic: merge(pictographic),
     conjunct: mergeCoded(conjunct),
@@ -239,6 +244,7 @@ ${table(
 )}
 ${table("WORD_RANGES", "Letters, marks, and numbers (general category L, M, and N). Flattened [start, end, …].", t.word)}
 ${table("SPACE_RANGES", "White_Space. Flattened [start, end, …].", t.space)}
+${table("PUNCTUATION_RANGES", "Punctuation (general category P). Flattened [start, end, …].", t.punctuation)}
 ${table(
   "GRAPHEME_BREAK_RANGES",
   "Grapheme_Cluster_Break other than Other. Flattened [start, end, code, …], codes as GCB_VALUES.",

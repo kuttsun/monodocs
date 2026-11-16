@@ -1863,6 +1863,16 @@ Indic_Conjunct_Break section, the only part read, with the full file's SHA-256, 
 count is checked against the section's own totals. Text is compared as the author wrote it, not
 normalized: a precomposed `é` and a decomposed one are different text.
 
+**What the alignment decided (v0.20).** `diff/text.ts` aligns the tokens with `diffSequences`, the
+implementation and tie-break of the blocks, and writes each change as its deleted text followed by
+its inserted text, whatever order the edit script interleaves them in. Punctuation in the cleanup is
+general category P, generated into the tables with the rest; a symbol such as `→` is not
+punctuation, so an equal ` → ` between two changes stays, while a lone `→` is absorbed as any one
+character is. Equal runs and changes alternate, and each run is judged by its own text, so one pass
+from the start absorbs every run that qualifies, joining the change before it with the one after.
+What is equal is counted after the cleanup, and a side that is empty shows the other whole. The five
+pairs measured on 2026-10-14 come out as recorded, and `diff/text.test.ts` pins them.
+
 ---
 
 ## 8. Delivery Forms
