@@ -1200,7 +1200,7 @@ contents are not extracted; a submodule appears as an empty directory, as in a c
 | `--diff-from-dir` does not exist or is not a directory | `diff/dir-not-found` |
 | Both options are given | `diff/conflicting-options` |
 | A path of the earlier version leaves `diff.tree`, or a mapped path is missing from it | `diff/outside-version` |
-| A difference is asked of what does not output one yet: a PDF in stage 1, from `-f` or `output.format`; `watchSite`, `serveSite`, or `validateSite` | `diff/unsupported` |
+| A difference is asked of what does not output one yet: a PDF, until stage 2 is taken up after 1.0, from `-f` or `output.format`; `watchSite`, `serveSite`, or `validateSite` | `diff/unsupported` |
 
 15.5 declined to generate aliases automatically because that would make the output depend on the
 clone's history. A difference may depend on history, because the author names the ref; in exchange,
@@ -6639,8 +6639,8 @@ Completion criteria:
 
 This was the v0.20 milestone until 2026-11-16, when the PDF was deferred past 1.0 (7.3.5). It is
 kept, with only its number and its place before 1.0 taken out, for the release after 1.0 that takes
-the PDF up; that release gives it its number,
-decides the option or the key first, and asks of itself only what a minor release may add (12.4).
+the PDF up; that release gives it its number, decides the option or the key first, and asks of
+itself only what a minor release may add (12.4).
 
 Purpose:
 

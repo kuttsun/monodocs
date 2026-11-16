@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-11-09
+Last updated: 2026-11-16
 
 ## Support Status
 
@@ -42,8 +42,8 @@ The difference from an earlier version in PDF is deferred past 1.0 (2026-11-16).
 switch views, which is what makes the difference readable in HTML, and neither presentation planned
 for paper reads well enough for what it costs. A PDF with `--diff-from` or `--diff-from-dir` keeps
 stopping with `diff/unsupported`; a minor release after 1.0 can add the PDF without breaking
-anything. The reasoning is recorded in [roadmap.md](roadmap.md) 7.3.5, and the milestone it was
-under "Deferred past 1.0" there.
+anything. The reasoning is recorded in [roadmap.md](roadmap.md) 7.3.5, and its milestone under "Deferred past
+1.0" in the same document.
 
 0.14.0 is released: section numbering (`numbering.sections`), the printed table of contents
 (`pdf.toc`), and the math measurement. Neither feature changes what an existing configuration
@@ -98,10 +98,10 @@ patch, but it turns the UI labels of every `lang: ja` build that does not set `h
 verified, and `next` moved onto 0.17.2.
 
 v0.18 to v0.20 come before 1.0 too: HTML with the difference from an earlier version written into
-it, for readers who do not look at Git, in three releases; the PDF planned for v0.20 is deferred past
-1.0. 12.4 would allow them in 1.x; they
-come first because what they add is a surface 1.0 freezes, cheap to change before the number and
-expensive after it ([roadmap.md](roadmap.md) 7.3, 12.4).
+it, for readers who do not look at Git, in three releases; the PDF planned for v0.20 is deferred
+past 1.0. 12.4 would allow them in 1.x; they come first because what they add is a surface 1.0
+freezes, cheap to change before the number and expensive after it ([roadmap.md](roadmap.md) 7.3,
+12.4).
 0.18.0, the first of them, went out under `latest` with the CI guide pinned to it, and without a
 beta, since nothing changes for a build without `--diff-from` or `--diff-from-dir`. It also carries
 the zod update for #232, which 0.17.2's package and binaries lack. After `latest` moved, the
