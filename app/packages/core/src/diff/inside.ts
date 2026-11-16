@@ -61,7 +61,7 @@ export class Atoms {
         if (cp >= 0xf0000 && cp <= 0x10fffd && cp > highest) highest = cp;
       }
     }
-    this.next = highest + 1;
+    this.next = highest === 0xffffd ? 0x100000 : highest + 1;
   }
 
   /** The character for `key`, the same for the same key. */
@@ -74,6 +74,8 @@ export class Atoms {
         return "\u{10FFFD}";
       }
       ch = String.fromCodePoint(this.next++);
+      // U+FFFFE and U+FFFFF are noncharacters: Plane 16 follows Plane 15's last character.
+      if (this.next === 0xffffe) this.next = 0x100000;
       this.byKey.set(key, ch);
     }
     return ch;
@@ -205,8 +207,6 @@ const TEXT_KINDS = new Set([
   "li",
   "dt",
   "dd",
-  "caption",
-  "figcaption",
   "summary",
   "title",
   "text",

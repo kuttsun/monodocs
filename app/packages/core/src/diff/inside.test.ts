@@ -91,6 +91,11 @@ describe("extract", () => {
     const atoms = new Atoms("\u{F0005}");
     expect(atoms.of("k").codePointAt(0)).toBe(0xf0006);
     expect(atoms.of("k")).toBe(atoms.of("k"));
+    // Plane 15 ends in two noncharacters: the next character is Plane 16's first.
+    const edge = new Atoms("\u{FFFFC}");
+    expect(edge.of("a").codePointAt(0)).toBe(0xffffd);
+    expect(edge.of("b").codePointAt(0)).toBe(0x100000);
+    expect(new Atoms("\u{FFFFD}").of("a").codePointAt(0)).toBe(0x100000);
   });
 
   it("says when it runs out of characters, rather than reusing one", () => {
