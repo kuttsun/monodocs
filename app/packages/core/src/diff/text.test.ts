@@ -41,8 +41,8 @@ describe("diffText", () => {
     ).toEqual({
       whole: true,
     });
-    // At half exactly it is still compared.
-    expect(diff("abcd efgh", "abcd wxyz")).toBe("abcd [-efgh-]{+wxyz+}");
+    // At half exactly (4 of 8 clusters equal) it is still compared.
+    expect(diff("abcd efgh", "abcd wxy")).toBe("abcd [-efgh-]{+wxy+}");
   });
 
   it("absorbs a one-character equal run between two changes, and one of only punctuation", () => {
@@ -55,6 +55,10 @@ describe("diffText", () => {
     // Only whitespace and punctuation between them: absorbed, however long.
     expect(diff("keep one, — two here", "keep uno, — dos here")).toBe(
       "keep [-one, — two-]{+uno, — dos+} here",
+    );
+    // A chain of absorptions makes one change of all of them.
+    expect(diff("甲を乙を丙ですから大丈夫です", "丁を戊を己ですから大丈夫です")).toBe(
+      "[-甲を乙を丙-]{+丁を戊を己+}ですから大丈夫です",
     );
     // An equal run at either end is not between two changes, and stays.
     expect(diff("a。b", "a。c")).toBe("a。[-b-]{+c+}");

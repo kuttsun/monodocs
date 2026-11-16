@@ -1867,9 +1867,9 @@ normalized: a precomposed `é` and a decomposed one are different text.
 implementation and tie-break of the blocks, and writes each change as its deleted text followed by
 its inserted text, whatever order the edit script interleaves them in. Punctuation in the cleanup is
 general category P, generated into the tables with the rest; a symbol such as `→` is not
-punctuation, so an equal `→` between two changes stays unless it is a single character. The cleanup
-runs once from the start, so an absorbed run joins the change before it with the one after, and a
-run that becomes surrounded by changes only after an absorption is still judged where it stands.
+punctuation, so an equal ` → ` between two changes stays, while a lone `→` is absorbed as any one
+character is. Equal runs and changes alternate, and each run is judged by its own text, so one pass
+from the start absorbs every run that qualifies, joining the change before it with the one after.
 What is equal is counted after the cleanup, and a side that is empty shows the other whole. The five
 pairs measured on 2026-10-14 come out as recorded, and `diff/text.test.ts` pins them.
 
