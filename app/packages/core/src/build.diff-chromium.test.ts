@@ -599,7 +599,8 @@ describe.skipIf(!chromium)("a change inside a collapsed block, and the earlier f
         "docs/b.md": "# B\n\nOne[^a] and two[^b].\n\n[^a]: First.\n[^b]: Second.\n",
       });
       await write(join(dir, "now"), {
-        "docs/a.adoc": "= A\n\n.More\n[%collapsible]\n====\nNew inside.\n====\n",
+        // Rewritten past half: a deletion and an addition, not a changed pair.
+        "docs/a.adoc": "= A\n\n.More\n[%collapsible]\n====\nRewritten words.\n====\n",
         "docs/b.md": "# B\n\nOne and two[^b].\n\n[^b]: Second.\n",
       });
       const html = join(dir, "out.html");
@@ -1689,7 +1690,9 @@ describe.skipIf(!chromium)("the one-column view (v0.19)", () => {
       // And again once the one-column view has put the deleted blocks back and taken them out.
       await page.click('[data-monodocs-diff-view="inline"]');
       await sleep(200);
-      expect(await deletedInCurrent(page)).toBe(4);
+      // The two admonition paragraphs and the row; the title is a changed pair, its deleted word put
+      // back inside it.
+      expect(await deletedInCurrent(page)).toBe(3);
       await page.click('[data-monodocs-diff-view="current"]');
       await sleep(300);
       expect(await layout(page, ".monodocs-diff-current")).toEqual(want);
@@ -1910,6 +1913,90 @@ describe.skipIf(!chromium)("the one-column view (v0.19)", () => {
       expect(
         await page.evaluate(() => document.documentElement.getAttribute("data-monodocs-diff-view")),
       ).toBe("both");
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
+});
+
+describe.skipIf(!chromium)("a changed block (v0.20)", () => {
+  it("shows the words that changed in each view, as one change lined up with its earlier self", async () => {
+    const { dir, html } = await builtDiff(
+      "changed",
+      {
+        "docs/a.md":
+          "# A\n\n## Install the tool\n\nA long paragraph that wraps in the earlier column, which is narrower than the page.\n\nSet the output directory first.\n",
+      },
+      {
+        "docs/a.md":
+          "# A\n\n## Install the CLI\n\nA long paragraph that wraps in the earlier column, which is narrower than the page.\n\nSet the output folder first.\n",
+      },
+    );
+    const browser = await sharedBrowser();
+    // The changed paragraph in a column: its text, and its top.
+    const read = (page: import("puppeteer-core").Page, column: string) =>
+      page.evaluate((selector) => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        const node = article.querySelector(
+          `${selector} p[data-monodocs-diff-block="changed"]`,
+        ) as HTMLElement | null;
+        if (node === null || node.offsetParent === null) return null;
+        const del = node.querySelector("del[data-monodocs-diff]");
+        return {
+          text: node.innerText.replace(/\s+/g, " ").trim(),
+          top: node.getBoundingClientRect().top,
+          del: del === null ? null : getComputedStyle(del).textDecorationLine,
+        };
+      }, column);
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      // Side by side: both blocks, lined up, the change counted once.
+      await openView(page, html, "both", "/a");
+      const earlier = await read(page, ".monodocs-diff-earlier");
+      const current = await read(page, ".monodocs-diff-current");
+      expect(earlier?.text).toBe("Set the output directory first.");
+      expect(current?.text).toBe("Set the output folder first.");
+      expect(Math.abs(earlier!.top - current!.top)).toBeLessThan(1);
+      expect(earlier?.del).toBe("line-through");
+      expect(await countOf(page)).toBe("– / 2");
+      // The table of contents lists the changed heading once, as the new version has it.
+      const toc = await page.evaluate(() =>
+        [...document.querySelectorAll("#toc-nav li")].map((item) => item.textContent!.trim()),
+      );
+      // Its section holds two changes: the heading and the paragraph.
+      expect(toc).toEqual(["~Install the CLI2"]);
+      // Next reaches the new column's block.
+      await page.click('[data-monodocs-diff-go="1"]');
+      await page.click('[data-monodocs-diff-go="1"]');
+      await sleep(300);
+      expect(
+        await page.evaluate(
+          () =>
+            document
+              .querySelector(".monodocs-diff-change-current")
+              ?.closest(".monodocs-diff-current") !== null,
+        ),
+      ).toBe(true);
+      // One column: the block once, the deleted word put back before the added one.
+      await page.click('[data-monodocs-diff-view="inline"]');
+      await sleep(300);
+      expect((await read(page, ".monodocs-diff-current"))?.text).toBe(
+        "Set the output directoryfolder first.",
+      );
+      expect(await countOf(page)).toBe("– / 2");
+      // A version's own view, plain: the version's words alone, with nothing struck.
+      await page.click('[data-monodocs-diff-view="earlier"]');
+      await sleep(300);
+      const plain = await read(page, ".monodocs-diff-earlier");
+      expect(plain?.text).toBe("Set the output directory first.");
+      expect(plain?.del).toBe("none");
+      await page.click('[data-monodocs-diff-view="current"]');
+      await sleep(300);
+      expect((await read(page, ".monodocs-diff-current"))?.text).toBe(
+        "Set the output folder first.",
+      );
     } finally {
       await closePages(browser);
       await rm(dir, { recursive: true, force: true });

@@ -392,9 +392,12 @@ export function writeDiffDocument(
     const edits = page.edits ?? [];
     const plus = edits.filter((edit) => edit.op === "insert").length;
     const minus = edits.filter((edit) => edit.op === "delete").length;
+    const changed = edits.filter((edit) => edit.op === "change").length;
     // A page changed only in its title has no block to count.
-    if (plus === 0 && minus === 0) return "";
-    return ` — ${escapeHtml(labels.diffAdded)} ${plus} / ${escapeHtml(labels.diffDeleted)} ${minus}`;
+    if (plus === 0 && minus === 0 && changed === 0) return "";
+    // The changed blocks are counted only where there are some: a page with none reads as before.
+    const pairs = changed === 0 ? "" : ` / ${escapeHtml(labels.diffChanged)} ${changed}`;
+    return ` — ${escapeHtml(labels.diffAdded)} ${plus} / ${escapeHtml(labels.diffDeleted)} ${minus}${pairs}`;
   };
   const withTitle = (page: PageComparison & { state: "matched" }) => {
     const title = earlierTitle(page);

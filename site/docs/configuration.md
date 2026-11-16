@@ -771,7 +771,7 @@ into it.
 | `diffNext` | Next change | 次の変更 | The button to the next change |
 | `diffAdded` | Added | 追加 | A changed page's count of added blocks, and the sidebar's mark of an added page |
 | `diffDeleted` | Deleted | 削除 | A changed page's count of deleted blocks, and the sidebar's mark of a deleted page |
-| `diffChanged` | Changed | 変更 | The sidebar's mark of a changed page |
+| `diffChanged` | Changed | 変更 | The sidebar's mark of a changed page, and a page's changed blocks in the list of changes |
 | `diffMoved` | Moved | 移動 | The sidebar's mark of a moved page |
 | `diffTitleChanged` | The title changed. Its earlier title: | タイトルが変わりました。以前のタイトル: | Note of a page whose front-matter title changed, before the earlier title |
 | `diffMergedInto` | Merged into: | 統合先: | A deleted page whose route another page took through its aliases |

@@ -140,14 +140,14 @@ function toText(node: Element | HastRoot): string {
   return out;
 }
 
-/** The marked blocks of a column, as `+tag text` and `-tag text`, in order. */
+/** The marked blocks of a column, as `+tag text`, `-tag text`, and `~tag text` for a changed one. */
 function marks(html: string): string[] {
   const out: string[] = [];
   visit(parse(html), "element", (node) => {
     const mark = node.properties.dataMonodocsDiffBlock;
     if (mark === undefined) return;
     const text = toText(node).replace(/\s+/g, " ").trim();
-    out.push(`${mark === "ins" ? "+" : "-"}${node.tagName} ${text}`);
+    out.push(`${mark === "ins" ? "+" : mark === "changed" ? "~" : "-"}${node.tagName} ${text}`);
   });
   return out;
 }
@@ -333,7 +333,7 @@ describe("matching pages, for AsciiDoc", () => {
       '<li><a href="#/merged">Merged</a> (<code>/merge-a</code> → <code>/merged</code>) — Added 1 / Deleted 1</li>\n<li><a href="#/new-place">Moved</a> (<code>/old-place</code> → <code>/new-place</code>)</li>',
     );
     expect(section("changed")).toContain(
-      '<li><a href="#/changed">Changed</a> — Added 1 / Deleted 1</li>\n<li><a href="#/retitled">New title</a> (The title changed. Its earlier title: Old title)</li>',
+      '<li><a href="#/changed">Changed</a> — Added 0 / Deleted 0 / Changed 1</li>\n<li><a href="#/retitled">New title</a> (The title changed. Its earlier title: Old title)</li>',
     );
     expect(section("deleted")).toContain(
       '<li><a href="#//deleted/gone">Gone</a></li>\n<li><a href="#//deleted/merge-b">B</a> (Merged into: <a href="#/merged">Merged</a>)</li>',
@@ -343,10 +343,20 @@ describe("matching pages, for AsciiDoc", () => {
 
     // The marks within pages, in each column.
     const changed = columns(pages.get("/changed")!)!;
-    expect(marks(changed.earlier)).toEqual(["-p Old text."]);
-    expect(marks(changed.current)).toEqual(["+p New text."]);
-    expect(changed.earlier).toContain('<p data-monodocs-diff-pair="2">Keep.</p>');
-    expect(changed.current).toContain('<p data-monodocs-diff-pair="2">Keep.</p>');
+    // One word replaced: a changed pair, marked in each column.
+    expect(marks(changed.earlier)).toEqual(["~p Old text."]);
+    expect(marks(changed.current)).toEqual(["~p New text."]);
+    // The changed pair is lined up as an unchanged one is, numbered with them in order: the deleted
+    // word marked in the earlier column, and in the new one taken out to its place, the added word
+    // marked.
+    expect(changed.earlier).toContain(
+      '<p data-monodocs-diff-pair="2" data-monodocs-diff-block="changed"><del data-monodocs-diff="">Old</del> text.</p>',
+    );
+    expect(changed.current).toContain(
+      '<p data-monodocs-diff-pair="2" data-monodocs-diff-block="changed"><!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="">New</ins> text.</p>',
+    );
+    expect(changed.earlier).toContain('<p data-monodocs-diff-pair="3">Keep.</p>');
+    expect(changed.current).toContain('<p data-monodocs-diff-pair="3">Keep.</p>');
     const merged = pages.get("/merged")!;
     expect(merged).toMatch(
       /^<div class="monodocs-diff-note"><p>This page moved\. Its earlier route: <code>\/merge-a<\/code><\/p><\/div>\n<div class="monodocs-diff-columns">/,
@@ -535,7 +545,8 @@ describe("the earlier column is valid HTML", () => {
       `= A\n\nKeep.\n\n${table("Old caption", "H2")}`,
       `= A\n\nKeep.\n\n${table("New caption", "H3")}`,
     );
-    expect(marks(changed.earlier)).toEqual(["-caption Old caption", "-tr H1 H2"]);
+    // The caption is a changed pair; a row is not paired yet.
+    expect(marks(changed.earlier)).toEqual(["~caption Old caption", "-tr H1 H2"]);
     expect(changed.earlier).toMatch(
       /<table[^>]*>\n?<caption[\s\S]*<\/caption>\n?<colgroup>[\s\S]*<\/colgroup>\n?<thead>[\s\S]*<\/thead>\n?<tbody>/,
     );
@@ -680,8 +691,9 @@ describe("a document's own struck and inserted text", () => {
       expect(column).toContain('<p data-monodocs-diff-pair="2">Keep <del>old</del>.</p>');
       expect(own(column)).toEqual(["del old", "del x"]);
     }
-    expect(marks(page.earlier)).toEqual(["-p Was x a."]);
-    expect(marks(page.current)).toEqual(["+p Now x b."]);
+    // The paragraph is a changed pair: the page's own struck text stays unmarked inside it.
+    expect(marks(page.earlier)).toEqual(["~p Was x a."]);
+    expect(marks(page.current)).toEqual(["~p Now x b."]);
   });
 
   it("keeps an AsciiDoc page's raw <ins>, unmarked, in both columns", async () => {
@@ -694,8 +706,8 @@ describe("a document's own struck and inserted text", () => {
       expect(column).toContain('<p data-monodocs-diff-pair="2">Keep <ins>raw</ins>.</p>');
       expect(own(column)).toEqual(["ins raw", "ins r"]);
     }
-    expect(marks(page.earlier)).toEqual(["-p Was r a."]);
-    expect(marks(page.current)).toEqual(["+p Now r b."]);
+    expect(marks(page.earlier)).toEqual(["~p Was r a."]);
+    expect(marks(page.current)).toEqual(["~p Now r b."]);
   });
 });
 
@@ -716,11 +728,11 @@ describe("the one-column view (v0.19)", () => {
     const page = await onePage(
       "docs/a.md",
       "# A\n\nKeep.\n\nOld one.\n\nMiddle.\n\nGone.\n",
-      "# A\n\nKeep.\n\nNew one.\n\nMiddle.\n",
+      "# A\n\nKeep.\n\nA rewritten sentence.\n\nMiddle.\n",
     );
-    expect(marks(page.inline)).toEqual(["-p Old one.", "+p New one.", "-p Gone."]);
+    expect(marks(page.inline)).toEqual(["-p Old one.", "+p A rewritten sentence.", "-p Gone."]);
     // The new version's column holds no deleted block, only the comments marking their places.
-    expect(marks(page.current)).toEqual(["+p New one."]);
+    expect(marks(page.current)).toEqual(["+p A rewritten sentence."]);
     expect(page.current.match(/<!-- monodocs-diff-inline \d+ -->/g)).toHaveLength(2);
     // Unchanged blocks keep their pair in the new column, and the put-back blocks carry none.
     expect(page.inline).toMatch(/<p data-monodocs-diff-pair="\d+">Middle\.<\/p>/);

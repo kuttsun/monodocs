@@ -51,6 +51,15 @@ export const DIFF_STYLE = `
   background: color-mix(in srgb, var(--monodocs-diff-deleted) var(--monodocs-diff-tint), transparent);
   box-shadow: inset -3px 0 0 var(--monodocs-diff-deleted);
 }
+/* A changed block (7.3.6): its band in the colour of a change, edged as an addition is in the new
+   column and as a deletion is in the earlier one. */
+[data-monodocs-diff-block="changed"] {
+  background: color-mix(in srgb, var(--monodocs-diff-changed) var(--monodocs-diff-tint), transparent);
+  box-shadow: inset 3px 0 0 var(--monodocs-diff-changed);
+}
+.monodocs-diff-earlier [data-monodocs-diff-block="changed"] {
+  box-shadow: inset -3px 0 0 var(--monodocs-diff-changed);
+}
 /* The band's room, only while the band is shown. */
 :is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) p[data-monodocs-diff-block],
 :is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) li[data-monodocs-diff-block],
@@ -93,6 +102,15 @@ del[data-monodocs-diff] {
   background: none;
   text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 75%, transparent);
   text-decoration-thickness: 1px;
+}
+/* Inside a changed block, the words added and deleted are tinted as well as underlined and struck. */
+[data-monodocs-diff-block="changed"] ins[data-monodocs-diff] {
+  background: color-mix(in srgb, var(--monodocs-diff-added) calc(var(--monodocs-diff-tint) * 2.5), transparent);
+  border-radius: 2px;
+}
+[data-monodocs-diff-block="changed"] del[data-monodocs-diff] {
+  background: color-mix(in srgb, var(--monodocs-diff-deleted) calc(var(--monodocs-diff-tint) * 2.5), transparent);
+  border-radius: 2px;
 }
 /* Code struck through or underlined line by line cannot be read; its band and edge say what changed. */
 pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
@@ -380,6 +398,7 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
 }
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) ins[data-monodocs-diff],
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) del[data-monodocs-diff] {
+  background: none;
   text-decoration: none;
 }
 :root[data-monodocs-diff-marks="off"]:not([data-monodocs-diff-view="both"]):not([data-monodocs-diff-view="inline"]) .page > .monodocs-diff-note,
@@ -405,6 +424,7 @@ body:has(.monodocs-diff-bar) #sidebar-show { top: calc(var(--monodocs-diff-bar-h
 .monodocs-diff-toc-sign { flex: none; font-weight: 700; }
 .monodocs-diff-toc-ins .monodocs-diff-toc-sign { color: var(--monodocs-diff-added); }
 .monodocs-diff-toc-del .monodocs-diff-toc-sign { color: var(--monodocs-diff-deleted); }
+.monodocs-diff-toc-changed .monodocs-diff-toc-sign { color: var(--monodocs-diff-changed); }
 .monodocs-diff-toc-del .monodocs-diff-toc-text {
   text-decoration: line-through color-mix(in srgb, var(--monodocs-diff-deleted) 70%, transparent);
 }
@@ -677,7 +697,14 @@ export const DIFF_SCRIPT = `(function () {
     if (!state) return [];
     var hidden = hiddenColumn(article);
     var visible = function (node) { return !hidden || !node.closest(hidden); };
-    var marks = own(article, "[data-monodocs-diff-block]").filter(visible);
+    // A changed block stands in both columns: it is one change, the new column's while it is shown.
+    var marks = own(article, "[data-monodocs-diff-block]").filter(visible).filter(function (node) {
+      return !(
+        hidden !== ".monodocs-diff-current" &&
+        node.getAttribute("data-monodocs-diff-block") === "changed" &&
+        node.closest(".monodocs-diff-earlier")
+      );
+    });
     if (marks.length === 0) {
       // A note above the page is hidden in a version's plain view: the page's first block shows
       // where its change is.
@@ -886,6 +913,13 @@ export const DIFF_SCRIPT = `(function () {
   // dollars, without its section number, which is written beside it.
   function headingText(heading) {
     var copy = heading.cloneNode(true);
+    // A changed heading in the new column, with its deleted words put back in one column, reads as
+    // the new heading.
+    if (heading.getAttribute("data-monodocs-diff-block") === "changed" && heading.closest(".monodocs-diff-current")) {
+      Array.prototype.forEach.call(copy.querySelectorAll("del[data-monodocs-diff]"), function (node) {
+        node.parentNode.removeChild(node);
+      });
+    }
     Array.prototype.forEach.call(copy.querySelectorAll(".section-number"), function (node) {
       node.parentNode.removeChild(node);
     });
@@ -910,6 +944,11 @@ export const DIFF_SCRIPT = `(function () {
       var pair = heading.getAttribute("data-monodocs-diff-pair");
       if (pair === null) return true;
       if (seen[pair]) return false;
+      // A changed heading is the new column's, when it is shown: its entry reads as the new heading.
+      if (heading.getAttribute("data-monodocs-diff-block") === "changed" && heading.closest(".monodocs-diff-earlier")) {
+        var newer = columns.children[1].querySelector('[data-monodocs-diff-pair="' + pair + '"]');
+        if (newer && visible(newer)) return false;
+      }
       seen[pair] = true;
       return true;
     });
@@ -960,7 +999,7 @@ export const DIFF_SCRIPT = `(function () {
       html +=
         '<li class="toc-item toc-level-' + heading.tagName.slice(1) + kind + '">' +
         '<a href="#" data-monodocs-diff-toc="' + i + '">' +
-        (shownMarks && state ? '<span class="monodocs-diff-toc-sign" aria-hidden="true">' + (state === "ins" ? "+" : "−") + "</span>" : "") +
+        (shownMarks && state ? '<span class="monodocs-diff-toc-sign" aria-hidden="true">' + (state === "ins" ? "+" : state === "changed" ? "~" : "−") + "</span>" : "") +
         '<span class="monodocs-diff-toc-text">' +
         (number ? '<span class="section-number">' + escapeText(number.textContent) + "</span> " : "") +
         escapeText(text) + "</span>" +

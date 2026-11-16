@@ -6,6 +6,7 @@ import { isGenerated } from "../pipeline/generatedNumbers.js";
 import { isExternalSrc } from "../pipeline/postprocess.js";
 import { containerLink, isSectionWrapper, type Block } from "./blocks.js";
 import type { BlockEdit, PageComparison } from "./compare.js";
+import { writeNewText, writeOldText } from "./writeInside.js";
 
 /**
  * Writing the difference into a page's tree (roadmap 7.3.4).
@@ -166,6 +167,38 @@ class Parents {
     kids(parent).splice(at, remove, ...nodes);
     for (const node of nodes) this.set(node, parent);
   }
+}
+
+/** The class of the element text read from a run is given, to carry its pair or its mark. */
+const RUN_CLASS = "monodocs-diff-run";
+
+/**
+ * The element that stands for a block: its own, or for text read from a run, a
+ * `span.monodocs-diff-run` around the run — the one already there, or one put around it now.
+ */
+function carrierOf(block: Block, parents: Parents): Element {
+  if (block.run === undefined) return block.node;
+  const parent = parents.get(block.run[0]!)!;
+  if (
+    parent.type === "element" &&
+    classes(parent).includes(RUN_CLASS) &&
+    parent.children.length === block.run.length &&
+    block.run.every((node, i) => parent.children[i] === node)
+  ) {
+    return parent;
+  }
+  const at = kids(parent).indexOf(block.run[0]!);
+  const end = kids(parent).indexOf(block.run.at(-1)!);
+  const run = kids(parent).slice(at, end + 1);
+  const span: Element = {
+    type: "element",
+    tagName: "span",
+    properties: { className: [RUN_CLASS] },
+    children: run,
+  };
+  parents.splice(parent, at, run.length, span);
+  for (const node of run) parents.set(node, span);
+  return span;
 }
 
 /** The first node of a block in its tree: its element, or the first node of its run. */
@@ -383,7 +416,16 @@ class Cloner {
     }
     const toc =
       inToc || (node.tagName === "ul" && classes(node).some((name) => /^sectlevel\d+$/.test(name)));
-    const shell = this.shell(node, this.cleanChildren(node.children, inLink, toc));
+    const children = this.cleanChildren(node.children, inLink, toc);
+    // A changed block's mark around what is not kept — a footnote reference — marks nothing.
+    if (
+      (node.tagName === "del" || node.tagName === "ins") &&
+      node.properties[DIFF] !== undefined &&
+      !children.some(significant)
+    ) {
+      return [];
+    }
+    const shell = this.shell(node, children);
     // Other sources of the image, and a video's poster, would be read from the new version too.
     delete shell.properties.srcSet;
     if (typeof shell.properties.poster === "string" && isLocal(shell.properties.poster)) {
@@ -637,7 +679,8 @@ export function writeDifference(
   };
   const transparent = (node: Element) => isSectionWrapper(node) || node.tagName === "a";
   for (const edit of edits) {
-    if (edit.op !== "equal") continue;
+    // A changed block stands where its earlier self did, as an unchanged one does.
+    if (edit.op !== "equal" && edit.op !== "change") continue;
     if (edit.old.run === undefined && edit.new.run === undefined) {
       pair(edit.old.node, edit.new.node);
     }
@@ -666,6 +709,21 @@ export function writeDifference(
     if (edit.op !== "insert") return;
     const marked = markInPlace(edit.new, "ins", newParents, newStructure);
     if (edit.new.run !== undefined) items[i] = marked;
+  });
+
+  // Every node written from the earlier tree, for the check that none kept an ID.
+  const fromEarlier: Element[] = [];
+  // Each changed block marked, with what differs inside it written in (7.3.6): the deleted text is
+  // cloned from the earlier tree, as a deleted block is.
+  edits.forEach((edit, i) => {
+    if (edit.op !== "change") return;
+    const root = carrierOf(edit.new, newParents);
+    root.properties[DIFF_BLOCK] = "changed";
+    items[i] = root;
+    if (edit.inside.kind === "text") {
+      fromEarlier.push(...writeNewText(root, edit.inside, edit.old.own ?? [], cloner));
+    }
+    newParents.index(root);
   });
 
   // Where to put a node written for edit `i` in `parent`: after what stands for the edits before it
@@ -716,8 +774,6 @@ export function writeDifference(
   };
 
   const clones = new Map<Node, Parent>();
-  // Every node written from the earlier tree, for the check that none kept an ID.
-  const fromEarlier: Element[] = [];
   const written = new Set<Element>();
   const rows: Element[] = [];
   const lists = new Set<Element>();
@@ -900,32 +956,24 @@ export function writeColumns(
   const oldParents = new Parents(old);
   let pair = 0;
   for (const edit of edits) {
-    if (edit.op !== "equal") continue;
+    // The two blocks of a changed pair are lined up as an unchanged pair's are.
+    if (edit.op !== "equal" && edit.op !== "change") continue;
     pair++;
     // Text read from a run has no element of its own: it is given one, in each column.
-    const carrier = (block: Block, parents: Parents): Element => {
-      if (block.run === undefined) return block.node;
-      const parent = parents.get(block.run[0]!)!;
-      const at = kids(parent).indexOf(block.run[0]!);
-      const end = kids(parent).indexOf(block.run.at(-1)!);
-      const run = kids(parent).slice(at, end + 1);
-      const span: Element = {
-        type: "element",
-        tagName: "span",
-        properties: { className: ["monodocs-diff-run"] },
-        children: run,
-      };
-      parents.splice(parent, at, run.length, span);
-      for (const node of run) parents.set(node, span);
-      return span;
-    };
-    carrier(edit.old, oldParents).properties[DIFF_PAIR] = String(pair);
-    carrier(edit.new, newParents).properties[DIFF_PAIR] = String(pair);
+    carrierOf(edit.old, oldParents).properties[DIFF_PAIR] = String(pair);
+    carrierOf(edit.new, newParents).properties[DIFF_PAIR] = String(pair);
   }
   // The additions are marked here, and the deletions cloned from the earlier tree before it is
   // marked itself.
   const detached: Element[] = [];
   writeDifference(next, old, edits, inline, detached);
+  // A changed block in the earlier column: its deleted text marked where it stands.
+  for (const edit of edits) {
+    if (edit.op !== "change") continue;
+    const root = carrierOf(edit.old, oldParents);
+    root.properties[DIFF_BLOCK] = "changed";
+    if (edit.inside.kind === "text") writeOldText(root, edit.inside);
+  }
   const marked = new Parents(old);
   const oldStructure = structure(
     edits.flatMap((edit) => (edit.op === "insert" ? [] : [edit.old])),

@@ -87,14 +87,14 @@ function parse(html: string): HastRoot {
   return parser.parse(html);
 }
 
-/** The marked blocks of a page, as `+tag text` and `-tag text`, in order. */
+/** The marked blocks of a page, as `+tag text`, `-tag text`, and `~tag text` for a changed one. */
 function marks(html: string): string[] {
   const out: string[] = [];
   visit(parse(html), "element", (node) => {
     const mark = node.properties.dataMonodocsDiffBlock;
     if (mark === undefined) return;
     const text = toText(node).replace(/\s+/g, " ").trim();
-    out.push(`${mark === "ins" ? "+" : "-"}${node.tagName} ${text}`);
+    out.push(`${mark === "ins" ? "+" : mark === "changed" ? "~" : "-"}${node.tagName} ${text}`);
   });
   return out;
 }
@@ -294,16 +294,16 @@ describe("where a deleted block goes", () => {
     const html = await onePage(
       "docs/a.adoc",
       "= A\n\n.Old caption\n[cols=2]\n|===\n|H1 |H2\n\n|a |b\n|===\n",
-      "= A\n\n.New caption\n[cols=2]\n|===\n|H1 |H3\n\n|a |b\n|===\n",
+      "= A\n\n.Rewritten words\n[cols=2]\n|===\n|H1 |H3\n\n|a |b\n|===\n",
     );
     expect(marks(html)).toEqual([
-      "+caption Old captionTable 1. New caption",
+      "+caption Old captionTable 1. Rewritten words",
       "-del Old caption",
       "-tr H1 H2",
       "+tr H1 H3",
     ]);
     expect(html).toMatch(
-      /<caption[^>]*><del[^>]*>Old caption<\/del><ins[^>]*>Table 1\. New caption<\/ins><\/caption>/,
+      /<caption[^>]*><del[^>]*>Old caption<\/del><ins[^>]*>Table 1\. Rewritten words<\/ins><\/caption>/,
     );
     expect(html).toContain("<colgroup>");
     expectValid(html);
