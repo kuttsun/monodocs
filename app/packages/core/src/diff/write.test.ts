@@ -457,3 +457,76 @@ describe("a changed text block (v0.20)", () => {
     );
   });
 });
+
+describe("a changed code block, row, formula, or diagram (v0.20)", () => {
+  function changed(earlier: string, current: string) {
+    const old = parser.parse(earlier);
+    const next = parser.parse(current);
+    const columns = writeColumns(
+      next,
+      old,
+      alignBlocks(blocksOf(old), blocksOf(next)),
+      EARLIER,
+      INLINE,
+    );
+    return {
+      earlier: toHtml(columns.earlier),
+      current: toHtml(next),
+      detached: columns.inline.map((node) => toHtml(node)),
+    };
+  }
+
+  it("marks code by line, a deleted line cloned before the line after it", () => {
+    const plain = changed(
+      "<pre><code>a();\nb();\nc();\n</code></pre>",
+      "<pre><code>a();\nB();\nc();\nd();\n</code></pre>",
+    );
+    expect(plain.earlier).toBe(
+      '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>a();\n<del data-monodocs-diff="">b();\n</del>c();\n</code></pre>',
+    );
+    expect(plain.current).toBe(
+      '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>a();\n<!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="">B();\n</ins>c();\n<ins data-monodocs-diff="">d();\n</ins></code></pre>',
+    );
+    expect(plain.detached).toEqual(['<del data-monodocs-diff="">b();\n</del>']);
+    // Highlighted: each line its span and the line break after it.
+    const line = (code: string) => `<span class="line"><span>${code}</span></span>`;
+    const shiki = changed(
+      `<pre class="shiki"><code>${line("a();")}\n${line("b();")}\n${line("c();")}</code></pre>`,
+      `<pre class="shiki"><code>${line("a();")}\n${line("c();")}\n${line("e();")}</code></pre>`,
+    );
+    expect(shiki.current).toBe(
+      `<pre class="shiki" data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>${line("a();")}\n<!-- monodocs-diff-inline 0 -->${line("c();")}\n<ins data-monodocs-diff="">${line("e();")}</ins></code></pre>`,
+    );
+    expect(shiki.detached).toEqual([`<del data-monodocs-diff="">${line("b();")}\n</del>`]);
+  });
+
+  it("marks a row cell by cell: a cell unchanged, compared, or rewritten whole", () => {
+    const row = changed(
+      "<table><tbody><tr><td>Bolt</td><td>4 pieces</td><td>abc</td></tr></tbody></table>",
+      "<table><tbody><tr><td>Bolt</td><td>6 pieces</td><td>xyz</td></tr></tbody></table>",
+    );
+    expect(row.earlier).toBe(
+      '<table><tbody><tr data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><td>Bolt</td><td><del data-monodocs-diff="">4</del> pieces</td><td><del data-monodocs-diff="">abc</del></td></tr></tbody></table>',
+    );
+    expect(row.current).toBe(
+      '<table><tbody><tr data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><td>Bolt</td><td><!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="">6</ins> pieces</td><td><!-- monodocs-diff-inline 1 --><ins data-monodocs-diff="">xyz</ins></td></tr></tbody></table>',
+    );
+  });
+
+  it("shows a display formula old and new whole, the earlier one cloned before the new", () => {
+    const formula = changed(
+      '<div class="math-display" data-math-tex="a"><span>A</span></div>',
+      '<div class="math-display" data-math-tex="b"><span>B</span></div>',
+    );
+    expect(formula.earlier).toBe(
+      '<div class="math-display" data-math-tex="a" data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><del data-monodocs-diff=""><span>A</span></del></div>',
+    );
+    expect(formula.current).toBe(
+      '<!-- monodocs-diff-inline 0 --><div class="math-display" data-math-tex="b" data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><ins data-monodocs-diff=""><span>B</span></ins></div>',
+    );
+    // No mark or pair of its own: the one-column view shows it beside the changed block.
+    expect(formula.detached).toEqual([
+      '<del data-monodocs-diff=""><div class="math-display" data-math-tex="a"><span>A</span></div></del>',
+    ]);
+  });
+});

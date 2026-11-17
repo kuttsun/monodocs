@@ -468,11 +468,12 @@ describe("a table with a rowspan, side by side", () => {
   it("keeps every value of a changed row under a span in its column, in both columns", async () => {
     for (const [earlier, current, before, after] of [
       [
-        "[cols=2]\n|===\n.2+|span |a\n|b\n|c |d\n|===\n",
+        "[cols=2]\n|===\n.2+|span |a\n|b\n|gone |row\n|c |d\n|===\n",
         "[cols=2]\n|===\n.2+|span |a\n|b2\n|c |d\n|===\n",
         [
           ["span", "a"],
           ["span", "b"],
+          ["gone", "row"],
           ["c", "d"],
         ],
         [
@@ -482,11 +483,12 @@ describe("a table with a rowspan, side by side", () => {
         ],
       ],
       [
-        "[cols=3]\n|===\n|x .2+|span |y\n|b |c\n|e |f |g\n|===\n",
+        "[cols=3]\n|===\n|x .2+|span |y\n|b |c\n|gone |r |w\n|e |f |g\n|===\n",
         "[cols=3]\n|===\n|x .2+|span |y\n|b2 |c\n|e |f |g\n|===\n",
         [
           ["x", "span", "y"],
           ["b", "span", "c"],
+          ["gone", "r", "w"],
           ["e", "f", "g"],
         ],
         [
@@ -497,8 +499,9 @@ describe("a table with a rowspan, side by side", () => {
       ],
     ] as const) {
       const page = await onePage("docs/a.adoc", `= A\n\n${earlier}`, `= A\n\n${current}`);
-      expect(marks(page.earlier).map((m) => m.slice(0, 3))).toEqual(["-tr"]);
-      expect(marks(page.current).map((m) => m.slice(0, 3))).toEqual(["+tr"]);
+      // The row under the span is a changed pair (v0.20); the row after it is deleted.
+      expect(marks(page.earlier).map((m) => m.slice(0, 3))).toEqual(["~tr", "-tr"]);
+      expect(marks(page.current).map((m) => m.slice(0, 3))).toEqual(["~tr"]);
       expect(grid(page.earlier)).toEqual(before);
       expect(grid(page.current)).toEqual(after);
       for (const column of [page.earlier, page.current]) {
@@ -511,7 +514,7 @@ describe("a table with a rowspan, side by side", () => {
         marks(page.inline)
           .map((m) => m.slice(0, 3))
           .sort(),
-      ).toEqual(["+tr", "-tr"]);
+      ).toEqual(["-tr", "~tr"]);
       expectValid(page.inline);
     }
   });
@@ -545,8 +548,8 @@ describe("the earlier column is valid HTML", () => {
       `= A\n\nKeep.\n\n${table("Old caption", "H2")}`,
       `= A\n\nKeep.\n\n${table("New caption", "H3")}`,
     );
-    // The caption is a changed pair; a row is not paired yet.
-    expect(marks(changed.earlier)).toEqual(["~caption Old caption", "-tr H1 H2"]);
+    // The caption and the header row are changed pairs.
+    expect(marks(changed.earlier)).toEqual(["~caption Old caption", "~tr H1 H2"]);
     expect(changed.earlier).toMatch(
       /<table[^>]*>\n?<caption[\s\S]*<\/caption>\n?<colgroup>[\s\S]*<\/colgroup>\n?<thead>[\s\S]*<\/thead>\n?<tbody>/,
     );

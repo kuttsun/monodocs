@@ -113,6 +113,41 @@ del[data-monodocs-diff] {
   background: color-mix(in srgb, var(--monodocs-diff-deleted) calc(var(--monodocs-diff-tint) * 2.5), transparent);
   border-radius: 2px;
 }
+/* A changed code block's lines (7.3.6): each added or deleted line a band of its own, across the
+   block; a changed row's cells in the colour of a change. */
+pre[data-monodocs-diff-block="changed"] :is(ins, del)[data-monodocs-diff] {
+  display: block;
+  border-radius: 0;
+}
+tr[data-monodocs-diff-block="changed"] > * {
+  background: color-mix(in srgb, var(--monodocs-diff-changed) var(--monodocs-diff-tint), var(--monodocs-diff-paper));
+}
+/* In one column a changed display formula or diagram stands beside the earlier one, shown whole as
+   each was drawn; on paper, one above the other. */
+.monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)) {
+  background: color-mix(in srgb, var(--monodocs-diff-deleted) var(--monodocs-diff-tint), transparent);
+  box-shadow: inset 3px 0 0 var(--monodocs-diff-deleted);
+  border-radius: 4px;
+  text-decoration: none;
+}
+/* \`:is(#content, *)\` weighs as an ID, as the default theme's \`#content .math-display\` does, and
+   matches in any theme. */
+:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)),
+:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)) + :is(ins[data-monodocs-diff], [data-monodocs-diff-block="changed"]) {
+  display: inline-block;
+  width: calc(50% - 0.5rem);
+  vertical-align: top;
+  overflow-x: auto;
+}
+.monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)) { margin-inline-end: 1rem; }
+@media print {
+  :is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)),
+  :is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)) + :is(ins[data-monodocs-diff], [data-monodocs-diff-block="changed"]) {
+    display: block;
+    width: auto;
+    margin-inline-end: 0;
+  }
+}
 /* Code struck through or underlined line by line cannot be read; its band and edge say what changed. */
 pre :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
 

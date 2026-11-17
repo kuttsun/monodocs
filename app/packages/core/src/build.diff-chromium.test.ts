@@ -1317,9 +1317,10 @@ describe.skipIf(!chromium)("a table with rows of different heights either side",
       await page.setViewport({ width: 1500, height: 900 });
       await page.goto(`${pathToFileURL(html).href}#/a`);
       const level = (gaps: { gap: number }[]) => gaps.every((pair) => Math.abs(pair.gap) <= 1);
-      // The deleted row on the left and the taller changed row on the right both push what follows.
+      // The deleted row on the left and the taller changed row on the right both push what follows;
+      // the changed row is lined up with its earlier self.
       const rows = await until(() => rowGaps(page), level);
-      expect(rows.map((pair) => pair.row)).toEqual(["Key", "first", "second", "fourth"]);
+      expect(rows.map((pair) => pair.row)).toEqual(["Key", "first", "second", "third", "fourth"]);
       expect(level(rows)).toBe(true);
       expect(level(await pairGaps(page))).toBe(true);
       // Again once the layout changes.
@@ -2030,6 +2031,90 @@ describe.skipIf(!chromium)("a changed block (v0.20)", () => {
     } finally {
       await closePages(browser);
       await rm(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
+
+  it("lays a changed code block out as the new version does, and stands formulas side by side", async () => {
+    const code = (b: string) => `\`\`\`js\nconst a = 1;\nconst b = ${b};\nconst c = 3;\n\`\`\`\n`;
+    const diagram = (to: string) => `\`\`\`mermaid\ngraph LR\n  Start --> ${to}\n\`\`\`\n`;
+    const now = { "docs/a.md": `# A\n\n${code("20")}\n$$\na^3\n$$\n\n${diagram("Finish")}` };
+    const { dir, html } = await builtDiff(
+      "changed-kinds",
+      { "docs/a.md": `# A\n\n${code("2")}\n$$\na^2\n$$\n\n${diagram("End")}` },
+      now,
+    );
+    const plain = await builtPlain("changed-kinds", now);
+    const browser = await sharedBrowser();
+    const preHeight = (page: import("puppeteer-core").Page, column: string) =>
+      page.evaluate((selector) => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        return article.querySelector(`${selector} pre`)!.getBoundingClientRect().height;
+      }, column);
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1300, height: 900 });
+      await page.goto(`${pathToFileURL(plain.html).href}#/a`);
+      await sleep(300);
+      const want = await preHeight(page, "");
+      // The new version's own view: the added line marked, the deleted one taken out, the block
+      // as tall as without a difference.
+      await openView(page, html, "current", "/a");
+      expect(await preHeight(page, ".monodocs-diff-current")).toBe(want);
+      // One column: the deleted line put back as a line of its own.
+      await page.click('[data-monodocs-diff-view="inline"]');
+      await sleep(300);
+      const lines = await page.evaluate(() => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        const pre = article.querySelector(".monodocs-diff-current pre")!;
+        const height = (selector: string) =>
+          pre.querySelector(selector)!.getBoundingClientRect().height;
+        return { del: height("del[data-monodocs-diff]"), ins: height("ins[data-monodocs-diff]") };
+      });
+      expect(lines.del).toBeGreaterThan(0);
+      expect(lines.del).toBe(lines.ins);
+      expect(await preHeight(page, ".monodocs-diff-current")).toBeCloseTo(want + lines.del, 0);
+      // The earlier formula and diagram stand beside the new ones, each about half the width.
+      const sides = await until(
+        () =>
+          page.evaluate(() => {
+            const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+            const column = article.querySelector(".monodocs-diff-current")!;
+            return [".math-display", ".mermaid"].map((kind) => {
+              const old = column.querySelector(`del[data-monodocs-diff] > ${kind}`)!.parentElement!;
+              const next = old.nextElementSibling!;
+              const a = old.getBoundingClientRect();
+              const b = next.getBoundingClientRect();
+              return {
+                level: Math.abs(a.top - b.top) < 1,
+                order: a.right <= b.left,
+                half: a.width < column.getBoundingClientRect().width * 0.55,
+                drawn: kind === ".math-display" || old.querySelector("svg") !== null,
+              };
+            });
+          }),
+        (all) => all.every((side) => side.drawn),
+      );
+      expect(sides).toEqual([
+        { level: true, order: true, half: true, drawn: true },
+        { level: true, order: true, half: true, drawn: true },
+      ]);
+      // On paper, the earlier one above the new.
+      await page.emulateMediaType("print");
+      const stacked = await page.evaluate(() => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        const old = article.querySelector(
+          ".monodocs-diff-current del[data-monodocs-diff] > .math-display",
+        )!.parentElement!;
+        return (
+          old.getBoundingClientRect().bottom <=
+          old.nextElementSibling!.getBoundingClientRect().top + 1
+        );
+      });
+      expect(stacked).toBe(true);
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+      await rm(plain.dir, { recursive: true, force: true });
     }
   }, 60_000);
 });
