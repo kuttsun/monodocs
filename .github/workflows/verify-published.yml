@@ -70,7 +70,7 @@ jobs:
       # and, in 0.17, the math font a PDF's formulas are set in. 0.17.2 keeps the UI labels English
       # under `lang: ja`, the one gate on a patch release. 0.18 writes the difference from an earlier
       # version into the HTML. 0.19 adds the one-column view and `html.diffViewDefault`, and brings
-      # the Japanese labels back under `lang: ja`.
+      # the Japanese labels back under `lang: ja`. 0.20 compares the inside of a changed block.
       # Verifying an older release must stay possible, so those steps ask rather than assume.
       - name: Record the published version
         run: |
@@ -1228,13 +1228,11 @@ jobs:
             printf '\nhtml:\n  diffViewDefault: inline\n' >> "$config"
             (cd "diffsamples/$lang/current" && monodocs build . -o "../../$lang-inline.html" --diff-from-dir ../earlier)
           done
-          # 0.20 pairs a deleted and an added block into one changed block: the samples' four such
-          # pairs, a row, a code block, a diagram, and a paragraph, are one change each.
-          changes=31
-          if [ "$SUPPORTS_V020" = "true" ]; then changes=27; fi
+          # The release decides what the samples show: from 0.20 a deleted and an added block are
+          # one changed block, and the changed paragraph is read in the four views.
           node scripts/verify-diff-browser.mjs --dir diffsamples --browser "$DIFF_BROWSER" \
             --shots diffsamples/shots --puppeteer-from "$(npm root -g | tr -d '\r')/monodocs" \
-            --changes "$changes"
+            --release "$MONODOCS_VERSION"
 
       # v0.20. A paragraph changed by one word, in English and in Japanese, built with
       # `--diff-from-dir` and driven in the Chrome the PDF steps use (7.3.6): side by side, each is
@@ -1246,8 +1244,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p words/now/docs words/then/docs
-          printf '# Guide\n\nThe build embeds no timestamp of its own.\n\n設定ファイルの既定値を変更した。\n' > words/then/docs/guide.md
-          printf '# Guide\n\nThe build embeds no date of its own.\n\n設定ファイルの初期値を変更した。\n' > words/now/docs/guide.md
+          # Written by Node with escapes, as the other steps write Japanese, so no shell carries it.
+          node -e "
+            const fs = require('node:fs');
+            fs.writeFileSync('words/then/docs/guide.md', '# Guide\\n\\nThe build embeds no timestamp of its own.\\n\\n\\u8a2d\\u5b9a\\u30d5\\u30a1\\u30a4\\u30eb\\u306e\\u65e2\\u5b9a\\u5024\\u3092\\u5909\\u66f4\\u3057\\u305f\\u3002\\n');
+            fs.writeFileSync('words/now/docs/guide.md', '# Guide\\n\\nThe build embeds no date of its own.\\n\\n\\u8a2d\\u5b9a\\u30d5\\u30a1\\u30a4\\u30eb\\u306e\\u521d\\u671f\\u5024\\u3092\\u5909\\u66f4\\u3057\\u305f\\u3002\\n');
+          "
           (cd words/now && monodocs build docs -o ../words.html --diff-from-dir ../then)
           MONODOCS_ROOT="$(npm root -g | tr -d '\r')/monodocs" node -e "
             const path = require('node:path');

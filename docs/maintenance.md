@@ -88,9 +88,10 @@ the second on 0.19):
 - The difference samples (`examples/diff`) built with `--diff-from-dir` and driven in Edge on Windows
   and Chrome on Linux by [`scripts/verify-diff-browser.mjs`](../scripts/verify-diff-browser.mjs): the
   view each opens in, the four views, previous and next, the sidebar marks, and the list of changes,
-  in English and Japanese. A screenshot of each view is kept as an artifact for a person to look
-  over. The same script drives the samples a released Linux binary builds for that release
-  criterion.
+  in English and Japanese, and from 0.20 the samples' changed paragraph read in each of the four views
+  (`--release` names the monodocs that built them). A screenshot of each view is kept as an artifact
+  for a person to look over. The same script drives the samples a released Linux binary builds for
+  that release criterion.
 
 What stays manual, because a script cannot settle it:
 

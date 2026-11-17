@@ -121,13 +121,16 @@ The Windows checks a person had made became steps of `verify-published.yml` and
 `verify-windows-binary.ps1`, and ran against 0.19.0 on a Windows runner; SmartScreen, a Windows 11
 host, how the generated HTML looks in Edge, and a look over the screenshots remain a person's.
 0.20.0 goes out under `latest` with the CI guide pinned to it, and without a beta. It compares the
-inside of a changed block: words, and Japanese characters, in a paragraph; code by line; a table row
-cell by cell; a display formula or a diagram shown old and new whole (7.3.6). A build without a
-difference changes only where its dependency updates change it: one byte of a table's search text
-(hast-util-to-text 4.0.3), and in a document with diagrams what Mermaid 12.3.0 writes for them,
-the runtime it carries or the drawings it pre-renders, which look the same as 12.2.0's. After `latest` moves, the published package and the release binaries are
-verified, a difference the released Linux binary builds is driven in a browser, changed paragraphs
-in Japanese and English read in the four views, and `next` moves onto 0.20.0.
+inside of a changed block: words, and Chinese and Japanese characters, in a paragraph; code by line;
+a table row cell by cell; a display formula or a diagram shown old and new whole (7.3.6). A build
+without a difference changes, besides the version the generated HTML and a PDF's metadata name, only
+through the dependency updates it carries: among them, a table's search text separates its cells and
+rows (hast-util-to-text 4.0.3), Shiki 4.6.0 highlights some languages' code differently, and Mermaid
+12.3.0 writes a document's diagrams anew — the runtime it carries, the CDN address it names, or the
+drawings it pre-renders — the samples' flowcharts measured pixel-identical to 12.2.0's. After
+`latest` moves, the published package and the release binaries are verified, a difference the
+released Linux binary builds is driven in a browser, changed paragraphs in Japanese and English read
+in the four views, and `next` moves onto 0.20.0.
 
 ## Completion Criteria Status
 
@@ -832,7 +835,7 @@ Nothing changes for a build without a difference but a comment in the default th
 
 **Dependencies**
 
-- [x] The minor and patch updates Dependabot proposed in #245, but for KaTeX and Mermaid, taken in #248: hast-util-to-text 4.0.3 separates a table's cells and rows in the search text, the one byte a build without a difference changes, and KaTeX stays 0.18.11, moved by hand with the Mermaid runtime that carries it
+- [x] The minor and patch updates Dependabot proposed in #245, but for KaTeX and Mermaid, taken in #248: hast-util-to-text 4.0.3 separates a table's cells and rows in the search text, the one byte the two pinned fixtures of a build without a difference change (Shiki 4.6.0 also highlights some languages' code differently, which neither fixture holds), and KaTeX stays 0.18.11, moved by hand with the Mermaid runtime that carries it
 - [x] Mermaid 12.3.0, with the runtime's notices regenerated and the pinned CDN runtime moved with it, measured as [roadmap.md](roadmap.md) 21.3 records: DOMPurify 3.4.17 past #229, ELK as `elkjs@0.12.0` under the EPL-2.0, uuid gone, KaTeX still 0.18.11, and every diagram in `examples/en` and `examples/ja` pixel-identical to its drawing under 12.2.0
 
 **Documentation and tests**
