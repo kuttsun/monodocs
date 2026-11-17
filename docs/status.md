@@ -120,7 +120,7 @@ difference the released Linux binary built was driven in a browser, and `next` m
 The Windows checks a person had made became steps of `verify-published.yml` and
 `verify-windows-binary.ps1`, and ran against 0.19.0 on a Windows runner; SmartScreen, a Windows 11
 host, how the generated HTML looks in Edge, and a look over the screenshots remain a person's.
-0.20.0 goes out under `latest` with the CI guide pinned to it, and without a beta. It compares the
+0.20.0 went out under `latest` with the CI guide pinned to it, and without a beta. It compares the
 inside of a changed block: words, and Chinese and Japanese characters, in a paragraph; code by line;
 a table row cell by cell; a display formula or a diagram shown old and new whole (7.3.6). A build
 without a difference changes, besides the version the generated HTML and a PDF's metadata name, only
@@ -128,9 +128,10 @@ through the dependency updates it carries: among them, a table's search text sep
 rows (hast-util-to-text 4.0.3), Shiki 4.6.0 highlights some languages' code differently, and Mermaid
 12.3.0 writes a document's diagrams anew — the runtime it carries, the CDN address it names, or the
 drawings it pre-renders — the samples' flowcharts measured pixel-identical to 12.2.0's. After
-`latest` moves, the published package and the release binaries are verified, a difference the
-released Linux binary builds is driven in a browser, changed paragraphs in Japanese and English read
-in the four views, and `next` moves onto 0.20.0.
+`latest` moved, the published package and the release binaries were verified, a difference the
+released Linux binary built was driven in a browser, its changed paragraphs in Japanese and English
+read in the four views, and `next` moved onto 0.20.0. SmartScreen, a Windows 11 host, how the
+generated HTML looks in Edge, and a look over the screenshots remain a person's, as for 0.19.0.
 
 ## Completion Criteria Status
 
@@ -848,13 +849,13 @@ It changes what a build with a difference shows inside a changed block, and a bu
 
 - [x] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.20.0` in the version change itself, before the `v0.20.0` tag is created
 - [x] `verify-published.yml` gains a 0.20 gate and a step that builds a difference with a paragraph changed by one word, merged before anything below runs — "A word changed inside a paragraph (0.20)" builds an English and a Japanese paragraph each changed by one word and, in Chrome, finds each one changed block in both columns with the word marked, counted once, and shown once in one column; the difference samples' browser pass expects 27 changes from 0.20, 31 before it
-- [ ] Publish `0.20.0` under the `latest` tag, with release notes stating how a changed block now reads, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.20.0`, confirming that the 0.20 steps ran rather than being skipped
-- [ ] Verify the `v0.20.0` release binaries through `verify-release-binaries.yml` on both platforms
-- [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js
-- [ ] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, reading changed paragraphs in Japanese and English in the four views
-- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host
+- [x] Publish `0.20.0` under the `latest` tag, with release notes stating how a changed block now reads, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.20.0`, confirming that the 0.20 steps ran rather than being skipped — published with provenance once the `npm` environment's approval was given, `latest` reading `0.20.0` and the release notes saying how a changed block now reads; `verify-published.yml` passed on both platforms with "A word changed inside a paragraph (0.20)" run and passed on each, and the difference samples' browser pass, in Edge on Windows and Chrome on Linux, passed 37 checks per language, Next walking the 27 changes
+- [x] Verify the `v0.20.0` release binaries through `verify-release-binaries.yml` on both platforms — the run the release started passed: 16 checks on Linux, and on Windows `verify-windows-binary.ps1` passed 18
+- [x] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js — in a `debian:stable-slim` container without Node.js, against the published `v0.20.0` assets: all 16 checks pass
+- [x] The browser pass over a difference the released Linux binary produced, driven rather than eyeballed, reading changed paragraphs in Japanese and English in the four views — the published Linux asset, checked against its `.sha256` and reporting `0.20.0`, built `examples/diff/en` and `examples/diff/ja` with `--diff-from-dir ../earlier`, and again with `html.diffViewDefault: inline` added, in a container without Node.js; driven in Chromium by [`scripts/verify-diff-browser.mjs`](../scripts/verify-diff-browser.mjs) with `--release 0.20.0`, each language passed 37 checks: the 33 0.19.0 had, Next now walking 27 changes, and the samples' changed paragraph read in each of the four views — the earlier version's words in its own view; side by side, the earlier version's words beside the new version's with the added words marked; in one column and in the new version's own view, the new version's with the added words marked
+- [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host — on a Windows Server runner, which has Node.js, it passed all 18 checks in `verify-release-binaries.yml`; a Windows 11 host remains, which also answers Smart App Control for an unsigned binary
 - [ ] What only a person can answer, on Windows: SmartScreen for an asset downloaded through a browser, how the generated HTML looks in Edge, and a look over the Edge screenshots `verify-published.yml` keeps (the rest of what 0.18.0 asked runs as steps from 0.19.0) — and how changed paragraphs in Japanese and English read
-- [ ] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese
+- [x] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese — `next` and `latest` both read `0.20.0`, and the deployed CI guide pins `monodocs@0.20.0` four times in each language, with no other version left; the deployed command reference describes a changed block
 
 ### 1.0
 
