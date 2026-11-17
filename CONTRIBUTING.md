@@ -129,7 +129,7 @@ not matter, and you do not need to squash or rewrite history before submitting. 
 conflicts, or to rebase a pull request that depends on another one onto the updated `main` after that one is
 merged.
 
-Merging a pull request requires the required status checks — App CI (Linux), App CI (Windows), and Site CI —
+Merging a pull request requires the required status checks — App CI (Linux), App CI (Windows), Site CI, and Difference on Node (oldest) and (current) —
 to pass, the branch to be up to date with `main`, and review conversations to be resolved. Pull request CI
 checks the result of merging the branch into `main`, not the individual commits in the pull request. When a
 pull request is focused on one purpose, reverting its commit on `main` removes exactly that change, and

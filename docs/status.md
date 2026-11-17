@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 
 ## Support Status
 
@@ -29,7 +29,7 @@ Last updated: 2026-11-16
 | One math font for the PDF, KaTeX 0.18, Mermaid 12.2 | ✅ Done   | v0.17 |
 | Difference from an earlier version in HTML        | ✅ Done   | v0.18          |
 | One-column view of the difference, its default view | ✅ Done   | v0.19        |
-| Word and character differences inside a block     | 🚧 Planned| v0.20          |
+| Word and character differences inside a block     | ✅ Done   | v0.20          |
 | Difference from an earlier version in PDF         | ⏸ Deferred | after 1.0     |
 | `sidebar.exclude` removed, surfaces frozen        | 🚧 Planned| 1.0            |
 
@@ -120,6 +120,14 @@ difference the released Linux binary built was driven in a browser, and `next` m
 The Windows checks a person had made became steps of `verify-published.yml` and
 `verify-windows-binary.ps1`, and ran against 0.19.0 on a Windows runner; SmartScreen, a Windows 11
 host, how the generated HTML looks in Edge, and a look over the screenshots remain a person's.
+0.20.0 goes out under `latest` with the CI guide pinned to it, and without a beta. It compares the
+inside of a changed block: words, and Japanese characters, in a paragraph; code by line; a table row
+cell by cell; a display formula or a diagram shown old and new whole (7.3.6). A build without a
+difference changes only where its dependency updates change it: one byte of a table's search text
+(hast-util-to-text 4.0.3), and in a document with diagrams what Mermaid 12.3.0 writes for them,
+the runtime it carries or the drawings it pre-renders, which look the same as 12.2.0's. After `latest` moves, the published package and the release binaries are
+verified, a difference the released Linux binary builds is driven in a browser, changed paragraphs
+in Japanese and English read in the four views, and `next` moves onto 0.20.0.
 
 ## Completion Criteria Status
 
@@ -833,10 +841,10 @@ Nothing changes for a build without a difference but a comment in the default th
 
 **Release**
 
-It changes only what a build with a difference shows inside a changed block, and 12.4 promises no output that stays the same across versions before 1.0, so this release goes to `latest` without a beta, as 0.19.0 did.
+It changes what a build with a difference shows inside a changed block, and a build without one only where the dependency updates above change it, and 12.4 promises no output that stays the same across versions before 1.0, so this release goes to `latest` without a beta, as 0.19.0 did.
 
-- [ ] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.20.0` in the version change itself, before the `v0.20.0` tag is created
-- [ ] `verify-published.yml` gains a 0.20 gate and a step that builds a difference with a paragraph changed by one word, merged before anything below runs
+- [x] The CI guide on the documentation site, English and Japanese alike, pins `monodocs@0.20.0` in the version change itself, before the `v0.20.0` tag is created
+- [x] `verify-published.yml` gains a 0.20 gate and a step that builds a difference with a paragraph changed by one word, merged before anything below runs — "A word changed inside a paragraph (0.20)" builds an English and a Japanese paragraph each changed by one word and, in Chrome, finds each one changed block in both columns with the word marked, counted once, and shown once in one column; the difference samples' browser pass expects 27 changes from 0.20, 31 before it
 - [ ] Publish `0.20.0` under the `latest` tag, with release notes stating how a changed block now reads, and verify it on Linux x64 and Windows x64 through `verify-published.yml` run with `dist_tag: 0.20.0`, confirming that the 0.20 steps ran rather than being skipped
 - [ ] Verify the `v0.20.0` release binaries through `verify-release-binaries.yml` on both platforms
 - [ ] Run [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) against the published `v0.20.0` assets on a Linux x64 host without Node.js

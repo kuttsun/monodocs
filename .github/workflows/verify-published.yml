@@ -84,7 +84,7 @@ jobs:
             if (!m) { console.error('cannot read a version out of: ' + JSON.stringify(process.argv[1])); process.exit(1); }
             const major = Number(m[1]), minor = Number(m[2]), patch = Number(m[3]);
             const atLeast = (n, p = 0) => major > 0 || minor > n || (minor === n && patch >= p);
-            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16), atLeast(17), atLeast(17, 2), atLeast(18), atLeast(19)].map(String).join(' '));
+            process.stdout.write([atLeast(10), atLeast(11), atLeast(12), atLeast(13), atLeast(14), atLeast(15), atLeast(16), atLeast(17), atLeast(17, 2), atLeast(18), atLeast(19), atLeast(20)].map(String).join(' '));
           " "$version")"
           echo "MONODOCS_VERSION=$version" >> "$GITHUB_ENV"
           echo "SUPPORTS_V010=$(echo "$gate" | cut -d' ' -f1)" >> "$GITHUB_ENV"
@@ -98,6 +98,7 @@ jobs:
           echo "SUPPORTS_V0172=$(echo "$gate" | cut -d' ' -f9)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V018=$(echo "$gate" | cut -d' ' -f10)" >> "$GITHUB_ENV"
           echo "SUPPORTS_V019=$(echo "$gate" | cut -d' ' -f11)" >> "$GITHUB_ENV"
+          echo "SUPPORTS_V020=$(echo "$gate" | cut -d' ' -f12)" >> "$GITHUB_ENV"
 
       - name: Validate
         run: monodocs validate examples/en
@@ -1227,8 +1228,67 @@ jobs:
             printf '\nhtml:\n  diffViewDefault: inline\n' >> "$config"
             (cd "diffsamples/$lang/current" && monodocs build . -o "../../$lang-inline.html" --diff-from-dir ../earlier)
           done
+          # 0.20 pairs a deleted and an added block into one changed block: the samples' four such
+          # pairs, a row, a code block, a diagram, and a paragraph, are one change each.
+          changes=31
+          if [ "$SUPPORTS_V020" = "true" ]; then changes=27; fi
           node scripts/verify-diff-browser.mjs --dir diffsamples --browser "$DIFF_BROWSER" \
-            --shots diffsamples/shots --puppeteer-from "$(npm root -g | tr -d '\r')/monodocs"
+            --shots diffsamples/shots --puppeteer-from "$(npm root -g | tr -d '\r')/monodocs" \
+            --changes "$changes"
+
+      # v0.20. A paragraph changed by one word, in English and in Japanese, built with
+      # `--diff-from-dir` and driven in the Chrome the PDF steps use (7.3.6): side by side, each is
+      # one changed block in both columns, the earlier marking the deleted word and the new the
+      # added one, counted once; in one column the block is shown once, the deleted word put back
+      # before the added one.
+      - name: A word changed inside a paragraph (0.20)
+        if: env.SUPPORTS_V020 == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p words/now/docs words/then/docs
+          printf '# Guide\n\nThe build embeds no timestamp of its own.\n\n設定ファイルの既定値を変更した。\n' > words/then/docs/guide.md
+          printf '# Guide\n\nThe build embeds no date of its own.\n\n設定ファイルの初期値を変更した。\n' > words/now/docs/guide.md
+          (cd words/now && monodocs build docs -o ../words.html --diff-from-dir ../then)
+          MONODOCS_ROOT="$(npm root -g | tr -d '\r')/monodocs" node -e "
+            const path = require('node:path');
+            const { pathToFileURL } = require('node:url');
+            const puppeteer = require(require.resolve('puppeteer-core', { paths: [process.env.MONODOCS_ROOT] }));
+            const fail = (m) => { throw new Error(m); };
+            (async () => {
+              const browser = await puppeteer.launch({ headless: true, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+              try {
+                const page = await browser.newPage();
+                await page.setViewport({ width: 1300, height: 900 });
+                const url = pathToFileURL(path.resolve('words/words.html')).href + '#/guide';
+                await page.goto(url);
+                await new Promise((r) => setTimeout(r, 400));
+                const read = () => page.evaluate(() => {
+                  const article = [...document.querySelectorAll('article.page')].find((a) => !a.hidden);
+                  const visible = (el) => el.getBoundingClientRect().height > 0;
+                  const words = (column, tag) => [...article.querySelectorAll(column + ' [data-monodocs-diff-block=\"changed\"] ' + tag + '[data-monodocs-diff]')].filter(visible).map((el) => el.textContent.trim());
+                  return {
+                    deleted: words('.monodocs-diff-earlier', 'del'),
+                    added: words('.monodocs-diff-current', 'ins'),
+                    putBack: words('.monodocs-diff-current', 'del'),
+                    count: document.querySelector('.monodocs-diff-count').textContent.trim(),
+                  };
+                });
+                const both = await read();
+                const want = { deleted: ['timestamp', '\u65e2\u5b9a'], added: ['date', '\u521d\u671f'], putBack: [], count: '\u2013 / 2' };
+                if (JSON.stringify(both) !== JSON.stringify(want)) fail('side by side does not mark the changed words: ' + JSON.stringify(both));
+                await page.click('[data-monodocs-diff-view=\"inline\"]');
+                await new Promise((r) => setTimeout(r, 400));
+                const one = await page.evaluate(() => {
+                  const article = [...document.querySelectorAll('article.page')].find((a) => !a.hidden);
+                  return [...article.querySelectorAll('.monodocs-diff-current [data-monodocs-diff-block=\"changed\"]')].map((el) => el.textContent.replace(/\\s+/g, ' ').trim());
+                });
+                const blocks = ['The build embeds no timestampdate of its own.', '\u8a2d\u5b9a\u30d5\u30a1\u30a4\u30eb\u306e\u65e2\u5b9a\u521d\u671f\u5024\u3092\u5909\u66f4\u3057\u305f\u3002'];
+                if (JSON.stringify(one) !== JSON.stringify(blocks)) fail('one column does not show each changed block once: ' + JSON.stringify(one));
+              } finally {
+                await browser.close();
+              }
+            })().catch((e) => { console.error(e); process.exit(1); });
+          "
 
       - name: Keep the difference samples' screenshots (0.19)
         if: ${{ !cancelled() && env.SUPPORTS_V019 == 'true' }}

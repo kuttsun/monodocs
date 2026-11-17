@@ -12,7 +12,10 @@
 //
 // Usage:
 //   node scripts/verify-diff-browser.mjs --dir <dir> --browser <chrome-or-edge-executable>
-//       [--shots <dir>] [--puppeteer-from <dir>]
+//       [--shots <dir>] [--puppeteer-from <dir>] [--changes <n>]
+//
+// --changes is how many changes the samples hold for the monodocs that built them: 27 from 0.20,
+// which pairs a deleted and an added block into one changed block, and 31 before it.
 //
 // `puppeteer-core` is not a dependency of this repository's root. It is taken from --puppeteer-from
 // (a directory whose node_modules has it, such as an installed monodocs package or app/packages/core),
@@ -29,11 +32,12 @@ const { values } = parseArgs({
     browser: { type: "string" },
     shots: { type: "string" },
     "puppeteer-from": { type: "string" },
+    changes: { type: "string" },
   },
 });
 if (!values.dir || !values.browser) {
   console.error(
-    "usage: node scripts/verify-diff-browser.mjs --dir <dir> --browser <executable> [--shots <dir>] [--puppeteer-from <dir>]",
+    "usage: node scripts/verify-diff-browser.mjs --dir <dir> --browser <executable> [--shots <dir>] [--puppeteer-from <dir>] [--changes <n>]",
   );
   process.exit(2);
 }
@@ -57,8 +61,13 @@ const LANGUAGES = {
 };
 const SIGNS = { added: "+", deleted: "−", changed: "•", moved: "→" };
 // The changes the samples hold, which Next has to reach: a count the page reports for itself would
-// let a document that lost changes pass.
-const CHANGES = 31;
+// let a document that lost changes pass. From 0.20 the samples' four replaced blocks — a row, a code
+// block, a diagram, a paragraph — are a changed block each, one change where they were two.
+const CHANGES = values.changes === undefined ? 27 : Number(values.changes);
+if (!Number.isInteger(CHANGES) || CHANGES < 1) {
+  console.error(`--changes must be a positive whole number: ${values.changes}`);
+  process.exit(2);
+}
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 const server = createServer((request, response) => {
