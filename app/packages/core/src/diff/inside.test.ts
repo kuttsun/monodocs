@@ -61,6 +61,18 @@ describe("extract", () => {
     expect(out.text).toBe("Title");
   });
 
+  it("takes the space after a generated number, and none where nothing follows it but text", () => {
+    const word = text("Figure ");
+    const number = () => text("1", { monodocsGenerated: true } as Text["data"]);
+    const after = text(" again");
+    const out = extract([h("a", {}, [word, number()]), after], new Atoms(), "page");
+    expect(out.text).toBe("Figure again");
+    expect(out.origin[6]).toEqual({ space: [{ node: after, start: 0, end: 1 }] });
+    expect(
+      extract([h("a", {}, [text("Figure "), number()]), text(".")], new Atoms(), "page").text,
+    ).toBe("Figure.");
+  });
+
   it("writes what is not text as one private-use character per key, the same for the same key", () => {
     const atoms = new Atoms();
     const math = (tex: string) => h("span", { className: ["math"], dataMathTex: tex }, [text("x")]);

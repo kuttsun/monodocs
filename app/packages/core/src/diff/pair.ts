@@ -9,10 +9,16 @@
  * its insertion.
  */
 import type { BlockEdit } from "./compare.js";
-import { insideDifference } from "./inside.js";
+import { insideDifference, type Inside } from "./inside.js";
 
-/** `edits` with the deleted and added blocks of each run paired where they can be. */
-export function pairEdits(edits: readonly BlockEdit[]): BlockEdit[] {
+/**
+ * `edits` with the deleted and added blocks of each run paired where they can be, and where `accept`
+ * takes what is inside them.
+ */
+export function pairEdits(
+  edits: readonly BlockEdit[],
+  accept: (inside: Inside) => boolean = () => true,
+): BlockEdit[] {
   const out: BlockEdit[] = [];
   let i = 0;
   while (i < edits.length) {
@@ -36,7 +42,7 @@ export function pairEdits(edits: readonly BlockEdit[]): BlockEdit[] {
       const a = added[slot];
       if (d?.op !== "delete" || a?.op !== "insert") return undefined;
       const inside = insideDifference(d.old, a.new);
-      return inside === undefined
+      return inside === undefined || !accept(inside)
         ? undefined
         : ({ op: "change", old: d.old, new: a.new, inside } as const);
     });

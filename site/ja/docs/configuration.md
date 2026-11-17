@@ -710,7 +710,7 @@ html:
 | `diffNext` | Next change | 次の変更 | 次の変更へのボタン |
 | `diffAdded` | Added | 追加 | 変更されたページの追加ブロック数と、サイドバーの追加ページの印 |
 | `diffDeleted` | Deleted | 削除 | 変更されたページの削除ブロック数と、サイドバーの削除ページの印 |
-| `diffChanged` | Changed | 変更 | サイドバーの変更ページの印 |
+| `diffChanged` | Changed | 変更 | サイドバーの変更ページの印と、変更点の一覧でのページの変更されたブロックの数 |
 | `diffMoved` | Moved | 移動 | サイドバーの移動ページの印 |
 | `diffTitleChanged` | The title changed. Its earlier title: | タイトルが変わりました。以前のタイトル: | front matter のタイトルが変わったページの注記。以前のタイトルの前 |
 | `diffMergedInto` | Merged into: | 統合先: | 別のページが aliases で route を引き継いだ、削除されたページ |

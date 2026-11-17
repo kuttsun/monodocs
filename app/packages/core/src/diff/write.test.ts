@@ -4,7 +4,7 @@ import rehypeParse from "rehype-parse";
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
 import { blocksOf, sameBlock } from "./blocks";
-import type { BlockEdit } from "./compare";
+import { alignBlocks, type BlockEdit } from "./compare";
 import { diffSequences } from "./myers";
 import {
   assertNoEarlierId,
@@ -253,6 +253,207 @@ describe("two columns", () => {
     // The earlier column is marked as before, its pair kept.
     expect(toHtml(earlier)).toContain(
       '<p data-monodocs-diff-block="del"><del data-monodocs-diff="">Gone.</del></p>',
+    );
+  });
+});
+
+describe("a changed text block (v0.20)", () => {
+  /** Both versions' HTML with their blocks aligned and paired, the difference written in. */
+  function changed(earlier: string, current: string) {
+    const parse = () => ({ old: parser.parse(earlier), next: parser.parse(current) });
+    // One column's markup, deletions in place.
+    const one = parse();
+    writeDifference(one.next, one.old, alignBlocks(blocksOf(one.old), blocksOf(one.next)), EARLIER);
+    // Two columns, the deletions taken out of the new one.
+    const two = parse();
+    const edits = alignBlocks(blocksOf(two.old), blocksOf(two.next));
+    const columns = writeColumns(two.next, two.old, edits, EARLIER, INLINE);
+    return {
+      inline: toHtml(one.next),
+      earlier: toHtml(columns.earlier),
+      current: toHtml(two.next),
+      detached: columns.inline.map((node) => toHtml(node)),
+    };
+  }
+
+  it("marks the added words, and writes the deleted ones from the earlier block before them", () => {
+    const out = changed(
+      '<p>Keep the <strong id="s">bold old</strong> words here.</p>',
+      '<p>Keep the <strong id="s">bold new</strong> words here.</p>',
+    );
+    // Deleted bold text stays bold: written inside the new bold run, it takes no second one.
+    expect(out.inline).toBe(
+      '<p data-monodocs-diff-block="changed">Keep the <strong id="s">bold <del data-monodocs-diff="">old</del><ins data-monodocs-diff="">new</ins></strong> words here.</p>',
+    );
+    // The earlier column marks its deleted words where they stand; the new one takes them out to
+    // a template, a comment in their place.
+    expect(out.earlier).toBe(
+      '<p data-monodocs-diff-pair="1" data-monodocs-diff-block="changed">Keep the <strong>bold <del data-monodocs-diff="">old</del></strong> words here.</p>',
+    );
+    expect(out.current).toBe(
+      '<p data-monodocs-diff-pair="1" data-monodocs-diff-block="changed">Keep the <strong id="s">bold <!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="">new</ins></strong> words here.</p>',
+    );
+    expect(out.detached).toEqual(['<del data-monodocs-diff="">old</del>']);
+  });
+
+  it("keeps deleted words inside the link they were in, and never links them", () => {
+    const out = changed(
+      '<p>See <a href="#x" id="l">the old guide</a> now.</p>',
+      '<p>See <a href="#x" id="l">the new guide</a> now.</p>',
+    );
+    expect(out.inline).toBe(
+      '<p data-monodocs-diff-block="changed">See <a href="#x" id="l">the <del data-monodocs-diff="">old</del><ins data-monodocs-diff="">new</ins> guide</a> now.</p>',
+    );
+  });
+
+  it("puts a deletion before the next equal word, outside a link that starts there", () => {
+    expect(changed("<p>One two three four five.</p>", "<p>One three four five.</p>").inline).toBe(
+      '<p data-monodocs-diff-block="changed">One <del data-monodocs-diff="">two </del>three four five.</p>',
+    );
+    expect(
+      changed(
+        '<p>Read the <a href="#g">guide</a> first.</p>',
+        '<p>Read <a href="#g">guide</a> first.</p>',
+      ).inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed">Read <del data-monodocs-diff="">the </del><a href="#g">guide</a> first.</p>',
+    );
+  });
+
+  it("puts a deletion at an item's end before the list nested in it", () => {
+    const out = changed(
+      "<ul><li>Install the tool now<ul><li>x</li></ul></li></ul>",
+      "<ul><li>Install the tool<ul><li>x</li></ul></li></ul>",
+    );
+    expect(out.inline).toBe(
+      '<ul><li data-monodocs-diff-block="changed">Install the tool<del data-monodocs-diff=""> now</del><ul><li>x</li></ul></li></ul>',
+    );
+    expect(out.earlier).toBe(
+      '<ul><li data-monodocs-diff-pair="1" data-monodocs-diff-block="changed">Install the tool<del data-monodocs-diff=""> now</del><ul><li data-monodocs-diff-pair="2">x</li></ul></li></ul>',
+    );
+  });
+
+  it("marks what is not text whole, and writes nothing for a deleted footnote reference", () => {
+    expect(
+      changed(
+        '<p>Press <img src="https://e.test/a.png" alt="A"> to start the build.</p>',
+        '<p>Press <img src="https://e.test/b.png" alt="B"> to start the build.</p>',
+      ).inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed">Press <del data-monodocs-diff=""><img src="https://e.test/a.png" alt="A"></del><ins data-monodocs-diff=""><img src="https://e.test/b.png" alt="B"></ins> to start the build.</p>',
+    );
+    const footnote = changed(
+      '<p>One<sup><a href="#fn-a" data-footnote-ref id="r">1</a></sup> and two words.</p>',
+      "<p>One and two words.</p>",
+    );
+    expect(footnote.inline).toBe('<p data-monodocs-diff-block="changed">One and two words.</p>');
+    expect(footnote.earlier).toBe(
+      '<p data-monodocs-diff-pair="1" data-monodocs-diff-block="changed">One and two words.</p>',
+    );
+    expect(footnote.detached).toEqual([]);
+  });
+
+  it("keeps the earlier column's spaces round a deleted word set in bold", () => {
+    const out = changed(
+      "<p>Keep this <b>very</b> important sentence here.</p>",
+      "<p>Keep this important sentence here.</p>",
+    );
+    expect(out.earlier).toBe(
+      '<p data-monodocs-diff-pair="1" data-monodocs-diff-block="changed">Keep this <b><del data-monodocs-diff="">very</del></b><del data-monodocs-diff=""> </del>important sentence here.</p>',
+    );
+    // Deleted bold text written where nothing is bold stays bold, and keeps no ID.
+    expect(out.detached).toEqual(['<del data-monodocs-diff=""><b>very</b> </del>']);
+    // A space deleted alone is written, so the change shows.
+    expect(
+      changed("<p>設定 ファイルを変更した。</p>", "<p>設定ファイルを変更した。</p>").inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed">設定<del data-monodocs-diff=""> </del>ファイルを変更した。</p>',
+    );
+  });
+
+  it("keeps a deletion at an item's start or end inside the paragraph the item's text is in", () => {
+    expect(
+      changed(
+        "<ul><li><p>Very foo bar baz qux</p></li></ul>",
+        "<ul><li><p>foo bar baz qux</p></li></ul>",
+      ).current,
+    ).toBe(
+      '<ul><li data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><p><!-- monodocs-diff-inline 0 -->foo bar baz qux</p></li></ul>',
+    );
+    expect(
+      changed(
+        "<ul><li><p>foo bar baz qux end</p></li></ul>",
+        "<ul><li><p>foo bar baz qux</p></li></ul>",
+      ).inline,
+    ).toBe(
+      '<ul><li data-monodocs-diff-block="changed"><p>foo bar baz qux<del data-monodocs-diff=""> end</del></p></li></ul>',
+    );
+    expect(
+      changed(
+        "<dl><dt>T</dt><dd><p>Old text here and more</p></dd></dl>",
+        "<dl><dt>T</dt><dd><p>text here and more</p></dd></dl>",
+      ).inline,
+    ).toBe(
+      '<dl><dt>T</dt><dd data-monodocs-diff-block="changed"><p><del data-monodocs-diff="">Old </del>text here and more</p></dd></dl>',
+    );
+  });
+
+  it("puts a deletion before the code or bold run its replacement starts, not inside it", () => {
+    expect(
+      changed(
+        "<p>Use <code>foo</code> to start the build.</p>",
+        "<p>Use <code>bar</code> to start the build.</p>",
+      ).inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed">Use <del data-monodocs-diff=""><code>foo</code></del><code><ins data-monodocs-diff="">bar</ins></code> to start the build.</p>',
+    );
+    // In the middle of the run, the deletion is inside it, and takes no second one.
+    expect(
+      changed(
+        "<p>Run the <code>build --old</code> command before you start.</p>",
+        "<p>Run the <code>build --new</code> command before you start.</p>",
+      ).inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed">Run the <code>build --<del data-monodocs-diff="">old</del><ins data-monodocs-diff="">new</ins></code> command before you start.</p>',
+    );
+  });
+
+  it("leaves a deleted block holding only a footnote reference as stage 1 writes it", () => {
+    expect(
+      changed('<p>Keep.</p><p><sup><a href="#f" data-footnote-ref>1</a></sup></p>', "<p>Keep.</p>")
+        .earlier,
+    ).toBe(
+      '<p data-monodocs-diff-pair="1">Keep.</p><p data-monodocs-diff-block="del"><del data-monodocs-diff=""></del></p>',
+    );
+  });
+
+  it("clones a character outside the BMP once, and an element of another class around it", () => {
+    expect(
+      changed(
+        "<p>担当者は𠮷田さんから佐藤さんに変わった。</p>",
+        "<p>担当者は佐藤さんに変わった。</p>",
+      ).detached,
+    ).toEqual(['<del data-monodocs-diff="">𠮷田さんから</del>']);
+    expect(
+      changed(
+        '<p><span class="big">Some <span class="line-through">old</span> words in it</span></p>',
+        '<p><span class="big">Some words in it</span></p>',
+      ).inline,
+    ).toBe(
+      '<p data-monodocs-diff-block="changed"><span class="big">Some <del data-monodocs-diff=""><span class="line-through">old</span> </del>words in it</span></p>',
+    );
+  });
+
+  it("gives text between blocks an element to carry its mark", () => {
+    const out = changed(
+      "<p>Text one</p>tail words here<p>end</p>",
+      "<p>Text one</p>tail word here<p>end</p>",
+    );
+    expect(out.inline).toBe(
+      '<p>Text one</p><span class="monodocs-diff-run" data-monodocs-diff-block="changed">tail <del data-monodocs-diff="">words</del><ins data-monodocs-diff="">word</ins> here</span><p>end</p>',
+    );
+    expect(out.current).toContain(
+      '<span class="monodocs-diff-run" data-monodocs-diff-pair="2" data-monodocs-diff-block="changed">tail <!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="">word</ins> here</span>',
     );
   });
 });

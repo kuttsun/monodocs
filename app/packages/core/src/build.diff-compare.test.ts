@@ -49,18 +49,20 @@ async function compare(earlier: Files, current: Files): Promise<PageComparison[]
   return result!;
 }
 
-/** A page's edits that are not `equal`, as `-kind text` / `+kind text`. */
+/**
+ * A page's edits that are not `equal`, as `-kind text` / `+kind text`: a changed pair (7.3.6) as its
+ * deleted and its added block, which is what comparing their keys found.
+ */
 function changes(page: PageComparison | undefined): string[] {
   const short = (text: string) => (text.length > 40 ? `${text.slice(0, 40)}…` : text);
-  return (page?.edits ?? [])
-    .filter((edit: BlockEdit) => edit.op !== "equal")
-    .map((edit) =>
-      edit.op === "delete"
-        ? `-${edit.old.kind} ${short(edit.old.key)}`
-        : edit.op === "insert"
-          ? `+${edit.new.kind} ${short(edit.new.key)}`
-          : "",
-    );
+  return (page?.edits ?? []).flatMap((edit: BlockEdit) =>
+    edit.op === "equal"
+      ? []
+      : [
+          ...(edit.op === "insert" ? [] : [`-${edit.old.kind} ${short(edit.old.key)}`]),
+          ...(edit.op === "delete" ? [] : [`+${edit.new.kind} ${short(edit.new.key)}`]),
+        ],
+  );
 }
 
 /** The comparison of one page, both versions of it written as `earlier` and `current`. */
