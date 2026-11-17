@@ -168,7 +168,8 @@ export function writeNewCode(
         let nodes = group.nodes.flatMap((node) => cloner.clean(node));
         for (let at: Element | undefined = group.parent; at !== undefined && at !== old;) {
           if (at.tagName === "code") break;
-          nodes = [cloner.shell(at, nodes)];
+          // A link points into the earlier version: its content is kept, not the link.
+          if (at.tagName !== "a") nodes = [cloner.shell(at, nodes)];
           at = earlier.parentOf(at);
         }
         return nodes;

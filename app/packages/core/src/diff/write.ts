@@ -734,6 +734,9 @@ export function writeDifference(
   const items: (Node | undefined)[] = edits.map((edit) =>
     edit.op === "delete" ? undefined : firstNode(edit.new),
   );
+  // Where an edit that stands as two nodes ends — a changed formula or diagram, its earlier copy
+  // then the new one: a deletion after it goes after the end, one before it before the start.
+  const ends = new Map<number, Node>();
 
   // Additions first: a deleted block written into an added caption goes before its mark.
   edits.forEach((edit, i) => {
@@ -797,6 +800,9 @@ export function writeDifference(
         newParents.splice(holder, kids(holder).indexOf(standing), 0, piece);
         newParents.index(piece);
         fromEarlier.push(piece);
+        // The pair starts at the copy and ends at the new block: a deletion goes outside both.
+        items[i] = piece;
+        ends.set(i, standing);
         if (edit.old.kind === "diagram") changedDiagrams++;
       }
     }
@@ -811,7 +817,8 @@ export function writeDifference(
     }
     let at: number | undefined;
     for (let j = i - 1; j >= 0 && at === undefined; j--) {
-      const child = items[j] === undefined ? undefined : newParents.childOf(parent, items[j]!);
+      const end = ends.get(j) ?? items[j];
+      const child = end === undefined ? undefined : newParents.childOf(parent, end);
       if (child !== undefined) at = kids(parent).indexOf(child) + 1;
     }
     if (at === undefined) {

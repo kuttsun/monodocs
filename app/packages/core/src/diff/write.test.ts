@@ -510,6 +510,13 @@ describe("a changed code block, row, formula, or diagram (v0.20)", () => {
       '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>p\n<!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="" class="monodocs-diff-part">y </ins><strong><ins data-monodocs-diff="" class="monodocs-diff-part">a\n</ins>b</strong>\nc\nd\ne\n</code></pre>',
     );
     expect(split.detached).toEqual(['<del data-monodocs-diff="">x <strong>a\n</strong></del>']);
+    // A deleted line inside a link spanning lines keeps the link's content, not the link.
+    expect(
+      changed(
+        '<pre><code><a href="https://example.com">a\nb</a>\nc\n</code></pre>',
+        "<pre><code>A\nb\nc\n</code></pre>",
+      ).detached,
+    ).toEqual(['<del data-monodocs-diff="">a\n</del>']);
     // An empty new block: the deleted line goes into its code.
     expect(
       changed(
@@ -552,6 +559,29 @@ describe("a changed code block, row, formula, or diagram (v0.20)", () => {
     expect(formula.current).toBe(
       '<!-- monodocs-diff-inline 0 --><div class="math-display" data-math-tex="b" data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><ins data-monodocs-diff=""><span>B</span></ins></div>',
     );
+    // A block deleted before it goes before the copy, not between the two.
+    const between = changed(
+      '<blockquote><p>Gone words.</p><div class="math-display" data-math-tex="a"><span>A</span></div></blockquote>',
+      '<p>New words.</p><blockquote><div class="math-display" data-math-tex="b"><span>B</span></div></blockquote>',
+    );
+    // In one column: the deleted paragraph, then the earlier formula right before the new one.
+    const one = between.current.replace(
+      /<!-- monodocs-diff-inline (\d+) -->/g,
+      (_, n: string) => between.detached[Number(n)]!,
+    );
+    expect(one.indexOf("Gone words")).toBeLessThan(one.indexOf('data-math-tex="a"'));
+    expect(one).toMatch(/<\/div><\/del><div class="math-display" data-math-tex="b"/);
+    // And a block deleted after it goes after both.
+    const after = changed(
+      '<div class="math-display" data-math-tex="a"><span>A</span></div><p>Gone words.</p><p>Keep.</p>',
+      '<div class="math-display" data-math-tex="b"><span>B</span></div><p>Keep.</p>',
+    );
+    const both = after.current.replace(
+      /<!-- monodocs-diff-inline (\d+) -->/g,
+      (_, n: string) => after.detached[Number(n)]!,
+    );
+    expect(both).toMatch(/<\/div><\/del><div class="math-display" data-math-tex="b"/);
+    expect(both.indexOf('data-math-tex="b"')).toBeLessThan(both.indexOf("Gone words"));
     // No mark or pair of its own: the one-column view shows it beside the changed block.
     expect(formula.detached).toEqual([
       '<del data-monodocs-diff=""><div class="math-display" data-math-tex="a"><span>A</span></div></del>',
