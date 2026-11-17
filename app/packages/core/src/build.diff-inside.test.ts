@@ -283,3 +283,55 @@ describe("the words inside a changed block (7.3.6)", () => {
     expect(marked(inline)).toEqual(["[-Old-]{+New+} word here."]);
   });
 });
+
+describe("each kind in its own unit (7.3.6)", () => {
+  it("compares code by line, highlighted or not, and in another language not at all", async () => {
+    const code = (lang: string, b: string) =>
+      `# A\n\n\`\`\`${lang}\nconst a = 1;\nconst b = ${b};\nconst c = 3;\n\`\`\`\n`;
+    for (const config of [{}, { "monodocs.config.yml": "highlight:\n  enabled: false\n" }]) {
+      const pages = await difference(
+        { "docs/a.md": code("js", "2"), ...config },
+        { "docs/a.md": code("js", "20"), ...config },
+      );
+      const { earlier, inline } = columns(pages.get("/a")!);
+      expect(blockMarks(inline)).toEqual(["~pre"]);
+      // Each line marked whole, its line break with it.
+      const lines = (column: string) => marked(column).map((text) => text.replace(/\n$/, ""));
+      expect(lines(inline)).toEqual([
+        "const a = 1;\n[-const b = 2;\n-]{+const b = 20;\n+}const c = 3;",
+      ]);
+      expect(lines(earlier)).toEqual(["const a = 1;\n[-const b = 2;\n-]const c = 3;"]);
+    }
+    // The language changed: a deletion and an addition.
+    const pages = await difference(
+      { "docs/a.md": code("js", "2") },
+      { "docs/a.md": code("ts", "2") },
+    );
+    expect(blockMarks(columns(pages.get("/a")!).inline)).toEqual(["-pre", "+pre"]);
+  });
+
+  it("compares a table row cell by cell", async () => {
+    const table = (count: string) => `# A\n\n| Part | Count |\n|---|---|\n| Bolt | ${count} |\n`;
+    const pages = await difference(
+      { "docs/a.md": table("4 pieces") },
+      { "docs/a.md": table("6 pieces") },
+    );
+    const { inline } = columns(pages.get("/a")!);
+    expect(blockMarks(inline)).toEqual(["~tr"]);
+    expect(marked(inline).map((text) => text.replace(/\s+/g, " ").trim())).toEqual([
+      "Bolt [-4-]{+6+} pieces",
+    ]);
+  });
+
+  it("shows a display formula old and new whole, the earlier one before the new", async () => {
+    const pages = await difference(
+      { "docs/a.md": "# A\n\n$$\na^2\n$$\n" },
+      { "docs/a.md": "# A\n\n$$\na^3\n$$\n" },
+    );
+    const { inline } = columns(pages.get("/a")!);
+    expect(blockMarks(inline)).toEqual(["~span"]);
+    expect(inline).toMatch(
+      /<del data-monodocs-diff=""><span class="[^"]*math-display[^"]*"[^>]*data-math-tex="\s*a\^2\s*"[\s\S]*?<\/del><span class="[^"]*math-display[^"]*"[^>]*data-monodocs-diff-block="changed"/,
+    );
+  });
+});

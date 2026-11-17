@@ -31,8 +31,7 @@ export type ComparedVersion = { pages: readonly Page[]; trees: ReadonlyMap<strin
 
 /**
  * Two pages' blocks aligned (7.3.3), and the deleted and added blocks next to each other paired
- * where what is inside them can be shown (7.3.6). Text blocks are paired; the other kinds stay
- * deleted and added until their writing comes.
+ * where what is inside them can be shown (7.3.6).
  */
 export function alignBlocks(before: readonly Block[], after: readonly Block[]): BlockEdit[] {
   const edits = diffSequences(before, after, sameBlock).map((edit): BlockEdit =>
@@ -42,7 +41,7 @@ export function alignBlocks(before: readonly Block[], after: readonly Block[]): 
         ? { op: "delete", old: before[edit.old]! }
         : { op: "insert", new: after[edit.new]! },
   );
-  return pairEdits(edits, (inside) => inside.kind === "text");
+  return pairEdits(edits);
 }
 
 /** The difference between two versions, page by page (roadmap 7.3.3). */

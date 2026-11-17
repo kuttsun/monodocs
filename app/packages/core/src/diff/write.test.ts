@@ -457,3 +457,134 @@ describe("a changed text block (v0.20)", () => {
     );
   });
 });
+
+describe("a changed code block, row, formula, or diagram (v0.20)", () => {
+  function changed(earlier: string, current: string) {
+    const old = parser.parse(earlier);
+    const next = parser.parse(current);
+    const columns = writeColumns(
+      next,
+      old,
+      alignBlocks(blocksOf(old), blocksOf(next)),
+      EARLIER,
+      INLINE,
+    );
+    return {
+      earlier: toHtml(columns.earlier),
+      current: toHtml(next),
+      detached: columns.inline.map((node) => toHtml(node)),
+    };
+  }
+
+  it("marks code by line, a deleted line cloned before the line after it", () => {
+    const plain = changed(
+      "<pre><code>a();\nb();\nc();\n</code></pre>",
+      "<pre><code>a();\nB();\nc();\nd();\n</code></pre>",
+    );
+    expect(plain.earlier).toBe(
+      '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>a();\n<del data-monodocs-diff="">b();\n</del>c();\n</code></pre>',
+    );
+    expect(plain.current).toBe(
+      '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>a();\n<!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="">B();\n</ins>c();\n<ins data-monodocs-diff="">d();\n</ins></code></pre>',
+    );
+    expect(plain.detached).toEqual(['<del data-monodocs-diff="">b();\n</del>']);
+    // Highlighted: each line its span and the line break after it.
+    const line = (code: string) => `<span class="line"><span>${code}</span></span>`;
+    const shiki = changed(
+      `<pre class="shiki"><code>${line("a();")}\n${line("b();")}\n${line("c();")}</code></pre>`,
+      `<pre class="shiki"><code>${line("a();")}\n${line("c();")}\n${line("e();")}</code></pre>`,
+    );
+    expect(shiki.current).toBe(
+      `<pre class="shiki" data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>${line("a();")}\n<!-- monodocs-diff-inline 0 -->${line("c();")}\n<ins data-monodocs-diff="">${line("e();")}</ins></code></pre>`,
+    );
+    expect(shiki.detached).toEqual([`<del data-monodocs-diff="">${line("b();")}\n</del>`]);
+  });
+
+  it("marks a line split by an element spanning lines in parts, and keeps the element in its clone", () => {
+    const split = changed(
+      "<pre><code>p\nx <strong>a\nb</strong>\nc\nd\ne\n</code></pre>",
+      "<pre><code>p\ny <strong>a\nb</strong>\nc\nd\ne\n</code></pre>",
+    );
+    // The parts stay inline (their class), so the line is still one line.
+    expect(split.current).toBe(
+      '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>p\n<!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="" class="monodocs-diff-part">y </ins><strong><ins data-monodocs-diff="" class="monodocs-diff-part">a\n</ins>b</strong>\nc\nd\ne\n</code></pre>',
+    );
+    expect(split.detached).toEqual(['<del data-monodocs-diff="">x <strong>a\n</strong></del>']);
+    // A deleted line inside a link spanning lines keeps the link's content, not the link.
+    expect(
+      changed(
+        '<pre><code><a href="https://example.com">a\nb</a>\nc\n</code></pre>',
+        "<pre><code>A\nb\nc\n</code></pre>",
+      ).detached,
+    ).toEqual(['<del data-monodocs-diff="">a\n</del>']);
+    // An empty new block: the deleted line goes into its code.
+    expect(
+      changed(
+        '<pre><code class="language-text">\nb\n</code></pre>',
+        '<pre><code class="language-text"></code></pre>',
+      ).detached,
+    ).toEqual(['<del data-monodocs-diff="">b\n</del>']);
+    // A block of one line: the deleted line stays inside its code.
+    expect(
+      changed(
+        '<pre><code class="language-js">x\na\n</code></pre>',
+        '<pre><code class="language-js">a\n</code></pre>',
+      ).current,
+    ).toBe(
+      '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code class="language-js"><!-- monodocs-diff-inline 0 -->a\n</code></pre>',
+    );
+  });
+
+  it("marks a row cell by cell: a cell unchanged, compared, or rewritten whole", () => {
+    const row = changed(
+      "<table><tbody><tr><td>Bolt</td><td>4 pieces</td><td>abc</td></tr></tbody></table>",
+      "<table><tbody><tr><td>Bolt</td><td>6 pieces</td><td>xyz</td></tr></tbody></table>",
+    );
+    expect(row.earlier).toBe(
+      '<table><tbody><tr data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><td>Bolt</td><td><del data-monodocs-diff="">4</del> pieces</td><td><del data-monodocs-diff="">abc</del></td></tr></tbody></table>',
+    );
+    expect(row.current).toBe(
+      '<table><tbody><tr data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><td>Bolt</td><td><!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="">6</ins> pieces</td><td><!-- monodocs-diff-inline 1 --><ins data-monodocs-diff="">xyz</ins></td></tr></tbody></table>',
+    );
+  });
+
+  it("shows a display formula old and new whole, the earlier one cloned before the new", () => {
+    const formula = changed(
+      '<div class="math-display" data-math-tex="a"><span>A</span></div>',
+      '<div class="math-display" data-math-tex="b"><span>B</span></div>',
+    );
+    expect(formula.earlier).toBe(
+      '<div class="math-display" data-math-tex="a" data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><del data-monodocs-diff=""><span>A</span></del></div>',
+    );
+    expect(formula.current).toBe(
+      '<!-- monodocs-diff-inline 0 --><div class="math-display" data-math-tex="b" data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><ins data-monodocs-diff=""><span>B</span></ins></div>',
+    );
+    // A block deleted before it goes before the copy, not between the two.
+    const between = changed(
+      '<blockquote><p>Gone words.</p><div class="math-display" data-math-tex="a"><span>A</span></div></blockquote>',
+      '<p>New words.</p><blockquote><div class="math-display" data-math-tex="b"><span>B</span></div></blockquote>',
+    );
+    // In one column: the deleted paragraph, then the earlier formula right before the new one.
+    const one = between.current.replace(
+      /<!-- monodocs-diff-inline (\d+) -->/g,
+      (_, n: string) => between.detached[Number(n)]!,
+    );
+    expect(one.indexOf("Gone words")).toBeLessThan(one.indexOf('data-math-tex="a"'));
+    expect(one).toMatch(/<\/div><\/del><div class="math-display" data-math-tex="b"/);
+    // And a block deleted after it goes after both.
+    const after = changed(
+      '<div class="math-display" data-math-tex="a"><span>A</span></div><p>Gone words.</p><p>Keep.</p>',
+      '<div class="math-display" data-math-tex="b"><span>B</span></div><p>Keep.</p>',
+    );
+    const both = after.current.replace(
+      /<!-- monodocs-diff-inline (\d+) -->/g,
+      (_, n: string) => after.detached[Number(n)]!,
+    );
+    expect(both).toMatch(/<\/div><\/del><div class="math-display" data-math-tex="b"/);
+    expect(both.indexOf('data-math-tex="b"')).toBeLessThan(both.indexOf("Gone words"));
+    // No mark or pair of its own: the one-column view shows it beside the changed block.
+    expect(formula.detached).toEqual([
+      '<del data-monodocs-diff=""><div class="math-display" data-math-tex="a"><span>A</span></div></del>',
+    ]);
+  });
+});

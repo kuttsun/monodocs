@@ -299,8 +299,8 @@ describe("where a deleted block goes", () => {
     expect(marks(html)).toEqual([
       "+caption Old captionTable 1. Rewritten words",
       "-del Old caption",
-      "-tr H1 H2",
-      "+tr H1 H3",
+      // The header row is a changed pair, its cell rewritten whole.
+      "~tr H1 H2H3",
     ]);
     expect(html).toMatch(
       /<caption[^>]*><del[^>]*>Old caption<\/del><ins[^>]*>Table 1\. Rewritten words<\/ins><\/caption>/,
@@ -369,17 +369,18 @@ describe("where a deleted block goes", () => {
   it("places a deleted row after the rows a new cell spans", async () => {
     const html = await onePage(
       "docs/a.adoc",
-      "= A\n\n[cols=2]\n|===\n.2+|span |a\n|b\n|c |d\n|===\n",
+      "= A\n\n[cols=2]\n|===\n.2+|span |a\n|b\n|gone |row\n|c |d\n|===\n",
       "= A\n\n[cols=2]\n|===\n.2+|span |a\n|b2\n|c |d\n|===\n",
     );
-    expect(marks(html)).toEqual(["+tr b2", "-tr b"]);
+    // The row under the span is a changed pair; the row after it, deleted, goes past the span.
+    expect(marks(html)).toEqual(["~tr bb2", "-tr gone row"]);
     const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].map((m) =>
       m[1]!
         .replace(/<[^>]+>/g, "")
         .replace(/\s+/g, " ")
         .trim(),
     );
-    expect(rows).toEqual(["span a", "b2", "b", "c d"]);
+    expect(rows).toEqual(["span a", "bb2", "gone row", "c d"]);
     expectValid(html);
   });
 });
@@ -491,8 +492,13 @@ describe("deleted content has no address", () => {
       `${EARLIER_MERMAID_ID_PREFIX}1`,
       `${EARLIER_MERMAID_ID_PREFIX}1-arrow`,
     ]);
-    expect(html).toMatch(
-      /<del data-monodocs-diff=""><figure class="mermaid"[^>]*data-monodocs-diff-block="del"><svg id="mermaid-earlier-0">/,
+    // A changed diagram (v0.20): the earlier one cloned before it, with no mark of its own, and the
+    // new one marked changed inside its addition.
+    expect(html).toContain(
+      '<del data-monodocs-diff=""><figure class="mermaid" data-monodocs-figure="center"><svg id="mermaid-earlier-0">',
+    );
+    expect(html).toContain(
+      '</del><ins data-monodocs-diff=""><figure class="mermaid" data-monodocs-figure="center" data-monodocs-diff-block="changed"><svg id="mermaid-0">',
     );
   });
 

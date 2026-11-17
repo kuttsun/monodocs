@@ -6,6 +6,7 @@ import { isGenerated } from "../pipeline/generatedNumbers.js";
 import { isExternalSrc } from "../pipeline/postprocess.js";
 import { containerLink, isSectionWrapper, type Block } from "./blocks.js";
 import type { BlockEdit, PageComparison } from "./compare.js";
+import { writeNewCode, writeOldCode } from "./writeCode.js";
 import { writeNewText, writeOldText } from "./writeInside.js";
 
 /**
@@ -733,6 +734,9 @@ export function writeDifference(
   const items: (Node | undefined)[] = edits.map((edit) =>
     edit.op === "delete" ? undefined : firstNode(edit.new),
   );
+  // Where an edit that stands as two nodes ends — a changed formula or diagram, its earlier copy
+  // then the new one: a deletion after it goes after the end, one before it before the start.
+  const ends = new Map<number, Node>();
 
   // Additions first: a deleted block written into an added caption goes before its mark.
   edits.forEach((edit, i) => {
@@ -745,13 +749,62 @@ export function writeDifference(
   const fromEarlier: Element[] = [];
   // Each changed block marked, with what differs inside it written in (7.3.6): the deleted text is
   // cloned from the earlier tree, as a deleted block is.
+  let changedDiagrams = 0;
   edits.forEach((edit, i) => {
     if (edit.op !== "change") return;
     const root = carrierOf(edit.new, newParents);
     root.properties[DIFF_BLOCK] = "changed";
     items[i] = root;
-    if (edit.inside.kind === "text") {
-      fromEarlier.push(...writeNewText(root, edit.inside, edit.old.own ?? [], cloner));
+    const inside = edit.inside;
+    if (inside.kind === "text") {
+      fromEarlier.push(...writeNewText(root, inside, edit.old.own ?? [], cloner));
+    } else if (inside.kind === "code") {
+      fromEarlier.push(...writeNewCode(root, inside, edit.old.node, cloner));
+    } else if (inside.kind === "row") {
+      const before = cellsOf(edit.old.node);
+      cellsOf(root).forEach((cell, c) => {
+        const plan = inside.cells[c];
+        const old = before[c]!;
+        if (plan === undefined || plan === "same") return;
+        if (plan !== "whole") {
+          fromEarlier.push(...writeNewText(cell, plan, old.children, cloner));
+          return;
+        }
+        // A cell rewritten whole: its new content marked, and the earlier content cloned before it.
+        if (cell.children.some(significant)) cell.children = [wrapper("ins", cell.children)];
+        const cloned = old.children.flatMap((child) => cloner.clean(child));
+        if (cloned.some(significant)) {
+          const deleted = wrapper("del", cloned);
+          cell.children.unshift(deleted);
+          fromEarlier.push(deleted);
+        }
+      });
+    } else {
+      // A display formula or a diagram, shown old and new whole: the new one marked as added, and
+      // the earlier one cloned before it — no mark or pair of its own, being the changed block's.
+      markInPlace(edit.new, "ins", newParents, newStructure);
+      root.properties[DIFF_BLOCK] = "changed";
+      const [clone] = cloner.clean(edit.old.node);
+      if (clone?.type === "element") {
+        delete clone.properties[DIFF_BLOCK];
+        unpair(clone);
+        const piece = wrapper("del", [clone]);
+        const parent = newParents.get(root)!;
+        const standing =
+          parent.type === "element" &&
+          parent.tagName === "ins" &&
+          parent.properties[DIFF] !== undefined
+            ? parent
+            : root;
+        const holder = newParents.get(standing)!;
+        newParents.splice(holder, kids(holder).indexOf(standing), 0, piece);
+        newParents.index(piece);
+        fromEarlier.push(piece);
+        // The pair starts at the copy and ends at the new block: a deletion goes outside both.
+        items[i] = piece;
+        ends.set(i, standing);
+        if (edit.old.kind === "diagram") changedDiagrams++;
+      }
     }
     newParents.index(root);
   });
@@ -764,7 +817,8 @@ export function writeDifference(
     }
     let at: number | undefined;
     for (let j = i - 1; j >= 0 && at === undefined; j--) {
-      const child = items[j] === undefined ? undefined : newParents.childOf(parent, items[j]!);
+      const end = ends.get(j) ?? items[j];
+      const child = end === undefined ? undefined : newParents.childOf(parent, end);
       if (child !== undefined) at = kids(parent).indexOf(child) + 1;
     }
     if (at === undefined) {
@@ -909,7 +963,15 @@ export function writeDifference(
       detached.push(node);
     }
   }
-  return edits.filter((edit) => edit.op === "delete" && edit.old.kind === "diagram").length;
+  return (
+    edits.filter((edit) => edit.op === "delete" && edit.old.kind === "diagram").length +
+    changedDiagrams
+  );
+}
+
+/** A row's cells, in order. */
+function cellsOf(row: Element): Element[] {
+  return elements(row).filter((cell) => cell.tagName === "td" || cell.tagName === "th");
 }
 
 /** Take the pair numbers off what was cloned from the earlier tree: they are its column's. */
@@ -1009,8 +1071,20 @@ export function writeColumns(
     const root = carrierOf(edit.old, oldParents);
     root.properties[DIFF_BLOCK] = "changed";
     // What the column does not keep — a footnote reference — is not marked, which would mark nothing.
-    if (edit.inside.kind === "text") {
-      writeOldText(root, edit.inside, (node) => !isGeneratedElement(node));
+    const kept = (node: Element) => !isGeneratedElement(node);
+    const inside = edit.inside;
+    if (inside.kind === "text") writeOldText(root, inside, kept);
+    else if (inside.kind === "code") writeOldCode(root, inside);
+    else if (inside.kind === "row") {
+      cellsOf(root).forEach((cell, c) => {
+        const plan = inside.cells[c];
+        if (plan === undefined || plan === "same") return;
+        if (plan !== "whole") writeOldText(cell, plan, kept);
+        else if (cell.children.some(significant)) cell.children = [wrapper("del", cell.children)];
+      });
+    } else {
+      markInPlace(edit.old, "del", oldParents, new Set());
+      root.properties[DIFF_BLOCK] = "changed";
     }
   }
   for (const edit of edits) {
