@@ -13,7 +13,7 @@ What keeps running after a release, and what a person has to check. This is the 
 | Vulnerable versions    | Dependabot alerts and automated security fixes, enabled in the repository settings    |
 | Advisories on the tree | `.github/workflows/scheduled-audit.yml`, weekly, opening an issue when it fails       |
 | Pull request checks    | `.github/workflows/pr-ci.yml`, which also audits both dependency sets and lints the scripts |
-| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version. Steps that verify a feature added in 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.17.2, 0.18, or 0.19 are gated on the installed version, so an older release can still be verified. The include read boundary is checked on Linux only, because creating a symbolic link on a Windows runner needs privileges the job does not have |
+| Published package      | `.github/workflows/verify-published.yml`, run by hand against a dist-tag or version. Steps that verify a feature added in 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.17.2, 0.18, 0.19, or 0.20 are gated on the installed version, so an older release can still be verified. The include read boundary is checked on Linux only, because creating a symbolic link on a Windows runner needs privileges the job does not have |
 | Release binaries       | `.github/workflows/verify-release-binaries.yml`, on publish and by hand against a tag |
 | Documentation site     | `.github/workflows/deploy-site.yml`, after a successful Release run for a stable tag, and by hand from main against the latest stable tag; a push to main does not deploy |
 | Review reminder        | `.github/workflows/quarterly-review.yml`, opening the quarterly checklist as an issue |
@@ -88,9 +88,10 @@ the second on 0.19):
 - The difference samples (`examples/diff`) built with `--diff-from-dir` and driven in Edge on Windows
   and Chrome on Linux by [`scripts/verify-diff-browser.mjs`](../scripts/verify-diff-browser.mjs): the
   view each opens in, the four views, previous and next, the sidebar marks, and the list of changes,
-  in English and Japanese. A screenshot of each view is kept as an artifact for a person to look
-  over. The same script drives the samples a released Linux binary builds for that release
-  criterion.
+  in English and Japanese, and from 0.20 the samples' changed paragraph read in each of the four views
+  (`--release` names the monodocs that built them). A screenshot of each view is kept as an artifact
+  for a person to look over. The same script drives the samples a released Linux binary builds for
+  that release criterion.
 
 What stays manual, because a script cannot settle it:
 

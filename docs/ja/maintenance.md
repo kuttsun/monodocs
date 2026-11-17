@@ -13,7 +13,7 @@ M6 の運用面にあたる。方針そのものはそちらに置く。
 | 脆弱なバージョンの検知   | Dependabot alerts と automated security fixes（リポジトリ設定で有効）                 |
 | 依存ツリーへの advisory  | `.github/workflows/scheduled-audit.yml`（週次。失敗時に Issue を作成）                |
 | プルリクエストの検査     | `.github/workflows/pr-ci.yml`（両方の依存セットの audit と、スクリプトの静的解析も実行） |
-| 公開済みパッケージの検証 | `.github/workflows/verify-published.yml`（dist-tag / バージョンを指定して手動実行。0.10・0.11・0.12・0.13・0.14・0.15・0.16・0.17・0.17.2・0.18・0.19 で入った機能を確かめる手順はインストールされたバージョンで切り替わるので、それ以前のリリースも検証できる。include の読み取り境界は Linux でのみ確認する。Windows のランナーでシンボリックリンクを作るにはこのジョブが持たない権限が要るため） |
+| 公開済みパッケージの検証 | `.github/workflows/verify-published.yml`（dist-tag / バージョンを指定して手動実行。0.10・0.11・0.12・0.13・0.14・0.15・0.16・0.17・0.17.2・0.18・0.19・0.20 で入った機能を確かめる手順はインストールされたバージョンで切り替わるので、それ以前のリリースも検証できる。include の読み取り境界は Linux でのみ確認する。Windows のランナーでシンボリックリンクを作るにはこのジョブが持たない権限が要るため） |
 | リリースバイナリの検証   | `.github/workflows/verify-release-binaries.yml`（公開時に自動、タグ指定で手動実行）   |
 | ドキュメントサイトの配信 | `.github/workflows/deploy-site.yml`（安定版タグの Release が成功した後に自動、main から最新の安定版タグを指定して手動実行。main への push ではデプロイしない） |
 | 棚卸しのリマインダ       | `.github/workflows/quarterly-review.yml`（四半期のチェックリストを Issue として作成） |
@@ -86,7 +86,8 @@ Smart App Control は、それを有効にした Windows 11 ホストでは端�
 - 差分のサンプル（`examples/diff`）を `--diff-from-dir` で組み、
   [`scripts/verify-diff-browser.mjs`](../../scripts/verify-diff-browser.mjs) で、Windows では Edge、Linux
   では Chrome で操作する。開いたときの表示、4 つの表示、前後の移動、サイドバーの印、変更の一覧を、英語と
-  日本語で確かめる。各表示のスクリーンショットを成果物として残し、人がざっと見られるようにする。リリース
+  日本語で確かめ、0.20 からはサンプルの変更された段落を 4 つの表示それぞれで読む（`--release` に組んだ
+  monodocs の版を渡す）。各表示のスクリーンショットを成果物として残し、人がざっと見られるようにする。リリース
   した Linux バイナリが組んだサンプルを操作するリリースの完了条件にも、同じスクリプトを使う。
 
 次の項目は、スクリプトでは決着しないため手作業のまま残す。

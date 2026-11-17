@@ -6696,10 +6696,13 @@ Completion criteria:
   Node versions with different ICU and Unicode versions
 - The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in both languages
 - testing.md lists the new tests in both languages
-- 0.20.0 changes what a build with a difference shows inside a changed block, and nothing else; it
-  goes to `latest` without a beta, since before 1.0 12.4 promises no output that stays the same
-  across versions, with the verification 0.19.0 had, its browser pass reading changed paragraphs in
-  Japanese and English in the four views; the release notes say how a changed block now reads
+- 0.20.0 changes what a build with a difference shows inside a changed block, and a build without
+  one, besides the version it names, only through the dependency updates it carries (among them a
+  table's search text separating its cells and rows, Shiki 4.6.0's highlighting of some languages,
+  and what Mermaid 12.3.0 writes for diagrams); it goes to `latest` without a
+  beta, since before 1.0 12.4 promises no output that stays the same across versions, with the
+  verification 0.19.0 had, its browser pass reading changed paragraphs in Japanese and English in
+  the four views; the release notes say how a changed block now reads
 
 ---
 

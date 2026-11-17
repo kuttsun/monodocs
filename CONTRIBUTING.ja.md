@@ -106,7 +106,7 @@ Pull Request の説明には少なくとも次を含めてください。
 
 `main` へは squash merge で取り込みます。1 つの Pull Request が `main` 上の 1 つのコミットになります。Pull Request 内のコミット数、メッセージ、途中のコミットがチェックを通るかどうかは問いません。提出前に squash したり履歴を整理したりする必要はありません。ただし、競合の解消は必要になることがあります。また、ほかの Pull Request に依存する Pull Request は、依存先がマージされた後に新しい `main` へ rebase し直す必要があることがあります。
 
-マージするには、必須のステータスチェック（App CI (Linux)、App CI (Windows)、Site CI）が通り、ブランチが `main` に追従し、レビューの会話が解決済みである必要があります。Pull Request の CI は、ブランチを `main` にマージした結果を検証します。Pull Request 内の個々のコミットは検証しません。Pull Request が 1 つの目的にまとまっていれば、`main` 上のそのコミットを revert するとその変更だけを取り除けます。`git bisect` では回帰をその Pull Request まで絞り込めますが、Pull Request 内のコミットまでは絞り込めません。
+マージするには、必須のステータスチェック（App CI (Linux)、App CI (Windows)、Site CI、Difference on Node (oldest) と (current)）が通り、ブランチが `main` に追従し、レビューの会話が解決済みである必要があります。Pull Request の CI は、ブランチを `main` にマージした結果を検証します。Pull Request 内の個々のコミットは検証しません。Pull Request が 1 つの目的にまとまっていれば、`main` 上のそのコミットを revert するとその変更だけを取り除けます。`git bisect` では回帰をその Pull Request まで絞り込めますが、Pull Request 内のコミットまでは絞り込めません。
 
 ## ライセンス
 

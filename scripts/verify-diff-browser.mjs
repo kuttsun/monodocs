@@ -12,7 +12,11 @@
 //
 // Usage:
 //   node scripts/verify-diff-browser.mjs --dir <dir> --browser <chrome-or-edge-executable>
-//       [--shots <dir>] [--puppeteer-from <dir>]
+//       [--shots <dir>] [--puppeteer-from <dir>] [--release <version>]
+//
+// --release is the monodocs that built the files (0.20.0 if left out). From 0.20, which
+// pairs a deleted and an added block into one changed block, the samples hold 27 changes rather than
+// 31, and the samples' changed paragraph is read in each of the four views.
 //
 // `puppeteer-core` is not a dependency of this repository's root. It is taken from --puppeteer-from
 // (a directory whose node_modules has it, such as an installed monodocs package or app/packages/core),
@@ -29,11 +33,12 @@ const { values } = parseArgs({
     browser: { type: "string" },
     shots: { type: "string" },
     "puppeteer-from": { type: "string" },
+    release: { type: "string" },
   },
 });
 if (!values.dir || !values.browser) {
   console.error(
-    "usage: node scripts/verify-diff-browser.mjs --dir <dir> --browser <executable> [--shots <dir>] [--puppeteer-from <dir>]",
+    "usage: node scripts/verify-diff-browser.mjs --dir <dir> --browser <executable> [--shots <dir>] [--puppeteer-from <dir>] [--release <version>]",
   );
   process.exit(2);
 }
@@ -48,17 +53,38 @@ const LANGUAGES = {
     title: "Changes 1.0 → 2.0",
     sections: ["Added pages", "Moved pages", "Changed pages", "Deleted pages"],
     inline: "Inline",
+    // The changed paragraph on the AsciiDoc page, as each version reads it, and the words added.
+    paragraph: {
+      route: "/06-asciidoc",
+      earlier: "The device is used on factory conveyor lines.",
+      current: "The device is used on factory and warehouse conveyor lines.",
+      added: ["and warehouse"],
+    },
   },
   ja: {
     title: "変更点 1.0 → 2.0",
     sections: ["追加されたページ", "移動したページ", "変更されたページ", "削除されたページ"],
     inline: "1 列",
+    paragraph: {
+      route: "/06-asciidoc",
+      earlier: "この装置は工場の搬送ラインで使います。",
+      current: "この装置は工場と倉庫の搬送ラインで使います。",
+      added: ["と倉庫"],
+    },
   },
 };
 const SIGNS = { added: "+", deleted: "−", changed: "•", moved: "→" };
+// Whether the release that built the files compares inside a changed block (0.20 and later).
+const release = /^v?(\d+)\.(\d+)\.\d+/.exec(values.release ?? "0.20.0");
+if (release === null) {
+  console.error(`--release must be a version such as 0.20.0: ${values.release}`);
+  process.exit(2);
+}
+const INSIDE = Number(release[1]) > 0 || Number(release[2]) >= 20;
 // The changes the samples hold, which Next has to reach: a count the page reports for itself would
-// let a document that lost changes pass.
-const CHANGES = 31;
+// let a document that lost changes pass. From 0.20 the samples' four replaced blocks — a row, a code
+// block, a diagram, a paragraph — are a changed block each, one change where they were two.
+const CHANGES = INSIDE ? 27 : 31;
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 const server = createServer((request, response) => {
@@ -178,6 +204,46 @@ try {
       check(`the ${view} view shows its columns`, holds(seen), JSON.stringify(seen));
       if (values.shots) {
         await page.screenshot({ path: join(values.shots, `${lang}-${view}.png`), fullPage: false });
+      }
+    }
+
+    // From 0.20, the samples' changed paragraph in each view: side by side, the earlier version's
+    // words on the left and the new version's on the right with the added words marked; in one
+    // column and in the new version's own view, the new version's words once; in the earlier
+    // version's own view, its own words.
+    if (INSIDE) {
+      const want = words.paragraph;
+      await open(`${lang}.html`, `#${want.route}`);
+      const read = () =>
+        page.evaluate(() => {
+          const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden);
+          const visible = (element) => element.getBoundingClientRect().height > 0;
+          const blocks = [...article.querySelectorAll('p[data-monodocs-diff-block="changed"]')].filter(visible);
+          return blocks.map((block) => ({
+            column: block.closest(".monodocs-diff-earlier") ? "earlier" : "current",
+            text: block.textContent.replace(/\s+/g, " ").trim(),
+            added: [...block.querySelectorAll("ins[data-monodocs-diff]")]
+              .filter(visible)
+              .map((ins) => ins.textContent.trim()),
+          }));
+        });
+      const expected = {
+        both: [
+          { column: "earlier", text: want.earlier, added: [] },
+          { column: "current", text: want.current, added: want.added },
+        ],
+        inline: [{ column: "current", text: want.current, added: want.added }],
+        earlier: [{ column: "earlier", text: want.earlier, added: [] }],
+        current: [{ column: "current", text: want.current, added: want.added }],
+      };
+      for (const [view, blocks] of Object.entries(expected)) {
+        await choose(view);
+        const seen = await read();
+        check(
+          `the ${view} view reads the changed paragraph`,
+          JSON.stringify(seen) === JSON.stringify(blocks),
+          JSON.stringify(seen),
+        );
       }
     }
 
