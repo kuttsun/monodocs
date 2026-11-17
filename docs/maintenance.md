@@ -128,7 +128,10 @@ item is looking for.
       release environment. Renaming any of the three breaks publishing silently — the failure shows
       up only at the next release.
 - [ ] **Node.js and Chromium support range.** The floor is Node 22.12. Node 22 leaves LTS in April
-      2027, so decide before then whether to raise it. Confirm the Chromium detection paths in
+      2027, so decide before then whether to raise it; the `oldest` leg of `pr-ci.yml`'s
+      `diff-unicode` job names the floor's version, and moves with it. Its fixture
+      (`build.diff-unicode.test.ts`) holds Unicode 17.0 letters that leg expects not to know: on a
+      floor whose ICU has Unicode 17.0, the fixture moves to letters of a version it does not. Confirm the Chromium detection paths in
       [ci.md](../site/docs/ci.md) still match what the supported platforms install.
 - [ ] **dist-tags.** `latest` and `next` point where they should, and `next` is never older than
       `latest` — publishing a stable version leaves `next` on the prerelease before it, so moving it

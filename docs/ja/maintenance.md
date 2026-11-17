@@ -125,7 +125,11 @@ Smart App Control は、それを有効にした Windows 11 ホストでは端�
       environment を指していること。3 つのいずれかを改名すると publish は黙って壊れ、次のリリース
       まで気づけない。
 - [ ] **Node.js / Chromium のサポート範囲。** 下限は Node 22.12。Node 22 は 2027 年 4 月に LTS を
-      終えるため、それまでに引き上げるかを決める。[ci.md](../../site/ja/docs/ci.md) に書いた Chromium の
+      終えるため、それまでに引き上げるかを決める。`pr-ci.yml` の `diff-unicode` ジョブの `oldest` は下限の版を
+      手で書いているので、下限と一緒に動かす。その入力（`build.diff-unicode.test.ts`）は、この脚が知らないと
+      期待する Unicode 17.0 の文字を持つので、ICU が Unicode 17.0 を持つ下限にするときは、入力をその Node が
+      知らない版の文字に移す。
+      [ci.md](../../site/ja/docs/ci.md) に書いた Chromium の
       検出パスが、サポート対象プラットフォームの実際のインストール先と合っているかも確認する。
 - [ ] **dist-tag。** `latest` / `next` が意図した先を指し、`next` が `latest` より古くないこと。
       安定版を公開すると `next` は直前の prerelease を指したまま残るため、これを移すことはリリース
