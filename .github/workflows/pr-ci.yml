@@ -164,7 +164,7 @@ jobs:
 
   # The difference inside a changed block on two Nodes whose Unicode versions differ (roadmap 7.3.6,
   # 12.4): the oldest `engines` allows and a current one. Its tokens come from generated tables, so
-  # the markup is the same; the test also checks each Node reads its fixture's newest character as
+  # the markup is the same; the test also checks each Node reads its fixture's newest characters as
   # this job expects, so the two runs are shown to differ where the regular-expression engine does.
   diff-unicode:
     # Named by the role of each Node, not its version, so a required check keeps its name when the
@@ -196,6 +196,9 @@ jobs:
         with:
           version: 11.9.0
           run_install: false
+          # pnpm 11 runs on Node 22.13 and later: the build that carries its own Node runs on the
+          # oldest Node this job sets up.
+          standalone: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -213,7 +216,7 @@ jobs:
       - name: Compare inside a changed block
         run: pnpm exec vitest run packages/core/src/build.diff-unicode.test.ts
         env:
-          MONODOCS_EXPECT_EXT_J_LETTER: ${{ matrix.letter }}
+          MONODOCS_EXPECT_UNICODE_17: ${{ matrix.letter }}
 
   # リリースバイナリの検証スクリプトは CI で実行されないため、静的解析だけは毎回かける
   # （両方とも、検査が黙って嘘をつく種類の不具合を実際に抱えていた）。

@@ -308,8 +308,13 @@ describe("each kind in its own unit (7.3.6)", () => {
         { "docs/a.md": code("", "2"), ...config },
         { "docs/a.md": code("", "20"), ...config },
       );
-      const lines = marked(columns(pages.get("/a")!).inline).map((text) => text.replace(/\n$/, ""));
-      expect(lines).toEqual(["const a = 1;\n[-const b = 2;\n-]{+const b = 20;\n+}const c = 3;"]);
+      const { earlier, inline } = columns(pages.get("/a")!);
+      const lines = (column: string) => marked(column).map((text) => text.replace(/\n$/, ""));
+      expect(blockMarks(inline)).toEqual(["~pre"]);
+      expect(lines(inline)).toEqual([
+        "const a = 1;\n[-const b = 2;\n-]{+const b = 20;\n+}const c = 3;",
+      ]);
+      expect(lines(earlier)).toEqual(["const a = 1;\n[-const b = 2;\n-]const c = 3;"]);
     }
     // The language changed: a deletion and an addition.
     const pages = await difference(

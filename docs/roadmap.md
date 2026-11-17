@@ -1909,8 +1909,10 @@ references in one sentence, deleting one can show the other's number struck, sin
 content; and pairing by position does not pair a heading rewritten right after a section added in
 the same run. PR CI runs `build.diff-unicode.test.ts` on Node 22.12.0 (ICU 76.1, Unicode 16.0) and
 Node 22.23.2 (ICU 78.2, Unicode 17.0): its difference holds an emoji joined by ZWJ, a flag, `क्ष`,
-and U+323B0, a letter of Extension J only the newer Node's `\p{L}` reads as one, and both give the
-markup the test pins.
+U+323B0 of Extension J, and a word that changes with U+A7CE inside it, a Latin letter: only the
+newer Node's `\p{L}` reads those two as letters, so a tokenizer that followed the Node would split
+the word there and mark its last letters alone. Both give the markup the test pins, and a tokenizer
+reading letters through `\p{L}` fails it on Node 22.12.0.
 
 ---
 

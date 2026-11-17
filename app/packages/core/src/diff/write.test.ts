@@ -296,6 +296,19 @@ describe("a changed text block (v0.20)", () => {
     expect(out.detached).toEqual(['<del data-monodocs-diff="">old</del>']);
   });
 
+  it("clones deleted bold text placed where nothing is bold without its ID, and linked words without the link", () => {
+    expect(
+      changed('<p>Keep <strong id="s">old words</strong> here now.</p>', "<p>Keep here now.</p>")
+        .detached,
+    ).toEqual(['<del data-monodocs-diff=""><strong>old words</strong> </del>']);
+    expect(
+      changed(
+        '<p>See <a href="#x" id="l">the old guide</a> now please.</p>',
+        "<p>See now please.</p>",
+      ).detached,
+    ).toEqual(['<del data-monodocs-diff="">the old guide </del>']);
+  });
+
   it("keeps deleted words inside the link they were in, and never links them", () => {
     const out = changed(
       '<p>See <a href="#x" id="l">the old guide</a> now.</p>',
