@@ -107,14 +107,16 @@ v0.18〜v0.20 も 1.0 の前に置く。Git を見ない読み手のために、
 操作して確かめ、`next` を 0.19.0 に移した。人が Windows で行っていた確認は `verify-published.yml` と
 `verify-windows-binary.ps1` の手順にし、Windows のランナーで 0.19.0 に対して走らせた。SmartScreen、
 Windows 11 ホストでの実行、生成した HTML の Edge での見え方、スクリーンショットをざっと見ることは人の確認として残る。
-0.20.0 は、CI ガイドをそれに固定して `latest` に出す。ベータは通さない。変更されたブロックの中を比べる。
+0.20.0 は、CI ガイドをそれに固定して `latest` に出した。ベータは通さなかった。変更されたブロックの中を比べる。
 段落では語と、中国語と日本語の文字を、コードは行ごとに、表の行はセルごとに比べ、別行立ての数式と図は旧と新をまるごと示す
 （7.3.6）。差分を出さないビルドが変わるのは、生成した HTML と PDF のメタデータが示す版のほかは、取り込んだ依存の更新が
 変えるところだけである。たとえば、表の検索用テキストはセルと行を区切るようになり（hast-util-to-text 4.0.3）、
 Shiki 4.6.0 は一部の言語のコードの色分けを変え、Mermaid 12.3.0 は文書の図を書き直す（持たせるランタイム、
 指す CDN のアドレス、事前に描いた図。サンプルのフローチャートは 12.2.0 とピクセル単位で同じと測った）。
 `latest` を動かしたあとに、公開パッケージとリリースバイナリを検証し、リリースした Linux バイナリが組んだ差分を
-ブラウザで操作して確かめ、変更された日本語と英語の段落を 4 つの表示で読み、`next` を 0.20.0 に移す。
+ブラウザで操作して確かめ、変更された日本語と英語の段落を 4 つの表示で読み、`next` を 0.20.0 に移した。
+SmartScreen、Windows 11 ホストでの実行、生成した HTML の Edge での見え方、スクリーンショットをざっと見ることは、
+0.19.0 と同じく人の確認として残る。
 
 ## 完了条件の達成状況
 
@@ -832,13 +834,13 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 
 - [x] ドキュメントサイトの CI ガイドが、英語・日本語とも、`v0.20.0` タグを作る前のバージョン変更そのものの中で `monodocs@0.20.0` に固定する
 - [x] `verify-published.yml` に 0.20 の判定と、1 語だけ変えた段落を含む差分を組む手順を足し、以下より前にマージする — 「A word changed inside a paragraph (0.20)」が、1 語ずつ変えた英語と日本語の段落の差分を組み、Chrome で、それぞれが両方の列で語に印の付いた 1 つの変更されたブロックになり、1 回と数えられ、1 列で 1 度だけ出ることを確かめる。差分の見本のブラウザでの確認は、0.20 からは 27 の変更、それより前は 31 を期待する
-- [ ] `0.20.0` を `latest` タグで公開し、リリースノートに変更されたブロックがどう読めるようになったかを書き、`dist_tag: 0.20.0` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.20 の手順が飛ばされずに走ったことを確かめる
-- [ ] `v0.20.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する
-- [ ] Node.js の無い Linux x64 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する
-- [ ] リリースした Linux バイナリが組んだ差分を、目視ではなく操作して確かめる。変更された日本語と英語の段落を 4 つの表示で読む
-- [ ] Windows 11 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する
+- [x] `0.20.0` を `latest` タグで公開し、リリースノートに変更されたブロックがどう読めるようになったかを書き、`dist_tag: 0.20.0` で走らせた `verify-published.yml` で Linux x64 と Windows x64 で検証する。0.20 の手順が飛ばされずに走ったことを確かめる — `npm` 環境の承認を経て provenance 付きで公開し、`latest` は `0.20.0` を指し、リリースノートは変更されたブロックがどう読めるようになったかを書いている。`verify-published.yml` は両プラットフォームで通り、「A word changed inside a paragraph (0.20)」がそれぞれで走って通った。差分のサンプルのブラウザでの確認は、Windows の Edge と Linux の Chrome で、言語ごとに 37 項目が通り、次への移動は 27 の変更をたどった
+- [x] `v0.20.0` のリリースバイナリを `verify-release-binaries.yml` で両プラットフォームについて検証する — リリースが起動した実行が通った。Linux で 16 項目、Windows で `verify-windows-binary.ps1` が 18 項目
+- [x] Node.js の無い Linux x64 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行する — Node.js の無い `debian:stable-slim` のコンテナで、公開した `v0.20.0` のアセットに対して 16 の確認がすべて通った
+- [x] リリースした Linux バイナリが組んだ差分を、目視ではなく操作して確かめる。変更された日本語と英語の段落を 4 つの表示で読む — 公開した Linux のアセットを `.sha256` と照らし（`0.20.0` を返す）、Node.js の無いコンテナで `examples/diff/en` と `examples/diff/ja` を `--diff-from-dir ../earlier` で組み、`html.diffViewDefault: inline` を足してもう一度組んだ。Chromium で [`scripts/verify-diff-browser.mjs`](../../scripts/verify-diff-browser.mjs) を `--release 0.20.0` で操作し、言語ごとに 37 項目が通った。0.19.0 の 33 項目（次への移動は 27 の変更をたどる）と、サンプルの変更された段落を 4 つの表示それぞれで読むこと（旧版の表示では旧版の語、左右に並べる表示では旧版の語の隣に追加された語に印の付いた新版の語、1 列と新版の表示では追加された語に印の付いた新版の語）
+- [ ] Windows 11 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する — Node.js のある Windows Server のランナーでは、`verify-release-binaries.yml` で 18 項目すべてが通った。Windows 11 ホストでの実行が残る。署名の無いバイナリへの Smart App Control もそこで分かる
 - [ ] 人にしか答えられない Windows での確認。ブラウザでダウンロードしたアセットの SmartScreen、生成した HTML の Edge での見え方、`verify-published.yml` が残す Edge のスクリーンショットをざっと見ること（0.18.0 で確かめたことの残りは 0.19.0 から手順で走る）に加え、変更された日本語と英語の段落がどう読めるか
-- [ ] `next` の dist-tag を `0.20.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.20.0` に固定していることを確かめる
+- [x] `next` の dist-tag を `0.20.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.20.0` に固定していることを確かめる — `next` と `latest` はどちらも `0.20.0` で、デプロイした CI ガイドは言語ごとに 4 か所で `monodocs@0.20.0` に固定し、ほかの版は残っていない。デプロイしたコマンドリファレンスは変更されたブロックを説明している
 
 ### 1.0
 
