@@ -78,7 +78,8 @@ class CodeLines {
       let open: Group | undefined;
       for (const child of parent.children) {
         const [a, b] = this.lines.get(child) ?? [-1, -1];
-        if (a === k && b === k) {
+        // The `code` holding the lines is never a line itself, though it holds only one.
+        if (a === k && b === k && !(child.type === "element" && child.tagName === "code")) {
           if (open === undefined) {
             open = { parent, nodes: [] };
             out.push(open);
@@ -103,12 +104,21 @@ function mark(tag: "ins" | "del", children: ElementContent[]): Element {
   return { type: "element", tagName: tag, properties: { dataMonodocsDiff: "" }, children };
 }
 
+/**
+ * The class of a mark that holds part of a line, the rest being inside or outside an element that
+ * spans lines (AsciiDoc's bold across a line break): it stays inline, where a whole line's mark is
+ * shown as a block.
+ */
+const PART = "monodocs-diff-part";
+
 /** Wrap each run of line `k`'s nodes in a mark; the first wrapper, or undefined for an empty line. */
 function wrapLine(lines: CodeLines, k: number, tag: "ins" | "del"): Element | undefined {
   let first: Element | undefined;
-  for (const group of lines.groups(k)) {
+  const groups = lines.groups(k);
+  for (const group of groups) {
     const at = group.parent.children.indexOf(group.nodes[0]!);
     const wrapper = mark(tag, group.nodes);
+    if (groups.length > 1) wrapper.properties.className = [PART];
     group.parent.children.splice(at, group.nodes.length, wrapper);
     first ??= wrapper;
   }
@@ -153,7 +163,16 @@ export function writeNewCode(
   // The clones are taken before anything is wrapped in the earlier block.
   const clones = runs.map((r) =>
     r.lines.flatMap((k) =>
-      earlier.groups(k).flatMap((group) => group.nodes.flatMap((node) => cloner.clean(node))),
+      earlier.groups(k).flatMap((group) => {
+        // A part of a line inside an element spanning lines keeps that element around it.
+        let nodes = group.nodes.flatMap((node) => cloner.clean(node));
+        for (let at: Element | undefined = group.parent; at !== undefined && at !== old;) {
+          if (at.tagName === "code") break;
+          nodes = [cloner.shell(at, nodes)];
+          at = earlier.parentOf(at);
+        }
+        return nodes;
+      }),
     ),
   );
   for (const edit of plan.edits) if (edit.op === "insert") wrapLine(next, edit.new, "ins");
@@ -171,7 +190,16 @@ export function writeNewCode(
         : at;
     };
     const anchor = r.before ?? last;
-    if (anchor === undefined) return;
+    if (anchor === undefined) {
+      // A new block with no line node at all (plain and empty): the lines go into its code.
+      const holder =
+        root.children.find((c): c is Element => c.type === "element" && c.tagName === "code") ??
+        root;
+      holder.children.push(node);
+      next.index();
+      written.push(node);
+      return;
+    }
     const at = outer(anchor);
     const parent = next.parentOf(at)!;
     parent.children.splice(parent.children.indexOf(at) + (r.before === undefined ? 1 : 0), 0, node);

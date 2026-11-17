@@ -500,6 +500,34 @@ describe("a changed code block, row, formula, or diagram (v0.20)", () => {
     expect(shiki.detached).toEqual([`<del data-monodocs-diff="">${line("b();")}\n</del>`]);
   });
 
+  it("marks a line split by an element spanning lines in parts, and keeps the element in its clone", () => {
+    const split = changed(
+      "<pre><code>p\nx <strong>a\nb</strong>\nc\nd\ne\n</code></pre>",
+      "<pre><code>p\ny <strong>a\nb</strong>\nc\nd\ne\n</code></pre>",
+    );
+    // The parts stay inline (their class), so the line is still one line.
+    expect(split.current).toBe(
+      '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code>p\n<!-- monodocs-diff-inline 0 --><ins data-monodocs-diff="" class="monodocs-diff-part">y </ins><strong><ins data-monodocs-diff="" class="monodocs-diff-part">a\n</ins>b</strong>\nc\nd\ne\n</code></pre>',
+    );
+    expect(split.detached).toEqual(['<del data-monodocs-diff="">x <strong>a\n</strong></del>']);
+    // An empty new block: the deleted line goes into its code.
+    expect(
+      changed(
+        '<pre><code class="language-text">\nb\n</code></pre>',
+        '<pre><code class="language-text"></code></pre>',
+      ).detached,
+    ).toEqual(['<del data-monodocs-diff="">b\n</del>']);
+    // A block of one line: the deleted line stays inside its code.
+    expect(
+      changed(
+        '<pre><code class="language-js">x\na\n</code></pre>',
+        '<pre><code class="language-js">a\n</code></pre>',
+      ).current,
+    ).toBe(
+      '<pre data-monodocs-diff-pair="1" data-monodocs-diff-block="changed"><code class="language-js"><!-- monodocs-diff-inline 0 -->a\n</code></pre>',
+    );
+  });
+
   it("marks a row cell by cell: a cell unchanged, compared, or rewritten whole", () => {
     const row = changed(
       "<table><tbody><tr><td>Bolt</td><td>4 pieces</td><td>abc</td></tr></tbody></table>",

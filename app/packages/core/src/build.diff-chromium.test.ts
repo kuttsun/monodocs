@@ -2037,10 +2037,14 @@ describe.skipIf(!chromium)("a changed block (v0.20)", () => {
   it("lays a changed code block out as the new version does, and stands formulas side by side", async () => {
     const code = (b: string) => `\`\`\`js\nconst a = 1;\nconst b = ${b};\nconst c = 3;\n\`\`\`\n`;
     const diagram = (to: string) => `\`\`\`mermaid\ngraph LR\n  Start --> ${to}\n\`\`\`\n`;
-    const now = { "docs/a.md": `# A\n\n${code("20")}\n$$\na^3\n$$\n\n${diagram("Finish")}` };
+    const long = (end: string) =>
+      `\`\`\`js\nconst a = 1;\nconst s = "${"x".repeat(300)}${end}";\n\`\`\`\n`;
+    const now = {
+      "docs/a.md": `# A\n\n${code("20")}\n${long("y")}\n$$\na^3\n$$\n\n${diagram("Finish")}`,
+    };
     const { dir, html } = await builtDiff(
       "changed-kinds",
-      { "docs/a.md": `# A\n\n${code("2")}\n$$\na^2\n$$\n\n${diagram("End")}` },
+      { "docs/a.md": `# A\n\n${code("2")}\n${long("")}\n$$\na^2\n$$\n\n${diagram("End")}` },
       now,
     );
     const plain = await builtPlain("changed-kinds", now);
@@ -2071,6 +2075,26 @@ describe.skipIf(!chromium)("a changed block (v0.20)", () => {
         return { del: height("del[data-monodocs-diff]"), ins: height("ins[data-monodocs-diff]") };
       });
       expect(lines.del).toBeGreaterThan(0);
+      // A line wider than the block: its band reaches its end, past the part shown.
+      const wide = await page.evaluate(() => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        const pre = article.querySelectorAll(".monodocs-diff-current pre")[1]!;
+        const ins = pre.querySelector("ins[data-monodocs-diff]")!;
+        return {
+          scroll: pre.scrollWidth > pre.clientWidth,
+          band: ins.getBoundingClientRect().width >= pre.scrollWidth - 40,
+        };
+      });
+      expect(wide).toEqual({ scroll: true, band: true });
+      // With the theme's wrapping on, the long line wraps as the others do, band and all.
+      const wrapped = await page.evaluate((one) => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        const pre = article.querySelectorAll(".monodocs-diff-current pre")[1]! as HTMLElement;
+        pre.closest(".code-block")?.classList.add("wrap");
+        const ins = pre.querySelector("ins[data-monodocs-diff]")!.getBoundingClientRect();
+        return { wraps: ins.height > one * 1.5, fits: ins.width <= pre.clientWidth };
+      }, lines.ins);
+      expect(wrapped).toEqual({ wraps: true, fits: true });
       expect(lines.del).toBe(lines.ins);
       expect(await preHeight(page, ".monodocs-diff-current")).toBeCloseTo(want + lines.del, 0);
       // The earlier formula and diagram stand beside the new ones, each about half the width.
@@ -2088,15 +2112,18 @@ describe.skipIf(!chromium)("a changed block (v0.20)", () => {
                 level: Math.abs(a.top - b.top) < 1,
                 order: a.right <= b.left,
                 half: a.width < column.getBoundingClientRect().width * 0.55,
-                drawn: kind === ".math-display" || old.querySelector("svg") !== null,
+                // The earlier one's deleted edge shows on what it holds.
+                edge: getComputedStyle(old.firstElementChild!).boxShadow.includes("inset"),
+                // A diagram drawn, its nodes in it, not an empty box.
+                drawn: kind === ".math-display" || old.querySelector("svg .node") !== null,
               };
             });
           }),
         (all) => all.every((side) => side.drawn),
       );
       expect(sides).toEqual([
-        { level: true, order: true, half: true, drawn: true },
-        { level: true, order: true, half: true, drawn: true },
+        { level: true, order: true, half: true, edge: true, drawn: true },
+        { level: true, order: true, half: true, edge: true, drawn: true },
       ]);
       // On paper, the earlier one above the new.
       await page.emulateMediaType("print");
@@ -2115,6 +2142,87 @@ describe.skipIf(!chromium)("a changed block (v0.20)", () => {
       await closePages(browser);
       await rm(dir, { recursive: true, force: true });
       await rm(plain.dir, { recursive: true, force: true });
+    }
+  }, 60_000);
+
+  it("lets a changed line's band and a changed header row's tint show in either scheme", async () => {
+    const tables = (k: string) =>
+      `| h | ${k} |\n|---|---|\n| 1 | 2 |\n\nBetween.\n\n| same | head |\n|---|---|\n| 3 | 4 |\n`;
+    const { dir, html } = await builtDiff(
+      "changed-schemes",
+      { "docs/a.md": `# A\n\n\`\`\`js\nconst a = 1;\nconst b = 2;\n\`\`\`\n\n${tables("k")}` },
+      { "docs/a.md": `# A\n\n\`\`\`js\nconst a = 1;\nconst b = 20;\n\`\`\`\n\n${tables("kk")}` },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1300, height: 900 });
+      await openView(page, html, "both", "/a");
+      for (const scheme of ["light", "dark"]) {
+        await page.evaluate(
+          (name) => document.documentElement.setAttribute("data-theme", name),
+          scheme,
+        );
+        const seen = await page.evaluate(() => {
+          const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+          const column = article.querySelector(".monodocs-diff-current")!;
+          const bg = (node: Element) => getComputedStyle(node).backgroundColor;
+          const heads = [...column.querySelectorAll("th")];
+          return {
+            // A highlighted token inside a changed line lets the band show.
+            token: bg(column.querySelector("pre ins[data-monodocs-diff] span")!),
+            // A changed header cell takes the change's tint, not the theme's header background.
+            tinted: bg(heads[1]!) !== bg(heads[3]!),
+          };
+        });
+        expect(seen, scheme).toEqual({ token: "rgba(0, 0, 0, 0)", tinted: true });
+      }
+      // A version's own view with its marks off: the header row as the theme draws any.
+      await page.click('[data-monodocs-diff-view="current"]');
+      await page.evaluate(() =>
+        document.documentElement.setAttribute("data-monodocs-diff-marks", "off"),
+      );
+      const plain = await page.evaluate(() => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        const heads = [...article.querySelectorAll(".monodocs-diff-current th")];
+        const bg = (node: Element) => getComputedStyle(node).backgroundColor;
+        return bg(heads[1]!) === bg(heads[3]!);
+      });
+      expect(plain).toBe(true);
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
+
+  it("keeps a diagram deleted whole at a deleted block's width in one column", async () => {
+    const diagram = "```mermaid\ngraph TD\n  A-->B\n```\n";
+    const { dir, html } = await builtDiff(
+      "deleted-diagram",
+      { "docs/a.md": `# A\n\nBefore.\n\n${diagram}\nAfter one.\n` },
+      { "docs/a.md": "# A\n\nBefore.\n\nAfter one.\n" },
+    );
+    const browser = await sharedBrowser();
+    try {
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1500, height: 900 });
+      await openView(page, html, "inline", "/a");
+      const widths = await page.evaluate(() => {
+        const article = [...document.querySelectorAll("article.page")].find((a) => !a.hidden)!;
+        const column = article.querySelector(".monodocs-diff-current")!;
+        const deleted = column.querySelector(
+          'del[data-monodocs-diff] > [data-monodocs-diff-block="del"]',
+        )!.parentElement!;
+        return {
+          display: getComputedStyle(deleted).display,
+          full: deleted.getBoundingClientRect().width > column.getBoundingClientRect().width * 0.9,
+        };
+      });
+      expect(widths.display).not.toBe("inline-block");
+      expect(widths.full).toBe(true);
+    } finally {
+      await closePages(browser);
+      await rm(dir, { recursive: true, force: true });
     }
   }, 60_000);
 });

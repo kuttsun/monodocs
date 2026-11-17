@@ -19,7 +19,9 @@ export const DIFF_MERMAID =
   ':not(:root[data-monodocs-diff-view="current"] .monodocs-diff-earlier .mermaid)' +
   ':not(:root[data-monodocs-diff-view="earlier"] .monodocs-diff-current .mermaid)' +
   ':not(:root[data-monodocs-diff-view="inline"] .page:not([data-monodocs-diff-page="deleted"]) .monodocs-diff-earlier .mermaid)' +
-  ':not(:root:not([data-monodocs-diff-view="inline"]) .monodocs-diff-current .mermaid[data-monodocs-diff-block="del"])';
+  ':not(:root:not([data-monodocs-diff-view="inline"]) .monodocs-diff-current .mermaid[data-monodocs-diff-block="del"])' +
+  // The earlier copy before a changed diagram, which has no mark of its own: drawn in one column only.
+  ':not(:root:not([data-monodocs-diff-view="inline"]) .monodocs-diff-current del[data-monodocs-diff] > .mermaid)';
 
 /** The rules a difference adds to `{{style}}`. */
 export const DIFF_STYLE = `
@@ -85,10 +87,10 @@ tr[data-monodocs-diff-block] { box-shadow: none; }
 }
 :is(img, svg, object, video, audio, iframe, embed)[data-monodocs-diff-block="ins"] { --monodocs-diff-ring: var(--monodocs-diff-added); }
 :is(img, svg, object, video, audio, iframe, embed)[data-monodocs-diff-block="del"] { --monodocs-diff-ring: var(--monodocs-diff-deleted); }
-tr[data-monodocs-diff-block="ins"] > * {
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) :is(#content, *) tr[data-monodocs-diff-block="ins"] > * {
   background: color-mix(in srgb, var(--monodocs-diff-added) var(--monodocs-diff-tint), var(--monodocs-diff-paper));
 }
-tr[data-monodocs-diff-block="del"] > * {
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) :is(#content, *) tr[data-monodocs-diff-block="del"] > * {
   background: color-mix(in srgb, var(--monodocs-diff-deleted) var(--monodocs-diff-tint), var(--monodocs-diff-paper));
 }
 /* The text keeps a mark of its own, so black and white still tells the two apart. */
@@ -105,26 +107,40 @@ del[data-monodocs-diff] {
 }
 /* Inside a changed block, the words added and deleted are tinted as well as underlined and struck:
    not a block added or deleted inside it, whose mark stands for the block, nor what is in one. */
-[data-monodocs-diff-block="changed"] ins[data-monodocs-diff]:not([data-monodocs-diff-block], :has(> [data-monodocs-diff-block]), [data-monodocs-diff-block="ins"] *, [data-monodocs-diff-block="del"] *) {
+[data-monodocs-diff-block="changed"] ins[data-monodocs-diff]:not([data-monodocs-diff-block], :has(> [data-monodocs-diff-block]), [data-monodocs-diff-block="ins"] *, [data-monodocs-diff-block="del"] *, .math-display > *) {
   background: color-mix(in srgb, var(--monodocs-diff-added) calc(var(--monodocs-diff-tint) * 2.5), transparent);
   border-radius: 2px;
 }
-[data-monodocs-diff-block="changed"] del[data-monodocs-diff]:not([data-monodocs-diff-block], :has(> [data-monodocs-diff-block]), [data-monodocs-diff-block="ins"] *, [data-monodocs-diff-block="del"] *) {
+[data-monodocs-diff-block="changed"] del[data-monodocs-diff]:not([data-monodocs-diff-block], :has(> [data-monodocs-diff-block]), [data-monodocs-diff-block="ins"] *, [data-monodocs-diff-block="del"] *, .math-display > *) {
   background: color-mix(in srgb, var(--monodocs-diff-deleted) calc(var(--monodocs-diff-tint) * 2.5), transparent);
   border-radius: 2px;
 }
 /* A changed code block's lines (7.3.6): each added or deleted line a band of its own, across the
    block; a changed row's cells in the colour of a change. */
-pre[data-monodocs-diff-block="changed"] :is(ins, del)[data-monodocs-diff] {
+pre[data-monodocs-diff-block="changed"] :is(ins, del)[data-monodocs-diff]:not(.monodocs-diff-part) {
   display: block;
+  min-width: 100%;
   border-radius: 0;
 }
-tr[data-monodocs-diff-block="changed"] > * {
+/* On screen, in a block that scrolls rather than wraps (the default theme's \`.wrap\` wraps it), the
+   band is as wide as the line, to its end past the part shown. */
+@media screen {
+  pre[data-monodocs-diff-block="changed"]:not(.wrap pre) :is(ins, del)[data-monodocs-diff]:not(.monodocs-diff-part) {
+    width: max-content;
+  }
+}
+/* A highlighting theme may paint each token's background, as the default one does in its dark
+   scheme: inside a changed line it lets the band show. */
+:root :is(#content, *) pre[data-monodocs-diff-block="changed"] :is(ins, del)[data-monodocs-diff] span {
+  background-color: transparent !important;
+}
+:is(:root:not([data-monodocs-diff-marks="off"]), :root[data-monodocs-diff-view="both"], :root[data-monodocs-diff-view="inline"]) :is(#content, *) tr[data-monodocs-diff-block="changed"] > * {
   background: color-mix(in srgb, var(--monodocs-diff-changed) var(--monodocs-diff-tint), var(--monodocs-diff-paper));
 }
 /* In one column a changed display formula or diagram stands beside the earlier one, shown whole as
-   each was drawn; on paper, one above the other. */
-.monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)) {
+   each was drawn; on paper, one above the other. The earlier one is the clone with no mark of its
+   own, not a diagram deleted whole, which keeps the width a deleted block has. */
+.monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])) {
   background: color-mix(in srgb, var(--monodocs-diff-deleted) var(--monodocs-diff-tint), transparent);
   box-shadow: inset 3px 0 0 var(--monodocs-diff-deleted);
   border-radius: 4px;
@@ -132,17 +148,29 @@ tr[data-monodocs-diff-block="changed"] > * {
 }
 /* \`:is(#content, *)\` weighs as an ID, as the default theme's \`#content .math-display\` does, and
    matches in any theme. */
-:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)),
-:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)) + :is(ins[data-monodocs-diff], [data-monodocs-diff-block="changed"]) {
+:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])),
+:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])) + :is(ins[data-monodocs-diff], [data-monodocs-diff-block="changed"]) {
   display: inline-block;
   width: calc(50% - 0.5rem);
   vertical-align: top;
   overflow-x: auto;
 }
-.monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)) { margin-inline-end: 1rem; }
+.monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])) { margin-inline-end: 1rem; }
+/* The two stand level, their own margins taken off; a formula in a pair is marked by its band, old
+   and new, not struck or underlined word by word. */
+:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])) > *,
+:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])) + ins[data-monodocs-diff] > * {
+  margin-block: 0;
+}
+[data-monodocs-diff-block="changed"].math-display > :is(ins, del)[data-monodocs-diff] { text-decoration: none; }
+/* The earlier one's edge on what it holds, which may paint its own background over the mark's, as
+   the default theme's code background does for a diagram drawn in the browser. */
+:is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])) > * {
+  box-shadow: inset 3px 0 0 var(--monodocs-diff-deleted);
+}
 @media print {
-  :is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)),
-  :is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid)) + :is(ins[data-monodocs-diff], [data-monodocs-diff-block="changed"]) {
+  :is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])),
+  :is(#content, *) .monodocs-diff-current del[data-monodocs-diff]:has(> :is(.math-display, .mermaid):not([data-monodocs-diff-block])) + :is(ins[data-monodocs-diff], [data-monodocs-diff-block="changed"]) {
     display: block;
     width: auto;
     margin-inline-end: 0;
