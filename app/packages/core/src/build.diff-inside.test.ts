@@ -302,6 +302,15 @@ describe("each kind in its own unit (7.3.6)", () => {
       ]);
       expect(lines(earlier)).toEqual(["const a = 1;\n[-const b = 2;\n-]const c = 3;"]);
     }
+    // A block without a language, highlighting on and off.
+    for (const config of [{}, { "monodocs.config.yml": "highlight:\n  enabled: false\n" }]) {
+      const pages = await difference(
+        { "docs/a.md": code("", "2"), ...config },
+        { "docs/a.md": code("", "20"), ...config },
+      );
+      const lines = marked(columns(pages.get("/a")!).inline).map((text) => text.replace(/\n$/, ""));
+      expect(lines).toEqual(["const a = 1;\n[-const b = 2;\n-]{+const b = 20;\n+}const c = 3;"]);
+    }
     // The language changed: a deletion and an addition.
     const pages = await difference(
       { "docs/a.md": code("js", "2") },

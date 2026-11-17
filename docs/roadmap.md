@@ -1873,6 +1873,45 @@ from the start absorbs every run that qualifies, joining the change before it wi
 What is equal is counted after the cleanup, and a side that is empty shows the other whole. The five
 pairs measured on 2026-10-14 come out as recorded, and `diff/text.test.ts` pins them.
 
+**What the writing decided (v0.20).** In a run of deleted and added blocks the i-th deleted is
+paired with the i-th added, by position, when their kinds and chains agree and what is inside them
+can be shown; a run in which nothing pairs keeps the order the edit script gave it, so a build shows
+stage 1 wherever stage 3 finds nothing, and a run with a pair writes each slot's deletion before its
+insertion. A block's text is read again from the nodes its key was read from (`diff/inside.ts`),
+each place mapped to its text node; what is not text is one character from the Supplementary
+Private Use Area per key, above any the text holds, past Plane 15's noncharacters, and a grapheme
+cluster of its own; a footnote reference is one too. Generated numbers are left out, and across one
+the space that counts is the one after it, outside the reference it ends: `Figure 1.` reads
+`Figure.`.
+
+Added words are wrapped in `<ins data-monodocs-diff>`; each deleted run is cloned from the earlier
+block with its inline elements and no address, and goes before the added words that replace it or
+the next equal word, lifted out of an inline element its place starts or ends but never out of the
+item's paragraph, and inside one without a second copy of it. A link is not split: words deleted
+inside one go inside the new link. A cross-reference deleted or added whole goes with its number,
+and a changed caption label leaves the earlier column with its number. A changed block carries
+`data-monodocs-diff-block="changed"` in both columns and shares `data-monodocs-diff-pair` with its
+earlier self, numbered in order with the unchanged pairs; the new column takes its deleted words out
+to templates, as it does deleted blocks, so it lays out as the new version does, and the one-column
+view puts them back. The list of changes adds `Changed N` to a page only where N is not zero, so a
+page with none reads as before. Code is compared by line in its recorded source, the half rule
+counted in lines, and a block whose language changed is not paired; each changed line is marked
+whole, a band across the block. A row is compared cell by cell when its cells agree in number,
+kind, and span, a cell kept, compared, or shown whole. A display formula or a diagram is shown old
+and new whole: the earlier one cloned before the new, beside it in one column and above it on
+paper.
+
+What this leaves as it is, measured and not changed: in one column the default theme's copy button
+copies a changed code block's deleted lines with the rest, and a deleted last line without a line
+break joins the one before it; a deletion placed in the middle of a new inline element takes that
+element's look (a plain word deleted between two bold runs that were merged reads bold); with two
+references in one sentence, deleting one can show the other's number struck, since numbers are not
+content; and pairing by position does not pair a heading rewritten right after a section added in
+the same run. PR CI runs `build.diff-unicode.test.ts` on Node 22.12.0 (ICU 76.1, Unicode 16.0) and
+Node 22.23.2 (ICU 78.2, Unicode 17.0): its difference holds an emoji joined by ZWJ, a flag, `क्ष`,
+and U+323B0, a letter of Extension J only the newer Node's `\p{L}` reads as one, and both give the
+markup the test pins.
+
 ---
 
 ## 8. Delivery Forms

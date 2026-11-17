@@ -162,6 +162,59 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # The difference inside a changed block on two Nodes whose Unicode versions differ (roadmap 7.3.6,
+  # 12.4): the oldest `engines` allows and a current one. Its tokens come from generated tables, so
+  # the markup is the same; the test also checks each Node reads its fixture's newest character as
+  # this job expects, so the two runs are shown to differ where the regular-expression engine does.
+  diff-unicode:
+    # Named by the role of each Node, not its version, so a required check keeps its name when the
+    # versions move.
+    name: Difference on Node (${{ matrix.role }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ICU 76.1, Unicode 16.0.
+          - role: oldest
+            node: 22.12.0
+            letter: 'false'
+          # ICU 78.2, Unicode 17.0.
+          - role: current
+            node: 22.23.2
+            letter: 'true'
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.9.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install app dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Compare inside a changed block
+        run: pnpm exec vitest run packages/core/src/build.diff-unicode.test.ts
+        env:
+          MONODOCS_EXPECT_EXT_J_LETTER: ${{ matrix.letter }}
+
   # リリースバイナリの検証スクリプトは CI で実行されないため、静的解析だけは毎回かける
   # （両方とも、検査が黙って嘘をつく種類の不具合を実際に抱えていた）。
   scripts:

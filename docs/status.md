@@ -813,14 +813,14 @@ Nothing changes for a build without a difference but a comment in the default th
 [roadmap.md](roadmap.md) defines this milestone; the list below tracks it.
 
 - [x] The examples measured in [roadmap.md](roadmap.md) 7.3.6 come out as recorded there, and a test pins them — `diff/text.test.ts` aligns the five measured pairs and writes each as roadmap 7.3.6 records it, `[-…-]` and `{+…+}` around the equal text, and shows the rewritten paragraph that keeps less than half of itself whole
-- [ ] In a paragraph mixing Japanese and English, a change to a single word shows as a difference in that word only
-- [ ] An emoji joined by ZWJ and a flag are never split, and the script and cluster table is generated from one Unicode version, with a test that fails when the table and its data file disagree
-- [ ] A paired heading whose generated number changed shows no difference in the number
-- [ ] A deleted run inside bold text is bold inside its `<del>`, and carries no ID or link
-- [ ] A changed line in a code block without a language, and with `highlight.enabled: false`, is marked by line
-- [ ] The earlier-version view of a changed paragraph reads as the earlier paragraph, and the one-column view shows a paired block once, with the difference inside it
-- [ ] The same old and new inputs, including a character assigned in a Unicode version newer than the older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two Node versions with different ICU and Unicode versions
-- [ ] The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in English and Japanese
+- [x] In a paragraph mixing Japanese and English, a change to a single word shows as a difference in that word only — `build.diff-inside.test.ts` builds `設定ファイルの path を変更する。` changed to `folder` and marks that word alone
+- [x] An emoji joined by ZWJ and a flag are never split, and the script and cluster table is generated from one Unicode version, with a test that fails when the table and its data file disagree — `diff/graphemes.test.ts` checks the tables against the vendored Unicode 18.0.0 files and runs every case of GraphemeBreakTest.txt; `build.diff-unicode.test.ts` replaces an emoji joined by ZWJ whole beside a flag kept whole
+- [x] A paired heading whose generated number changed shows no difference in the number — `build.diff-inside.test.ts` renumbers an AsciiDoc `:sectnums:` heading from 2 to 3 and marks only its changed word
+- [x] A deleted run inside bold text is bold inside its `<del>`, and carries no ID or link — `diff/write.test.ts` pins the markup: a deleted bold word cloned bold with no ID, and words deleted inside a link written with no link
+- [x] A changed line in a code block without a language, and with `highlight.enabled: false`, is marked by line — `build.diff-inside.test.ts` builds a block with a language and one without, highlighting on and off, and marks each changed line whole
+- [x] The earlier-version view of a changed paragraph reads as the earlier paragraph, and the one-column view shows a paired block once, with the difference inside it — `build.diff-chromium.test.ts` reads a changed paragraph in all four views: the earlier version's words alone with nothing struck in its own view, the block once with the deleted word put back in one column
+- [x] The same old and new inputs, including a character assigned in a Unicode version newer than the older Node knows and a Devanagari conjunct such as `क्ष`, give the same difference markup on two Node versions with different ICU and Unicode versions — PR CI runs `build.diff-unicode.test.ts` on Node 22.12.0 (ICU 76.1, Unicode 16.0) and 22.23.2 (ICU 78.2, Unicode 17.0); its fixture holds U+323B0, which only the newer Node's `\p{L}` reads as a letter, and both give the pinned markup
+- [x] The "What 1.0 Freezes" page lists `data-monodocs-diff-block="changed"`, in English and Japanese — added with the writing in #255, with `data-monodocs-diff-pair` marking a changed pair too
 
 **Dependencies**
 
@@ -829,7 +829,7 @@ Nothing changes for a build without a difference but a comment in the default th
 
 **Documentation and tests**
 
-- [ ] [testing.md](testing.md) lists the new tests in English and Japanese
+- [x] [testing.md](testing.md) lists the new tests in English and Japanese
 
 **Release**
 
