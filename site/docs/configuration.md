@@ -388,7 +388,7 @@ patterns say. The patterns only decide what a directory scan picks up.
 > `sidebar.exclude`, the earlier home for `sources.exclude`, was removed in 1.0. A configuration
 > that writes it is refused, and the message names `sources.exclude`: write the same patterns there.
 > An earlier version compared with `--diff-from` or `--diff-from-dir` that still writes it is read
-> as before.
+> as before, the key as `sources.exclude`.
 
 #### `sources.asciidoc.attributes` (values a document set shares) {#asciidoc-attributes}
 

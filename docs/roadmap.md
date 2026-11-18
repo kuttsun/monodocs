@@ -1240,7 +1240,7 @@ someone decides where it belongs.
 
 **Keys a major release removed are read as their replacements.** An earlier configuration with a key
 the current monodocs does not know is an error, not something silently dropped (12.2) — with one
-allowance. A key a major release removed after deprecating it, as 1.0 will remove `sidebar.exclude`
+allowance. A key a major release removed after deprecating it, as 1.0 removed `sidebar.exclude`
 for `sources.exclude` (12.4), is read in an earlier configuration as its replacement, without a
 warning: every 0.x version that used it would otherwise be impossible to compare against, and its
 author cannot rewrite a released configuration. The translations are a table kept beside the
@@ -2569,8 +2569,8 @@ sidebar some commits later, with nothing connecting the two. A list that adds ca
 files, and it says so where anyone reading the configuration can see it.
 
 The key also moved. It was `sidebar.exclude`, but it was never a sidebar setting: a match never
-becomes a page at all, so it leaves the bundle rather than the navigation. `sidebar.exclude` is still
-honoured, merged the same way, and warns that it moved. A file named directly on the command line is
+becomes a page at all, so it leaves the bundle rather than the navigation. `sidebar.exclude` was
+honoured, merged the same way, with a warning that it moved, until 1.0 removed it (12.4). A file named directly on the command line is
 bundled whatever the patterns say (25.2) — naming a file is a choice, and the patterns only decide
 what a directory scan picks up.
 
@@ -2616,15 +2616,15 @@ What 1.0 does not do:
   when `TZ` agrees too, `TZ=UTC` for one (all measured 2026-10-14). The build adds no time of its own; it
   does not take away the one the document asked for
 
-**Deprecation has a shape.** `sidebar.exclude` moved to `sources.exclude` and still builds while
-saying where it went (12.3), which is the pattern: the old spelling keeps working, warns, names its
+**Deprecation has a shape.** `sidebar.exclude` moved to `sources.exclude` and built while saying
+where it went (12.3) until 1.0 removed it, which is the pattern: the old spelling keeps working, warns, names its
 replacement, and is removed no earlier than the next major release. Nothing is removed in a minor
 release, and nothing is removed without having warned in a release before it.
 
 **Where the surfaces are listed (v0.16).** The site's reference has one page, "What 1.0 Freezes",
 in both languages: every configuration key with its default, every command and option, every
 diagnostic code with the `schemaVersion` a CI job pins, and the markup monodocs recognises beyond
-CommonMark, GFM, and AsciiDoc. `sidebar.exclude` is listed as deprecated and removed in 1.0. The
+CommonMark, GFM, and AsciiDoc. `sidebar.exclude` was listed as deprecated until 1.0 removed it. The
 keys include those inside a list's items (`sidebar.items[].path`) and inside the object a value may
 be instead (`pdf.density.fontSize`), and the values two defaults stand for: the built-in exclusions
 and the `pdf.density` presets. A last section lists what the tables do not hold but a script,

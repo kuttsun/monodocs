@@ -341,7 +341,7 @@ sources:
 > [!NOTE]
 > `sources.exclude` が以前あった `sidebar.exclude` は、1.0 で削除しました。これを書いた設定は
 > 受け付けず、メッセージが `sources.exclude` を示します。同じパターンをそちらに書いてください。
-> `--diff-from` や `--diff-from-dir` で比べる以前の版の設定にあるものは、これまでどおり読みます。
+> `--diff-from` や `--diff-from-dir` で比べる以前の版の設定にあるものは、これまでどおり `sources.exclude` として読みます。
 
 #### `sources.asciidoc.attributes`（文書一式で共有する値） {#asciidoc-attributes}
 

@@ -60,9 +60,8 @@ const EN = {
     'Invalid pdf.density lineHeight: "{value}" is not a positive number.',
   "config.invalidPdfCellPadding":
     'Invalid pdf.density tableCellPadding: "{value}" is not one or two CSS lengths.',
-  "config.removedKey":
-    "{from} was removed in 1.0: write the same value as {to}. Its patterns add to the built-in " +
-    "exclude list rather than replacing it (sources.excludeDefaults: false drops that list).",
+  "config.removedKey": "{from} was removed in 1.0: write the same value as {to}.",
+  "config.removedKeyBeside": "{from} was removed in 1.0, and {to} is already set: remove {from}.",
   "config.inputOutsideRoot":
     'input and root name different directories: input "{input}", root "{root}". Everything relative ' +
     "is resolved against one root, so two would leave a route and an image path with two answers. A " +
@@ -441,10 +440,9 @@ const JA: Record<MessageKey, string> = {
     'pdf.density の lineHeight が不正です: "{value}" は正の数ではありません。',
   "config.invalidPdfCellPadding":
     'pdf.density の tableCellPadding が不正です: "{value}" は CSS の長さ 1〜2 個ではありません。',
-  "config.removedKey":
-    "{from} は 1.0 で削除されました。同じ値を {to} に書いてください。" +
-    "パターンは既定の除外リストを置き換えず、そこへ追加されます" +
-    "（既定リストを外すには sources.excludeDefaults: false）。",
+  "config.removedKey": "{from} は 1.0 で削除されました。同じ値を {to} に書いてください。",
+  "config.removedKeyBeside":
+    "{from} は 1.0 で削除されました。{to} はすでに設定されているので、{from} を削除してください。",
   "config.inputOutsideRoot":
     'input と root が別のディレクトリを指しています: input "{input}"、root "{root}"。' +
     "相対的なものはすべて 1 つのルートから解決するため、2 つあると route も画像のパスも答えが 2 つに" +

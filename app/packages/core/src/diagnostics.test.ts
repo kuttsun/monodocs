@@ -205,7 +205,7 @@ describe("what a build reports", () => {
         ...original,
         loadConfig: async (...args: Parameters<typeof original.loadConfig>) => ({
           ...(await original.loadConfig(...args)),
-          warnings: [warn("config/invalid", "a warning")],
+          warnings: [warn("lang/no-label-table", "a warning")],
         }),
       };
     });
@@ -218,7 +218,7 @@ describe("what a build reports", () => {
     try {
       const result = await validate({ inputDir: docs });
       expect(result.diagnostics.map((d) => d.code)).toEqual([
-        "config/invalid",
+        "lang/no-label-table",
         "page/duplicate-route",
       ]);
     } finally {

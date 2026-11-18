@@ -455,11 +455,18 @@ describe("loadConfig: what is excluded from the bundle", () => {
     const error = await loadConfig({}, dir).catch((e: unknown) => e);
     expect(error).toMatchObject({ code: "config/invalid" });
     expect((error as Error).message).toMatch(
-      /sidebar\.exclude was removed in 1\.0: write the same value as sources\.exclude/,
+      /sidebar\.exclude was removed in 1\.0: write the same value as sources\.exclude\./,
     );
     // Beside sources.exclude it is refused the same way.
     await writeConfig("sources:\n  exclude:\n    - a.md\nsidebar:\n  exclude:\n    - b.md\n");
-    await expect(loadConfig({}, dir)).rejects.toThrow(/sidebar\.exclude was removed in 1\.0/);
+    await expect(loadConfig({}, dir)).rejects.toThrow(
+      /sidebar\.exclude was removed in 1\.0, and sources\.exclude is already set: remove sidebar\.exclude/,
+    );
+    // Beside another unknown key it is still named, and the other is reported as unknown.
+    await writeConfig("sidebar:\n  exclude:\n    - a.md\n  bogus: 1\n");
+    const mixed = (await loadConfig({}, dir).catch((e: unknown) => e)) as Error;
+    expect(mixed.message).toMatch(/sidebar\.exclude was removed in 1\.0/);
+    expect(mixed.message).toMatch(/sidebar: Unrecognized key: "bogus"/);
   });
 
   it("reads sidebar.exclude as sources.exclude in an earlier version's configuration", async () => {

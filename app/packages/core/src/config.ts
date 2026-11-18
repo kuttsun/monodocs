@@ -2,7 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { type Diagnostic, MonodocsError, warn } from "./diagnostics.js";
+import { type Diagnostic, MonodocsError } from "./diagnostics.js";
 import type { DocumentMetadata } from "./documentMeta.js";
 import { z } from "zod";
 import {
@@ -658,7 +658,7 @@ export type ResolvedConfig = {
   configFilePath?: string;
   /**
    * Problems found while resolving the configuration that do not stop the build — a deprecated
-   * key, for one. The build surfaces them alongside its own warnings, because a configuration
+   * key's, when one is deprecated (none is today). The build surfaces them alongside its own warnings, because a configuration
    * that is quietly half-honoured is the failure this is here to prevent.
    */
   warnings: Diagnostic[];
@@ -1157,6 +1157,8 @@ function objectAt(
 function formatConfigIssues(
   error: z.ZodError,
   moved: readonly { from: string; to: string }[] = [],
+  /** The configuration as written, to tell whether a removed key's replacement is set beside it. */
+  written: unknown = undefined,
 ): string {
   return error.issues
     .map((issue) => {
@@ -1166,9 +1168,25 @@ function formatConfigIssues(
         const removed = issue.keys.flatMap((key) => {
           const full = parent ? `${parent}.${key}` : key;
           const entry = REMOVED_KEY_TRANSLATIONS.find((removedKey) => removedKey.from === full);
-          return entry === undefined ? [] : [t("config.removedKey", entry)];
+          if (entry === undefined) return [];
+          const [toParent, toKey] = splitKey(entry.to);
+          const beside =
+            typeof written === "object" &&
+            written !== null &&
+            !Array.isArray(written) &&
+            objectAt(written as Record<string, unknown>, toParent)?.[toKey] !== undefined;
+          return [t(beside ? "config.removedKeyBeside" : "config.removedKey", entry)];
         });
-        if (removed.length === issue.keys.length) return removed.join("; ");
+        if (removed.length > 0) {
+          // The other unknown keys beside it are reported as any unknown key is.
+          const others = issue.keys.filter(
+            (key) =>
+              !REMOVED_KEY_TRANSLATIONS.some((r) => r.from === (parent ? `${parent}.${key}` : key)),
+          );
+          if (others.length === 0) return removed.join("; ");
+          const rest = `Unrecognized key${others.length > 1 ? "s" : ""}: ${others.map((key) => `"${key}"`).join(", ")}`;
+          return [...removed, parent ? `${parent}: ${rest}` : rest].join("; ");
+        }
       }
       let path = issue.path.join(".");
       // A key read as its replacement is reported under the name the file gives it.
@@ -1219,7 +1237,7 @@ export async function loadConfig(
         "config/invalid",
         t("config.invalid", {
           path: configPath,
-          detail: formatConfigIssues(result.error, translated.moved),
+          detail: formatConfigIssues(result.error, translated.moved, translated.value),
         }),
       );
     }
