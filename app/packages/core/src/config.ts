@@ -386,12 +386,6 @@ export function buildConfigFileSchema() {
           // "custom" = items に書いた構造と順序をそのまま使う。
           mode: z.enum(["folder", "custom"]).optional(),
           items: z.array(sidebarItemSchema).min(1).optional(),
-          /**
-           * Deprecated in favour of `sources.exclude`, which is named for what it does: a match is
-           * left out of the bundle, not merely out of the sidebar. Still honoured, with a warning,
-           * and merged with DEFAULT_EXCLUDE like its replacement.
-           */
-          exclude: z.array(z.string()).optional(),
           // この階層より深いディレクトリを既定で折りたたむ（隠さず畳むだけなので到達性は失わない）。
           // 0 = 全ディレクトリを畳む / 未指定 = 折りたたみなし（全展開）。
           collapseDepth: z.number().int().min(0).optional(),
@@ -1166,6 +1160,16 @@ function formatConfigIssues(
 ): string {
   return error.issues
     .map((issue) => {
+      // A key a major release removed is named with its replacement, not as merely unknown.
+      if (issue.code === "unrecognized_keys") {
+        const parent = issue.path.join(".");
+        const removed = issue.keys.flatMap((key) => {
+          const full = parent ? `${parent}.${key}` : key;
+          const entry = REMOVED_KEY_TRANSLATIONS.find((removedKey) => removedKey.from === full);
+          return entry === undefined ? [] : [t("config.removedKey", entry)];
+        });
+        if (removed.length === issue.keys.length) return removed.join("; ");
+      }
       let path = issue.path.join(".");
       // A key read as its replacement is reported under the name the file gives it.
       for (const { from, to } of moved) {
@@ -1229,23 +1233,11 @@ export async function loadConfig(
 
   const warnings: Diagnostic[] = [];
 
-  // `sidebar.exclude` moved to `sources.exclude`, which is where it acts: a match never becomes a
-  // page, so it leaves the bundle rather than just the sidebar. The old key still works — a 0.9
-  // configuration keeps building — but it is worth one line of output, because its meaning changed
-  // too: the patterns now add to the built-in list instead of replacing it.
-  const sidebarExclude = fileConfig.sidebar?.exclude;
+  // `sidebar.exclude`, deprecated in 0.10 for this key, was removed in 1.0 (12.4): written in a
+  // configuration it is an unknown key whose message names `sources.exclude` (formatConfigIssues).
   const sourcesExclude = fileConfig.sources?.exclude;
-  if (sidebarExclude !== undefined && sourcesExclude !== undefined) {
-    throw new MonodocsError("config/invalid", t("config.excludeInBothPlaces"));
-  }
-  if (sidebarExclude !== undefined) {
-    warnings.push(warn("config/deprecated-key", t("config.sidebarExcludeMoved")));
-  }
   const excludeDefaults = fileConfig.sources?.excludeDefaults ?? true;
-  const exclude = [
-    ...(excludeDefaults ? DEFAULT_EXCLUDE : []),
-    ...(sourcesExclude ?? sidebarExclude ?? []),
-  ];
+  const exclude = [...(excludeDefaults ? DEFAULT_EXCLUDE : []), ...(sourcesExclude ?? [])];
 
   // `root` and `input` are the same key seen from different distances (12.5): one names what
   // everything is relative to, the other names what a single-directory document bundles. Written
@@ -1297,7 +1289,7 @@ export async function loadConfig(
   // walk exactly the directory the author meant to leave out and skip the ones they meant to keep.
   // Two keys already say both things: `include` selects and `exclude` subtracts, last (12.5).
   assertNoNegatedGlob(fileConfig.sources?.include ?? [], "sources.include");
-  assertNoNegatedGlob(sourcesExclude ?? sidebarExclude ?? [], "sources.exclude");
+  assertNoNegatedGlob(sourcesExclude ?? [], "sources.exclude");
 
   // 設定ファイルの output.format は zod で検証済みだが、CLI の --format は生文字列で渡るため
   // ここで検証する（不正値が resolveOutputs の both 分岐へ落ちるのを防ぐ）。

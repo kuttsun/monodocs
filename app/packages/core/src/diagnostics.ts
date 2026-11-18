@@ -22,7 +22,6 @@
  */
 export const DIAGNOSTIC_CODES = [
   "browser/setup",
-  "config/deprecated-key",
   "config/input-outside-root",
   "config/invalid",
   "config/not-found",

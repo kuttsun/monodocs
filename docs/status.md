@@ -861,8 +861,8 @@ It changes what a build with a difference shows inside a changed block, and a bu
 
 [roadmap.md](roadmap.md) defines this release; it starts once v0.20 is released.
 
-- [ ] `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the enumeration no longer lists it
-- [ ] An earlier version whose configuration uses `sidebar.exclude` is still compared against with `--diff-from`, the key read as `sources.exclude` ([roadmap.md](roadmap.md) 7.3.2)
+- [x] `sidebar.exclude` is rejected as an unknown key with a message naming `sources.exclude`, and the enumeration no longer lists it — `config.test.ts` finds a configuration writing it, alone or beside `sources.exclude`, refused as `config/invalid` with "sidebar.exclude was removed in 1.0: write the same value as sources.exclude"; the "What 1.0 Freezes" page lists neither the key nor `config/deprecated-key`, which only it reported, and `surfaces.test.ts` passes
+- [x] An earlier version whose configuration uses `sidebar.exclude` is still compared against with `--diff-from`, the key read as `sources.exclude` ([roadmap.md](roadmap.md) 7.3.2) — `build.diff-earlier.test.ts` builds a difference whose earlier configuration writes `sidebar.exclude`, its patterns read as `sources.exclude` with no warning, and reports a problem with it under the name the file gives it
 - [ ] The enumeration's test passes, and the documentation is checked against the code in English and Japanese: no key in the reference that the schema does not have, and no behaviour in [architecture.md](architecture.md) that the code does not do
 
 ## Supported Syntax

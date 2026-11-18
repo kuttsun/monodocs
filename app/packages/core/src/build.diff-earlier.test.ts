@@ -99,7 +99,7 @@ describe("the configuration the earlier version is built with", () => {
 });
 
 describe("keys a major release removed", () => {
-  it("maps sidebar.exclude to sources.exclude, ready for 1.0's removal", () => {
+  it("maps sidebar.exclude, removed in 1.0, to sources.exclude", () => {
     expect(REMOVED_KEY_TRANSLATIONS).toContainEqual({
       from: "sidebar.exclude",
       to: "sources.exclude",

@@ -32,7 +32,6 @@ Every key `monodocs.config.yml` accepts, with its default. An unknown key is an 
 | `sidebar.items[].title` | unset |
 | `sidebar.items[].path` | unset |
 | `sidebar.items[].children` | unset |
-| `sidebar.exclude` | unset (deprecated; removed in 1.0) |
 | `sidebar.collapseDepth` | unset |
 | `sidebar.titleTransform.page` | `none` |
 | `sidebar.titleTransform.page.type` | unset (required when the object is written) |
@@ -178,7 +177,6 @@ Every command also takes `-h, --help`.
 A diagnostic's `code` is what a job filters on, and is not renamed. The codes:
 
 - `browser/setup`
-- `config/deprecated-key`
 - `config/input-outside-root`
 - `config/invalid`
 - `config/not-found`

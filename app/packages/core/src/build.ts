@@ -709,9 +709,9 @@ function toValidateResult(diagnostics: Diagnostic[], pages: number): ValidateRes
  */
 export async function validateSite(options: BuildOptions = {}): Promise<ValidateResult> {
   const cwd = process.cwd();
-  // What was found before the run stopped is still found. A deprecated key is still deprecated
-  // when a route collision ends the build, and dropping it would make the report depend on which
-  // problem happened to be fatal.
+  // What was found before the run stopped is still found. A configuration's warning (a deprecated
+  // key's, when there is one) is still a warning when a route collision ends the build, and dropping
+  // it would make the report depend on which problem happened to be fatal.
   const found: Diagnostic[] = [];
   try {
     assertNoDiff(options, "validate");

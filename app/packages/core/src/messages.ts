@@ -60,11 +60,8 @@ const EN = {
     'Invalid pdf.density lineHeight: "{value}" is not a positive number.',
   "config.invalidPdfCellPadding":
     'Invalid pdf.density tableCellPadding: "{value}" is not one or two CSS lengths.',
-  "config.excludeInBothPlaces":
-    "Both sources.exclude and sidebar.exclude are set. Keep sources.exclude and remove sidebar.exclude.",
-  "config.sidebarExcludeMoved":
-    "sidebar.exclude is deprecated: use sources.exclude, which is named for what it does — a match " +
-    "is left out of the bundle, not only out of the sidebar. Patterns are now added to the built-in " +
+  "config.removedKey":
+    "{from} was removed in 1.0: write the same value as {to}. Its patterns add to the built-in " +
     "exclude list rather than replacing it (sources.excludeDefaults: false drops that list).",
   "config.inputOutsideRoot":
     'input and root name different directories: input "{input}", root "{root}". Everything relative ' +
@@ -444,13 +441,9 @@ const JA: Record<MessageKey, string> = {
     'pdf.density の lineHeight が不正です: "{value}" は正の数ではありません。',
   "config.invalidPdfCellPadding":
     'pdf.density の tableCellPadding が不正です: "{value}" は CSS の長さ 1〜2 個ではありません。',
-  "config.excludeInBothPlaces":
-    "sources.exclude と sidebar.exclude の両方が設定されています。" +
-    "sources.exclude を残して sidebar.exclude を削除してください。",
-  "config.sidebarExcludeMoved":
-    "sidebar.exclude は非推奨です。sources.exclude を使ってください" +
-    "（サイドバーからではなく束そのものからファイルを外す設定です）。" +
-    "指定したパターンは既定の除外リストを置き換えず、そこへ追加されるようになりました" +
+  "config.removedKey":
+    "{from} は 1.0 で削除されました。同じ値を {to} に書いてください。" +
+    "パターンは既定の除外リストを置き換えず、そこへ追加されます" +
     "（既定リストを外すには sources.excludeDefaults: false）。",
   "config.inputOutsideRoot":
     'input と root が別のディレクトリを指しています: input "{input}"、root "{root}"。' +
