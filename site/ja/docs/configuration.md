@@ -339,9 +339,9 @@ sources:
 束に入ります。パターンが決めるのはディレクトリ走査が何を拾うかだけです。
 
 > [!NOTE]
-> `sources.exclude` は以前 `sidebar.exclude` にありました。いまも動き、挙動も同じ（置換ではなく
-> 追加）ですが、警告を出します。一致したファイルはナビゲーションだけでなく、束そのものから
-> 外れるためです。
+> `sources.exclude` が以前あった `sidebar.exclude` は、1.0 で削除しました。これを書いた設定は
+> 受け付けず、メッセージが `sources.exclude` を示します。同じパターンをそちらに書いてください。
+> `--diff-from` や `--diff-from-dir` で比べる以前の版の設定にあるものは、これまでどおり `sources.exclude` として読みます。
 
 #### `sources.asciidoc.attributes`（文書一式で共有する値） {#asciidoc-attributes}
 
@@ -405,7 +405,6 @@ monodocs がここのすべての値に既に付けるものです。
 | ---------------------------- | -------------------- | --------------------------------------------------------- | ---- |
 | `sidebar.mode`               | `folder` `custom`    | `folder`                                                  | サイドバーの生成方式。`folder` はフォルダ構造から生成し、`custom` は `sidebar.items` をそのまま使う。下記参照。 |
 | `sidebar.items`              | object[]             | 未指定                                                    | `mode: custom` で使うサイドバー定義。`mode: custom` とセットで指定する（片方だけはエラー）。下記参照。 |
-| `sidebar.exclude`            | string[]             | 未指定                                                    | **非推奨** — [`sources.exclude`](#sources) を使う。いまも有効だが警告が出る。 |
 | `sidebar.collapseDepth`      | integer              | 未指定                                                    | この階層より **深い** ディレクトリを既定で折りたたむ（トップレベル=深さ 1）。`0` で全畳み、未指定で全展開。畳んでも隠さないため到達性は失わず、いつでも開ける。 |
 | `sidebar.titleFrom`          | `heading` `filename` | `heading`                                                 | ナビ用タイトルの取得元。`heading` = 明示タイトル → 見出し → ファイル名。`filename` = 見出しを飛ばしファイル名を使う（明示タイトル / `:sd-title:` はどちらでも常に最優先）。 |
 | `sidebar.flattenSingleChild` | boolean              | `false`                                                   | **ページちょうど 1 つ・サブフォルダ 0** のディレクトリを畳み、唯一のページを親へ繰り上げる。ドキュメント＋画像を 1 フォルダにまとめた場合などに有効（画像はページに数えない）。 |

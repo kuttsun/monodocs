@@ -385,9 +385,10 @@ A file named directly on the command line (`monodocs build ./docs/_draft.md`) is
 patterns say. The patterns only decide what a directory scan picks up.
 
 > [!NOTE]
-> `sidebar.exclude` was the earlier home for `sources.exclude`. It still works and behaves the same
-> way (merged rather than replacing), but warns: a match is left out of the bundle, not just out of
-> the navigation.
+> `sidebar.exclude`, the earlier home for `sources.exclude`, was removed in 1.0. A configuration
+> that writes it is refused, and the message names `sources.exclude`: write the same patterns there.
+> An earlier version compared with `--diff-from` or `--diff-from-dir` that still writes it is read
+> as before, the key as `sources.exclude`.
 
 #### `sources.asciidoc.attributes` (values a document set shares) {#asciidoc-attributes}
 
@@ -453,7 +454,6 @@ for an attribute the document may override, and monodocs already adds it to ever
 | ---------------------------- | --------- | -------------------------------------------------- | ----------- |
 | `sidebar.mode`               | `folder` `custom` | `folder`                                   | How the sidebar is built. `folder` derives it from the directory structure. `custom` uses `sidebar.items` exactly as written. See below. |
 | `sidebar.items`             | object[]  | unset                                              | The sidebar definition for `mode: custom`. Requires `mode: custom`, and `mode: custom` requires it. See below. |
-| `sidebar.exclude`            | string[]  | unset                                              | **Deprecated** — use [`sources.exclude`](#sources). Still honoured, with a warning. |
 | `sidebar.collapseDepth`      | integer   | unset                                              | Collapse directories **deeper** than this level by default (top level = depth 1). `0` collapses everything, unset keeps all expanded. Pages stay reachable — collapsing hides nothing, it can always be re-opened. |
 | `sidebar.titleFrom`          | `heading` `filename` | `heading`                               | Where the navigation title comes from. `heading` = explicit title → heading → filename. `filename` = skip the heading and use the filename (the explicit frontmatter / `:sd-title:` title always wins either way). |
 | `sidebar.flattenSingleChild` | boolean   | `false`                                            | Flatten a directory that holds **exactly one page and no subfolders**, pulling that page up to its parent. Useful when each document lives in its own folder with its images (images are not counted as pages). |

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { validateSite } from "./build";
 import { DIAGNOSTIC_CODES, MonodocsError, toDiagnostic, warn } from "./diagnostics";
 
@@ -194,22 +194,36 @@ describe("what a build reports", () => {
   });
 
   it("keeps what it had found when something later stops the run", async () => {
-    // A deprecated key is still deprecated when a route collision ends the build. Dropping it
-    // would make the report depend on which problem happened to be the fatal one.
+    // A configuration's warning is still a warning when a route collision ends the build: dropping
+    // it would make the report depend on which problem happened to be the fatal one. No key warns
+    // today (sidebar.exclude, which did, was removed in 1.0), so the configuration here is given one,
+    // as the next deprecated key will be.
+    vi.resetModules();
+    vi.doMock("./config.js", async (importOriginal) => {
+      const original = await importOriginal<typeof import("./config.js")>();
+      return {
+        ...original,
+        loadConfig: async (...args: Parameters<typeof original.loadConfig>) => ({
+          ...(await original.loadConfig(...args)),
+          warnings: [warn("lang/no-label-table", "a warning")],
+        }),
+      };
+    });
+    const { validateSite: validate } = await import("./build.js");
     const root = await mkdtemp(join(tmpdir(), "monodocs-diagnostics-fatal-"));
     const docs = join(root, "docs");
     await mkdir(join(docs, "a"), { recursive: true });
     await writeFile(join(docs, "a.md"), "# A\n");
     await writeFile(join(docs, "a", "index.md"), "# Also A\n");
-    const configFile = join(root, "monodocs.config.yml");
-    await writeFile(configFile, "sidebar:\n  exclude:\n    - nothing-matches.md\n");
     try {
-      const result = await validateSite({ inputDir: docs, configFile });
+      const result = await validate({ inputDir: docs });
       expect(result.diagnostics.map((d) => d.code)).toEqual([
-        "config/deprecated-key",
+        "lang/no-label-table",
         "page/duplicate-route",
       ]);
     } finally {
+      vi.doUnmock("./config.js");
+      vi.resetModules();
       await rm(root, { recursive: true, force: true });
     }
   });

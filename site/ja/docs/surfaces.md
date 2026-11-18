@@ -32,7 +32,6 @@
 | `sidebar.items[].title` | 未設定 |
 | `sidebar.items[].path` | 未設定 |
 | `sidebar.items[].children` | 未設定 |
-| `sidebar.exclude` | 未設定（非推奨。1.0 で削除） |
 | `sidebar.collapseDepth` | 未設定 |
 | `sidebar.titleTransform.page` | `none` |
 | `sidebar.titleTransform.page.type` | 未設定（オブジェクトを書くときは必須） |
@@ -178,7 +177,6 @@
 診断の `code` はジョブが絞り込みに使うもので、名前を変えません。コードは次のとおりです。
 
 - `browser/setup`
-- `config/deprecated-key`
 - `config/input-outside-root`
 - `config/invalid`
 - `config/not-found`

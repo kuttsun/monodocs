@@ -103,7 +103,7 @@ export function buildCustomSidebar(pages: Page[], items: SidebarItem[]): CustomS
     const relativePath = normalizeItemPath(item.path ?? "");
     const page = byPath.get(relativePath);
     if (!page) {
-      // ファイル自体はあっても sidebar.exclude や対象拡張子の設定でページ化されていない
+      // ファイル自体はあっても sources.exclude や対象拡張子の設定でページ化されていない
       // ことがあるため、探す場所を示す。
       throw new MonodocsError(
         "sidebar/item-not-found",

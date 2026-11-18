@@ -449,17 +449,32 @@ describe("loadConfig: what is excluded from the bundle", () => {
     expect((await loadConfig({}, dir)).exclude).toEqual([]);
   });
 
-  it("still honours sidebar.exclude, merged, and says it moved", async () => {
+  it("refuses sidebar.exclude, removed in 1.0, naming sources.exclude", async () => {
+    // Deprecated in 0.10, removed in 1.0 (12.4): an unknown key whose message says where it went.
     await writeConfig("sidebar:\n  exclude:\n    - skip.md\n");
-    const config = await loadConfig({}, dir);
-    expect(config.exclude).toEqual([...DEFAULT_EXCLUDE, "skip.md"]);
-    expect(config.warnings).toHaveLength(1);
-    expect(config.warnings[0]?.message).toMatch(/sources\.exclude/);
+    const error = await loadConfig({}, dir).catch((e: unknown) => e);
+    expect(error).toMatchObject({ code: "config/invalid" });
+    expect((error as Error).message).toMatch(
+      /sidebar\.exclude was removed in 1\.0: write the same value as sources\.exclude\./,
+    );
+    // Beside sources.exclude it is refused the same way.
+    await writeConfig("sources:\n  exclude:\n    - a.md\nsidebar:\n  exclude:\n    - b.md\n");
+    await expect(loadConfig({}, dir)).rejects.toThrow(
+      /sidebar\.exclude was removed in 1\.0, and sources\.exclude is already set: remove sidebar\.exclude/,
+    );
+    // Beside another unknown key it is still named, and the other is reported as unknown.
+    await writeConfig("sidebar:\n  exclude:\n    - a.md\n  bogus: 1\n");
+    const mixed = (await loadConfig({}, dir).catch((e: unknown) => e)) as Error;
+    expect(mixed.message).toMatch(/sidebar\.exclude was removed in 1\.0/);
+    expect(mixed.message).toMatch(/sidebar: Unrecognized key: "bogus"/);
   });
 
-  it("refuses a configuration that excludes from both places", async () => {
-    await writeConfig("sources:\n  exclude:\n    - a.md\nsidebar:\n  exclude:\n    - b.md\n");
-    await expect(loadConfig({}, dir)).rejects.toThrow(/sidebar\.exclude/);
+  it("reads sidebar.exclude as sources.exclude in an earlier version's configuration", async () => {
+    // The earlier build (7.3.2) translates the removed key: a version that used it stays comparable.
+    await writeConfig("sidebar:\n  exclude:\n    - skip.md\n");
+    const config = await loadConfig({}, dir, { translateRemovedKeys: true });
+    expect(config.exclude).toEqual([...DEFAULT_EXCLUDE, "skip.md"]);
+    expect(config.warnings).toEqual([]);
   });
 });
 

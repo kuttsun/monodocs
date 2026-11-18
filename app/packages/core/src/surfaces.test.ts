@@ -174,7 +174,6 @@ function expectedDefaults(
     "sidebar.items[].title": "unset",
     "sidebar.items[].path": "unset",
     "sidebar.items[].children": "unset",
-    "sidebar.exclude": "unset (deprecated; removed in 1.0)",
     "sidebar.collapseDepth": unset(r.sidebarCollapseDepth),
     ...Object.fromEntries(
       (["page", "directory"] as const).flatMap((which) => {
@@ -262,7 +261,6 @@ const JA_WORDS: Record<string, string> = {
   unset: "未設定",
   "value of `input` (for a single file, its directory)":
     "`input` の値（単一ファイルならそのディレクトリ）",
-  "unset (deprecated; removed in 1.0)": "未設定（非推奨。1.0 で削除）",
   "from `lang`": "`lang` から",
   "page number / total pages": "ページ番号 / 総ページ数",
   "unset (required when the object is written)": "未設定（オブジェクトを書くときは必須）",
