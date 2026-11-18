@@ -2,3 +2,11 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: true
+auditConfig:
+  ignoreGhsas:
+    # picomatch: ReDoS through single-branch repeated extglobs (high; no patched version — 4.0.7 is
+    # the latest). monodocs passes it only the configuration's sources.include and sources.exclude,
+    # with extended globs off (noextglob in scan.ts), so the vulnerable parse is never reached; the
+    # other copies are under vite and vitest, which do not ship. Remove this entry when a patched
+    # picomatch is published and resolved (docs/development.md).
+    - GHSA-fc5q-39xc-vjpf

@@ -44,9 +44,13 @@ export async function scanSourceFiles(
   options: ScanOptions,
 ): Promise<SourceFile[]> {
   const include = options.include ?? [];
-  const isIncluded = include.length > 0 ? picomatch(include, { dot: true }) : undefined;
+  // Extended globs (`+(…)`, `@(…)`) are off: monodocs never documented them, and picomatch's parser
+  // backtracks exponentially on some of them (GHSA-fc5q-39xc-vjpf, unpatched in 4.0.7), which a
+  // pattern in the configuration could reach. With them off the parser never takes that path.
+  const glob = { dot: true, noextglob: true };
+  const isIncluded = include.length > 0 ? picomatch(include, glob) : undefined;
   const mayHoldMatch = include.length > 0 ? makeDirectoryFilter(include) : undefined;
-  const isExcluded = picomatch(options.exclude, { dot: true });
+  const isExcluded = picomatch(options.exclude, glob);
   const files: SourceFile[] = [];
 
   async function walk(dir: string): Promise<void> {

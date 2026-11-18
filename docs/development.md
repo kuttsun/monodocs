@@ -53,6 +53,18 @@ other dev tool. While `vite` was only a peer dependency of `vitest`, Dependabot'
 the upstream fix. The declaration adds nothing to the install (`vitest` required it already) or to the
 published bundle.
 
+### App Dependency Advisory Ignored in the Audit
+
+`app/pnpm-workspace.yaml` lists GHSA-fc5q-39xc-vjpf under `auditConfig.ignoreGhsas`, so `pnpm audit` does
+not fail on it. It is a high-severity picomatch advisory with no patched version (4.0.7, the latest, is
+affected): its parser backtracks exponentially on single-branch repeated extended globs such as `+(*a)`,
+which can block the build. monodocs calls picomatch only on `sources.include` and `sources.exclude`, written
+by the configuration's author, and passes `noextglob: true` (`app/packages/core/src/scan.ts`), so extended
+globs are read as literal characters and the vulnerable parse is never reached; monodocs never documented
+them. The other copies are under `vite` and `vitest`, which do not ship. Remove the entry when a patched
+picomatch is published and the lockfile resolves it; `noextglob` can stay, since extended globs were never a
+surface. Last checked 2026-11-18: picomatch 4.0.7 is the latest.
+
 ### Release-Age Policy for Dependencies
 
 pnpm 11 refuses to install any version published less than `minimumReleaseAge` minutes ago (default 1440 =

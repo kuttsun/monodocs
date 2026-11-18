@@ -65,6 +65,19 @@ describe("scanSourceFiles", () => {
     expect(subtracted.map((f) => f.relativePath)).toEqual(["a.md"]);
   });
 
+  it("reads an extended glob as literal characters, not as a pattern", async () => {
+    // Extended globs are off (GHSA-fc5q-39xc-vjpf): `@(a).md` would match `a.md` with them on.
+    const extensions = new Map<string, SourceFormat>([[".md", "markdown"]]);
+    const selected = await scanSourceFiles(dir, { extensions, include: ["@(a).md"], exclude: [] });
+    expect(selected).toEqual([]);
+    const kept = await scanSourceFiles(dir, {
+      extensions,
+      include: ["a.md"],
+      exclude: ["+(*a).md"],
+    });
+    expect(kept.map((f) => f.relativePath)).toEqual(["a.md"]);
+  });
+
   it("does not walk a directory no include pattern can reach", async () => {
     const extensions = new Map<string, SourceFormat>([[".md", "markdown"]]);
     // A directory that cannot be read at all: reaching it throws EACCES, so a clean result is what

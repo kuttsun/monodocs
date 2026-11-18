@@ -321,7 +321,7 @@ Noto Sans CJK); ✅ (U+2705, e.g. Noto Color Emoji). Install a font that covers 
 | `sources.markdown.extensions` | string[] | `[.md, .markdown]`           | Markdown として描画する拡張子。 |
 | `sources.asciidoc.extensions` | string[] | `[.adoc, .asciidoc, .asc]`   | AsciiDoc として描画する拡張子。 |
 | `sources.asciidoc.attributes` | object   | 未指定                       | Asciidoctor 属性を、ロックではなく**既定値**として設定します。自分で指定した文書が勝ちます。下記参照。 |
-| `sources.include`             | string[] | 未指定                       | ページ化しうるものを選ぶ glob（`root` からの相対）。未指定なら `root` 配下すべてが候補。`sources.exclude` はここから引き、しかも最後に引く。否定パターン（`!…`）はどちらのリストでも拒否されます。パターンは OR で結合されるため、否定パターンはほとんどすべてのパスに当たるからです。 |
+| `sources.include`             | string[] | 未指定                       | ページ化しうるものを選ぶ glob（`root` からの相対）。未指定なら `root` 配下すべてが候補。`sources.exclude` はここから引き、しかも最後に引く。否定パターン（`!…`）はどちらのリストでも拒否されます。パターンは OR で結合されるため、否定パターンはほとんどすべてのパスに当たるからです。`+(…)` や `@(…)` のような拡張 glob には対応せず、その文字はそのまま照合します。 |
 | `sources.exclude`             | string[] | `[]`                         | ページ化しない glob（`root` からの相対パスに対して評価）。既定リストを置き換えず、**そこへ追加される**。 |
 | `sources.excludeDefaults`     | boolean  | `true`                       | 既定の除外リストを適用するか。`_` 始まりのファイルも束ねたいツリーでは `false` にする。 |
 | `sources.lineBreak`           | string   | `space`                      | 段落の中の改行をどう扱うか。Markdown と AsciiDoc の両方に効く。`space` は CommonMark と Asciidoctor のまま（ブラウザは空白として描く）。`break` は `<br>` にする。AsciiDoc では `hardbreaks-option` を既定値として設定するので、`:hardbreaks-option!:` と書いた文書は自分の行を繋いだままにできる。`join` は東アジアの文字（East_Asian_Width が F・W・H で、どちらもハングルでないもの）に挟まれた改行を取り除く。日本語の文がそうした文字で終わり、次の文もそうした文字で始まる箇所では、どのブラウザでも PDF でも空白が出ない。それ以外の改行は残す。英数字（`[^1]` のような脚注参照を含む）、`…` や `→` のような曖昧幅の文字、インラインコードや画像に接する改行がこれに当たる。`break` は見出しを変えず、どちらの値も `pre` と `code` の中身は変えない。検索インデックスも同じ値に従う。 |

@@ -47,6 +47,10 @@ corepack による pnpm の都度ダウンロードが発生しない。
 
 あわせて `vite` を `app/package.json` の直接の dev dependency として宣言し、ほかの開発ツールと同じく通常のバージョン更新で追跡されるようにしています。`vitest` の peer dependency にとどまっていた間は、manifest を対象とする Dependabot の通常のバージョン更新が更新を提案せず、上流の修正から 2 か月間、lockfile は `vite` 8.1.0 のままでした。`vitest` がもともと要求していたものなので、インストール内容も公開バンドルも増えません。
 
+### 監査から除外しているアプリ依存関係の advisory
+
+`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` に GHSA-fc5q-39xc-vjpf を挙げ、`pnpm audit` がこれで失敗しないようにしています。修正版の無い高深刻度の picomatch の advisory です（最新の 4.0.7 も該当します）。`+(*a)` のような、枝が 1 つの繰り返しの拡張 glob でパーサーが指数的に後戻りし、ビルドを止めうるというものです。monodocs が picomatch に渡すのは、設定の書き手が書いた `sources.include` と `sources.exclude` だけで、`noextglob: true` を指定しています（`app/packages/core/src/scan.ts`）。拡張 glob は文字どおりの文字として読まれ、脆弱な解析には入りません。monodocs は拡張 glob を文書に書いたこともありません。ほかの写しは `vite` と `vitest` の下にあり、出荷しません。修正版の picomatch が公開され、lockfile がそれを解決したら除外を削除します。拡張 glob は表に出したことのないものなので、`noextglob` は残してかまいません。2026-11-18 時点の再点検では、picomatch の最新は 4.0.7 です。
+
 ### 依存関係の公開後経過時間ポリシー
 
 pnpm 11 は、公開から `minimumReleaseAge` 分（既定 1440 分＝24 時間）が経っていないバージョンをインストールせず、`pnpm install --frozen-lockfile` もコミット済み lockfile を同じポリシーで検証します。悪意あるリリースはたいてい 1 時間ほどでレジストリから削除されるため、1 日待てばその時間帯をほぼ回避できます。リポジトリでは設定せず、pnpm の既定値に任せています。
