@@ -848,7 +848,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 
 - [x] `sidebar.exclude` が、`sources.exclude` を名指すメッセージとともに未知のキーとして拒否され、列挙から消える — `config.test.ts` が、これを書いた設定を、単独でも `sources.exclude` と並べても、「sidebar.exclude was removed in 1.0: write the same value as sources.exclude」とともに `config/invalid` で拒否することを確かめる。「1.0 が凍結するもの」のページはこのキーも、これだけが報告していた `config/deprecated-key` も載せず、`surfaces.test.ts` が通る
 - [x] 設定に `sidebar.exclude` を使う旧版とも、そのキーを `sources.exclude` として読んで、`--diff-from` で比べられる（[roadmap.md](roadmap.md) 7.3.2） — `build.diff-earlier.test.ts` が、以前の版の設定に `sidebar.exclude` を書いた差分を組み、そのパターンを警告なしに `sources.exclude` として読み、問題があればファイルに書かれた名前で報告することを確かめる
-- [ ] 列挙のテストが通り、ドキュメントを英語と日本語でコードと突き合わせる。リファレンスにスキーマの持たないキーは無く、[architecture.md](architecture.md) にコードのしない挙動は無い
+- [x] 列挙のテストが通り、ドキュメントを英語と日本語でコードと突き合わせる。リファレンスにスキーマの持たないキーは無く、[architecture.md](architecture.md) にコードのしない挙動は無い — `surfaces.test.ts` が通る。設定リファレンス、コマンドリファレンス、[architecture.md](architecture.md) を両言語でコードと突き合わせた。リファレンスには `html.branding` と完全な例に欠けていたキーを足し、`root` が設定ファイルを探す場所を決めるという記述を除いた。文書の言うことをコードがしていなかった 2 か所は、コードのほうを直した。エディタが rename で保存する設定ファイルを `watch` が見失わないこと、`%` を含む route へのページ本文のリンクがそのページに着くことで、それぞれ修正なしでは落ちるテストを持つ
 
 ## 対応記法
 

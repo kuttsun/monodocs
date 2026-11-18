@@ -316,8 +316,9 @@ export function buildConfigFileSchema() {
         .optional(),
       input: z.string().optional(),
       /**
-       * The directory every relative path is resolved against: routes, images, `include::`, and the
-       * configuration file itself. Defaults to `input`'s value, so a configuration that does not
+       * The directory the scan starts from and that routes, images, and `include::` resolve against.
+       * It does not decide where the configuration file is looked for, and is itself resolved against
+       * the configuration file's directory, as `input` is. Defaults to `input`'s value, so a configuration that does not
        * write it keeps its meaning exactly (12.5).
        *
        * It exists so that a document can span more than one directory without the root becoming

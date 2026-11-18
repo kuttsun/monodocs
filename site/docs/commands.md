@@ -1,6 +1,6 @@
 # Command Options
 
-monodocs is a single CLI with five subcommands: `init`, `build`, `watch`, `serve`, and `validate`. The four that read documents share the optional input argument and the config-file option, plus a few options of their own; `init` takes neither.
+monodocs is a single CLI with six subcommands: `init`, `build`, `watch`, `serve`, `validate`, and `help`. The four that read documents share the optional input argument and the config-file option, plus a few options of their own; `init` takes neither. `help [command]` prints the help for a command, as `<command> --help` does.
 
 ```bash
 monodocs <command> [input] [options]
@@ -22,6 +22,7 @@ monodocs <command> [input] [options]
 ```bash
 monodocs --help          # top-level help (lists all commands)
 monodocs build --help    # help for a single command
+monodocs help build      # the same
 ```
 
 ### Message language {#message-language}
@@ -83,7 +84,7 @@ monodocs build [input] [options]
 | Argument / Option       | Default                | Description                                                  |
 | ----------------------- | ---------------------- | ------------------------------------------------------------ |
 | `[input]`               | `./docs`               | Input directory to scan, or a single source file.            |
-| `-o, --output <file>`   | `./dist/docs.html`   | Output file path. Overrides `output.path`.                   |
+| `-o, --output <path>`   | by format              | Output path: a file under `html` and `pdf`, a directory under `both`. Overrides `output.path`. See [below](#output-path). |
 | `-c, --config <file>`   | auto-detected          | Config file. Uses `monodocs.config.yml` if present.          |
 | `-f, --format <format>` | `html`                 | Output format: `html` \| `pdf` \| `both`. Overrides `output.format`. |
 | `--diff-from <ref>` | — | Write the difference from an earlier version, a git ref, into the HTML. See [below](#difference). |
@@ -103,7 +104,19 @@ monodocs build ./docs -c ./monodocs.config.yml
 monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 ```
 
-On success it prints the number of pages generated and the output path. Warnings (e.g. broken links, missing titles) are printed but do not fail the build; use [`validate`](#validate) to fail on an error, and `validate --strict` to fail on a warning as well. The one exception is [`fontCheck: error`](/docs/configuration#font-check), which stops a build whose output would carry characters this machine has no font for.
+### Where the output goes {#output-path}
+
+What `-o` (or `output.path`) names, and its default, depend on the output format:
+
+| Format | `-o` / `output.path` names | Default |
+| ------ | -------------------------- | ------- |
+| `html` | the HTML file | `./dist/docs.html` |
+| `pdf`  | the PDF file | `./dist/docs.pdf` |
+| `both` | a directory, which receives `docs.html` and `docs.pdf` | `./dist` |
+
+Under `both` the path is always read as a directory, even one whose name has a dot in it such as `dist/v1.0`: `-o ./dist/docs.html` writes `./dist/docs.html/docs.html` and `./dist/docs.html/docs.pdf`.
+
+On success it prints the number of pages generated and the output path. Warnings (e.g. broken links, missing titles) are printed but do not fail the build; an error (e.g. a missing input, two pages on one route) stops it with exit code `1`. Three settings turn a finding that is otherwise a warning into an error that stops the build: [`fontCheck: error`](/docs/configuration#font-check), for characters this machine has no font for; [`assets.onLargeImage: error`](/docs/configuration#assets), for an image larger than `assets.maxInlineSize`; and [`assets.onBudget: error`](/docs/configuration#assets), for an output larger than `assets.budget`. To check without writing any output, use [`validate`](#validate); `validate --strict` fails on a warning as well.
 
 ### The difference from an earlier version {#difference}
 
@@ -148,10 +161,10 @@ monodocs watch [input] [options]
 | Argument / Option     | Default              | Description                                         |
 | --------------------- | -------------------- | --------------------------------------------------- |
 | `[input]`             | `./docs`             | Input directory, or a single source file, to watch. |
-| `-o, --output <file>` | `./dist/docs.html` | Output file path. Overrides `output.path`.          |
+| `-o, --output <file>` | by format            | Output path, read as for `build` (see [Where the output goes](#output-path)). Overrides `output.path`. |
 | `-c, --config <file>` | auto-detected        | Config file. Uses `monodocs.config.yml` if present. |
 
-Writes to the output file are ignored, so a rebuild never re-triggers itself. Press `Ctrl+C` to stop.
+`watch` has no `--format`: it writes the format `output.format` sets, HTML by default. Writes to the output file are ignored, so a rebuild never re-triggers itself. Press `Ctrl+C` to stop.
 
 > [!NOTE]
 > On Linux, watching takes an inotify instance, and the number a user may hold (`fs.inotify.max_user_instances`, often 128) is shared with every program they run, editors and browsers included. With none left, `watch` and `serve` stop with `EMFILE: too many open files, watch`. Check the limit with `cat /proc/sys/fs/inotify/max_user_instances` and raise it with `sudo sysctl fs.inotify.max_user_instances=1024`; to keep it across reboots, put `fs.inotify.max_user_instances = 1024` in a file under `/etc/sysctl.d/`. A Docker container that runs as the host user's UID, as the repository's development scripts do, shares the limit with that user. Watching also takes one inotify watch per directory and file under the input, from a second limit, `fs.inotify.max_user_watches`; with none of those left, part of the tree goes unwatched. Only a watch that fails after watching has started, such as one for a directory added later, is reported; one that fails while watching is being set up goes unnoticed, so raise this limit too if changes under the input are missed.
@@ -167,7 +180,7 @@ monodocs serve [input] [options]
 | Argument / Option     | Default              | Description                                         |
 | --------------------- | -------------------- | --------------------------------------------------- |
 | `[input]`             | `./docs`             | Input directory, or a single source file, to serve. |
-| `-o, --output <file>` | `./dist/docs.html` | Output file path. Overrides `output.path`.          |
+| `-o, --output <file>` | `./dist/docs.html`   | The HTML file to write and serve. Overrides `output.path`. |
 | `-c, --config <file>` | auto-detected        | Config file. Uses `monodocs.config.yml` if present. |
 | `-p, --port <port>`   | `4173`               | Port to listen on.                                  |
 | `-H, --host <host>`   | `127.0.0.1`          | Host to bind. Use `0.0.0.0` to accept connections from outside the machine (e.g. from a Docker host). |
@@ -180,6 +193,8 @@ monodocs serve
 # Bind all interfaces (e.g. to reach it from the Docker host) and open the browser
 monodocs serve ./docs --host 0.0.0.0 --open
 ```
+
+`serve` always writes and serves HTML, whatever `output.format` says; it never writes a PDF. `-o` names the HTML file under every format. Without `-o`, the HTML goes where the configuration puts it: to `output.path` under `html`, to `docs.html` beside the PDF under `pdf`, and to `docs.html` in the output directory under `both` — `./dist/docs.html` by default in each case.
 
 Press `Ctrl+C` to stop.
 
@@ -211,7 +226,7 @@ monodocs validate ./docs --strict  # a warning fails it as well
 
 The exit code follows the `severity` in the report, so a release that adds a check as a warning does not turn a passing job red. To make warnings a release gate, add `--strict` in the workflow.
 
-`validate` runs the same pipeline as a build, so a build reports every check `validate` does (and still writes its output). The reverse does not hold: a build that writes a PDF also reports what only that work can find, such as a bottom margin too small for the page-number band or a character no font on the machine can draw.
+`validate` runs the same pipeline as a build up to writing the output, so a build reports every check `validate` makes: an error `validate` reports stops the build too, including an image over `assets.maxInlineSize` under `assets.onLargeImage: error`. The reverse does not hold: a build also reports what only writing the output can find — an output larger than [`assets.budget`](/docs/configuration#assets), a bottom margin too small for a PDF's page-number band, and a character in a PDF or a pre-rendered diagram that no font on the machine can draw. `validate` therefore passes a document whose build `assets.onBudget: error` or `fontCheck: error` would stop.
 
 > [!NOTE]
 > Mermaid diagrams are validated without a browser, so pre-render rendering and diagram syntax errors are not checked by `validate`.
