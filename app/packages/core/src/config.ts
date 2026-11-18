@@ -318,8 +318,8 @@ export function buildConfigFileSchema() {
       /**
        * The directory the scan starts from and that routes, images, and `include::` resolve against.
        * It does not decide where the configuration file is looked for, and is itself resolved against
-       * the configuration file's directory, as `input` is. Defaults to `input`'s value, so a configuration that does not
-       * write it keeps its meaning exactly (12.5).
+       * the configuration file's directory, as `input` is. Defaults to `input`'s value, so a
+       * configuration that does not write it keeps its meaning exactly (12.5).
        *
        * It exists so that a document can span more than one directory without the root becoming
        * several. `input` stays the single-directory spelling, and writing both is allowed only when

@@ -192,10 +192,11 @@ export async function watchSite(
     const rootPath = isAbsolute(config.rootDir) ? config.rootDir : resolve(cwd, config.rootDir);
     startWatch(rootPath, rootPath, true);
   }
-  // 設定ファイルの監視は best-effort（失敗しても入力監視は継続する）。An editor that saves by
-  // writing a temporary file and renaming it over the configuration replaces its inode, as for a
-  // single-file input above: the directory is watched and filtered by the file's name. The real
-  // path is the one watched, so that a symbolic link is followed to the file it names (an edit
+  // 設定ファイルの監視は best-effort（失敗しても入力監視は継続する）。
+  //
+  // An editor that saves by writing a temporary file and renaming it over the configuration
+  // replaces its inode, as for a single-file input above: the directory is watched and filtered by
+  // the file's name. The real path is the one watched, so that a symbolic link is followed to the file it names (an edit
   // there raises nothing beside the link) and the name compared is the one the file system
   // reports, whatever case the configuration was named in on a case-insensitive one.
   if (config.configFilePath && existsSync(config.configFilePath)) {

@@ -1041,8 +1041,8 @@ function resolveHref(
 
   // `other.md#` のように空のアンカーはページ先頭リンクとして扱う（警告しない）。
   const fragment = hashIdx === -1 ? "" : href.slice(hashIdx + 1);
-  // href は encodeURI する（サイドバーと同じ）。クライアントは decodeURI してから route と比べるため、
-  // `a%20b.md` のように `%` を含む route を生のまま書くと別のページ（`a b`）に解ける。
+  // The route goes into href through encodeURI, as the sidebar writes it. The reader decodes the hash
+  // before comparing it with the route, so a raw route containing `%` (`a%20b.md`) reached `a b`.
   const routeHref = `#${encodeURI(target.route)}`;
   if (!fragment) return { href: routeHref };
 

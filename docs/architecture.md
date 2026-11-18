@@ -363,8 +363,9 @@ custom theme is guaranteed.
 [`watch.ts`](../app/packages/core/src/watch.ts) uses `fs.watch` (recursive where supported) with debouncing. It
 watches source and configuration inputs, ignores output-file writes to prevent rebuild loops, and rejects a
 missing input path. A single-file input and the configuration file are each watched through their directory,
-filtered to that name (the configuration's real path, so a symbolic link is followed to the file it names), because `fs.watch` follows the inode and would go silent after an editor saves by renaming a
-temporary file over the original. On Linux a plain watch on the same target is opened before each recursive one and
+filtered to that name (the configuration's real path, so a symbolic link is followed to the file it names),
+because `fs.watch` follows the inode and would go silent after an editor saves by renaming a temporary file over
+the original. On Linux a plain watch on the same target is opened before each recursive one and
 kept with it: with no inotify instance left, Node 22 returns a recursive watch that reports nothing and no error,
 and only the plain one throws (EMFILE, #215). It is not redundant, and removing it brings back a watch that
 silently does nothing.
