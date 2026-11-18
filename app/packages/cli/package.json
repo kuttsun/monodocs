@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@monodocs/core": "workspace:*",
-    "commander": "^15.0.0"
+    "commander": "^15.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.5"
