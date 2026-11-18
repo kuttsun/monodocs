@@ -396,7 +396,10 @@ than under `pdf`.
 
 ## Security Boundaries
 
-`monodocs` converts trusted documents managed by the user or the user's team.
+`monodocs` converts trusted documents managed by the user or the user's team, and its configuration is
+trusted the same way: a `sources.include` or `sources.exclude` pattern is compiled into a regular expression,
+and one written to be slow can slow the build. Extended globs, the path of an unpatched picomatch advisory, are
+off ([development.md](development.md)).
 
 - Markdown raw HTML is discarded by the default remark-rehype path. The one exception is the page-break marker
   (`<div class="page-break"></div>` and its `style="page-break-after: always"` spelling, in the quoting and

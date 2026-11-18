@@ -24,11 +24,21 @@ export type ScanOptions = {
  * entering when it is on the same branch as one of those prefixes.
  */
 function makeDirectoryFilter(include: string[]): (relativeDir: string) => boolean {
-  const bases = include.map((pattern) => picomatch.scan(pattern).base);
+  // An author's escape (`docs/\\(old\\)`) stays in the base `picomatch.scan` gives; the directory
+  // it names is the one without it.
+  const bases = include.map((pattern) => picomatch.scan(pattern).base.replace(/\\(.)/g, "$1"));
   // A pattern with no static prefix can match at any depth, so nothing can be pruned.
   if (bases.some((base) => base === "")) return () => true;
   return (dir) =>
     bases.some((base) => base === dir || base.startsWith(`${dir}/`) || dir.startsWith(`${base}/`));
+}
+
+/**
+ * `pattern` with `(`, `)`, and `+` escaped. A character the author already escaped is left alone; a
+ * backslash escaped itself (`\\\\(`) protects nothing, so the `(` after it is escaped too.
+ */
+export function literalGroups(pattern: string): string {
+  return pattern.replace(/\\[\s\S]|[()+]/g, (found) => (found.length === 2 ? found : `\\${found}`));
 }
 
 /**
@@ -44,13 +54,17 @@ export async function scanSourceFiles(
   options: ScanOptions,
 ): Promise<SourceFile[]> {
   const include = options.include ?? [];
-  // Extended globs (`+(…)`, `@(…)`) are off: monodocs never documented them, and picomatch's parser
-  // backtracks exponentially on some of them (GHSA-fc5q-39xc-vjpf, unpatched in 4.0.7), which a
-  // pattern in the configuration could reach. With them off the parser never takes that path.
+  // Extended globs are off: picomatch compiles one such as `+(*a)` into a regular expression that
+  // backtracks exponentially on a crafted path (GHSA-fc5q-39xc-vjpf, unpatched in 4.0.7), and
+  // monodocs never documented them. `(`, `)`, and `+` are matched as the characters they are, as a
+  // file name such as `notes (old).md` needs, which also keeps a group written plainly from taking a
+  // `+`. Braces still expand (`*.{md,adoc}`). This closes the advisory's path, not every slow glob:
+  // a long run of stars is slow too, and the configuration is trusted input, as the documents are
+  // (docs/architecture.md, Security Boundaries).
   const glob = { dot: true, noextglob: true };
-  const isIncluded = include.length > 0 ? picomatch(include, glob) : undefined;
+  const isIncluded = include.length > 0 ? picomatch(include.map(literalGroups), glob) : undefined;
   const mayHoldMatch = include.length > 0 ? makeDirectoryFilter(include) : undefined;
-  const isExcluded = picomatch(options.exclude, glob);
+  const isExcluded = picomatch(options.exclude.map(literalGroups), glob);
   const files: SourceFile[] = [];
 
   async function walk(dir: string): Promise<void> {

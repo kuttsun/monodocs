@@ -203,7 +203,7 @@ v0.10 からは、文書が必要とするものとそのマシンが描ける�
 
 ## セキュリティ境界
 
-`monodocs` は利用者または利用者のチームが管理する、信頼できる文書を変換するものです。
+`monodocs` は利用者または利用者のチームが管理する、信頼できる文書を変換するものです。設定も同じく信頼できる入力として扱います。`sources.include` や `sources.exclude` のパターンは正規表現に変換されるので、遅くなるように書いたパターンはビルドを遅くしえます。修正版の無い picomatch の advisory の経路である拡張 glob は切っています（[development.md](development.md)）。
 
 - Markdown の raw HTML は既定の remark-rehype 経路で破棄します。例外は改ページマーカー（`<div class="page-break"></div>` と、その `style="page-break-after: always"` 綴り。引用符と ASCII 空白の揺れは設定リファレンスに列挙）だけで、この経路より前に mdast の `html` ノードで一致させ、core が組み立てた要素（`div` ひとつ、クラスひとつ、子は無し）に置き換えます。入力から出力へ届くものは無いので、境界に開いた穴ではなく、認識されたマーカーです。
 - AsciiDoc passthrough は未サニタイズの raw HTML を出力できるため、信頼できない AsciiDoc を変換すると XSS の原因になります。

@@ -57,13 +57,19 @@ published bundle.
 
 `app/pnpm-workspace.yaml` lists GHSA-fc5q-39xc-vjpf under `auditConfig.ignoreGhsas`, so `pnpm audit` does
 not fail on it. It is a high-severity picomatch advisory with no patched version (4.0.7, the latest, is
-affected): its parser backtracks exponentially on single-branch repeated extended globs such as `+(*a)`,
-which can block the build. monodocs calls picomatch only on `sources.include` and `sources.exclude`, written
-by the configuration's author, and passes `noextglob: true` (`app/packages/core/src/scan.ts`), so extended
-globs are read as literal characters and the vulnerable parse is never reached; monodocs never documented
-them. The other copies are under `vite` and `vitest`, which do not ship. Remove the entry when a patched
-picomatch is published and the lockfile resolves it; `noextglob` can stay, since extended globs were never a
-surface. Last checked 2026-11-18: picomatch 4.0.7 is the latest.
+affected): a single-branch repeated extended glob such as `+(*a)` compiles to a regular expression that
+backtracks exponentially on a crafted path, which can block the build. monodocs calls picomatch only on
+`sources.include` and `sources.exclude` (`app/packages/core/src/scan.ts`), with extended globs off, so the
+advisory's path is not reached; monodocs never documented extended globs. It also matches `(`, `)`, and `+`
+as the characters they are, so a name such as `notes (old).md` can be written as it is and a group written
+plainly cannot take a `+`. That closes the advisory's path, not every slow glob: a long run of stars, for
+one, is slow too. The configuration is trusted input, written by whoever runs the build, as the documents
+are ([architecture.md](architecture.md), Security Boundaries); monodocs does not defend against its own
+configuration. The other copies are under `vite` and `vitest`, which do not ship. `site/` resolves its own
+copy under `vite` too, the documentation site's build tool, which does not ship either: npm has no ignore
+list, so the site's audit runs [`scripts/audit-site.mjs`](../scripts/audit-site.mjs), which sets the advisory
+aside in `IGNORED`. Remove both entries when a patched picomatch is published and the lockfiles resolve it; the escaping stays, since groups and extended
+globs were never a surface. Last checked 2026-11-18: picomatch 4.0.7 is the latest.
 
 ### Release-Age Policy for Dependencies
 
