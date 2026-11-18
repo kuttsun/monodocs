@@ -8,20 +8,25 @@
 
 各ソース形式を専用レンダラーで処理し、共通の `Page` モデルへ正規化してから出力します。Markdown と AsciiDoc を共通レンダラーへ通してはいけません。共通型は [`app/packages/core/src/types.ts`](../../app/packages/core/src/types.ts) にあります。
 
-中心となる [`build.ts`](../../app/packages/core/src/build.ts) の `preparePages()` は `buildSite` と `validateSite` で共有され、次の順序で処理します。
+中心となる [`build.ts`](../../app/packages/core/src/build.ts) の `preparePages()` は `buildSite` と `validateSite` で共有され、どちらも先に設定を読み込んでから、次の順序で処理します。
 
 ```text
-loadConfig (config.ts)
-  -> scanSourceFiles (scan.ts)           入力走査、形式判定、除外
-  -> buildPages (pipeline/buildPages.ts) 各 SourceRenderer で Page[] へ正規化
-  -> buildSidebar (pipeline/buildSidebar.ts)
-                                         ディレクトリ構造からサイドバーを生成
+loadConfig (config.ts)                   buildSite / validateSite の中
+  -> preparePages (build.ts)
+     -> scanSourceFiles (scan.ts)        入力走査、形式判定、除外
+                                         （単一ファイルの入力は代わりに readSourceFile で読む）
+     -> buildPages (pipeline/buildPages.ts)
+                                         各 SourceRenderer で Page[] へ正規化
+     -> buildSidebar / buildCustomSidebar (pipeline/buildSidebar.ts)
+                                         ディレクトリ構造から、sidebar.mode: "custom" では
+                                         sidebar.items からサイドバーを生成
                                          （numbering.sections のとき numberSidebar が番号を付ける）
-  -> postprocessPages (pipeline/postprocess.ts)
+     -> postprocessPages (pipeline/postprocess.ts)
                                          リンク、画像、Mermaid、Shiki、見出し番号を HAST 上で処理
-  -> renderSingleHtml (pipeline/renderSingleHtml.ts)
+buildSite のみ:
+  -> renderSingleHtmlParts (pipeline/renderSingleHtml.ts)
                                          テンプレートへ内容を注入
-  -> writeOutput (build.ts)
+  -> HTML を書き出し（html / both）、組んだ HTML から PDF を印刷 (pdf / both, pipeline/renderPdf.ts)
 ```
 
 形式別レンダラーは [`sources/markdown/renderer.ts`](../../app/packages/core/src/sources/markdown/renderer.ts) と [`sources/asciidoc/renderer.ts`](../../app/packages/core/src/sources/asciidoc/renderer.ts) で、どちらも `SourceRenderer`（`extractMeta` と `render`）を実装します。frontmatter と `:sd-*:` 属性は [`sources/meta.ts`](../../app/packages/core/src/sources/meta.ts) で `PageMeta` へ正規化します。
@@ -32,7 +37,7 @@ loadConfig (config.ts)
 - コードから推測した言語を読み込むショートハンドではなく、ハイライターのインスタンスを通してハイライトする。
 - 同じ位置に一致する差し込みは登録順に試される（Vue と Angular はどちらも `{{` に一致する）ので、競合しうる差し込みの文法は、いずれかが初めて必要になった時点で、まとめて決まった順序で登録する。
 
-`sources.lineBreak` は、共通のヘルパー（[`sources/lineBreak.ts`](../../app/packages/core/src/sources/lineBreak.ts)）を通して各レンダラーの中で適用し、`prefixIdsAndCollect` がページのテキストを集める前に済ませます。
+`sources.lineBreak` は各レンダラーの中で適用し、`prefixIdsAndCollect` がページのテキストを集める前に済ませます。`join` は [`sources/lineBreak.ts`](../../app/packages/core/src/sources/lineBreak.ts) の共通の `joinSegmentBreaks` を各レンダラーの HAST に適用します。`break` は形式ごとに異なり、Markdown は同じファイルの remark プラグイン（`remarkSoftBreaksToBreaks`）を使い、AsciiDoc は Asciidoctor の `hardbreaks-option` 属性を設定します（文書自身の `:hardbreaks-option!:` がそれに優先します）。
 
 > [!WARNING]
 > `sources.lineBreak` を `postprocessPages` へ移してはいけません。`postprocessPages` は `page.html` を再パースしますが `page.text` は再計算しないので、検索インデックスが HTML と食い違います。
@@ -57,7 +62,7 @@ loadConfig (config.ts)
 
 - 拡張子を除いた相対パスからルートを作り、`index` は `/` へ割り当てます。
 - 疑似ページ遷移には `#/setup/install` のような hash route を使います。
-- `href` には `encodeURI` 済みの値、`data-route` には生のルートを保存します。クライアントは照合前に `decodeURI` し、日本語や空白を扱います。
+- `href` に書くルートは、サイドバーの項目、本文中の書き換えたリンク、変更の一覧、`app.js` と差分のスクリプトが書くリンクのいずれも `encodeURI` を通します。サイドバーの項目は `data-route` にも生のルートを持ちます。クライアントは照合前に hash を `decodeURI` するので、日本語、空白、`%` を含むルートもそれぞれのページに着地します。
 - `.md`、`.adoc`、`.html` 相当のリンクと AsciiDoc xref を hash route へ変換します。
 - `file.md#heading` のような別ファイルの見出しリンクは、対象ページの接頭辞付き要素 ID（`{page-id}-heading`）へ書き換え、HTML でも PDF でも見出しに着地させます。対象にそのアンカーが無い場合は、そのページの先頭へ落として警告します。同一ページのアンカーは維持します。
 
@@ -85,8 +90,8 @@ Mermaid は `client` と `pre-render` の二つのモードを持ちます。
 
 pre-render の次の不変条件を守ってください。
 
-- SVG はソース ID の接頭辞付与後に挿入します。ビルド全体で一意かつ単調増加する ASCII-safe な `mermaid-{n}` ID を割り当て、`page.id` から導出してはいけません。
-- 図が存在し、Mermaid が有効で、モードが `client` の場合だけランタイムを注入します。
+- SVG はソース ID の接頭辞付与後に挿入します。`postprocessPages` の呼び出しごとに 0 から数えるカウンタで、単調増加する ASCII-safe な `mermaid-{n}` ID を割り当て、`page.id` から導出してはいけません。差分のあるビルドは以前の版を別の呼び出しで処理するので、その図は代わりに接頭辞 `mermaid-earlier-`（`EARLIER_MERMAID_ID_PREFIX`）を使います。
+- モードが `client` で、表示する図がある場合だけランタイムを注入します。新しい版に図があって Mermaid が有効な場合のほか、差分のあるビルドで以前の版の列が図を表示する場合も含みます（新しい版に図が無い、または Mermaid が無効でも）。
 - Chromium や `puppeteer-core` の欠落、ブラウザ起動失敗はセットアップエラーとしてビルドを失敗させます。個別の図の構文エラーは警告し、その図だけソース `<pre>` へ置き換えます。
 - ブラウザは遅延生成し、`finally` で閉じます。図がなければ Chromium を起動しません。
 - `validateSite` は Mermaid を client mode に上書きし、ブラウザを必要としません。
@@ -104,11 +109,13 @@ pre-render の次の不変条件を守ってください。
 [`themes/default/`](../../app/packages/core/src/themes/default/) は `template.html`、`style.css`、`app.js` を含みます。`renderSingleHtml` は次のトークンを置換します。
 
 ```text
-{{htmlAttrs}} {{bodyAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
+{{lang}} {{htmlAttrs}} {{bodyAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
 {{contentWidthTogglePressed}} {{contentWidthToggleTitle}}
-{{#contentWidthToggle}}...{{/contentWidthToggle}}
-{{generatorVersion}} {{generatorAttrs}}
+{{label<Key>}}（ラベルのキーごとに 1 つ。例: {{labelSearchPlaceholder}}）
+{{documentMeta}} {{generatorVersion}} {{generatorAttrs}}
+{{#contentWidthToggle}}...{{/contentWidthToggle}} {{#imageLightbox}}...{{/imageLightbox}}
+{{#documentFooter}}...{{/documentFooter}} {{#documentMeta}}...{{/documentMeta}}
 {{#branding}}...{{/branding}} {{#generatorVersion}}...{{/generatorVersion}}
 ```
 
@@ -125,11 +132,11 @@ pre-render の次の不変条件を守ってください。
   - `sidebar.mode: "custom"` はフォルダ構造ではなく `sidebar.items` からサイドバーを組み立て、その並びが閲覧順（前後ナビ、PDF のページ順、初期表示ページ）になります。ページに解決できないパスはエラー、未掲載・`hidden`・重複は警告で、ページ自体は削除せず route で到達できます。フォルダ由来の `sidebar.titleTransform.directory` と `sidebar.flattenSingleChild` はこのモードでは適用しません。
   - サイドバーのタイトルとツール列（検索・本文幅・ダークモード）はその場に留め、目次（および目次と入れ替わる検索結果）だけをスクロールさせます。目次が長くても検索欄を画面外へ送り出してはいけません。ただし到達可能性が優先で、列が収まらないほど画面が低いときは、目次を潰さずサイドバー全体のスクロールに戻します。
   - 768px 以下ではサイドバーを既定で閉じたオーバーレイのドロワーにし、本文から読み始められるようにします。ドロワーで文書に横スクロールを生じさせないこと。広い画面ではサイドバーは常設で、外側クリックや `Escape` で閉じてはいけません。ドロワーの中からページを開いたときは、ポインタでもキーボードでもドロワーを閉じます（閉じないと開いたページが陰に隠れます）。ドロワーを閉じるときは、読者が続けられる場所へフォーカスを置き、隠れたドロワーの中にも body にも残しません。
-- **検索ショートカット**：`/` と `Ctrl+K` / `⌘K` は、文書のどこからでも検索欄へフォーカスを移し、サイドバーが閉じていれば先に開きます（そうしないとショートカットが黙って無反応になります）。入力中の読者や IME の変換中からキーを奪ってはいけません。例外は編集操作の意味を持たない `⌘K` だけです。`Ctrl+K` は macOS では行末まで削除する操作です。
+- **検索ショートカット**：`/` と `Ctrl+K` / `⌘K` は、文書のどこからでも検索欄へフォーカスを移し、サイドバーが閉じていれば先に開きます（そうしないとショートカットが黙って無反応になります）。IME の変換中と、ダイアログ（lightbox など `dialog[open]`）が開いている間は、どのキーも奪いません。編集できる要素で入力中の読者からは `/` と `Ctrl+K` を奪いません。`⌘K` は編集操作の意味を持たないので奪いますが、`Ctrl+K` は macOS では行末まで削除する操作です。
 - **検索のクリアボタン**：テーマ自身のものを検索欄の中に置き、その横にブラウザ自身の × を描かせません。欄に語があるあいだだけ表示し、`Escape` と同じものを消し、フォーカスは欄に、狭い画面のドロワーは開いたままに残します。ボタンの無いテンプレートでも検索は働き、`app.js` はボタンが無いことに備えます。ブラウザ自身の × を隠す規則はボタンがあるところ（`app.js` がボタンを見つけたときに付ける `.search-field.has-clear`）だけに効くので、そのようなテンプレートはその × を保ちます。
 - `toc.maxLevel` は埋め込む見出しを h2 から設定レベル（2〜6、既定 3）までに絞りますが、本文は削除しません。
 - `html.colorScheme` はライト・ダーク・自動の初期配色を決めます。保存済みの `monodocs:theme` が優先されます。
-- **本文幅**：トグルは、読みやすい既定の最大幅と利用可能な横幅いっぱいを切り替えます。読者の選択は `monodocs:content-width` に保存し、印刷・PDF レイアウトには影響させません。`html.contentWidthDefault` は、読者の選択が保存されるまでの状態を `standard` / `wide` から選びます。`html.contentWidthToggle: false` ではボタンを出力せず、保存済みの選択も適用しません。
+- **本文幅**：トグルは、読みやすい既定の最大幅と利用可能な横幅いっぱいを切り替えます。読者の選択は `monodocs:content-width` に保存し、印刷・PDF レイアウトには影響させません。`html.contentWidthDefault` は、読者の選択が保存されるまでの状態を `standard` / `wide` から選びます。`html.contentWidthToggle: false` ではボタンを出力せず、保存済みの選択も `contentWidthDefault` も適用しないので、文書は標準の幅で開きます。
 - **画像ライトボックス**：`html.imageLightbox`（既定で有効）は、リンクのない装飾目的以外の本文画像を、キーボードでも操作できるダイアログで拡大表示します。
   - リンクまたはボタン内の画像は親要素の操作を維持し、`alt` が明示的に空の画像は装飾画像のままです。印刷および PDF 出力にはダイアログを表示しません。
   - ラスター画像は拡大するとぼやけるため、収まるように縮めるだけです。SVG 画像（パスが `.svg` で終わるもの、または `data:image/svg+xml` の URI）は、`width` と `height` が与える大きさで止めず、図と同じく縦横比を保ってダイアログいっぱいまで拡大します。
@@ -160,8 +167,8 @@ pre-render の次の不変条件を守ってください。
   - 帯は Chromium 自身のクラスで値が差し込まれる HTML フラグメントで、monodocs のテンプレート言語ではありません。数字と区切りだけにして翻訳が要らない形にします。
   - 帯を出さないときは空のフラグメントを明示すること。`displayHeaderFooter` を有効にしたまま何も渡さないと、Chromium 組み込みの日付＋タイトルのヘッダになります。
   - 下余白が既定フッタに足りないときは警告します。しきい値はそのフラグメントを測って決めます。置き換えフラグメントは判定しません（任意の HTML が収まるかは余白の値からは分からないため）。
-- **PDF メタデータ**：生成した PDF には、文書タイトルと `monodocs v<version>`（Creator / Producer）を記録します。pdf-lib は保存のたびに Producer を書き戻すため、この処理はしおり付与の後に実行します。
-- **ブランディング**：`html.branding` は、HTML と PDF の末尾にフッターを既定で表示します。CLI は実行時にパッケージのバージョンを渡し、レンダラーはその値をエスケープし、値がなければバージョン部分だけを省略します。`html.branding: false` ではフッター全体を出力しません。
+- **PDF メタデータ**：生成した PDF には、文書タイトルと `monodocs v<version>`（Creator / Producer。バージョンが分からないときは `monodocs` だけ）を記録します。`document` からは、Author に著者、Subject に版と日付、Keywords に書かれたままの版と日付を入れ、書くことの無い項目は入れません。pdf-lib は保存のたびに Producer を書き戻すため、この処理はしおり付与の後に実行します。
+- **ブランディング**：`html.branding` は、HTML と PDF の末尾にフッターを既定で表示します。CLI は実行時にパッケージのバージョンを渡し、レンダラーはその値をエスケープし、値がなければバージョン部分だけを省略します。`html.branding: false` では monodocs の行を出力しません。文書自身の行（`document.version`、`date`、`authors`）があるときは、`{{#documentFooter}}` と `{{#documentMeta}}` を通してフッター自体は残ります。
 
 既定テーマは意図的に中立で、[`site/`](../../site/) のドキュメントサイトのデザインには揃えません。サイトは monodocs を売り込むものですが、出力は文書を書いた人を表すものだからです。中立であることは、このディレクトリを差し替える `html.theme` の出発点としても適切です。同じ理由に加え、単一ファイルは外部を参照できない（webfont は全成果物へインライン埋め込みするしかない）ため、テーマは webfont を埋め込まず、システムフォントスタックを使います。サイトとの違いは、直すべき不整合ではなく決定として扱ってください。
 
@@ -172,7 +179,7 @@ pre-render の次の不変条件を守ってください。
 
 ## Watch と Serve
 
-[`watch.ts`](../../app/packages/core/src/watch.ts) は `fs.watch`（対応環境では recursive mode）と debounce を使います。ソースと設定の入力を監視し、出力ファイルの書き込みを無視して再ビルドループを避け、入力パスがなければ拒否します。単一ファイルの入力は、それを含むディレクトリをその名前だけに絞って監視します。`fs.watch` は inode を追うため、ファイル自身を監視すると、エディタが一時ファイルを元の名前へ rename して保存した後は何も届かなくなるからです。Linux では、再帰する監視のそれぞれの前に、同じ対象を再帰せずに監視するものを開いて一緒に保ちます。inotify のインスタンスが残っていないとき、Node 22 は何も知らせずエラーも出さない再帰の監視を返し、例外（EMFILE）を投げるのは再帰しないほうだけだからです（#215）。冗長ではなく、取り除くと、黙って何もしない監視に戻ります。
+[`watch.ts`](../../app/packages/core/src/watch.ts) は `fs.watch`（対応環境では recursive mode）と debounce を使います。ソースと設定の入力を監視し、出力ファイルの書き込みを無視して再ビルドループを避け、入力パスがなければ拒否します。単一ファイルの入力と設定ファイルは、それぞれを含むディレクトリをその名前だけに絞って監視します（設定ファイルは実パスで監視し、シンボリックリンクはその指す先のファイルを追います）。`fs.watch` は inode を追うため、ファイル自身を監視すると、エディタが一時ファイルを元の名前へ rename して保存した後は何も届かなくなるからです。Linux では、再帰する監視のそれぞれの前に、同じ対象を再帰せずに監視するものを開いて一緒に保ちます。inotify のインスタンスが残っていないとき、Node 22 は何も知らせずエラーも出さない再帰の監視を返し、例外（EMFILE）を投げるのは再帰しないほうだけだからです（#215）。冗長ではなく、取り除くと、黙って何もしない監視に戻ります。
 
 [`serve.ts`](../../app/packages/core/src/serve.ts) は Node.js API で HTTP 配信、`watchSite`、SSE live reload を提供します。明確な移植性要件がない限り、監視用の依存を増やしません。
 
@@ -181,7 +188,7 @@ pre-render の次の不変条件を守ってください。
 [`pipeline/outputSize.ts`](../../app/packages/core/src/pipeline/outputSize.ts) は、各出力を書き出したあとに報告します（roadmap 20.5）。
 
 - 合計はビルド中に積算せず、ディスクから読みます。
-- HTML の内訳の各部分（埋め込んだ各画像の data URI、inline の Mermaid ランタイム、`siteDataJson`）は完成したテキストの中から探し、`document` は残りとするので、内訳の合計は必ずファイルと一致します。
+- HTML の内訳の各部分（埋め込んだ各画像の data URI、inline の Mermaid ランタイム、`siteDataJson`）は完成したテキストの中から探し、`document` は残りとするので、内訳の合計は必ずファイルと一致します。差分があるときは、同じ残りを差分なしで描いた文書でも測り、`document` はその基準の値、`difference` はこのファイルの残りがそれを超える分とします。
 - `assets.budget` は HTML と PDF の各出力を測った直後に確かめます。そのため `onBudget: error` で HTML が予算を超えると、PDF を作る前に失敗します。失敗したビルドは結果を返さないので、エラーに大きさの報告を含めます。
 - `watch`（とその上で動く `serve`）は `onBudget: "warn"` を渡します。
 
@@ -194,7 +201,7 @@ PDF は Chromium の印刷レイアウトで単一 HTML を展開します。次
 - Unicode のページ ID でも PDF outline が安定するよう、しおりの宛先には ASCII 代替 ID を使います。
 - PDF に必要な画像は、HTML の画像埋め込みが無効でも可能な限り埋め込みます。
 - ブラウザのセットアップ失敗は即座に失敗させ、文書固有の描画失敗と区別します。
-- 印刷する目次（`pdf.toc`、[`pipeline/pdfToc.ts`](../../app/packages/core/src/pipeline/pdfToc.ts)）は PDF の中にだけあります。フォント検査の前にページへ差し込み、各行き先に ASCII のアンカー（`mdtoc-{n}`）を置き、ページ番号は印刷結果のカタログ `/Dests` から読みます。返すのは、宛先が自分の印刷した番号と一致した印刷だけで、決まった回数の印刷で定まらない文書は失敗させます。番号の欄は固定幅にして、番号を入れても行が折り返し直さないようにします。
+- 印刷する目次（`pdf.toc`、[`pipeline/pdfToc.ts`](../../app/packages/core/src/pipeline/pdfToc.ts)）は PDF の中にだけあります。フォント検査の前にページへ差し込み、各行き先に ASCII のアンカー（`mdtoc-{n}`）を置きます。文書の ID に `mdtoc-` で始まるものがあれば、`mdtoc1-`、`mdtoc2-` と順に試し、どの ID も始まらない最初の接頭辞を代わりに使います。ページ番号は印刷結果のカタログ `/Dests` から読みます。返すのは、宛先が自分の印刷した番号と一致した印刷だけで、決まった回数の印刷で定まらない文書は失敗させます。番号の欄は固定幅にして、番号を入れても行が折り返し直さないようにします。
 
 v0.10 からは、文書が必要とするものとそのマシンが描けるものの差をビルドが実測して報告します（`fontCheck`、既定 `warn`）。測るのは、PDF 出力でも Mermaid pre-render でも、そのためにすでに開いているブラウザの中です。後者はビルドマシンのフォントを SVG に焼き込むため、この設定は `pdf` の下ではなくトップレベルにあります。
 
