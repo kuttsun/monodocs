@@ -193,4 +193,45 @@ describe("a single file as the input", () => {
       handle.close();
     }
   }, 15000);
+
+  it("keeps watching the configuration across an editor's save-by-rename", async () => {
+    // The configuration sits outside the input, so only its own watch can see it change.
+    const docs = join(dir, "docs");
+    await mkdir(docs, { recursive: true });
+    await writeFile(join(docs, "index.md"), "# Index\n");
+    const config = join(dir, "monodocs.config.yml");
+    await writeFile(config, "title: First\n");
+    const out = join(dir, "dist", "docs.html");
+
+    let resolveNext: (() => void) | null = null;
+    const nextRebuild = () =>
+      new Promise<void>((res) => {
+        resolveNext = res;
+      });
+    const handle = await watchSite(
+      { inputDir: docs, configFile: config, outputFile: out },
+      {
+        onRebuild: () => {
+          const r = resolveNext;
+          resolveNext = null;
+          r?.();
+        },
+      },
+    );
+    try {
+      // Saved by writing a temporary file and renaming it over the configuration.
+      let next = nextRebuild();
+      await writeFile(join(dir, "monodocs.config.yml.tmp"), "title: Second\n");
+      await rename(join(dir, "monodocs.config.yml.tmp"), config);
+      await next;
+      expect(await readFile(out, "utf8")).toContain("<title>Second");
+      // And edited in place after that: a watch bound to the replaced inode would miss it.
+      next = nextRebuild();
+      await writeFile(config, "title: Third\n");
+      await next;
+      expect(await readFile(out, "utf8")).toContain("<title>Third");
+    } finally {
+      handle.close();
+    }
+  }, 15000);
 });

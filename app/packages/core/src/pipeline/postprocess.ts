@@ -1041,12 +1041,15 @@ function resolveHref(
 
   // `other.md#` のように空のアンカーはページ先頭リンクとして扱う（警告しない）。
   const fragment = hashIdx === -1 ? "" : href.slice(hashIdx + 1);
-  if (!fragment) return { href: `#${target.route}` };
+  // href は encodeURI する（サイドバーと同じ）。クライアントは decodeURI してから route と比べるため、
+  // `a%20b.md` のように `%` を含む route を生のまま書くと別のページ（`a b`）に解ける。
+  const routeHref = `#${encodeURI(target.route)}`;
+  if (!fragment) return { href: routeHref };
 
   const anchorId = `${target.idPrefix}-${safeDecodeUri(fragment) ?? fragment}`;
   if (target.anchors.has(anchorId)) return { href: `#${anchorId}` };
   // 解決できないアンカーは従来どおりページ先頭へ落とし、警告で気づけるようにする。
-  return { href: `#${target.route}`, unresolvedAnchor: fragment };
+  return { href: routeHref, unresolvedAnchor: fragment };
 }
 
 function rewriteLinks(
