@@ -155,6 +155,8 @@ Smart App Control は、それを有効にした Windows 11 ホストでは端�
    対象に加える。出荷される脆弱なコピーが依存の解決で変わらない場合（パッケージのバンドルにビルド済みで
    入っているコード）は、override は監査を黙らせるだけで出荷物を何も変えない。代わりに advisory を
    `auditConfig.ignoreGhsas` に挙げ、理由と削除条件を [development.md](development.md) に書き、同じ
-   棚卸しの対象に加える。
+   棚卸しの対象に加える。修正版が無く、出荷するものが脆弱な経路に届かない場合も同じにする。`site/` は
+   npm を使い、この一覧が無いので、代わりにサイトの監査が実行する
+   [`scripts/audit-site.mjs`](../../scripts/audit-site.mjs) の `IGNORED` に advisory を加える。
 5. 修正は現行系列の新しい patch としてリリースする。公開済みバージョンを作り直さず、旧版へ
    バックポートもしない（[SECURITY.ja.md](../../SECURITY.ja.md)）。
