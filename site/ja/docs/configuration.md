@@ -590,7 +590,7 @@ figures:
 | ----------------- | ---------------------- | -------- | --------------------------------------------------------------- |
 | `mermaid.enabled` | boolean                | `true`   | Mermaid コードブロックを図としてレンダリングする。              |
 | `mermaid.mode`    | `client` `pre-render`  | `client` | `client` はブラウザで mermaid ランタイムを実行（`runtime` で配給方法を選ぶ）。`pre-render` はビルド時にヘッドレス Chromium で各図を SVG 化して埋め込む（JS 不要・印刷安定・図が少数なら `inline` より小さい）。 |
-| `mermaid.runtime` | `inline` `cdn`         | `inline` | **client mode 専用。** `inline`（既定）は mermaid ランタイムを HTML に埋め込み**完全オフラインで自己完結**（図があると、第三者表記を含め約 5.4MB、gzip で約 1.5MB 増）。`cdn` は CDN から読み込み HTML は最小だが**表示にネット接続が必要**。 |
+| `mermaid.runtime` | `inline` `cdn`         | `inline` | **client mode 専用。** `inline`（既定）は mermaid ランタイムを HTML に埋め込み**完全オフラインで自己完結**（図があると、第三者表記を含め約 5.7MB、gzip で約 1.6MB 増。1024 単位で数えるサイズの報告では 5.4 MB と出ます）。`cdn` は CDN から読み込み HTML は最小だが**表示にネット接続が必要**。 |
 
 #### `client` と `pre-render` の比較
 
@@ -600,7 +600,7 @@ figures:
 | ----------------------- | ---------------------------------------- | ---------------------------------------------- |
 | 自己完結                | cdn = 要ネット / inline = 自己完結       | 自己完結（SVG を埋め込み）                      |
 | JavaScript              | 必要                                     | 不要                                           |
-| 追加サイズ              | cdn ≈ 0 / inline ≈ 5.4MB（gzip で 1.5MB）固定 | 図の数に比例（1 図あたり数 KB）                |
+| 追加サイズ              | cdn ≈ 0 / inline ≈ 5.7MB（gzip で 1.6MB）固定 | 図の数に比例（1 図あたり数 KB）                |
 | ダーク配色              | 追従しない（mermaid 既定テーマで固定。ダークモードでは白い下地に載せる） | `html.colorScheme` で固定（`dark`→`redux-dark-color` / 他→mermaid の既定） |
 | フォント                | 読者のブラウザ・フォントで描画           | **ビルド環境のフォントで計測・焼き込み**       |
 | 対話機能（`click` 等）  | 有効                                     | 無効（静的 SVG）                               |

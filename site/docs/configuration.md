@@ -648,7 +648,7 @@ every save.
 | ----------------- | --------------------- | -------- | ------------------------------------------------------------------------ |
 | `mermaid.enabled` | boolean               | `true`   | Render Mermaid code blocks as diagrams.                                   |
 | `mermaid.mode`    | `client` `pre-render` | `client` | `client` runs the mermaid runtime in the browser (see `runtime`). `pre-render` rasterizes each diagram to inline SVG at build time via headless Chromium (no JS, print-stable, smaller than `inline` for a handful of diagrams). |
-| `mermaid.runtime` | `inline` `cdn`        | `inline` | **client mode only.** `inline` (default) embeds the mermaid runtime in the HTML for a **fully self-contained, offline** file (adds about 5.4 MB, about 1.5 MB gzipped, when diagrams exist, its third-party notices included). `cdn` loads it from a CDN, keeping the HTML tiny but **requiring network access to display**. |
+| `mermaid.runtime` | `inline` `cdn`        | `inline` | **client mode only.** `inline` (default) embeds the mermaid runtime in the HTML for a **fully self-contained, offline** file (adds about 5.7 MB, about 1.6 MB gzipped, when diagrams exist, its third-party notices included; the size report, counting in 1024s, prints it as 5.4 MB). `cdn` loads it from a CDN, keeping the HTML tiny but **requiring network access to display**. |
 
 #### `client` vs `pre-render`
 
@@ -658,7 +658,7 @@ Both render with the same mermaid engine, so a given diagram's shape and layout 
 | ----------------------- | ---------------------------------------- | ---------------------------------------------- |
 | Self-contained          | cdn = needs network / inline = yes       | Yes (SVG embedded)                             |
 | JavaScript              | Required                                 | Not required                                   |
-| Added size              | cdn ≈ 0 / inline ≈ 5.4MB (1.5MB gzip) fixed | Proportional to diagram count (a few KB each)  |
+| Added size              | cdn ≈ 0 / inline ≈ 5.7MB (1.6MB gzip) fixed | Proportional to diagram count (a few KB each)  |
 | Dark theme              | Does not follow it (mermaid default; on a white backing in dark mode) | Fixed via `html.colorScheme` (`dark`→`redux-dark-color`, else mermaid's default) |
 | Fonts                   | Reader's browser fonts                   | **Measured & baked with the build machine's fonts** |
 | Interactivity (`click`) | Works                                    | Disabled (static SVG)                          |

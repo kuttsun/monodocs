@@ -32,7 +32,7 @@ loadConfig (config.ts)                   in buildSite / validateSite
 buildSite only:
   -> renderSingleHtmlParts (pipeline/renderSingleHtml.ts)
                                          inject content into the template
-  -> write the HTML, then print the PDF from it (pipeline/renderPdf.ts)
+  -> write the HTML (html / both) and print the PDF from the rendered HTML (pdf / both, pipeline/renderPdf.ts)
 ```
 
 The renderers are [`sources/markdown/renderer.ts`](../app/packages/core/src/sources/markdown/renderer.ts) and

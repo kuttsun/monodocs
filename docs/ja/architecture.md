@@ -26,7 +26,7 @@ loadConfig (config.ts)                   buildSite / validateSite の中
 buildSite のみ:
   -> renderSingleHtmlParts (pipeline/renderSingleHtml.ts)
                                          テンプレートへ内容を注入
-  -> HTML を書き出し、そこから PDF を印刷 (pipeline/renderPdf.ts)
+  -> HTML を書き出し（html / both）、組んだ HTML から PDF を印刷 (pdf / both, pipeline/renderPdf.ts)
 ```
 
 形式別レンダラーは [`sources/markdown/renderer.ts`](../../app/packages/core/src/sources/markdown/renderer.ts) と [`sources/asciidoc/renderer.ts`](../../app/packages/core/src/sources/asciidoc/renderer.ts) で、どちらも `SourceRenderer`（`extractMeta` と `render`）を実装します。frontmatter と `:sd-*:` 属性は [`sources/meta.ts`](../../app/packages/core/src/sources/meta.ts) で `PageMeta` へ正規化します。

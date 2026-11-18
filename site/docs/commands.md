@@ -51,7 +51,7 @@ MONODOCS_LANG=ja monodocs build ./docs
 
 ## `init`
 
-Writes a configuration and a first page to start from. It is the one subcommand with no input argument and no config option.
+Writes a configuration and a first page to start from. Besides `help`, it is the one subcommand with no input argument and no config option.
 
 ```bash
 monodocs init
