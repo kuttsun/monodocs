@@ -1,6 +1,6 @@
 # コマンドオプション
 
-monodocs は 1 つの CLI に `init`・`build`・`watch`・`serve`・`validate` の 5 つのサブコマンドを持ちます。文書を読む 4 つは省略可能な入力引数と設定ファイルオプションを共有し、それぞれ固有のオプションを少し持ちます。`init` はそのどちらも取りません。
+monodocs は 1 つの CLI に `init`・`build`・`watch`・`serve`・`validate`・`help` の 6 つのサブコマンドを持ちます。文書を読む 4 つは省略可能な入力引数と設定ファイルオプションを共有し、それぞれ固有のオプションを少し持ちます。`init` はそのどちらも取りません。`help [command]` は、`<command> --help` と同じくコマンドのヘルプを表示します。
 
 ```bash
 monodocs <command> [input] [options]
@@ -22,6 +22,7 @@ monodocs <command> [input] [options]
 ```bash
 monodocs --help          # トップレベルのヘルプ（全コマンド一覧）
 monodocs build --help    # 個別コマンドのヘルプ
+monodocs help build      # 同じ
 ```
 
 ### メッセージの言語 {#message-language}
@@ -43,7 +44,7 @@ MONODOCS_LANG=ja monodocs build ./docs
 
 ## `init`
 
-出発点になる設定ファイルと最初のページを書き出します。入力引数も設定ファイルオプションも持たない唯一のサブコマンドです。
+出発点になる設定ファイルと最初のページを書き出します。`help` を除けば、入力引数も設定ファイルオプションも持たない唯一のサブコマンドです。
 
 ```bash
 monodocs init
@@ -76,7 +77,7 @@ monodocs build [input] [options]
 | 引数 / オプション       | 既定値                 | 説明                                                       |
 | ----------------------- | ---------------------- | ---------------------------------------------------------- |
 | `[input]`               | `./docs`               | 走査する入力ディレクトリ、または単一のソースファイル。      |
-| `-o, --output <file>`   | `./dist/docs.html`   | 出力ファイルパス。`output.path` を上書き。                 |
+| `-o, --output <path>`   | 形式による             | 出力先。`html` と `pdf` ではファイル、`both` ではディレクトリ。`output.path` を上書き。[下記](#output-path)を参照。 |
 | `-c, --config <file>`   | 自動検出               | 設定ファイル。`monodocs.config.yml` があれば使用。         |
 | `-f, --format <format>` | `html`                 | 出力形式: `html` \| `pdf` \| `both`。`output.format` を上書き。 |
 | `--diff-from <ref>` | — | git の ref で指定した以前の版との差分を HTML に書き込む。[下記](#difference)を参照。 |
@@ -96,7 +97,19 @@ monodocs build ./docs -c ./monodocs.config.yml
 monodocs build ./docs/plan.md --format pdf -o ./dist/plan.pdf
 ```
 
-成功すると生成ページ数と出力パスを表示します。警告（リンク切れ・タイトル欠落など）は表示されますがビルドは失敗しません。エラーで失敗させたいときは [`validate`](#validate) を、警告でも失敗させたいときは `validate --strict` を使います。唯一の例外は [`fontCheck: error`](/ja/docs/configuration#font-check) で、そのマシンにフォントが無い文字を成果物が抱えることになるビルドを止めます。
+### 出力先 {#output-path}
+
+`-o`（または `output.path`）が何を指すか、その既定値は、出力形式によって変わります。
+
+| 形式   | `-o` / `output.path` が指すもの | 既定値 |
+| ------ | ------------------------------- | ------ |
+| `html` | HTML ファイル | `./dist/docs.html` |
+| `pdf`  | PDF ファイル | `./dist/docs.pdf` |
+| `both` | ディレクトリ。その中に `docs.html` と `docs.pdf` を書き出す | `./dist` |
+
+`both` では、`dist/v1.0` のように名前にドットを含むものも含め、パスを常にディレクトリとして読みます。`-o ./dist/docs.html` なら `./dist/docs.html/docs.html` と `./dist/docs.html/docs.pdf` を書き出します。
+
+成功すると生成ページ数と出力パスを表示します。警告（リンク切れ・タイトル欠落など）は表示されますがビルドは失敗しません。エラー（入力が無い、2 つのページが同じ route になる、など）はビルドを終了コード `1` で止めます。ふだんは警告で済む検出をビルドを止めるエラーにする設定が 3 つあります。そのマシンにフォントが無い文字に対する [`fontCheck: error`](/ja/docs/configuration#font-check)、`assets.maxInlineSize` を超える画像に対する [`assets.onLargeImage: error`](/ja/docs/configuration#assets)、`assets.budget` を超える出力に対する [`assets.onBudget: error`](/ja/docs/configuration#assets) です。出力を書き出さずに検査するには [`validate`](#validate) を使います。`validate --strict` は警告でも失敗します。
 
 ### 以前の版との差分 {#difference}
 
@@ -141,10 +154,10 @@ monodocs watch [input] [options]
 | 引数 / オプション     | 既定値               | 説明                                               |
 | --------------------- | -------------------- | -------------------------------------------------- |
 | `[input]`             | `./docs`             | 監視する入力ディレクトリ、または単一のソースファイル。 |
-| `-o, --output <file>` | `./dist/docs.html` | 出力ファイルパス。`output.path` を上書き。         |
+| `-o, --output <file>` | 形式による           | 出力先。`build` と同じく読みます（[出力先](#output-path)を参照）。`output.path` を上書き。 |
 | `-c, --config <file>` | 自動検出             | 設定ファイル。`monodocs.config.yml` があれば使用。 |
 
-出力ファイルへの書き込みイベントは無視するため、再ビルドが自分自身を再トリガすることはありません。`Ctrl+C` で停止します。
+`watch` に `--format` はありません。`output.format` が決める形式（既定は HTML）を書き出します。出力ファイルへの書き込みイベントは無視するため、再ビルドが自分自身を再トリガすることはありません。`Ctrl+C` で停止します。
 
 > [!NOTE]
 > Linux では、監視に inotify のインスタンスを 1 つ使います。利用者 1 人が持てる数（`fs.inotify.max_user_instances`、多くは 128）は、エディタやブラウザを含め、その人が動かすすべてのプログラムで分け合います。残りが無いと、`watch` と `serve` は `EMFILE: too many open files, watch` で止まります。上限は `cat /proc/sys/fs/inotify/max_user_instances` で確かめ、`sudo sysctl fs.inotify.max_user_instances=1024` で引き上げます。再起動後も保つには、`/etc/sysctl.d/` の下のファイルに `fs.inotify.max_user_instances = 1024` と書きます。ホストの利用者と同じ UID で動かす Docker のコンテナ（このリポジトリの開発用スクリプトはそうしています）は、その利用者と上限を分け合います。監視はさらに、入力の下のディレクトリとファイルごとに inotify の watch を 1 つずつ、別の上限 `fs.inotify.max_user_watches` から使います。それが残っていないと木の一部が監視されません。報告されるのは、監視が始まった後に失敗したもの（後から足したディレクトリなど）だけで、監視を組み立てている間に失敗したものは気づかれません。入力の下の変更を取りこぼすときは、この上限も引き上げてください。
@@ -160,7 +173,7 @@ monodocs serve [input] [options]
 | 引数 / オプション     | 既定値               | 説明                                               |
 | --------------------- | -------------------- | -------------------------------------------------- |
 | `[input]`             | `./docs`             | 配信する入力ディレクトリ、または単一のソースファイル。 |
-| `-o, --output <file>` | `./dist/docs.html` | 出力ファイルパス。`output.path` を上書き。         |
+| `-o, --output <file>` | `./dist/docs.html`   | 書き出して配信する HTML ファイル。`output.path` を上書き。 |
 | `-c, --config <file>` | 自動検出             | 設定ファイル。`monodocs.config.yml` があれば使用。 |
 | `-p, --port <port>`   | `4173`               | 待ち受けポート番号。                               |
 | `-H, --host <host>`   | `127.0.0.1`          | バインドするホスト。マシン外（例: Docker ホスト）から接続を受けるには `0.0.0.0` を指定。 |
@@ -173,6 +186,8 @@ monodocs serve
 # 全インターフェースにバインド（例: Docker ホストから見る）してブラウザを開く
 monodocs serve ./docs --host 0.0.0.0 --open
 ```
+
+`serve` は `output.format` に関わらず、常に HTML を書き出して配信します。PDF は書き出しません。`-o` はどの形式でも HTML ファイルを指します。`-o` が無ければ、HTML は設定が決める場所に出ます。`html` では `output.path`、`pdf` では PDF と同じ場所の `docs.html`、`both` では出力ディレクトリの中の `docs.html` です。既定ではどれも `./dist/docs.html` になります。
 
 `Ctrl+C` で停止します。
 
@@ -204,7 +219,7 @@ monodocs validate ./docs --strict  # 警告でも失敗する
 
 終了コードは報告の `severity` に従うため、リリースで検査が警告として増えても、通っていたジョブは失敗しません。警告をリリースのゲートにするには、ワークフローで `--strict` を付けてください。
 
-`validate` はビルドと同じパイプラインを走らせるので、`validate` が報告する検査はすべてビルドも報告します（ビルドはそのうえで出力も書き出します）。逆は成り立ちません。PDF を書き出すビルドは、ページ番号の帯に対して下余白が足りない、このマシンのどのフォントも描けない文字がある、といったその作業でしか分からないことも報告します。
+`validate` は出力を書き出す手前までビルドと同じパイプラインを走らせるので、`validate` が報告する検査はすべてビルドも報告します。`validate` が報告するエラーはビルドも止めます。`assets.onLargeImage: error` の下で `assets.maxInlineSize` を超える画像もそうです。逆は成り立ちません。ビルドは、出力を書き出して初めて分かることも報告します。[`assets.budget`](/ja/docs/configuration#assets) を超える出力、PDF のページ番号の帯に対して足りない下余白、PDF や pre-render した図の中でこのマシンのどのフォントも描けない文字、出力が PDF だから埋め込まれる、`assets.maxInlineSize` を超える画像（`assets.embedImages: false` で `output.format` が `pdf` か `both`）です。そのため、`assets.onBudget: error` や `fontCheck: error` でビルドが止まる文書でも、`validate` は通ります。
 
 > [!NOTE]
 > Mermaid はブラウザなしで検証するため、pre-render の実描画や図の構文エラーは `validate` では検査されません。

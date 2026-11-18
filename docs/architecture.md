@@ -13,21 +13,26 @@ generated. Do not route Markdown and AsciiDoc through a shared renderer. Shared 
 [`app/packages/core/src/types.ts`](../app/packages/core/src/types.ts).
 
 The central build function is `preparePages()` in [`build.ts`](../app/packages/core/src/build.ts), shared by
-`buildSite` and `validateSite`:
+`buildSite` and `validateSite`, each of which loads the configuration first:
 
 ```text
-loadConfig (config.ts)
-  -> scanSourceFiles (scan.ts)           scan inputs, detect formats, apply exclusions
-  -> buildPages (pipeline/buildPages.ts) render with each SourceRenderer and normalize to Page[]
-  -> buildSidebar (pipeline/buildSidebar.ts)
-                                         build the sidebar tree from the directory structure
+loadConfig (config.ts)                   in buildSite / validateSite
+  -> preparePages (build.ts)
+     -> scanSourceFiles (scan.ts)        scan inputs, detect formats, apply exclusions
+                                         (a single-file input is read by readSourceFile instead)
+     -> buildPages (pipeline/buildPages.ts)
+                                         render with each SourceRenderer and normalize to Page[]
+     -> buildSidebar / buildCustomSidebar (pipeline/buildSidebar.ts)
+                                         build the sidebar tree from the directory structure,
+                                         or from sidebar.items under sidebar.mode: "custom"
                                          (numberSidebar numbers it under numbering.sections)
-  -> postprocessPages (pipeline/postprocess.ts)
+     -> postprocessPages (pipeline/postprocess.ts)
                                          rewrite links, embed images, transform Mermaid,
                                          apply Shiki highlighting, and number headings on HAST
-  -> renderSingleHtml (pipeline/renderSingleHtml.ts)
+buildSite only:
+  -> renderSingleHtmlParts (pipeline/renderSingleHtml.ts)
                                          inject content into the template
-  -> writeOutput (build.ts)
+  -> write the HTML (html / both) and print the PDF from the rendered HTML (pdf / both, pipeline/renderPdf.ts)
 ```
 
 The renderers are [`sources/markdown/renderer.ts`](../app/packages/core/src/sources/markdown/renderer.ts) and
@@ -48,9 +53,11 @@ JavaScript's tagged templates) reaches only grammars first used after it was loa
   needed, because injections matching at the same place are tried in registration order (Vue's and Angular's
   both match `{{`).
 
-`sources.lineBreak` is applied inside each renderer through one shared helper
-([`sources/lineBreak.ts`](../app/packages/core/src/sources/lineBreak.ts)), before `prefixIdsAndCollect` collects
-the page's text.
+`sources.lineBreak` is applied inside each renderer, before `prefixIdsAndCollect` collects the page's text. `join`
+runs the shared `joinSegmentBreaks` from [`sources/lineBreak.ts`](../app/packages/core/src/sources/lineBreak.ts)
+on each renderer's HAST. `break` is per format: Markdown uses that file's remark plugin
+(`remarkSoftBreaksToBreaks`), and AsciiDoc sets Asciidoctor's `hardbreaks-option` attribute, which a document's
+own `:hardbreaks-option!:` overrides.
 
 > [!WARNING]
 > Do not move `sources.lineBreak` into `postprocessPages`. It re-parses `page.html` but does not recompute
@@ -86,8 +93,10 @@ All sources share one HTML document, so every element ID must be globally unique
 
 - Generate routes from relative paths without extensions and map `index` to `/`.
 - Use hash routes such as `#/setup/install` for pseudo-page navigation.
-- Store an `encodeURI`-encoded value in `href` and the raw route in `data-route`. The client decodes the route
-  with `decodeURI` before matching so Japanese characters and spaces remain supported.
+- Write every route into `href` through `encodeURI`: the sidebar's entries, rewritten links in page bodies, the
+  list of changes, and the links `app.js` and the difference script write. A sidebar entry also carries the raw
+  route in `data-route`. The client decodes the hash with `decodeURI` before matching, so Japanese characters,
+  spaces, and a route containing `%` land on their own page.
 - Rewrite links equivalent to `.md`, `.adoc`, and `.html`, plus AsciiDoc xrefs, to hash routes.
 - Rewrite a cross-file heading link such as `file.md#heading` to the target page's prefixed element ID
   (`{page-id}-heading`), so it lands on the heading in HTML and PDF alike. When the target has no such anchor,
@@ -149,9 +158,13 @@ Mermaid supports `client` and `pre-render` modes.
 
 Preserve these pre-render invariants:
 
-- SVG is inserted after source ID prefixing. Allocate globally unique, monotonically increasing, ASCII-safe IDs
-  as `mermaid-{n}` across the whole build; do not derive them from `page.id`.
-- Inject runtime JavaScript only when diagrams exist, Mermaid is enabled, and the mode is `client`.
+- SVG is inserted after source ID prefixing. Allocate monotonically increasing, ASCII-safe IDs as `mermaid-{n}`
+  from a counter each `postprocessPages` call starts at 0; do not derive them from `page.id`. A difference
+  build prepares the earlier version in a call of its own, so its diagrams use the prefix `mermaid-earlier-`
+  (`EARLIER_MERMAID_ID_PREFIX`) instead.
+- Inject runtime JavaScript only when the mode is `client` and a diagram is shown: the new version has one with
+  Mermaid enabled, or, in a difference build, the earlier version's column shows one, even when the new version
+  has none or has Mermaid off.
 - Missing Chromium, missing `puppeteer-core`, and browser startup failures are setup errors that fail the build.
   An individual diagram syntax error warns and replaces only that diagram with a source `<pre>`.
 - Create the browser lazily and close it in `finally`. Do not start Chromium when there are no diagrams.
@@ -180,11 +193,13 @@ precedence over automatic system-browser discovery.
 `app.js`. `renderSingleHtml` replaces these template tokens:
 
 ```text
-{{htmlAttrs}} {{bodyAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
+{{lang}} {{htmlAttrs}} {{bodyAttrs}} {{title}} {{style}} {{sidebar}} {{pages}}
 {{siteDataJson}} {{appJs}} {{bodyScripts}}
 {{contentWidthTogglePressed}} {{contentWidthToggleTitle}}
-{{#contentWidthToggle}}...{{/contentWidthToggle}}
-{{generatorVersion}} {{generatorAttrs}}
+{{label<Key>}} (one per label key, e.g. {{labelSearchPlaceholder}})
+{{documentMeta}} {{generatorVersion}} {{generatorAttrs}}
+{{#contentWidthToggle}}...{{/contentWidthToggle}} {{#imageLightbox}}...{{/imageLightbox}}
+{{#documentFooter}}...{{/documentFooter}} {{#documentMeta}}...{{/documentMeta}}
 {{#branding}}...{{/branding}} {{#generatorVersion}}...{{/generatorVersion}}
 ```
 
@@ -219,9 +234,10 @@ Preserve these display and reachability invariants:
     pointer and keyboard alike, or the page stays hidden behind it. When the drawer closes, focus lands
     somewhere the reader can carry on from, never inside the hidden drawer or on the body.
 - **Search shortcuts**: `/` and `Ctrl+K` / `⌘K` move focus to the search box from anywhere, opening the sidebar
-  first when it is closed (otherwise the shortcut silently does nothing). No key may be taken from a reader who
-  is typing or from an IME mid-composition, except `⌘K`, which carries no editing meaning; `Ctrl+K` does on
-  macOS (delete to end of line).
+  first when it is closed (otherwise the shortcut silently does nothing). None is taken from an IME
+  mid-composition or while a dialog (`dialog[open]`, such as the lightbox) is open. `/` and `Ctrl+K` are not
+  taken from a reader typing in an editable element; `⌘K` is, as it carries no editing meaning, while `Ctrl+K`
+  does on macOS (delete to end of line).
 - **Search clear button**: the theme's own, inside the search box, and the browser's × is not drawn beside it. It
   is shown only while the box holds a query, clears what `Escape` clears, and leaves the focus in the box and a
   narrow screen's drawer open. A template without it still searches; `app.js` guards its absence, and the rules
@@ -235,7 +251,8 @@ Preserve these display and reachability invariants:
 - **Content width**: the toggle switches between the readable default maximum width and the full available
   width. The reader's choice is stored in `monodocs:content-width` and must not affect print or PDF layout.
   `html.contentWidthDefault` selects `standard` or `wide` until the reader makes a stored choice.
-  `html.contentWidthToggle: false` omits the button and ignores any stored choice.
+  `html.contentWidthToggle: false` omits the button and ignores both a stored choice and `contentWidthDefault`,
+  so the document opens at the standard width.
 - **Image lightbox**: `html.imageLightbox` (on by default) opens unlinked, non-decorative content images in a
   keyboard-accessible dialog.
   - Images inside links or buttons keep the parent interaction; images with an explicit empty `alt` stay
@@ -311,11 +328,14 @@ Preserve these display and reachability invariants:
     falls back to Chromium's own date-and-title header.
   - A bottom margin too small for the default footer warns, with the threshold measured from that fragment. A
     replacement fragment is not judged, because whether arbitrary HTML fits cannot be told from the margin.
-- **PDF metadata**: generated PDFs carry the document title and `monodocs v<version>` as Creator and Producer.
+- **PDF metadata**: generated PDFs carry the document title, and `monodocs v<version>` as Creator and Producer
+  (plain `monodocs` when no version is known). From `document`, Author is the authors, Subject the version and
+  date, and Keywords the version and the date as written; a field with nothing to say is left out.
   The metadata pass runs after the bookmark pass, because pdf-lib rewrites Producer whenever it saves.
 - **Branding**: `html.branding` shows a footer at the end of HTML and PDF output by default. The CLI supplies its
   package version at runtime; the renderer escapes it and omits only the version when none is available.
-  `html.branding: false` omits the whole footer.
+  `html.branding: false` omits monodocs' line; the footer itself stays when the document has its own line
+  (`document.version`, `date`, or `authors`), through `{{#documentFooter}}` and `{{#documentMeta}}`.
 
 The default theme is deliberately neutral and not aligned with the [`site/`](../site/) design: the site
 promotes monodocs, while the output represents whoever wrote the documents. Neutrality is also the better
@@ -342,12 +362,13 @@ custom theme is guaranteed.
 
 [`watch.ts`](../app/packages/core/src/watch.ts) uses `fs.watch` (recursive where supported) with debouncing. It
 watches source and configuration inputs, ignores output-file writes to prevent rebuild loops, and rejects a
-missing input path. A single-file input is watched through its directory, filtered to that name, because
-`fs.watch` follows the inode and would go silent after an editor saves by renaming a temporary file over the
-original. On Linux a plain watch on the same target is opened before each recursive one and kept with it: with
-no inotify instance left, Node 22 returns a recursive watch that reports nothing and no error, and only the
-plain one throws (EMFILE, #215). It is not redundant, and removing it brings back a watch that silently does
-nothing.
+missing input path. A single-file input and the configuration file are each watched through their directory,
+filtered to that name (the configuration's real path, so a symbolic link is followed to the file it names),
+because `fs.watch` follows the inode and would go silent after an editor saves by renaming a temporary file over
+the original. On Linux a plain watch on the same target is opened before each recursive one and
+kept with it: with no inotify instance left, Node 22 returns a recursive watch that reports nothing and no error,
+and only the plain one throws (EMFILE, #215). It is not redundant, and removing it brings back a watch that
+silently does nothing.
 
 [`serve.ts`](../app/packages/core/src/serve.ts) provides HTTP serving, `watchSite`, and SSE live reload using
 Node.js APIs. Keep it dependency-free unless a clear portability requirement justifies a new watching
@@ -361,7 +382,8 @@ written (roadmap 20.5).
 - The total is read from disk, not summed while building.
 - Each part of the HTML breakdown (every embedded image's data URI, the inline Mermaid runtime, the
   `siteDataJson` payload) is found in the final text, and `document` is the remainder, so the parts always sum
-  to the file.
+  to the file. With a difference, the same remainder is measured in the document rendered without it:
+  `document` is that baseline's, and `difference` is what this file's remainder holds beyond it.
 - `assets.budget` is checked against each output, HTML and PDF, as soon as it is measured, so an HTML over budget
   under `onBudget: error` fails before the PDF is rendered. The error carries the size report, because a failed
   build returns no result to print it from.
@@ -378,9 +400,10 @@ PDF generation expands the single HTML document in Chromium's print layout. Pres
 - Browser setup failures fail fast and remain distinguishable from document-specific rendering failures.
 - The printed table of contents (`pdf.toc`, [`pipeline/pdfToc.ts`](../app/packages/core/src/pipeline/pdfToc.ts))
   exists only in the PDF. It is injected before the font check, with an ASCII anchor (`mdtoc-{n}`) at each
-  target, and its page numbers are read from the catalog `/Dests` of a print. Only a print whose destinations
-  match the numbers it carries is returned; a document that does not settle within a bounded number of prints
-  fails. The number column has a fixed width so filling it in cannot rewrap a line.
+  target; when an ID in the document already starts with `mdtoc-`, the first of `mdtoc1-`, `mdtoc2-`, and so on
+  that none starts with is used instead. Its page numbers are read from the catalog `/Dests` of a print. Only a
+  print whose destinations match the numbers it carries is returned; a document that does not settle within a
+  bounded number of prints fails. The number column has a fixed width so filling it in cannot rewrap a line.
 
 Since v0.10 the build measures what the document needs against what the machine can draw and reports the
 difference (`fontCheck`, default `warn`), in the browser already open for PDF output and for Mermaid pre-render

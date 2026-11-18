@@ -208,7 +208,23 @@ describe("postprocessPages - link rewriting", () => {
     const result = await postprocessPages(pages, baseOptions);
 
     expect(result.warnings).toHaveLength(0);
-    expect(pages[0]!.html).toContain('href="#/02_対応概要/02_ユーザー認証機能"');
+    expect(pages[0]!.html).toContain(
+      'href="#/02_%E5%AF%BE%E5%BF%9C%E6%A6%82%E8%A6%81/02_%E3%83%A6%E3%83%BC%E3%82%B6%E3%83%BC%E8%AA%8D%E8%A8%BC%E6%A9%9F%E8%83%BD"',
+    );
+  });
+
+  it("encodes a route with a percent sign, so the reader's decodeURI lands on the same page", async () => {
+    const pages: Page[] = [
+      page({ relativePath: "index.md", route: "/", html: '<a href="a%2520b.md">a</a>' }),
+      page({ relativePath: "a%20b.md", route: "/a%20b", html: "<p>a</p>" }),
+      page({ relativePath: "a b.md", route: "/a b", html: "<p>b</p>" }),
+    ];
+
+    const result = await postprocessPages(pages, baseOptions);
+
+    expect(result.warnings).toHaveLength(0);
+    expect(pages[0]!.html).toContain('href="#/a%2520b"');
+    expect(decodeURI("/a%2520b")).toBe(pages[1]!.route);
   });
 
   it("rewrites AsciiDoc-style .html cross links", async () => {
