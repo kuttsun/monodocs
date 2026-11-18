@@ -159,6 +159,9 @@ item is looking for.
    cannot change with dependency resolution — code prebuilt into a package's bundle — an override
    would silence the audit and change nothing that ships: list the advisory under
    `auditConfig.ignoreGhsas` instead, with the reason and removal condition in
-   [development.md](development.md), and add it to the same re-check.
+   [development.md](development.md), and add it to the same re-check. Do the same when no patched
+   version exists and what ships does not reach the vulnerable path. `site/` uses npm, which has no
+   such list: add the advisory to `IGNORED` in [`scripts/audit-site.mjs`](../scripts/audit-site.mjs)
+   instead, which the site's audit runs.
 5. Release the fix as a new patch on the current line. Do not rebuild an already-published version,
    and do not backport it to an older one ([SECURITY.md](../SECURITY.md)).

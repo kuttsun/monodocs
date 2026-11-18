@@ -30,7 +30,8 @@ jobs:
             command: pnpm audit
           - name: site
             directory: site
-            command: npm audit
+            # npm has no ignore list; the script sets aside the advisories docs/development.md lists.
+            command: node ../scripts/audit-site.mjs
 
     steps:
       - name: Check out repository
