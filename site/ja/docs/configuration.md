@@ -393,7 +393,7 @@ sources:
   hash route に変えられるかどうか——を決める `outfilesuffix` / `relfilesuffix`、そしてページタイトル・
   見出し一覧・すべての要素 ID の元になっている `showtitle`。
 
-属性名は装飾なしで書いてください（英字・数字・アンダースコア・ハイフン）。英字は Asciidoctor の扱いに
+属性名は装飾なしで書いてください（ASCII の英字・数字・アンダースコア・ハイフン。ハイフンで始めない）。英字は Asciidoctor の扱いに
 合わせて小文字にしてから分類するので、`SectNums` は `sectnums` です。`@` や `!` を含む名前は
 拒否します。Asciidoctor はそれらを soft set や unset として読むので、その属性が上の分類をすり抜けて
 しまうからです。

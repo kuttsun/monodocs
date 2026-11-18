@@ -219,7 +219,7 @@ monodocs validate ./docs --strict  # 警告でも失敗する
 
 終了コードは報告の `severity` に従うため、リリースで検査が警告として増えても、通っていたジョブは失敗しません。警告をリリースのゲートにするには、ワークフローで `--strict` を付けてください。
 
-`validate` は出力を書き出す手前までビルドと同じパイプラインを走らせるので、`validate` が報告する検査はすべてビルドも報告します。`validate` が報告するエラーはビルドも止めます。`assets.onLargeImage: error` の下で `assets.maxInlineSize` を超える画像もそうです。逆は成り立ちません。ビルドは、出力を書き出して初めて分かることも報告します。[`assets.budget`](/ja/docs/configuration#assets) を超える出力、PDF のページ番号の帯に対して足りない下余白、PDF や pre-render した図の中でこのマシンのどのフォントも描けない文字です。そのため、`assets.onBudget: error` や `fontCheck: error` でビルドが止まる文書でも、`validate` は通ります。
+`validate` は出力を書き出す手前までビルドと同じパイプラインを走らせるので、`validate` が報告する検査はすべてビルドも報告します。`validate` が報告するエラーはビルドも止めます。`assets.onLargeImage: error` の下で `assets.maxInlineSize` を超える画像もそうです。逆は成り立ちません。ビルドは、出力を書き出して初めて分かることも報告します。[`assets.budget`](/ja/docs/configuration#assets) を超える出力、PDF のページ番号の帯に対して足りない下余白、PDF や pre-render した図の中でこのマシンのどのフォントも描けない文字、出力が PDF だから埋め込まれる、`assets.maxInlineSize` を超える画像（`assets.embedImages: false` で `output.format` が `pdf` か `both`）です。そのため、`assets.onBudget: error` や `fontCheck: error` でビルドが止まる文書でも、`validate` は通ります。
 
 > [!NOTE]
 > Mermaid はブラウザなしで検証するため、pre-render の実描画や図の構文エラーは `validate` では検査されません。

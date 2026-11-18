@@ -444,7 +444,7 @@ monodocs relies on:
   into a hash route; and `showtitle`, which the page title, the heading list, and every element ID
   are built from.
 
-An attribute name must be written bare: letters, digits, underscores, and hyphens. Letters are
+An attribute name must be written bare: ASCII letters, digits, underscores, and hyphens, not starting with a hyphen. Letters are
 lowercased before the name is classified, as Asciidoctor treats names, so `SectNums` is `sectnums`.
 A name carrying `@` or `!` is refused, because Asciidoctor would read it as a soft set or an unset
 and the attribute would bypass the classification above.
