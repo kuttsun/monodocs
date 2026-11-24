@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-11-17
+Last updated: 2026-11-24
 
 ## Support Status
 
@@ -132,6 +132,14 @@ drawings it pre-renders — the samples' flowcharts measured pixel-identical to 
 released Linux binary built was driven in a browser, its changed paragraphs in Japanese and English
 read in the four views, and `next` moved onto 0.20.0. SmartScreen, a Windows 11 host, how the
 generated HTML looks in Edge, and a look over the screenshots remain a person's, as for 0.19.0.
+
+0.20.1 went out under `latest` from `release/0.20`, a branch made from the `v0.20.0` tag, because
+`main` already carries what 1.0 breaks. It brings the fixes made on `main` since 0.20.0 to the 0.20
+line: the unpatched picomatch advisory's path closed, which matches `(`, `)`, and `+` in the source
+patterns as characters, the configuration watched across a save-by-rename, body links to a route
+containing `%`, and the documentation checked against the code. `sidebar.exclude` still works on
+that line, with a warning. After `latest` moved, the published package and the release binaries
+were verified, and `next` moved onto 0.20.1.
 
 ## Completion Criteria Status
 
@@ -856,6 +864,14 @@ It changes what a build with a difference shows inside a changed block, and a bu
 - [ ] Run [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) against the published `v0.20.0` assets on a Windows 11 host — on a Windows Server runner, which has Node.js, it passed all 18 checks in `verify-release-binaries.yml`; a Windows 11 host remains, which also answers Smart App Control for an unsigned binary
 - [ ] What only a person can answer, on Windows: SmartScreen for an asset downloaded through a browser, how the generated HTML looks in Edge, and a look over the Edge screenshots `verify-published.yml` keeps (the rest of what 0.18.0 asked runs as steps from 0.19.0) — and how changed paragraphs in Japanese and English read
 - [x] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese — `next` and `latest` both read `0.20.0`, and the deployed CI guide pins `monodocs@0.20.0` four times in each language, with no other version left; the deployed command reference describes a changed block
+
+**0.20.1** ([#262](https://github.com/kuttsun/monodocs/pull/262), [#263](https://github.com/kuttsun/monodocs/pull/263)), released from `release/0.20` because `main` already carries what 1.0 breaks
+
+- [x] The unpatched picomatch advisory (GHSA-fc5q-39xc-vjpf) cannot be reached through `sources.include` and `sources.exclude`, or the deprecated `sidebar.exclude`: extended globs are read literally (`noextglob`), with `(`, `)`, and `+` matched as characters, and the advisory is set aside in both audits with the reason recorded; the configuration is trusted input, which [architecture.md](architecture.md) states — `scan.test.ts` matches parentheses and `+` as characters, and fails without the escaping. A `sources.include` pattern escaping a glob character in a directory name (`docs/\[x\]/*.md`) now finds the files there, where the directory was never entered
+- [x] `watch` and `serve` keep seeing the configuration after an editor saves it by renaming a temporary file over it, and follow a symbolic link to the file it names — `build.input-file.test.ts` covers both
+- [x] A link in a page body to a route containing `%` reaches its own page, the route written through `encodeURI` as the sidebar writes it — `postprocess.test.ts` covers it
+- [x] The configuration reference, the command reference, and [architecture.md](architecture.md) are checked against the code in both languages, as for 1.0 ([#263](https://github.com/kuttsun/monodocs/pull/263))
+- [x] Publish `0.20.1` under the `latest` tag from `release/0.20`, with the CI guide pinned to it in the version change, verify it through `verify-published.yml` run with `dist_tag: 0.20.1` and its release binaries through `verify-release-binaries.yml`, and move `next` onto it — published on 2026-11-24 from [#264](https://github.com/kuttsun/monodocs/pull/264), the GitHub release targeting `release/0.20`, with the CI guide pinned to `monodocs@0.20.1` four times in each language, and deployed so. `verify-published.yml` with `dist_tag: 0.20.1` passed on Linux and Windows; `verify-release-binaries.yml` passed 16 checks on Linux and 18 on Windows; [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) passed all 16 in a `debian:stable-slim` container without Node.js. `next` and `latest` both read `0.20.1`
 
 ### 1.0
 

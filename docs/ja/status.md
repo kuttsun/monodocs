@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-11-17
+最終更新: 2026-11-24
 
 ## 対応状況
 
@@ -117,6 +117,12 @@ Shiki 4.6.0 は一部の言語のコードの色分けを変え、Mermaid 12.3.0
 ブラウザで操作して確かめ、変更された日本語と英語の段落を 4 つの表示で読み、`next` を 0.20.0 に移した。
 SmartScreen、Windows 11 ホストでの実行、生成した HTML の Edge での見え方、スクリーンショットをざっと見ることは、
 0.19.0 と同じく人の確認として残る。
+
+0.20.1 は、`main` に 1.0 の破壊的変更がすでに入っているため、`v0.20.0` タグから作った `release/0.20` から
+`latest` に出した。0.20.0 のあとに `main` で直したものを 0.20 系に届ける。修正版の無い picomatch の advisory の
+経路を閉じ（ソースのパターンの `(`、`)`、`+` を文字として照合する）、rename 保存のあとも設定の変更を拾い、
+`%` を含む route への本文のリンクを直し、文書をコードと突き合わせた。この系列では `sidebar.exclude` はまだ
+使え、警告が出る。`latest` を動かしたあとに、公開パッケージとリリースバイナリを検証し、`next` を 0.20.1 に移した。
 
 ## 完了条件の達成状況
 
@@ -841,6 +847,14 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] Windows 11 ホストで、公開した `v0.20.0` のアセットに [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を実行する — Node.js のある Windows Server のランナーでは、`verify-release-binaries.yml` で 18 項目すべてが通った。Windows 11 ホストでの実行が残る。署名の無いバイナリへの Smart App Control もそこで分かる
 - [ ] 人にしか答えられない Windows での確認。ブラウザでダウンロードしたアセットの SmartScreen、生成した HTML の Edge での見え方、`verify-published.yml` が残す Edge のスクリーンショットをざっと見ること（0.18.0 で確かめたことの残りは 0.19.0 から手順で走る）に加え、変更された日本語と英語の段落がどう読めるか
 - [x] `next` の dist-tag を `0.20.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.20.0` に固定していることを確かめる — `next` と `latest` はどちらも `0.20.0` で、デプロイした CI ガイドは言語ごとに 4 か所で `monodocs@0.20.0` に固定し、ほかの版は残っていない。デプロイしたコマンドリファレンスは変更されたブロックを説明している
+
+**0.20.1**（[#262](https://github.com/kuttsun/monodocs/pull/262)、[#263](https://github.com/kuttsun/monodocs/pull/263)）。`main` には 1.0 の破壊的変更がすでに入っているため、`release/0.20` から出す
+
+- [x] 修正版の無い picomatch の advisory（GHSA-fc5q-39xc-vjpf）に `sources.include` と `sources.exclude`、非推奨の `sidebar.exclude` から届かない。拡張 glob を文字どおりに読み（`noextglob`）、`(`、`)`、`+` は文字として一致させる。advisory は理由を記録して両方の監査で除外し、設定は信頼する入力であることを [architecture.md](architecture.md) に書く — `scan.test.ts` が括弧と `+` を文字として一致させることを確かめ、エスケープなしでは落ちる。ディレクトリ名の glob 文字をエスケープした `sources.include` のパターン（`docs/\[x\]/*.md`）は、そのディレクトリに入らず何も見つけなかったが、中のファイルを見つけるようになった
+- [x] エディタが一時ファイルを rename して設定を保存したあとも、`watch` と `serve` が設定の変更を拾い、設定へのシンボリックリンクはその指す先のファイルを追う — `build.input-file.test.ts` が両方を確かめる
+- [x] `%` を含む route へのページ本文のリンクが、そのページに着く。route はサイドバーと同じく `encodeURI` して書く — `postprocess.test.ts` が確かめる
+- [x] 設定リファレンス、コマンドリファレンス、[architecture.md](architecture.md) を、1.0 と同じく両言語でコードと突き合わせる（[#263](https://github.com/kuttsun/monodocs/pull/263)）
+- [x] `0.20.1` を `release/0.20` から `latest` タグで公開する。版の変更で CI ガイドをこの版に固定し、`dist_tag: 0.20.1` で走らせた `verify-published.yml` と、リリースバイナリの `verify-release-binaries.yml` で確かめ、`next` をこの版に移す — 2026-11-24 に [#264](https://github.com/kuttsun/monodocs/pull/264) から、`release/0.20` を指す GitHub release として公開した。CI ガイドは各言語 4 か所で `monodocs@0.20.1` に固定され、そのままデプロイされた。`dist_tag: 0.20.1` の `verify-published.yml` は Linux と Windows で通り、`verify-release-binaries.yml` は Linux で 16、Windows で 18 の確認が通った。Node.js の無い `debian:stable-slim` コンテナで [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) の 16 項目すべてが通った。`next` と `latest` はどちらも `0.20.1`
 
 ### 1.0
 

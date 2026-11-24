@@ -164,4 +164,9 @@ item is looking for.
    such list: add the advisory to `IGNORED` in [`scripts/audit-site.mjs`](../scripts/audit-site.mjs)
    instead, which the site's audit runs.
 5. Release the fix as a new patch on the current line. Do not rebuild an already-published version,
-   and do not backport it to an older one ([SECURITY.md](../SECURITY.md)).
+   and do not backport it to an older one ([SECURITY.md](../SECURITY.md)). When `main` already
+   carries what the next major release breaks, the current line is released from a
+   `release/<major>.<minor>` branch made from its latest tag, as 0.20.1 was from `release/0.20`:
+   cherry-pick the fixes into a pull request against that branch, bump the version there, and create
+   the GitHub release targeting it. The release, the site deployment, and the verification work from
+   the tag as they do from `main`.
