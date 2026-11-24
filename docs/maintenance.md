@@ -166,7 +166,7 @@ item is looking for.
 5. Release the fix as a new patch on the current line. Do not rebuild an already-published version,
    and do not backport it to an older one ([SECURITY.md](../SECURITY.md)).
 
-### A patch while `main` carries the next major
+## A patch while `main` carries the next major
 
 When `main` already carries what the next major release breaks, a patch on the current line — the
 line `latest` points at, so this is not a backport — is released from a `release/<major>.<minor>`
@@ -174,10 +174,13 @@ branch made from that line's latest tag, as 0.20.1 was from `release/0.20`, whet
 security fix or not:
 
 1. Cherry-pick the fixes from `main` into a pull request against that branch, leaving out what only
-   the next major says, and bump the version there.
+   the next major says, and bump the version and pin the CI guide to it there: the site is built
+   from the tag, so the branch carries what the live site says.
 2. Create the GitHub release targeting that branch. `release.yml` and `verify-release-binaries.yml`
    run from the tag; `deploy-site.yml` runs on `main` and builds the site from the tag; dispatch
    `verify-published.yml` from `main`, with the new version as `dist_tag`.
-3. On `main`, pin the CI guide to the new version and record the release in
+3. Move `next` onto the new version only if nothing newer is on it: once the next major has a
+   prerelease under `next`, `next` stays there.
+4. On `main`, pin the CI guide to the new version too and record the release in
    [status.md](status.md). `main`'s package version stays where it is until the next major is
    prepared.

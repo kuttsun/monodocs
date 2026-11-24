@@ -137,8 +137,8 @@ generated HTML looks in Edge, and a look over the screenshots remain a person's,
 `main` already carries what 1.0 breaks. It brings the fixes made on `main` since 0.20.0 to the 0.20
 line: it closes the unpatched picomatch advisory's path by matching `(`, `)`, and `+` in the source
 patterns as characters, keeps watching the configuration across a save-by-rename, makes a body link
-to a route containing `%` reach its page, and checks the documentation against the code. `sidebar.exclude` still works on
-that line, with a warning. After `latest` moved, the published package and the release binaries
+to a route containing `%` reach its page, and checks the documentation against the code.
+`sidebar.exclude` still works on that line, with a warning. After `latest` moved, the published package and the release binaries
 were verified, and `next` moved onto 0.20.1.
 
 ## Completion Criteria Status

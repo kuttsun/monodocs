@@ -367,6 +367,9 @@ npm install -g monodocs@next
 12. Move the `next` dist-tag onto the published stable version.
 13. Update the README and status documents.
 
+While `main` carries the next major release, a patch on the current line follows these steps from a
+release branch instead ([maintenance.md](maintenance.md#a-patch-while-main-carries-the-next-major)).
+
 Step 10 is `verify-published.yml`. No workflow does step 11: that one leaves the release binaries
 and the long-running commands out of its scope, and CI never runs the published asset on a host
 without Node.js — the very environment a binary release makes a claim about. Run
