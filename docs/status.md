@@ -2,7 +2,7 @@
 
 [日本語](ja/status.md)
 
-Last updated: 2026-11-17
+Last updated: 2026-11-24
 
 ## Support Status
 
@@ -859,7 +859,7 @@ It changes what a build with a difference shows inside a changed block, and a bu
 
 **0.20.1** ([#262](https://github.com/kuttsun/monodocs/pull/262), [#263](https://github.com/kuttsun/monodocs/pull/263)), released from `release/0.20` because `main` already carries what 1.0 breaks
 
-- [x] The unpatched picomatch advisory (GHSA-fc5q-39xc-vjpf) cannot be reached through `sources.include` and `sources.exclude`: extended globs are read literally (`noextglob`), with `(`, `)`, and `+` matched as characters, and the advisory is set aside in both audits with the reason recorded; the configuration is trusted input, which [architecture.md](architecture.md) states — `scan.test.ts` matches parentheses and `+` as characters, and fails without the escaping
+- [x] The unpatched picomatch advisory (GHSA-fc5q-39xc-vjpf) cannot be reached through `sources.include` and `sources.exclude`, or the deprecated `sidebar.exclude`: extended globs are read literally (`noextglob`), with `(`, `)`, and `+` matched as characters, and the advisory is set aside in both audits with the reason recorded; the configuration is trusted input, which [architecture.md](architecture.md) states — `scan.test.ts` matches parentheses and `+` as characters, and fails without the escaping
 - [x] `watch` and `serve` keep seeing the configuration after an editor saves it by renaming a temporary file over it, and follow a symbolic link to the file it names — `build.input-file.test.ts` covers both
 - [x] A link in a page body to a route containing `%` reaches its own page, the route written through `encodeURI` as the sidebar writes it — `postprocess.test.ts` covers it
 - [x] The configuration reference, the command reference, and [architecture.md](architecture.md) are checked against the code in both languages, as for 1.0 ([#263](https://github.com/kuttsun/monodocs/pull/263))

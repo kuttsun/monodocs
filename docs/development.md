@@ -59,7 +59,8 @@ published bundle.
 not fail on it. It is a high-severity picomatch advisory with no patched version (4.0.7, the latest, is
 affected): a single-branch repeated extended glob such as `+(*a)` compiles to a regular expression that
 backtracks exponentially on a crafted path, which can block the build. monodocs calls picomatch only on
-`sources.include` and `sources.exclude` (`app/packages/core/src/scan.ts`), with extended globs off, so the
+`sources.include` and `sources.exclude`, or the deprecated `sidebar.exclude` in its place
+(`app/packages/core/src/scan.ts`), with extended globs off, so the
 advisory's path is not reached; monodocs never documented extended globs. It also matches `(`, `)`, and `+`
 as the characters they are, so a name such as `notes (old).md` can be written as it is and a group written
 plainly cannot take a `+`. That closes the advisory's path, not every slow glob: a long run of stars, for

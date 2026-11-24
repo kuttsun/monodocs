@@ -2,7 +2,7 @@
 
 [English](../status.md)
 
-最終更新: 2026-11-17
+最終更新: 2026-11-24
 
 ## 対応状況
 
@@ -844,7 +844,7 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 
 **0.20.1**（[#262](https://github.com/kuttsun/monodocs/pull/262)、[#263](https://github.com/kuttsun/monodocs/pull/263)）。`main` には 1.0 の破壊的変更がすでに入っているため、`release/0.20` から出す
 
-- [x] 修正版の無い picomatch の advisory（GHSA-fc5q-39xc-vjpf）に `sources.include` と `sources.exclude` から届かない。拡張 glob を文字どおりに読み（`noextglob`）、`(`、`)`、`+` は文字として一致させる。advisory は理由を記録して両方の監査で除外し、設定は信頼する入力であることを [architecture.md](architecture.md) に書く — `scan.test.ts` が括弧と `+` を文字として一致させることを確かめ、エスケープなしでは落ちる
+- [x] 修正版の無い picomatch の advisory（GHSA-fc5q-39xc-vjpf）に `sources.include` と `sources.exclude`、非推奨の `sidebar.exclude` から届かない。拡張 glob を文字どおりに読み（`noextglob`）、`(`、`)`、`+` は文字として一致させる。advisory は理由を記録して両方の監査で除外し、設定は信頼する入力であることを [architecture.md](architecture.md) に書く — `scan.test.ts` が括弧と `+` を文字として一致させることを確かめ、エスケープなしでは落ちる
 - [x] エディタが一時ファイルを rename して設定を保存したあとも、`watch` と `serve` が設定の変更を拾い、設定へのシンボリックリンクはその指す先のファイルを追う — `build.input-file.test.ts` が両方を確かめる
 - [x] `%` を含む route へのページ本文のリンクが、そのページに着く。route はサイドバーと同じく `encodeURI` して書く — `postprocess.test.ts` が確かめる
 - [x] 設定リファレンス、コマンドリファレンス、[architecture.md](architecture.md) を、1.0 と同じく両言語でコードと突き合わせる（[#263](https://github.com/kuttsun/monodocs/pull/263)）
