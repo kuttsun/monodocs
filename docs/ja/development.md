@@ -47,6 +47,10 @@ corepack による pnpm の都度ダウンロードが発生しない。
 
 あわせて `vite` を `app/package.json` の直接の dev dependency として宣言し、ほかの開発ツールと同じく通常のバージョン更新で追跡されるようにしています。`vitest` の peer dependency にとどまっていた間は、manifest を対象とする Dependabot の通常のバージョン更新が更新を提案せず、上流の修正から 2 か月間、lockfile は `vite` 8.1.0 のままでした。`vitest` がもともと要求していたものなので、インストール内容も公開バンドルも増えません。
 
+### 監査から除外しているアプリ依存関係の advisory
+
+`app/pnpm-workspace.yaml` の `auditConfig.ignoreGhsas` に GHSA-fc5q-39xc-vjpf を挙げ、`pnpm audit` がこれで失敗しないようにしています。修正版の無い高深刻度の picomatch の advisory です（最新の 4.0.7 も該当します）。`+(*a)` のような、枝が 1 つの繰り返しの拡張 glob が、細工したパスで指数的に後戻りする正規表現になり、ビルドを止めうるというものです。monodocs が picomatch に渡すのは `sources.include` と `sources.exclude`（またはその代わりに書いた非推奨の `sidebar.exclude`）だけで（`app/packages/core/src/scan.ts`）、拡張 glob を切っているので、advisory の経路には入りません。monodocs は拡張 glob を文書に書いたこともありません。また `(`、`)`、`+` を文字そのものとして照合するので、`notes (old).md` のような名前をそのまま書け、普通に書いた括弧の組に `+` が付くこともありません。閉じるのは advisory の経路で、遅い glob のすべてではありません。たとえば長い `*` の並びも遅くなります。設定は、文書と同じく、ビルドする人が書く信頼できる入力です（[architecture.md](architecture.md) のセキュリティ境界）。monodocs は自分の設定からは身を守りません。ほかの写しは `vite` と `vitest` の下にあり、出荷しません。`site/` もドキュメントサイトのビルドツールである `vite` の下に自分の写しを解決しますが、これも出荷しません。npm には除外の一覧が無いので、サイトの監査は [`scripts/audit-site.mjs`](../../scripts/audit-site.mjs) を実行し、その `IGNORED` でこの advisory を除きます。修正版の picomatch が公開され、両方の lockfile がそれを解決したら、両方の除外を削除します。括弧の組と拡張 glob は表に出したことがないので、エスケープは残します。2026-11-18 時点の再点検では、picomatch の最新は 4.0.7 です。
+
 ### 依存関係の公開後経過時間ポリシー
 
 pnpm 11 は、公開から `minimumReleaseAge` 分（既定 1440 分＝24 時間）が経っていないバージョンをインストールせず、`pnpm install --frozen-lockfile` もコミット済み lockfile を同じポリシーで検証します。悪意あるリリースはたいてい 1 時間ほどでレジストリから削除されるため、1 日待てばその時間帯をほぼ回避できます。リポジトリでは設定せず、pnpm の既定値に任せています。

@@ -295,8 +295,10 @@ jobs:
       - name: Install site dependencies
         run: npm ci
 
+      # npm has no ignore list: the script fails on every advisory but those set aside, with their
+      # reasons in docs/development.md.
       - name: Audit site dependencies
-        run: npm audit
+        run: node ../scripts/audit-site.mjs
 
       - name: Build production site
         run: npm run docs:build

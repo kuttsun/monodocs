@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -193,4 +193,79 @@ describe("a single file as the input", () => {
       handle.close();
     }
   }, 15000);
+});
+
+describe("watching the configuration", () => {
+  /**
+   * Watches a directory input whose configuration sits outside it, so only the configuration's own
+   * watch can see the configuration change. `nextRebuild` resolves on the rebuild after it is called.
+   */
+  async function watchWithConfig(configFile: string) {
+    const docs = join(dir, "docs");
+    await mkdir(docs, { recursive: true });
+    await writeFile(join(docs, "index.md"), "# Index\n");
+    const out = join(dir, "dist", "docs.html");
+    let resolveNext: (() => void) | null = null;
+    const nextRebuild = () =>
+      new Promise<void>((res) => {
+        resolveNext = res;
+      });
+    const handle = await watchSite(
+      { inputDir: docs, configFile, outputFile: out },
+      {
+        onRebuild: () => {
+          const r = resolveNext;
+          resolveNext = null;
+          r?.();
+        },
+      },
+    );
+    return { handle, nextRebuild, out };
+  }
+
+  it("keeps watching the configuration across an editor's save-by-rename", async () => {
+    const config = join(dir, "monodocs.config.yml");
+    await writeFile(config, "title: First\n");
+    const { handle, nextRebuild, out } = await watchWithConfig(config);
+    try {
+      // Saved by writing a temporary file and renaming it over the configuration.
+      let next = nextRebuild();
+      await writeFile(join(dir, "monodocs.config.yml.tmp"), "title: Second\n");
+      await rename(join(dir, "monodocs.config.yml.tmp"), config);
+      await next;
+      expect(await readFile(out, "utf8")).toContain("<title>Second");
+      // And edited in place after that: a watch bound to the replaced inode would miss it.
+      next = nextRebuild();
+      await writeFile(config, "title: Third\n");
+      await next;
+      expect(await readFile(out, "utf8")).toContain("<title>Third");
+    } finally {
+      handle.close();
+    }
+  }, 15000);
+
+  // A symbolic link needs a privilege Windows does not grant by default.
+  it.skipIf(process.platform === "win32")(
+    "sees an edit to the file a symbolic link to the configuration points at",
+    async () => {
+      // The file lives in another directory, as a configuration shared across a repository would:
+      // an edit to it raises nothing in the directory holding the link.
+      const shared = join(dir, "shared");
+      await mkdir(shared, { recursive: true });
+      const target = join(shared, "base.yml");
+      await writeFile(target, "title: First\n");
+      const config = join(dir, "monodocs.config.yml");
+      await symlink(target, config);
+      const { handle, nextRebuild, out } = await watchWithConfig(config);
+      try {
+        const next = nextRebuild();
+        await writeFile(target, "title: Second\n");
+        await next;
+        expect(await readFile(out, "utf8")).toContain("<title>Second");
+      } finally {
+        handle.close();
+      }
+    },
+    15000,
+  );
 });
