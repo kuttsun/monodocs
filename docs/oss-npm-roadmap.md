@@ -370,9 +370,11 @@ npm install -g monodocs@next
 While `main` carries the next major release, a patch on the current line follows these steps from a
 release branch instead ([maintenance.md](maintenance.md#a-patch-while-main-carries-the-next-major)).
 
-Step 10 is `verify-published.yml`. No workflow does step 11: that one leaves the release binaries
-and the long-running commands out of its scope, and CI never runs the published asset on a host
-without Node.js — the very environment a binary release makes a claim about. Run
+Step 10 is `verify-published.yml`, which leaves the release binaries and the long-running commands
+out of its scope. Step 11 is begun by `verify-release-binaries.yml`, which a published release
+starts: it runs the two scripts below against the attached assets on GitHub runners. Those runners
+have Node.js installed, so a green run says the asset is intact and the CLI behaves (and, on Windows,
+that `serve --open` launches a browser), but not that the binary works without Node.js — the very environment a binary release makes a claim about. To finish step 11, run
 [`scripts/verify-windows-binary.ps1`](../scripts/verify-windows-binary.ps1) on Windows x64 and
 [`scripts/verify-linux-binary.sh`](../scripts/verify-linux-binary.sh) on Linux x64, on hosts without
 Node.js, and finish the manual checks each prints at the end. [maintenance.md](maintenance.md)

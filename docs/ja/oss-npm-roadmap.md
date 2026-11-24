@@ -360,10 +360,13 @@ npm install -g monodocs@next
 `main` が次のメジャーリリースを抱えているあいだの現行系列のパッチは、この手順をリリースブランチから行う
 （[maintenance.md](maintenance.md#main-が次のメジャーを抱えているときのパッチ)）。
 
-手順 10 は `verify-published.yml` が行う。手順 11 を行うワークフローは無い。同ワークフローはリリース
-バイナリと長時間動作するコマンドを対象外にしており、CI が公開した資材を Node.js の無いホストで実行する
-こともない。バイナリを配る以上、動くと主張しているのはまさにその環境である。Node.js の無いホストで、
-Windows x64 では [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を、
+手順 10 は `verify-published.yml` が行う。同ワークフローはリリースバイナリと長時間動作するコマンドを
+対象外にしている。手順 11 は、リリースの公開で始まる `verify-release-binaries.yml` が先に手を付ける。
+GitHub のランナーで、添付した資材に下の 2 つのスクリプトを実行する。ただしランナーには Node.js が
+入っているので、緑であることが言えるのは資材が壊れていないことと CLI が期待どおり振る舞うこと
+（Windows では `serve --open` がブラウザを起動することも）までで、Node.js の無い環境で動くことではない。
+バイナリを配る以上、動くと主張しているのはまさにその環境である。手順 11 を終えるには、
+Node.js の無いホストで、Windows x64 では [`scripts/verify-windows-binary.ps1`](../../scripts/verify-windows-binary.ps1) を、
 Linux x64 では [`scripts/verify-linux-binary.sh`](../../scripts/verify-linux-binary.sh) を実行し、
 最後に表示される手作業の項目まで済ませる。スクリプトが何を見て、何を意図的に人へ残すかは
 [maintenance.md](maintenance.md) に記録している。
