@@ -171,7 +171,8 @@ item is looking for.
 When `main` already carries what the next major release breaks, a patch on the current line — the
 line `latest` points at, so this is not a backport — is released from a `release/<major>.<minor>`
 branch made from that line's latest tag, as 0.20.1 was from `release/0.20`, whether it carries a
-security fix or not:
+security fix or not. A vulnerability reported privately is still fixed as [SECURITY.md](../SECURITY.md)
+says, without a public pull request that describes it:
 
 1. Cherry-pick the fixes from `main` into a pull request against that branch, leaving out what only
    the next major says, and bump the version and pin the CI guide to it there: the site is built
