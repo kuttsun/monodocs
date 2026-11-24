@@ -857,6 +857,14 @@ It changes what a build with a difference shows inside a changed block, and a bu
 - [ ] What only a person can answer, on Windows: SmartScreen for an asset downloaded through a browser, how the generated HTML looks in Edge, and a look over the Edge screenshots `verify-published.yml` keeps (the rest of what 0.18.0 asked runs as steps from 0.19.0) — and how changed paragraphs in Japanese and English read
 - [x] Move the `next` dist-tag onto `0.20.0`, and confirm that the deployed CI guide pins `monodocs@0.20.0` in English and Japanese — `next` and `latest` both read `0.20.0`, and the deployed CI guide pins `monodocs@0.20.0` four times in each language, with no other version left; the deployed command reference describes a changed block
 
+**0.20.1** ([#262](https://github.com/kuttsun/monodocs/pull/262), [#263](https://github.com/kuttsun/monodocs/pull/263)), released from `release/0.20` because `main` already carries what 1.0 breaks
+
+- [x] The unpatched picomatch advisory (GHSA-fc5q-39xc-vjpf) cannot be reached through `sources.include` and `sources.exclude`: extended globs are read literally (`noextglob`), with `(`, `)`, and `+` matched as characters, and the advisory is set aside in both audits with the reason recorded; the configuration is trusted input, which [architecture.md](architecture.md) states — `scan.test.ts` matches parentheses and `+` as characters, and fails without the escaping
+- [x] `watch` and `serve` keep seeing the configuration after an editor saves it by renaming a temporary file over it, and follow a symbolic link to the file it names — `build.input-file.test.ts` covers both
+- [x] A link in a page body to a route containing `%` reaches its own page, the route written through `encodeURI` as the sidebar writes it — `postprocess.test.ts` covers it
+- [x] The configuration reference, the command reference, and [architecture.md](architecture.md) are checked against the code in both languages, as for 1.0 ([#263](https://github.com/kuttsun/monodocs/pull/263))
+- [ ] Publish `0.20.1` under the `latest` tag from `release/0.20`, with the CI guide pinned to it in the version change, verify it through `verify-published.yml` run with `dist_tag: 0.20.1` and its release binaries through `verify-release-binaries.yml`, and move `next` onto it
+
 ### 1.0
 
 [roadmap.md](roadmap.md) defines this release; it starts once v0.20 is released.

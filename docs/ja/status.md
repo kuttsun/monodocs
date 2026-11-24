@@ -842,6 +842,14 @@ AsciiDoc のチェックリストと検索結果が既存の文書で変わり�
 - [ ] 人にしか答えられない Windows での確認。ブラウザでダウンロードしたアセットの SmartScreen、生成した HTML の Edge での見え方、`verify-published.yml` が残す Edge のスクリーンショットをざっと見ること（0.18.0 で確かめたことの残りは 0.19.0 から手順で走る）に加え、変更された日本語と英語の段落がどう読めるか
 - [x] `next` の dist-tag を `0.20.0` に移し、デプロイした CI ガイドが英語・日本語とも `monodocs@0.20.0` に固定していることを確かめる — `next` と `latest` はどちらも `0.20.0` で、デプロイした CI ガイドは言語ごとに 4 か所で `monodocs@0.20.0` に固定し、ほかの版は残っていない。デプロイしたコマンドリファレンスは変更されたブロックを説明している
 
+**0.20.1**（[#262](https://github.com/kuttsun/monodocs/pull/262)、[#263](https://github.com/kuttsun/monodocs/pull/263)）。`main` には 1.0 の破壊的変更がすでに入っているため、`release/0.20` から出す
+
+- [x] 修正版の無い picomatch の advisory（GHSA-fc5q-39xc-vjpf）に `sources.include` と `sources.exclude` から届かない。拡張 glob を文字どおりに読み（`noextglob`）、`(`、`)`、`+` は文字として一致させる。advisory は理由を記録して両方の監査で除外し、設定は信頼する入力であることを [architecture.md](architecture.md) に書く — `scan.test.ts` が括弧と `+` を文字として一致させることを確かめ、エスケープなしでは落ちる
+- [x] エディタが一時ファイルを rename して設定を保存したあとも、`watch` と `serve` が設定の変更を拾い、設定へのシンボリックリンクはその指す先のファイルを追う — `build.input-file.test.ts` が両方を確かめる
+- [x] `%` を含む route へのページ本文のリンクが、そのページに着く。route はサイドバーと同じく `encodeURI` して書く — `postprocess.test.ts` が確かめる
+- [x] 設定リファレンス、コマンドリファレンス、[architecture.md](architecture.md) を、1.0 と同じく両言語でコードと突き合わせる（[#263](https://github.com/kuttsun/monodocs/pull/263)）
+- [ ] `0.20.1` を `release/0.20` から `latest` タグで公開する。版の変更で CI ガイドをこの版に固定し、`dist_tag: 0.20.1` で走らせた `verify-published.yml` と、リリースバイナリの `verify-release-binaries.yml` で確かめ、`next` をこの版に移す
+
 ### 1.0
 
 このリリースは [roadmap.md](roadmap.md) が定義し、v0.20 のリリース後に始める。
