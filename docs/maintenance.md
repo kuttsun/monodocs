@@ -164,9 +164,20 @@ item is looking for.
    such list: add the advisory to `IGNORED` in [`scripts/audit-site.mjs`](../scripts/audit-site.mjs)
    instead, which the site's audit runs.
 5. Release the fix as a new patch on the current line. Do not rebuild an already-published version,
-   and do not backport it to an older one ([SECURITY.md](../SECURITY.md)). When `main` already
-   carries what the next major release breaks, the current line is released from a
-   `release/<major>.<minor>` branch made from its latest tag, as 0.20.1 was from `release/0.20`:
-   cherry-pick the fixes into a pull request against that branch, bump the version there, and create
-   the GitHub release targeting it. The release, the site deployment, and the verification work from
-   the tag as they do from `main`.
+   and do not backport it to an older one ([SECURITY.md](../SECURITY.md)).
+
+### A patch while `main` carries the next major
+
+When `main` already carries what the next major release breaks, a patch on the current line — the
+line `latest` points at, so this is not a backport — is released from a `release/<major>.<minor>`
+branch made from that line's latest tag, as 0.20.1 was from `release/0.20`, whether it carries a
+security fix or not:
+
+1. Cherry-pick the fixes from `main` into a pull request against that branch, leaving out what only
+   the next major says, and bump the version there.
+2. Create the GitHub release targeting that branch. `release.yml` and `verify-release-binaries.yml`
+   run from the tag; `deploy-site.yml` runs on `main` and builds the site from the tag; dispatch
+   `verify-published.yml` from `main`, with the new version as `dist_tag`.
+3. On `main`, pin the CI guide to the new version and record the release in
+   [status.md](status.md). `main`'s package version stays where it is until the next major is
+   prepared.

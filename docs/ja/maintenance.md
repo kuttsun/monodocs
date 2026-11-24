@@ -159,8 +159,18 @@ Smart App Control は、それを有効にした Windows 11 ホストでは端�
    npm を使い、この一覧が無いので、代わりにサイトの監査が実行する
    [`scripts/audit-site.mjs`](../../scripts/audit-site.mjs) の `IGNORED` に advisory を加える。
 5. 修正は現行系列の新しい patch としてリリースする。公開済みバージョンを作り直さず、旧版へ
-   バックポートもしない（[SECURITY.ja.md](../../SECURITY.ja.md)）。次のメジャーリリースの破壊的変更が
-   `main` にすでに入っているときは、現行系列をその最新タグから作った `release/<major>.<minor>` ブランチから
-   出す（0.20.1 を `release/0.20` から出したように）。修正をそのブランチ向けの pull request に cherry-pick し、
-   そこで版を上げ、そのブランチを指す GitHub release を作る。リリース、サイトのデプロイ、検証は、`main` から
-   出すときと同じくタグから動く。
+   バックポートもしない（[SECURITY.ja.md](../../SECURITY.ja.md)）。
+
+### `main` が次のメジャーを抱えているときのパッチ
+
+次のメジャーリリースの破壊的変更が `main` にすでに入っているときは、現行系列（`latest` が指す系列なので、
+バックポートではない）のパッチを、その系列の最新タグから作った `release/<major>.<minor>` ブランチから出す。
+0.20.1 を `release/0.20` から出したように、セキュリティの修正を含むかどうかによらない。
+
+1. `main` の修正を、そのブランチ向けの pull request に cherry-pick する。次のメジャーにしか当てはまらない
+   記述は外し、そこで版を上げる。
+2. そのブランチを指す GitHub release を作る。`release.yml` と `verify-release-binaries.yml` はタグから動く。
+   `deploy-site.yml` は `main` で動き、タグからサイトを組む。`verify-published.yml` は `main` から、新しい版を
+   `dist_tag` にして実行する。
+3. `main` で CI ガイドを新しい版に固定し、[status.md](status.md) にリリースを記録する。`main` のパッケージの
+   版は、次のメジャーを準備するまでそのままにする。
